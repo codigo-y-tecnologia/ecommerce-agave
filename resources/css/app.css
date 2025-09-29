@@ -9,3 +9,23 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+.bg-agave {
+    background-color: #2d5016 !important;
+}
+
+.text-agave {
+    color: #2d5016 !important;
+}
+
+.btn-agave {
+    background-color: #2d5016;
+    border-color: #2d5016;
+    color: white;
+}
+
+.btn-agave:hover {
+    background-color: #1f3710;
+    border-color: #1f3710;
+    color: white;
+}
