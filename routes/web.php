@@ -20,4 +20,6 @@ Route::post('/usuarios', [AuthController::class, 'register'])->name('usuarios.st
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::resource('/categorias', CategoriaController::class);
-
+Route::resource('productos', ProductoController::class);
+Route::resource('marcas', MarcaController::class);
+Route::resource('etiquetas', EtiquetaController::class);
