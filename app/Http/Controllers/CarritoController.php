@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Carrito;
+use App\Models\CarritoDetalle;
+use App\Models\Producto;
 
 class CarritoController extends Controller
 {
@@ -11,10 +15,29 @@ class CarritoController extends Controller
      */
     public function index()
     {
-        //
-        $detalles = []; 
-        $total = 0;
-        return view('carrito.index', compact('detalles', 'total'));
+        $usuario = Auth::user();
+
+        // Buscar carrito activo del usuario
+        $carrito = Carrito::where('id_usuario', $usuario->id_usuario)
+            ->where('eEstado', 'activo')
+            ->with('detalles.producto') // eager load para no hacer muchas queries
+            ->first();
+
+            if (!$carrito || $carrito->detalles->isEmpty()) {
+            // Si no tiene carrito o no hay productos
+            return view('carrito.index', [
+                'detalles' => [],
+                'total' => 0
+            ])->with('carrito_vacio', 'Tu carrito está vacío.');
+        }
+
+        // Calcular total
+        $total = $carrito->detalles->sum('subtotal');
+
+        return view('carrito.index', [
+            'detalles' => $carrito->detalles,
+            'total' => $total
+        ]);
     }
 
     /**

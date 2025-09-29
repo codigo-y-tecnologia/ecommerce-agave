@@ -1,0 +1,20 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Carrito extends Model
+{
+    protected $table = 'tbl_carritos';
+    protected $primaryKey = 'id_carrito';
+    public $timestamps = false;
+
+    protected $fillable = ['id_usuario', 'eEstado'];
+
+    // Relación con detalles
+    public function detalles()
+    {
+        return $this->hasMany(CarritoDetalle::class, 'id_carrito', 'id_carrito');
+    }
+}

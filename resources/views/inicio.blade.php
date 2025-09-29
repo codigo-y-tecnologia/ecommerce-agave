@@ -17,7 +17,7 @@
     <ul>
         @auth('web')
             <li>Hola, {{ Auth::user()->vNombre }}</li>
-            <li><a href="#">Mi Carrito</a></li>
+            <li><a href="{{ route('carrito.index') }}">Mi Carrito</a></li>
             <li><a href="#">Mis Pedidos</a></li>
             <li><a href="{{ route('logout') }}">Cerrar Sesión</a></li>
         @endauth
