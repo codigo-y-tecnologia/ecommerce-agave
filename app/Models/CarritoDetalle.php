@@ -10,7 +10,7 @@ class CarritoDetalle extends Model
     protected $primaryKey = 'id_detalle_carrito';
     public $timestamps = false;
 
-    protected $fillable = ['id_carrito', 'id_producto', 'iCantidad', 'dPrecio_unitario', 'dSubtotal'];
+    protected $fillable = ['id_carrito', 'id_producto', 'iCantidad', 'dPrecio_unitario'];
 
     // Relación con producto
     public function producto()

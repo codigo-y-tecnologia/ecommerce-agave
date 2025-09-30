@@ -32,7 +32,7 @@ class CarritoController extends Controller
         }
 
         // Calcular total
-        $total = $carrito->detalles->sum('subtotal');
+        $total = $carrito->detalles->sum('dSubtotal');
 
         return view('carrito.index', [
             'detalles' => $carrito->detalles,
@@ -51,9 +51,46 @@ class CarritoController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Request $request, $idProducto)
     {
-        //
+         $usuario = Auth::user();
+
+        // Validar que el producto exista
+        $producto = Producto::findOrFail($idProducto);
+
+        // Buscar o crear carrito activo del usuario
+        $carrito = Carrito::firstOrCreate(
+            [
+                'id_usuario' => $usuario->id_usuario,
+                'eEstado' => 'activo'
+            ],
+            [
+                'id_usuario' => $usuario->id_usuario,
+                'eEstado' => 'activo'
+            ]
+        );
+
+        // Revisar si el producto ya está en el carrito
+        $detalle = CarritoDetalle::where('id_carrito', $carrito->id_carrito)
+            ->where('id_producto', $producto->id_producto)
+            ->first();
+
+        if ($detalle) {
+            // Si ya existe, actualizar cantidad
+            $detalle->iCantidad += $request->input('cantidad', 1);
+            //$detalle->subtotal = $detalle->cantidad * $detalle->precio_unitario;
+            $detalle->save();
+        } else {
+            // Si no existe, crear nuevo detalle
+            CarritoDetalle::create([
+                'id_carrito' => $carrito->id_carrito,
+                'id_producto' => $producto->id_producto,
+                'iCantidad' => $request->input('cantidad', 1),
+                'dPrecio_unitario' => $producto->dPrecio_venta,
+            ]);
+        }
+
+        return redirect()->route('carrito.index')->with('success', 'Producto agregado al carrito.');
     }
 
     /**

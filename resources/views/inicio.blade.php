@@ -41,6 +41,30 @@
             <a href="{{ route('login') }}">Iniciar sesión</a> |
             <a href="{{ route('usuarios.create') }}">Registrarse</a>
         @endauth
+
+        <h2>Agregar productos al carrito</h2>
+
+@if($productos->isEmpty())
+    <p>No hay productos disponibles por ahora.</p>
+@else
+    <div class="row">
+    @foreach($productos as $producto)
+        <div class="col-md-4 mb-3">
+            <div class="card p-3">
+                <h5>{{ $producto->vNombre }}</h5>
+                <p>Precio: ${{ number_format($producto->dPrecio_venta,2) }}</p>
+
+                <form action="{{ route('carrito.store', $producto->id_producto) }}" method="POST" class="d-flex align-items-center">
+                    @csrf
+                    <input type="number" name="cantidad" value="1" min="1" class="form-control w-25 me-2">
+                    <button type="submit" class="btn btn-success btn-sm">🛒 Agregar</button>
+                </form>
+            </div>
+        </div>
+    @endforeach
+    </div>
+@endif
+
     </main>
 </body>
 </html>

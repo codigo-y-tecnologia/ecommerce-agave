@@ -20,44 +20,53 @@
 
     <!-- Tabla de productos en el carrito -->
     <table class="table table-bordered">
-        <thead class="table-light">
-            <tr>
-                <th>Producto</th>
-                <th>Precio Unitario</th>
-                <th>Cantidad</th>
-                <th>Subtotal</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($detalles as $detalle)
-            <tr>
-                <td>{{ $detalle->producto->vNombre }}</td>
-                <td>${{ number_format($detalle->precio_unitario, 2) }}</td>
-                <td>
-                    <form action="{{ route('carrito.update', $detalle->id_detalle) }}" method="POST" class="d-flex align-items-center">
-                        @csrf
-                        @method('PUT')
-                        <input type="number" name="cantidad" value="{{ $detalle->cantidad }}" min="1" class="form-control w-50 me-2">
-                        <button type="submit" class="btn btn-sm btn-primary">Actualizar</button>
-                    </form>
-                </td>
-                <td>${{ number_format($detalle->subtotal, 2) }}</td>
-                <td>
-                    <form action="{{ route('carrito.destroy', $detalle->id_detalle) }}" method="POST" class="d-inline">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
-                    </form>
-                </td>
-            </tr>
-            @empty
-            <tr>
-                <td colspan="5" class="text-center">Tu carrito está vacío.</td>
-            </tr>
-            @endforelse
-        </tbody>
-    </table>
+    <thead class="table-light">
+        <tr>
+            <th>Producto</th>
+            <th>Precio Unitario</th>
+            <th>Cantidad</th>
+            <th>Subtotal</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @forelse($detalles as $detalle)
+        <tr>
+            <!-- Producto -->
+            <td>{{ $detalle->producto->vNombre }}</td>
+
+            <!-- Precio unitario -->
+            <td>${{ number_format($detalle->dPrecio_unitario, 2) }}</td>
+
+            <!-- Cantidad con formulario de actualización -->
+            <td>
+                <form action="{{ route('carrito.update', $detalle->id_detalle_carrito) }}" method="POST" class="d-flex align-items-center">
+                    @csrf
+                    @method('PUT')
+                    <input type="number" name="cantidad" value="{{ $detalle->iCantidad }}" min="1" class="form-control w-50 me-2">
+                    <button type="submit" class="btn btn-sm btn-primary">Actualizar</button>
+                </form>
+            </td>
+
+            <!-- Subtotal -->
+            <td>${{ number_format($detalle->dSubtotal, 2) }}</td>
+
+            <!-- Acciones -->
+            <td>
+                <form action="{{ route('carrito.destroy', $detalle->id_detalle_carrito) }}" method="POST" class="d-inline">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
+                </form>
+            </td>
+        </tr>
+        @empty
+        <tr>
+            <td colspan="5" class="text-center">Tu carrito está vacío.</td>
+        </tr>
+        @endforelse
+    </tbody>
+</table>
 
     <!-- Resumen -->
     @if(isset($total) && $total > 0)

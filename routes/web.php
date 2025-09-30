@@ -5,9 +5,13 @@ use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CarritoController;
 use App\Http\Controllers\CheckoutController;
+use App\Models\Producto;
 
 Route::get('/', function () {
-    return view('inicio');
+    // Trae productos activos (evita traer todo si la tabla es grande)
+    $productos = Producto::where('bActivo', 1)->orderBy('tFecha_registro','desc')->get();
+
+    return view('inicio', compact('productos'));
 });
 
 
