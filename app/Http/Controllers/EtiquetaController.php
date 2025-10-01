@@ -13,6 +13,8 @@ class EtiquetaController extends Controller
     public function index()
     {
         //
+         $etiquetas = Etiqueta::all();
+        return view('etiquetas.index', compact('etiquetas'));
     }
 
     /**
@@ -21,6 +23,7 @@ class EtiquetaController extends Controller
     public function create()
     {
         //
+         return view('etiquetas.create');
     }
 
     /**
@@ -29,6 +32,15 @@ class EtiquetaController extends Controller
     public function store(Request $request)
     {
         //
+        $request->validate([
+            'vNombre' => 'required|max:100|unique:tbl_etiquetas,vNombre',
+            'tDescripcion' => 'nullable|max:500'
+        ]);
+
+        Etiqueta::create($request->all());
+        
+        return redirect()->route('etiquetas.index')
+            ->with('success', 'Etiqueta creada exitosamente');
     }
 
     /**
@@ -37,6 +49,7 @@ class EtiquetaController extends Controller
     public function show(Etiqueta $etiqueta)
     {
         //
+
     }
 
     /**
@@ -45,6 +58,9 @@ class EtiquetaController extends Controller
     public function edit(Etiqueta $etiqueta)
     {
         //
+        return view('etiquetas.edit', compact('etiqueta'));
+
+        
     }
 
     /**
@@ -53,6 +69,15 @@ class EtiquetaController extends Controller
     public function update(Request $request, Etiqueta $etiqueta)
     {
         //
+        $request->validate([
+            'vNombre' => 'required|max:100|unique:tbl_etiquetas,vNombre,' . $etiqueta->id_etiqueta . ',id_etiqueta',
+            'tDescripcion' => 'nullable|max:500'
+        ]);
+
+        $etiqueta->update($request->all());
+        
+        return redirect()->route('etiquetas.index')
+            ->with('success', 'Etiqueta actualizada exitosamente');
     }
 
     /**
@@ -61,5 +86,9 @@ class EtiquetaController extends Controller
     public function destroy(Etiqueta $etiqueta)
     {
         //
+         $etiqueta->delete();
+        
+        return redirect()->route('etiquetas.index')
+            ->with('success', 'Etiqueta eliminada exitosamente');
     }
 }

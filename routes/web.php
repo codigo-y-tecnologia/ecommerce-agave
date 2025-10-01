@@ -4,6 +4,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\EtiquetaController; 
+use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\MarcaController; 
 
 
 Route::get('/', function () {

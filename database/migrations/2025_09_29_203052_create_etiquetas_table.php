@@ -11,8 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('etiquetas', function (Blueprint $table) {
-            $table->id();
+        Schema::create('tbl_etiquetas', function (Blueprint $table) {
+             $table->id('id_etiqueta');
+            $table->string('vNombre', 100);
+            $table->text('tDescripcion')->nullable();
             $table->timestamps();
         });
     }
@@ -22,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('etiquetas');
+        Schema::dropIfExists('tbl_etiquetas');
     }
 };
