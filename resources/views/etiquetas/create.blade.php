@@ -18,7 +18,15 @@
                                    id="vNombre" name="vNombre" value="{{ old('vNombre') }}" 
                                    placeholder="Ej: Oferta, Nuevo, Popular..." required>
                             @error('vNombre')
-                                <div class="invalid-feedback">{{ $message }}</div>
+                                @if($message == 'The vNombre has already been taken.')
+                                    <div class="invalid-feedback">Este nombre de etiqueta ya existe.</div>
+                                @elseif($message == 'The vNombre field is required.')
+                                    <div class="invalid-feedback">El nombre de la etiqueta es obligatorio.</div>
+                                @elseif($message == 'The vNombre must not be greater than 100 characters.')
+                                    <div class="invalid-feedback">El nombre no puede tener más de 100 caracteres.</div>
+                                @else
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @endif
                             @enderror
                         </div>
                         
@@ -28,7 +36,11 @@
                                       id="tDescripcion" name="tDescripcion" rows="3" 
                                       placeholder="Descripción opcional de la etiqueta...">{{ old('tDescripcion') }}</textarea>
                             @error('tDescripcion')
-                                <div class="invalid-feedback">{{ $message }}</div>
+                                @if($message == 'The tDescripcion must not be greater than 500 characters.')
+                                    <div class="invalid-feedback">La descripción no puede tener más de 500 caracteres.</div>
+                                @else
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @endif
                             @enderror
                         </div>
                         
