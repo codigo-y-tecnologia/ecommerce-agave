@@ -11,6 +11,19 @@
             </a>
         </div>
 
+        <!-- Agregar mensajes de éxito/error -->
+        @if(session('success'))
+            <div class="alert alert-success">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="alert alert-danger">
+                {{ session('error') }}
+            </div>
+        @endif
+
         <div class="card shadow-sm">
             <div class="card-body">
                 <form action="{{ route('categorias.update', $categoria) }}" method="POST">

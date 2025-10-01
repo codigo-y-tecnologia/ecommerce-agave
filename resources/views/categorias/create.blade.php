@@ -20,12 +20,21 @@
             @csrf
             <div class="mb-3">
                 <label for="vNombre" class="form-label">Nombre *</label>
-                <input type="text" class="form-control" id="vNombre" name="vNombre" required>
+                <input type="text" class="form-control @error('vNombre') is-invalid @enderror" 
+                       id="vNombre" name="vNombre" 
+                       value="{{ old('vNombre') }}" required>
+                @error('vNombre')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
             </div>
             
             <div class="mb-3">
                 <label for="tDescripcion" class="form-label">Descripción</label>
-                <textarea class="form-control" id="tDescripcion" name="tDescripcion" rows="3"></textarea>
+                <textarea class="form-control @error('tDescripcion') is-invalid @enderror" 
+                          id="tDescripcion" name="tDescripcion" rows="3">{{ old('tDescripcion') }}</textarea>
+                @error('tDescripcion')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
             </div>
             
             <button type="submit" class="btn btn-primary">Guardar</button>
