@@ -14,4 +14,11 @@ class Producto extends Model
         'dPrecio_compra','dPrecio_venta','iStock',
         'id_marca','id_categoria','bActivo'
     ];
+
+    //Relación con CarritoDetalle: Un producto puede estar en muchos carritos
+    public function detalles()
+    {
+        return $this->hasMany(CarritoDetalle::class, 'id_producto', 'id_producto');
+    }
+
 }

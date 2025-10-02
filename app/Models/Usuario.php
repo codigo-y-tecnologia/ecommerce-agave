@@ -43,9 +43,9 @@ class Usuario extends Authenticatable
     //     return 'vEmail';
     // }
 
-    // // Relación: un usuario tiene muchos carritos
-    // public function carritos()
-    // {
-    //     return $this->hasMany(Carrito::class, 'id_usuario', 'id_usuario');
-    // }
+    //Relación: un usuario tiene muchos carritos
+    public function carritos()
+    {
+        return $this->hasMany(Carrito::class, 'id_usuario', 'id_usuario');
+    }
 }

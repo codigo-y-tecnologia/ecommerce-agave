@@ -17,4 +17,12 @@ class Carrito extends Model
     {
         return $this->hasMany(CarritoDetalle::class, 'id_carrito', 'id_carrito');
     }
+
+    
+    //Relación: un carrito pertenece a un usuario
+    
+    public function usuario()
+    {
+        return $this->belongsTo(Usuario::class, 'id_usuario', 'id_usuario');
+    }
 }
