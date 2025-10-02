@@ -12,7 +12,7 @@ class Categoria extends Model
      use HasFactory;
 
       protected $table = 'tbl_categorias';
-    protected $primaryKey = 'id_categoria';
+      protected $primaryKey = 'id_categoria';
     
        public $timestamps = false;
     
