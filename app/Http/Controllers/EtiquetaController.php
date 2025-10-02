@@ -73,21 +73,30 @@ class EtiquetaController extends Controller
     public function update(Request $request, Etiqueta $etiqueta)
     {
         //
-        $request->validate([
-            'vNombre' => 'required|max:100|unique:tbl_etiquetas,vNombre',
-            'tDescripcion' => 'nullable|max:500'
-        ], [
-            
-            'vNombre.required' => 'El nombre de la etiqueta es obligatorio.',
-            'vNombre.max' => 'El nombre no debe exceder los 100 caracteres.',
-            'vNombre.unique' => 'El nombre de la etiqueta ya existe.',
-            'tDescripcion.max' => 'La descripción no debe exceder los 500 caracteres.'
+         $request->validate([
+        'vNombre' => 'required|max:100|unique:tbl_etiquetas,vNombre,' . $etiqueta->id_etiqueta . ',id_etiqueta',
+        'tDescripcion' => 'nullable|max:500'
+    ], [
+        'vNombre.required' => 'El nombre de la etiqueta es obligatorio',
+        'vNombre.unique' => 'Ya existe una etiqueta con este nombre',
+        'vNombre.max' => 'El nombre no puede tener más de 100 caracteres',
+        'tDescripcion.max' => 'La descripción no puede tener más de 500 caracteres'
+    ]);
+    
+    try {
+        $etiqueta->update([
+            'vNombre' => $request->vNombre,
+            'tDescripcion' => $request->tDescripcion
         ]);
-
-        $etiqueta->update($request->all());
         
         return redirect()->route('etiquetas.index')
             ->with('success', 'Etiqueta actualizada exitosamente');
+            
+    } catch (\Exception $e) {
+        return redirect()->back()
+            ->with('error', 'Error al actualizar la etiqueta: ' . $e->getMessage())
+            ->withInput();
+    }
     }
 
     /**

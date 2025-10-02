@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'Etiquetas de Productos')
+@section('title', 'Marcas de Agave')
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="fas fa-tags me-2"></i>Etiquetas de Productos</h1>
-    <a href="{{ route('etiquetas.create') }}" class="btn btn-primary">
-        <i class="fas fa-plus me-1"></i> Nueva Etiqueta
+    <h1><i class="fas fa-industry me-2"></i>Marcas de Agave</h1>
+    <a href="{{ route('marcas.create') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i> Nueva Marca
     </a>
 </div>
 
 <div class="card shadow-sm">
     <div class="card-body">
-        @if($etiquetas->count() > 0)
+        @if($marcas->count() > 0)
         <div class="table-responsive">
             <table class="table table-striped table-hover">
                 <thead class="table-dark">
@@ -24,31 +24,31 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($etiquetas as $etiqueta)
+                    @foreach($marcas as $marca)
                     <tr>
-                        <td>{{ $etiqueta->id_etiqueta }}</td>
+                        <td>{{ $marca->id_marca }}</td>
                         <td>
-                            <strong>{{ $etiqueta->vNombre }}</strong>
+                            <strong>{{ $marca->vNombre }}</strong>
                         </td>
                         <td>
-                            @if($etiqueta->tDescripcion)
-                                {{ Str::limit($etiqueta->tDescripcion, 50) }}
+                            @if($marca->tDescripcion)
+                                {{ Str::limit($marca->tDescripcion, 50) }}
                             @else
                                 <span class="text-muted">Sin descripción</span>
                             @endif
                         </td>
                         <td>
                             <span class="badge bg-info">
-                                {{ $etiqueta->productos->count() }} productos
+                                {{ $marca->productos->count() }} productos
                             </span>
                         </td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <a href="{{ route('etiquetas.edit', $etiqueta) }}" class="btn btn-warning">
+                                <a href="{{ route('marcas.edit', $marca) }}" class="btn btn-warning">
                                     <i class="fas fa-edit"></i> Editar
                                 </a>
-                                <form action="{{ route('etiquetas.destroy', $etiqueta) }}" method="POST" 
-                                      class="d-inline" onsubmit="return confirm('¿Eliminar etiqueta?')">
+                                <form action="{{ route('marcas.destroy', $marca) }}" method="POST" 
+                                      class="d-inline" onsubmit="return confirm('¿Eliminar marca?')">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="btn btn-danger">
                                         <i class="fas fa-trash"></i> Eliminar
@@ -63,11 +63,11 @@
         </div>
         @else
         <div class="text-center py-5">
-            <i class="fas fa-tags fa-4x text-muted mb-3"></i>
-            <h4 class="text-muted">No hay etiquetas registradas</h4>
-            <p class="text-muted">Comienza agregando etiquetas para organizar tus productos</p>
-            <a href="{{ route('etiquetas.create') }}" class="btn btn-primary">
-                <i class="fas fa-plus me-1"></i> Crear Primera Etiqueta
+            <i class="fas fa-industry fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">No hay marcas registradas</h4>
+            <p class="text-muted">Comienza agregando marcas de bebidas de agave</p>
+            <a href="{{ route('marcas.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i> Crear Primera Marca
             </a>
         </div>
         @endif

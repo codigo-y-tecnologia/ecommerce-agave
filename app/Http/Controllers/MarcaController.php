@@ -13,6 +13,8 @@ class MarcaController extends Controller
     public function index()
     {
         //
+        $marcas = Marca::all();
+        return view('marcas.index', compact('marcas'));
     }
 
     /**
@@ -21,6 +23,7 @@ class MarcaController extends Controller
     public function create()
     {
         //
+         return view('marcas.create');
     }
 
     /**
@@ -29,6 +32,19 @@ class MarcaController extends Controller
     public function store(Request $request)
     {
         //
+        $request->validate([
+            'vNombre' => 'required|max:100|unique:tbl_marcas,vNombre',
+            'tDescripcion' => 'nullable|max:500'
+        ], [
+            'vNombre.required' => 'El nombre de la marca es obligatorio',
+            'vNombre.max' => 'El nombre no debe exceder 100 caracteres',
+            'vNombre.unique' => 'Ya existe una marca con este nombre'
+        ]);
+
+        Marca::create($request->all());
+        
+        return redirect()->route('marcas.index')
+            ->with('success', 'Marca creada exitosamente');
     }
 
     /**
@@ -45,6 +61,7 @@ class MarcaController extends Controller
     public function edit(Marca $marca)
     {
         //
+         return view('marcas.edit', compact('marca'));
     }
 
     /**
@@ -53,6 +70,30 @@ class MarcaController extends Controller
     public function update(Request $request, Marca $marca)
     {
         //
+         $request->validate([
+        'vNombre' => 'required|max:100|unique:tbl_marcas,vNombre,' . $marca->id_marca . ',id_marca',
+        'tDescripcion' => 'nullable|max:500'
+    ], [
+        'vNombre.required' => 'El nombre de la marca es obligatorio',
+        'vNombre.unique' => 'Ya existe una marca con este nombre',
+        'vNombre.max' => 'El nombre no puede tener más de 100 caracteres',
+        'tDescripcion.max' => 'La descripción no puede tener más de 500 caracteres'
+    ]);
+
+    try {
+        $marca->update([
+            'vNombre' => $request->vNombre,
+            'tDescripcion' => $request->tDescripcion
+        ]);
+        
+        return redirect()->route('marcas.index')
+            ->with('success', 'Marca actualizada exitosamente');
+            
+    } catch (\Exception $e) {
+        return redirect()->back()
+            ->with('error', 'Error al actualizar la marca: ' . $e->getMessage())
+            ->withInput();
+         }
     }
 
     /**
@@ -60,6 +101,14 @@ class MarcaController extends Controller
      */
     public function destroy(Marca $marca)
     {
-        //
+        if ($marca->productos()->count() > 0) {
+            return redirect()->route('marcas.index')
+                ->with('error', 'No se puede eliminar la marca porque tiene productos asociados');
+        }
+
+        $marca->delete();
+        
+        return redirect()->route('marcas.index')
+            ->with('success', 'Marca eliminada exitosamente');
     }
 }
