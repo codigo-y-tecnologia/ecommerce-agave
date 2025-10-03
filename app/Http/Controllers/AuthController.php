@@ -40,7 +40,7 @@ class AuthController extends Controller
 
     public function showRegister()
     {
-        return view('registroUsuarios');
+        return view('auth.registroUsuarios');
     }
 
     /**

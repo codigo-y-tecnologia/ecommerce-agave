@@ -7,40 +7,53 @@
 </head>
 <body>
     <header>
-        <h1>Bienvenido a la página de inicio</h1>
+          @auth
+          <p>Hola, {{ Auth::user()->vNombre }}. Tu rol es: {{ Auth::user()->eRol }}</p>
 
+          @if(Auth::user()->eRol === 'cliente')
+           {{-- Panel de cliente --}}
          <nav class="navbar">
-            {{-- {{ dd(Auth::check(), Auth::user()) }} --}}
-            <p>Auth::check() = {{ Auth::check() ? 'true' : 'false' }}</p>
-<p>Usuario = {{ Auth::user() ? Auth::user()->id_usuario : 'ninguno' }}</p>
-
     <ul>
-        @auth('web')
-            <li>Hola, {{ Auth::user()->vNombre }}</li>
-            <li><a href="#">Mi Carrito</a></li>
+            <li><a href="#">🛒 Mi Carrito</a></li>
             <li><a href="#">Mis Pedidos</a></li>
-            <li><a href="{{ route('logout') }}">Cerrar Sesión</a></li>
-        @endauth
+        </ul>
+    </nav>
+
+    @elseif(Auth::user()->eRol === 'admin')
+        {{-- Panel de administrador --}}
+        <nav class="navbar">
+            <ul>
+                <li><a href="#">Gestionar Usuarios</a></li>
+                <li><a href="#">Ver Carritos de Clientes</a></li>
+                <li><a href="#">Reportes</a></li>
+            </ul>
+        </nav>
+    @elseif(Auth::user()->eRol === 'superadmin')
+        {{-- Panel de superadmin --}}
+        <nav class="navbar">
+            <ul>
+                <li><a href="#">⚙ Configuración General</a></li>
+                <li><a href="#">Gestión Avanzada de Usuarios</a></li>
+                <li><a href="#">Monitoreo del Sistema</a></li>
+            </ul>
+        </nav>
+    @endif
+
+    {{-- Botón de cerrar sesión --}}
+    <form method="POST" action="{{ route('logout') }}">
+        @csrf
+        <button type="submit">Cerrar sesión</button>
+    </form>
+    @endauth
 
         @guest
+            <p>No has iniciado sesión.</p>
             <li><a href="{{ route('login') }}">Ingresar</a></li>
             <li><a href="{{ route('usuarios.create') }}">Crear Cuenta</a></li>
         @endguest
-    </ul>
-</nav>
     </header>
     <main>
-        @auth
-            <p>Hola, {{ Auth::user()->vNombre }}. Has iniciado sesión.</p>
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit">Cerrar sesión</button>
-            </form>
-        @else
-            <p>No has iniciado sesión.</p>
-            <a href="{{ route('login') }}">Iniciar sesión</a> |
-            <a href="{{ route('usuarios.create') }}">Registrarse</a>
-        @endauth
+        
     </main>
 </body>
 </html>
