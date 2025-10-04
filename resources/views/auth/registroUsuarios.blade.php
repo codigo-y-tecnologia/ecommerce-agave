@@ -6,10 +6,12 @@
     <meta charset="UTF-8">
     <title>Registro de Usuario</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    @vite(['resources/js/app.js'])
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="container mt-5">
 
-    <h2>Registrar nuevo usuario</h2>
+    <h2>Formulario de registro</h2>
 
     <!-- Mostrar errores de validación -->
     @if ($errors->any())
@@ -23,7 +25,7 @@
     @endif
 
     <!-- Formulario -->
-    <form action="{{ route('usuarios.store') }}" method="POST">
+    <form id="registroForm" action="{{ route('usuarios.store') }}" method="POST">
         @csrf
 
         <div class="mb-3">
@@ -61,12 +63,11 @@
             <input type="date" name="dFecha_nacimiento" class="form-control" required>
         </div>
 
-        <div class="mb-3">
-            <label for="eRol" class="form-label">Rol</label>
-            <select name="eRol" class="form-select">
-                <option value="cliente">Cliente</option>
-                <option value="admin">Administrador</option>
-            </select>
+        <div class="mb-3 form-check">
+            <input type="checkbox" name="terminos" id="terminos" class="form-check-input" >
+            <label class="form-check-label" for="terminos">
+                Acepto los términos y condiciones y confirmo que soy mayor de edad.
+            </label>
         </div>
 
         <button type="submit" class="btn btn-success">Registrar</button>

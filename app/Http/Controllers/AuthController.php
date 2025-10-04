@@ -56,8 +56,17 @@ class AuthController extends Controller
             'vEmail' => 'required|email|unique:tbl_usuarios,vEmail',
             'vPassword' => 'required|min:6|confirmed',
             'dFecha_nacimiento' => 'required|date',
-            'eRol' => 'in:cliente,admin'
+             'terminos' => 'accepted', // Aceptar términos y condiciones
         ]);
+
+        // Validación extra: mayor de edad
+    $fechaNac = new \DateTime($data['dFecha_nacimiento']);
+    $hoy = new \DateTime();
+    $edad = $hoy->diff($fechaNac)->y;
+
+    if ($edad < 18) {
+        return back()->withErrors(['dFecha_nacimiento' => 'Debes ser mayor de edad para registrarte.'])->withInput();
+    }
 
         // Generar tokens
         $rememberToken = \Illuminate\Support\Str::random(60);
@@ -70,7 +79,7 @@ class AuthController extends Controller
             'vEmail' => $data['vEmail'],
             'vPassword' => Hash::make($data['vPassword']),
             'dFecha_nacimiento' => $data['dFecha_nacimiento'],
-            'eRol' => $data['eRol'] ?? 'cliente',
+            'eRol' => 'cliente',
             'remember_token' => $rememberToken, // Token para "recordar sesión"
             'api_token' => $apiToken, // Token para API
         ]);
@@ -78,7 +87,7 @@ class AuthController extends Controller
         Auth::login($usuario); // inicia sesión automático después de registro
         $request->session()->regenerate();
 
-        return redirect('/');
+        return redirect('/')->with('success', 'Registro exitoso, bienvenido.');
     }
 
     public function logout(Request $request)
