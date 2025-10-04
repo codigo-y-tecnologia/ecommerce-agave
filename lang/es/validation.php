@@ -155,4 +155,22 @@ return [
     'uppercase'              => 'El campo :attribute debe estar en mayúscula.',
     'url'                    => 'El campo :attribute debe ser una URL válida.',
     'uuid'                   => 'El campo :attribute debe ser un UUID válido.',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Atributos personalizados
+    |--------------------------------------------------------------------------
+    | Aquí mapeamos los nombres de las columnas/campos a algo legible
+    */
+    'attributes' => [
+        'vNombre' => 'nombre',
+        'vApaterno' => 'apellido paterno',
+        'vAmaterno' => 'apellido materno',
+        'vEmail' => 'correo electrónico',
+        'vPassword' => 'contraseña',
+        'vPassword_confirmation' => 'confirmación de contraseña',
+        'dFecha_nacimiento' => 'fecha de nacimiento',
+        'eRol' => 'rol',
+        'terminos' => 'términos y condiciones',
+    ],
 ];

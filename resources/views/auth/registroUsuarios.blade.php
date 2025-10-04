@@ -5,8 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Registro de Usuario</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    @vite(['resources/js/app.js'])
+    @vite(['resources/css/styles.css', 'resources/js/app.js'])
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="container mt-5">
@@ -30,41 +29,41 @@
 
         <div class="mb-3">
             <label for="vNombre" class="form-label">Nombre</label>
-            <input type="text" name="vNombre" class="form-control" required>
+            <input type="text" name="vNombre" class="form-control" value="{{ old('vNombre') }}">
         </div>
 
         <div class="mb-3">
             <label for="vApaterno" class="form-label">Apellido Paterno</label>
-            <input type="text" name="vApaterno" class="form-control" required>
+            <input type="text" name="vApaterno" class="form-control" value="{{ old('vApaterno') }}">
         </div>
 
         <div class="mb-3">
             <label for="vAmaterno" class="form-label">Apellido Materno</label>
-            <input type="text" name="vAmaterno" class="form-control" required>
+            <input type="text" name="vAmaterno" class="form-control" value="{{ old('vAmaterno') }}">
         </div>
 
         <div class="mb-3">
             <label for="vEmail" class="form-label">Correo Electrónico</label>
-            <input type="email" name="vEmail" class="form-control" required>
+            <input type="email" name="vEmail" class="form-control" value="{{ old('vEmail') }}">
         </div>
 
         <div class="mb-3">
             <label for="vPassword" class="form-label">Contraseña</label>
-            <input type="password" name="vPassword" class="form-control" required>
+            <input type="password" name="vPassword" class="form-control" value="{{ old('vPassword') }}">
         </div>
 
         <div class="mb-3">
     <label for="vPassword_confirmation" class="form-label">Confirmar Contraseña</label>
-    <input type="password" name="vPassword_confirmation" class="form-control" required>
+    <input type="password" name="vPassword_confirmation" class="form-control" value="{{ old('vPassword_confirmation') }}">
 </div>
 
         <div class="mb-3">
             <label for="dFecha_nacimiento" class="form-label">Fecha de Nacimiento</label>
-            <input type="date" name="dFecha_nacimiento" class="form-control" required>
+            <input type="date" name="dFecha_nacimiento" class="form-control" value="{{ old('dFecha_nacimiento') }}" >
         </div>
 
         <div class="mb-3 form-check">
-            <input type="checkbox" name="terminos" id="terminos" class="form-check-input" >
+            <input type="checkbox" name="terminos" id="terminos" class="form-check-input" value="1" {{ old('terminos') ? 'checked' : '' }}>
             <label class="form-check-label" for="terminos">
                 Acepto los términos y condiciones y confirmo que soy mayor de edad.
             </label>
