@@ -3,6 +3,7 @@ import Swal from "sweetalert2";
 document.addEventListener("DOMContentLoaded", () => {
     console.log("scripts.js cargado correctamente");
     alert("Rama usuarios");
+    alert("Cambio en usuarios");
 
     const registroForm = document.getElementById("registroForm");
     const passwordInput = document.querySelector("#vPassword");
