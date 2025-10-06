@@ -2,8 +2,18 @@ import Swal from "sweetalert2";
 
 document.addEventListener("DOMContentLoaded", () => {
     console.log("scripts.js cargado correctamente");
-    alert("Rama usuarios");
-    alert("Cambio en usuarios");
+
+    // Diccionario global reutilizable
+  const nombresLegibles = {
+    vNombre: "Nombre",
+    vApaterno: "Apellido Paterno",
+    vAmaterno: "Apellido Materno",
+    vEmail: "Correo Electrónico",
+    vPassword: "Contraseña",
+    vPassword_confirmation: "Confirmar Contraseña",
+    dFecha_nacimiento: "Fecha de Nacimiento",
+    terminos: "Términos y Condiciones",
+  };
 
     const registroForm = document.getElementById("registroForm");
     const passwordInput = document.querySelector("#vPassword");
@@ -93,6 +103,12 @@ const soloLetrasCampos = [
   { name: "vAmaterno", max: 50 },
 ];
 
+const limitarLongitud = [
+  { id: "vEmail", max: 60 }, 
+  { id: "vPassword", max: 60 },
+  { id: "vPassword_confirmation", max: 60 },
+];
+
 soloLetrasCampos.forEach(({ name, max }) => {
   const input = registroForm.querySelector(`input[name="${name}"]`);
   if (!input) return;
@@ -133,7 +149,7 @@ soloLetrasCampos.forEach(({ name, max }) => {
       Swal.fire({
         icon: "info",
         title: "Límite alcanzado",
-        text: `El campo ${name.replace("v", "")} solo permite ${max} caracteres.`,
+        text: `El campo "${nombresLegibles[name] || name}" solo permite ${max} caracteres.`,
         confirmButtonText: "Entendido",
       });
     }
@@ -155,12 +171,37 @@ soloLetrasCampos.forEach(({ name, max }) => {
       Swal.fire({
         icon: "warning",
         title: "Entrada no válida",
-        text: "Solo se permiten letras y acentos en este campo.",
+         text: `Solo se permiten letras y acentos en el campo "${nombresLegibles[name] || name}".`,
         confirmButtonText: "Entendido",
       });
     }
   });
 });
+
+// Limitar longitud de email y contraseñas
+limitarLongitud.forEach(({ id, max }) => {
+  const input = registroForm.querySelector(`input#${id}`);
+  if (!input) return;
+
+  input.addEventListener("input", () => {
+
+    if (input.value.length > max) {
+      input.value = input.value.substring(0, max);
+      Swal.fire({
+        icon: "info",
+        title: "Límite alcanzado",
+        text: `El campo "${nombresLegibles[id] || id}" solo permite ${max} caracteres.`,
+        confirmButtonText: "Entendido",
+      });
+    }
+
+    // Si estaba marcado en rojo, quitarlo al escribir bien
+    if (input.classList.contains("campo-invalido") && input.value.trim() !== "") {
+      input.classList.remove("campo-invalido");
+    }
+  });
+});
+
         // Restricción para campo de fecha (no permitir fechas futuras)
         const fechaInput = registroForm.querySelector('input[name="dFecha_nacimiento"]');
         if (fechaInput) {
@@ -202,18 +243,9 @@ soloLetrasCampos.forEach(({ name, max }) => {
 
             if (camposVacios.length > 0) {
                 e.preventDefault();
-                const nombresCampos = {
-                    vNombre: "Nombre",
-                    vApaterno: "Apellido Paterno",
-                    vAmaterno: "Apellido Materno",
-                    vEmail: "Correo Electrónico",
-                    vPassword: "Contraseña",
-                    vPassword_confirmation: "Confirmar Contraseña",
-                    dFecha_nacimiento: "Fecha de Nacimiento",
-                };
 
                 const camposFaltantes = camposVacios
-                    .map((c) => nombresCampos[c.name] || c.name)
+                    .map((c) => nombresLegibles[c.name] || c.name)
                     .join(", ");
 
                 Swal.fire({

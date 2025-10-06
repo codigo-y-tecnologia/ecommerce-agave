@@ -19,6 +19,7 @@ class Kernel extends HttpKernel
         \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
         \Illuminate\Foundation\Http\Middleware\TrimStrings::class,
         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
+        \App\Http\Middleware\SanitizeInput::class, // nuestro middleware de sanitización
     ];
 
     /**
@@ -63,5 +64,6 @@ class Kernel extends HttpKernel
 
         // tu middleware de roles
         'role' => \App\Http\Middleware\CheckRole::class,
+        'sanitize' => \App\Http\Middleware\SanitizeInput::class, // middleware de sanitización
     ];
 }

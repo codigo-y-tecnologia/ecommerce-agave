@@ -50,13 +50,19 @@ class AuthController extends Controller
     {
         // Validación
         $data = $request->validate([
-            'vNombre' => 'required|string|max:60',
-            'vApaterno' => 'required|string|max:50',
-            'vAmaterno' => 'required|string|max:50',
-            'vEmail' => 'required|email|unique:tbl_usuarios,vEmail',
-            'vPassword' => 'required|min:6|confirmed',
-            'dFecha_nacimiento' => 'required|date',
-             'terminos' => 'accepted', // Aceptar términos y condiciones
+            'vNombre' => ['required', 'string', 'max:60', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/u'],
+            'vApaterno' => ['required', 'string', 'max:50', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/u'],
+            'vAmaterno' => ['required', 'string', 'max:50', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/u'],
+            'vEmail' => ['required', 'email', 'max:80', 'unique:tbl_usuarios,vEmail'],
+            'vPassword' => ['required', 'string', 'min:8', 'max:150', 'confirmed'],
+            'dFecha_nacimiento' => ['required', 'date'],
+            'terminos' => ['accepted'],
+        ], [
+            // Mensajes personalizados claros
+            'regex' => 'El campo :attribute solo puede contener letras y espacios.',
+            'accepted' => 'Debes aceptar los términos y condiciones.',
+            'confirmed' => 'Las contraseñas no coinciden.',
+            'vPassword.min' => 'La contraseña debe tener al menos 8 caracteres.',
         ]);
 
         // Validación extra: mayor de edad
@@ -68,11 +74,24 @@ class AuthController extends Controller
         return back()->withErrors(['dFecha_nacimiento' => 'Debes ser mayor de edad para registrarte.'])->withInput();
     }
 
+    // Lista de palabras reservadas SQL
+        $palabrasReservadas = [
+            'SELECT', 'INSERT', 'DELETE', 'UPDATE', 'DROP', 'CREATE', 'ALTER', 'TRUNCATE',
+            'FROM', 'WHERE', 'AND', 'OR', 'JOIN', 'UNION', 'LIKE', 'HAVING', 'EXEC',
+            'GRANT', 'REVOKE', 'ADMIN', 'CAST', 'DECLARE', 'REPLACE', 'RENAME',
+            'BENCHMARK', 'LOAD_FILE', 'INTO OUTFILE', 'SHOW', 'DESCRIBE', 'EXPLAIN',
+            'MERGE', 'WITH', 'FOREIGN', 'PRIMARY', 'TABLE', 'COLUMN', 'VIEW', 'INDEX',
+            'PASSWORD', 'USER', 'SYSTEM', 'DATABASE', 'DROP USER', 'INFILE'
+        ];
+
+        // Funciones de limpieza y detección
+        $this->verificarYLimpiar($data, $palabrasReservadas);
+
         // Generar tokens
         $rememberToken = \Illuminate\Support\Str::random(60);
         $apiToken = \Illuminate\Support\Str::random(60);
 
-        $usuario = \App\Models\Usuario::create([
+        $usuario = Usuario::create([
             'vNombre' => $data['vNombre'],
             'vApaterno' => $data['vApaterno'],
             'vAmaterno' => $data['vAmaterno'] ?? null,
@@ -88,6 +107,27 @@ class AuthController extends Controller
         $request->session()->regenerate();
 
         return redirect('/')->with('success', 'Registro exitoso, bienvenido.');
+    }
+
+     /**
+     * Limpia y valida si los campos contienen palabras reservadas peligrosas
+     */
+    private function verificarYLimpiar(array &$data, array $palabrasReservadas): void
+    {
+        foreach ($data as $campo => &$valor) {
+            // Ignorar campos no textuales
+            if (!is_string($valor)) continue;
+
+            // Eliminar etiquetas HTML y espacios extremos
+            $valor = trim(strip_tags($valor));
+
+            // Si el campo contiene palabra reservada -> bloquear
+            foreach ($palabrasReservadas as $palabra) {
+                if (stripos($valor, $palabra) !== false) {
+                    abort(400, "El campo '$campo' contiene contenido no permitido.");
+                }
+            }
+        }
     }
 
     public function logout(Request $request)
