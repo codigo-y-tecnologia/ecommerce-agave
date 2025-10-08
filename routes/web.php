@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\ResetPasswordController;
 
 Route::get('/', function () {
     return view('inicio');
@@ -11,20 +13,31 @@ Route::get('/', function () {
 
 // Login y registro solo para invitados
 Route::middleware('guest')->group(function () {
+    
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
+
     Route::get('/usuarios/crear', [AuthController::class, 'showRegister'])->name('usuarios.create');
     Route::post('/usuarios', [AuthController::class, 'register'])->name('usuarios.store');
+
+    // Rutas para restablecimiento de contraseña
+Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])
+    ->name('password.request');
+
+Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])
+    ->name('password.email');
+
+Route::get('/reset-password/{token}', [ResetPasswordController::class, 'showResetForm'])
+    ->name('password.reset');
+
+Route::post('/reset-password', [ResetPasswordController::class, 'reset'])
+    ->name('password.update');
 });
 
-// Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-// Route::post('/login', [AuthController::class, 'login']);
-// Route::get('/usuarios/crear', [AuthController::class, 'showRegister'])->name('usuarios.create');
-// Route::post('/usuarios', [AuthController::class, 'register'])->name('usuarios.store');
-
-// Logout solo para usuarios autenticados
-Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
-//Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::middleware('auth')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    
+});
 
 // Rutas para clientes
 // --------------------

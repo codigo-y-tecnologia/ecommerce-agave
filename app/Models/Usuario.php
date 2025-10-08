@@ -3,9 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Notifications\Notifiable;
 
-class Usuario extends Authenticatable
+class Usuario extends Authenticatable implements CanResetPassword
 {
 
     use Notifiable;
@@ -37,6 +38,12 @@ class Usuario extends Authenticatable
     {
         return $this->vPassword;
     }
+    
+    public function getEmailForPasswordReset()
+    {
+        return $this->vEmail;
+    }
+
 
     // public function getAuthIdentifierName()
     // {
