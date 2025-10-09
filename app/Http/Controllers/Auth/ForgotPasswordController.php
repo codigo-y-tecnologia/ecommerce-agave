@@ -15,14 +15,17 @@ return view('auth.forgot-password');
 
 public function sendResetLinkEmail(Request $request)
 {
-$request->validate(['vEmail' => 'required|email']);
 
-$status = Password::broker('users')->sendResetLink(
-['vEmail' => $request->vEmail]
-);
+    $request->validate(['vEmail' => 'required|email']);
 
-return $status === Password::RESET_LINK_SENT
-? back()->with(['status' => __($status)])
-: back()->withErrors(['vEmail' => __($status)]);
-}
+    // Configura el campo personalizado para el broker
+        $response = Password::broker('users')->sendResetLink(
+            $request->only('vEmail')
+        );
+
+        return $response == Password::RESET_LINK_SENT
+            ? back()->with(['status' => __($response)])
+            : back()->withErrors(['vEmail' => __($response)]);
+
+    }
 }

@@ -2,10 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UsuarioController;
-use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Auth\AuthController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\Auth\VerificationController;
 
 Route::get('/', function () {
     return view('inicio');
@@ -19,6 +20,13 @@ Route::middleware('guest')->group(function () {
 
     Route::get('/usuarios/crear', [AuthController::class, 'showRegister'])->name('usuarios.create');
     Route::post('/usuarios', [AuthController::class, 'register'])->name('usuarios.store');
+
+    // Rutas para verificación de email
+    Route::get('/verify-email/{token}', [AuthController::class, 'verifyEmail'])->name('verification.verify');
+    Route::get('/resend-verification', function () {
+        return view('auth.resend-verification');
+    })->name('verification.resend-form');
+    Route::post('/resend-verification', [AuthController::class, 'resendVerificationEmail'])->name('verification.resend');
 
     // Rutas para restablecimiento de contraseña
 Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])

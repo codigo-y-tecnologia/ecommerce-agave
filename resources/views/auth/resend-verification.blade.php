@@ -2,20 +2,29 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Recuperar Contraseña</title>
+    <title>Reenviar Verificación de Email</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light d-flex align-items-center justify-content-center vh-100">
 
 <div class="card shadow p-4" style="max-width: 400px; width: 100%; border-radius: 16px;">
-    <h4 class="text-center text-primary mb-3">¿Olvidaste tu contraseña?</h4>
-    <p class="text-muted small text-center mb-4">Introduce tu correo y te enviaremos un enlace para restablecerla.</p>
+    <h4 class="text-center text-primary mb-3">Reenviar Verificación de Email</h4>
 
-    @if (session('status'))
-        <div class="alert alert-success">{{ session('status') }}</div>
+    @if (session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
-    <form method="POST" action="{{ route('password.email') }}">
+    @if (session('info'))
+        <div class="alert alert-info">{{ session('info') }}</div>
+    @endif
+
+    @if (session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
+
+    <p class="text-muted small text-center mb-4">Ingresa tu correo electrónico para reenviar el enlace de verificación.</p>
+
+    <form method="POST" action="{{ route('verification.resend') }}">
         @csrf
         <div class="mb-3">
             <label for="vEmail" class="form-label">Correo Electrónico</label>
@@ -26,7 +35,7 @@
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
         </div>
-        <button type="submit" class="btn btn-primary w-100">Enviar enlace</button>
+        <button type="submit" class="btn btn-primary w-100">Reenviar Enlace</button>
     </form>
 
     <div class="text-center mt-3">

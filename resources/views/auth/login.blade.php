@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Iniciar Sesión</title>
   @vite(['resources/css/styles.css', 'resources/js/app.js'])
-  @vite('resources/css/styles.css')
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="bg-light d-flex align-items-center justify-content-center vh-100">
 
@@ -14,6 +14,36 @@
       <h3 class="fw-bold text-primary">Iniciar Sesión</h3>
       <p class="text-muted small">Accede a tu cuenta para continuar</p>
     </div>
+
+     <!-- Mensaje de éxito general -->
+    @if (session('success'))
+        <div class="alert alert-success">
+            <strong>{{ session('success') }}</strong>
+            @if (session('verification_message'))
+                <br><small>{{ session('verification_message') }}</small>
+            @endif
+        </div>
+    @endif
+
+    <!-- Mensaje específico de verificación -->
+    @if (session('verification_sent'))
+        <div class="alert alert-info">
+            <i class="bi bi-envelope-check"></i>
+            <strong>¡Email de verificación enviado!</strong>
+            <br>
+            {{ session('verification_sent') }}
+        </div>
+    @endif
+
+    <!-- Mensaje de verificación exitosa -->
+    @if (session('verification_success'))
+        <div class="alert alert-success">
+            <i class="bi bi-check-circle"></i>
+            <strong>¡Email verificado!</strong>
+            <br>
+            {{ session('verification_success') }}
+        </div>
+    @endif
 
     @if ($errors->any())
       <div class="alert alert-danger p-2">
@@ -25,7 +55,7 @@
       </div>
     @endif
 
-    <form method="POST" action="{{ route('login') }}">
+    <form id="loginForm" action="{{ route('login') }}" method="POST">
       @csrf
 
       <!-- Email -->
@@ -37,7 +67,7 @@
           id="vEmail" 
           class="form-control @error('vEmail') is-invalid @enderror" 
           placeholder="ejemplo@correo.com" 
-          required 
+          required
           value="{{ old('vEmail') }}"
         >
         @error('vEmail')
@@ -86,6 +116,12 @@
         Ingresar
       </button>
     </form>
+
+    <div class="text-center mt-3">
+    <a href="{{ route('verification.resend-form') }}" class="text-decoration-none small">
+        ¿No recibiste el email de verificación?
+    </a>
+</div>
 
     <div class="text-center mt-3">
       <p class="small mb-0">¿No tienes una cuenta?
