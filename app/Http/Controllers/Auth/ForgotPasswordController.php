@@ -20,7 +20,12 @@ return view('auth.forgot-password');
 public function sendResetLinkEmail(Request $request)
 {
 
-    $request->validate(['vEmail' => ['required', 'email', 'max:80', 'exists:tbl_usuarios,vEmail']]);
+    $request->validate(['vEmail' => ['required', 'email', 'max:80', 'exists:tbl_usuarios,vEmail']], [
+            // Mensajes personalizados claros
+            'vEmail.exists' => 'No se encontró una cuenta con ese correo electrónico.',
+            'vEmail.email' => 'El correo electrónico debe tener un formato válido.',
+            'vEmail.required' => 'El campo de correo electrónico es obligatorio.',
+        ]);
 
      $emailData = $request->only('vEmail');
         $this->verificarYLimpiar($emailData, config('security.sql_keywords'));

@@ -66,8 +66,8 @@
           id="vEmail" 
           class="form-control @error('vEmail') is-invalid @enderror" 
           placeholder="ejemplo@correo.com" 
-          required 
-          maxlength="80"
+          required
+          maxlength="100"
           value="{{ old('vEmail') }}"
         >
         @error('vEmail')
@@ -84,7 +84,7 @@
           id="vPassword" 
           class="form-control @error('vPassword') is-invalid @enderror" 
           placeholder="••••••••" 
-          required 
+          required
           maxlength="150"
         >
         @error('vPassword')

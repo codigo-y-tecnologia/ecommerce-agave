@@ -25,8 +25,12 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'vEmail' => ['required', 'email', 'max:80', 'exists:tbl_usuarios,vEmail'],
+            'vEmail' => ['required', 'email', 'max:100', 'exists:tbl_usuarios,vEmail'],
             'vPassword' => ['required', 'string', 'min:8', 'max:150'],
+        ], [
+            // Mensajes personalizados claros
+            'vEmail.exists' => 'No se encontró una cuenta con ese correo electrónico.',
+            'vEmail.email' => 'El correo electrónico debe tener un formato válido.',
         ]);
 
         $this->verificarYLimpiar($credentials, config('security.sql_keywords'));
@@ -167,7 +171,11 @@ class AuthController extends Controller
     public function resendVerificationEmail(Request $request)
     {
         $request->validate([
-            'vEmail' => 'required|email|max:80|exists:tbl_usuarios,vEmail'
+            'vEmail' => 'required|email|max:100|exists:tbl_usuarios,vEmail'
+        ], [
+            // Mensajes personalizados claros
+            'vEmail.exists' => 'No se encontró una cuenta con ese correo electrónico.',
+            'vEmail.email' => 'El correo electrónico debe tener un formato válido.',
         ]);
 
         $emailData = $request->only('vEmail');

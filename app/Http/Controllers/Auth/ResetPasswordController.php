@@ -23,10 +23,20 @@ class ResetPasswordController extends Controller
 
     public function reset(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
             'token' => 'required',
-            'vEmail' => 'required|email',
+            'vEmail' => 'required|email|max:80|exists:tbl_usuarios,vEmail',
             'password' => 'required|min:8|max:150|confirmed',
+        ], [
+            // Mensajes personalizados claros
+            'vEmail.exists' => 'No se encontró una cuenta con ese correo electrónico.',
+            'vEmail.email' => 'El correo electrónico debe tener un formato válido.',
+            'vEmail.required' => 'El campo de correo electrónico es obligatorio.',
+            'vEmail.max' => 'El correo electrónico no debe exceder los 80 caracteres.',
+            'password.required' => 'El campo de contraseña es obligatorio.',
+            'confirmed' => 'Las contraseñas no coinciden.',
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
+            'password.max' => 'La contraseña no debe exceder los 150 caracteres.',
         ]);
 
         $this->verificarYLimpiar($data, config('security.sql_keywords'));

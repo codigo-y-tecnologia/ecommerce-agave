@@ -6,7 +6,6 @@
     <meta charset="UTF-8">
     <title>Registro de Usuario</title>
     @vite(['resources/css/styles.css', 'resources/js/app.js'])
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="container mt-5">
 

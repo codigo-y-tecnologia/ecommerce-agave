@@ -30,7 +30,7 @@
             <label for="vEmail" class="form-label">Correo Electrónico</label>
             <input type="email" name="vEmail" id="vEmail" 
                    class="form-control @error('vEmail') is-invalid @enderror" 
-                   value="{{ old('vEmail') }}" required autofocus>
+                   value="{{ old('vEmail') }}" maxlength="100" required autofocus>
             @error('vEmail')
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror

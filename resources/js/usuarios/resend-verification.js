@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Configuración de campos a limitar
 const limitarLongitud = [
-  { id: "vEmail", max: 80 }, 
+  { id: "vEmail", max: 100 }, 
 ];
 
 // Limitar longitud de email y contraseñas
