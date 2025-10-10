@@ -78,7 +78,7 @@ class AuthController extends Controller
             'vNombre' => ['required', 'string', 'max:60', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/u'],
             'vApaterno' => ['required', 'string', 'max:50', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/u'],
             'vAmaterno' => ['required', 'string', 'max:50', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/u'],
-            'vEmail' => ['required', 'email', 'max:80', 'unique:tbl_usuarios,vEmail'],
+            'vEmail' => ['required', 'email', 'max:100', 'unique:tbl_usuarios,vEmail'],
             'vPassword' => ['required', 'string', 'min:8', 'max:150', 'confirmed'],
             'dFecha_nacimiento' => ['required', 'date'],
             'terminos' => ['accepted'],
@@ -86,6 +86,7 @@ class AuthController extends Controller
             // Mensajes personalizados claros
             'regex' => 'El campo :attribute solo puede contener letras y espacios.',
             'accepted' => 'Debes aceptar los términos y condiciones.',
+            'vEmail.email' => 'El correo electrónico debe tener un formato válido.',
             'confirmed' => 'Las contraseñas no coinciden.',
             'vPassword.min' => 'La contraseña debe tener al menos 8 caracteres.',
         ]);
