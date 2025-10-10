@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Recuperar Contraseña</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    @vite(['resources/css/styles.css', 'resources/js/usuarios/forgot-password.js'])
 </head>
 <body class="bg-light d-flex align-items-center justify-content-center vh-100">
 
@@ -15,7 +15,7 @@
         <div class="alert alert-success">{{ session('status') }}</div>
     @endif
 
-    <form method="POST" action="{{ route('password.email') }}">
+    <form id="forgotPassword" method="POST" action="{{ route('password.email') }}">
         @csrf
         <div class="mb-3">
             <label for="vEmail" class="form-label">Correo Electrónico</label>

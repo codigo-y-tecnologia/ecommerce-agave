@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Iniciar Sesión</title>
-  @vite(['resources/css/styles.css', 'resources/js/app.js'])
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  @vite(['resources/css/styles.css', 'resources/js/usuarios/login.js'])
 </head>
 <body class="bg-light d-flex align-items-center justify-content-center vh-100">
 
@@ -67,7 +66,8 @@
           id="vEmail" 
           class="form-control @error('vEmail') is-invalid @enderror" 
           placeholder="ejemplo@correo.com" 
-          required
+          required 
+          maxlength="80"
           value="{{ old('vEmail') }}"
         >
         @error('vEmail')
@@ -84,7 +84,8 @@
           id="vPassword" 
           class="form-control @error('vPassword') is-invalid @enderror" 
           placeholder="••••••••" 
-          required
+          required 
+          maxlength="150"
         >
         @error('vPassword')
           <div class="invalid-feedback">{{ $message }}</div>

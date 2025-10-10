@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Traits\InputSanitizer;
 use App\Models\Usuario;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
@@ -13,6 +14,9 @@ use App\Notifications\VerifyEmailNotification;
 
 class AuthController extends Controller
 {
+
+    use InputSanitizer;
+
     public function showLogin()
     {
         return view('auth.login');
@@ -21,9 +25,11 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'vEmail' => 'required|email',
-            'vPassword' => 'required|min:6',
+            'vEmail' => ['required', 'email', 'max:80', 'exists:tbl_usuarios,vEmail'],
+            'vPassword' => ['required', 'string', 'min:8', 'max:150'],
         ]);
+
+        $this->verificarYLimpiar($credentials, config('security.sql_keywords'));
 
         $credentials = [
             'vEmail' => $request->vEmail,
@@ -89,18 +95,12 @@ class AuthController extends Controller
         return back()->withErrors(['dFecha_nacimiento' => 'Debes ser mayor de edad para registrarte.'])->withInput();
     }
 
-    // Lista de palabras reservadas SQL
-        $palabrasReservadas = [
-            'SELECT', 'INSERT', 'DELETE', 'UPDATE', 'DROP', 'CREATE', 'ALTER', 'TRUNCATE',
-            'FROM', 'WHERE', 'AND', 'OR', 'JOIN', 'UNION', 'LIKE', 'HAVING', 'EXEC',
-            'GRANT', 'REVOKE', 'ADMIN', 'CAST', 'DECLARE', 'REPLACE', 'RENAME',
-            'BENCHMARK', 'LOAD_FILE', 'INTO OUTFILE', 'SHOW', 'DESCRIBE', 'EXPLAIN',
-            'MERGE', 'WITH', 'FOREIGN', 'PRIMARY', 'TABLE', 'COLUMN', 'VIEW', 'INDEX',
-            'PASSWORD', 'USER', 'SYSTEM', 'DATABASE', 'DROP USER', 'INFILE'
-        ];
-
+        /**
+            * Limpia y valida si los campos contienen contenido potencialmente peligroso
+             * (anti inyección SQL básica sin falsos positivos)
+         */
         // Funciones de limpieza y detección
-        $this->verificarYLimpiar($data, $palabrasReservadas);
+        $this->verificarYLimpiar($data, config('security.sql_keywords'));
 
         // Generar tokens
         $rememberToken = Str::random(60);
@@ -125,6 +125,7 @@ class AuthController extends Controller
         try {
             $usuario->notify(new VerifyEmailNotification($usuario, $verificationToken));
         } catch (\Exception $e) {
+            dd($e->getMessage()); 
             // Si falla el envío del email, eliminar el usuario creado
             $usuario->delete();
             return back()->withErrors([
@@ -166,8 +167,12 @@ class AuthController extends Controller
     public function resendVerificationEmail(Request $request)
     {
         $request->validate([
-            'vEmail' => 'required|email|exists:tbl_usuarios,vEmail'
+            'vEmail' => 'required|email|max:80|exists:tbl_usuarios,vEmail'
         ]);
+
+        $emailData = $request->only('vEmail');
+        $this->verificarYLimpiar($emailData, config('security.sql_keywords'));
+
 
         $user = Usuario::where('vEmail', $request->vEmail)->first();
 
@@ -185,50 +190,12 @@ class AuthController extends Controller
             $user->notify(new VerifyEmailNotification($user, $user->verification_token));
             return back()->with('success', 'Se ha enviado un nuevo enlace de verificación a tu correo electrónico.');
         } catch (\Exception $e) {
+             dd($e->getMessage()); 
             return back()->withErrors([
                 'vEmail' => 'Error al enviar el email de verificación. Por favor, intenta nuevamente.'
             ]);
         }
     }
-
-     /**
- * Limpia y valida si los campos contienen contenido potencialmente peligroso
- * (anti inyección SQL básica sin falsos positivos)
- */
-private function verificarYLimpiar(array &$data, array $palabrasReservadas): void
-{
-    foreach ($data as $campo => &$valor) {
-        // Ignorar campos no textuales
-        if (!is_string($valor)) continue;
-
-        // Sanitizar entradas: quitar etiquetas HTML y espacios
-        $valor = trim(strip_tags($valor));
-
-        // Evitar caracteres de control invisibles o nulos
-        $valor = preg_replace('/[\x00-\x1F\x7F]/u', '', $valor);
-
-        // Normalizar espacios múltiples
-        $valor = preg_replace('/\s+/', ' ', $valor);
-
-        // Detectar inyecciones SQL reales (palabras reservadas completas)
-        foreach ($palabrasReservadas as $palabra) {
-            // Buscar palabra reservada completa (no dentro de nombres como "Alejandro")
-            if (preg_match('/\b' . preg_quote($palabra, '/') . '\b/i', $valor)) {
-                abort(400, "El campo '$campo' contiene contenido no permitido.");
-            }
-        }
-
-        // Validar longitud general (prevención de payloads largos)
-        if (strlen($valor) > 255) {
-            abort(400, "El campo '$campo' es demasiado largo.");
-        }
-
-        // Revalidar que no contenga caracteres sospechosos tipo SQL o HTML
-        if (preg_match('/(--|#|;|\/\*|\*\/|<\?|<script|<\/script>)/i', $valor)) {
-            abort(400, "El campo '$campo' contiene caracteres no permitidos.");
-        }
-    }
-}
 
     public function logout(Request $request)
     {

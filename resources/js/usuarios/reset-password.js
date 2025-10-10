@@ -1,23 +1,77 @@
 import Swal from "sweetalert2";
 
 document.addEventListener("DOMContentLoaded", () => {
-    console.log("login.js cargado correctamente");
+    console.log("reset-password.js cargado correctamente");
 
     // Diccionario global reutilizable
   const nombresLegibles = {
     vEmail: "Correo Electrónico",
-    vPassword: "Contraseña",
+    password: "Contraseña",
+    password_confirmation: "Confirmar Contraseña",
   };
 
-    const loginForm = document.getElementById("loginForm");
-    const passwordInput = document.querySelector("#vPassword");
+    const resetPasswordForm = document.getElementById("resetPasswordForm");
+    const passwordInput = document.querySelector("#password");
+    const passwordStrengthText = document.getElementById("passwordStrengthText");
+    const passwordStrengthBar = document.querySelector("#passwordStrengthBar .progress-bar");
+
+    // =============================
+    // Indicador de fortaleza de contraseña
+    // =============================
+    if (passwordInput) {
+        passwordInput.addEventListener("input", () => {
+            const val = passwordInput.value;
+            let strength = 0;
+
+            if (val.length >= 8) strength++;
+            if (/[A-Z]/.test(val)) strength++;
+            if (/[0-9]/.test(val)) strength++;
+            if (/[^A-Za-z0-9]/.test(val)) strength++; // símbolos
+
+            let color = "";
+            let text = "";
+
+            switch (strength) {
+                case 0:
+                case 1:
+                    color = "bg-danger";
+                    text = "Débil";
+                    break;
+                case 2:
+                    color = "bg-warning";
+                    text = "Media";
+                    break;
+                case 3:
+                    color = "bg-info";
+                    text = "Buena";
+                    break;
+                case 4:
+                    color = "bg-success";
+                    text = "Fuerte";
+                    break;
+            }
+
+            passwordStrengthText.textContent = `Seguridad: ${text}`;
+            passwordStrengthText.style.color =
+                color === "bg-danger"
+                    ? "#dc3545"
+                    : color === "bg-warning"
+                    ? "#ffc107"
+                    : color === "bg-info"
+                    ? "#0dcaf0"
+                    : "#198754";
+
+            passwordStrengthBar.className = `progress-bar ${color}`;
+            passwordStrengthBar.style.width = `${(strength / 4) * 100}%`;
+        });
+    }
 
     // =============================
     // Validaciones del formulario
     // =============================
-    if (loginForm) {
+    if (resetPasswordForm) {
         // Evitar espacios al inicio (incluye email)
-        loginForm.querySelectorAll("input").forEach((campo) => {
+        resetPasswordForm.querySelectorAll("input").forEach((campo) => {
             campo.addEventListener("input", () => {
                 if (campo.value.length === 1 && campo.value.startsWith(" ")) {
                     campo.value = "";
@@ -33,15 +87,20 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         });
 
-// Configuración de campos a limitar
+        // =============================
+// Restricciones para campos de texto (solo letras, espacios y acentos válidos)
+// con soporte completo para teclas muertas (´ + vocal)
+// =============================
+
 const limitarLongitud = [
   { id: "vEmail", max: 80 }, 
-  { id: "vPassword", max: 80 },
+  { id: "password", max: 80 },
+  { id: "password_confirmation", max: 80 },
 ];
 
 // Limitar longitud de email y contraseñas
 limitarLongitud.forEach(({ id, max }) => {
-  const input = loginForm.querySelector(`input#${id}`);
+  const input = resetPasswordForm.querySelector(`input#${id}`);
   if (!input) return;
 
   input.addEventListener("input", () => {
@@ -61,14 +120,15 @@ limitarLongitud.forEach(({ id, max }) => {
       input.classList.remove("campo-invalido");
     }
   });
-});
+}); 
+
         // =============================
         // Validar al enviar
         // =============================
-        loginForm.addEventListener("submit", (e) => {
-            const campos = loginForm.querySelectorAll(
-                'input[type="email"], input[type="password"]');
-
+        resetPasswordForm.addEventListener("submit", (e) => {
+            const campos = resetPasswordForm.querySelectorAll(
+                'input[type="email"], input[type="password"]'
+            );
             let camposVacios = [];
 
             campos.forEach((campo) => campo.classList.remove("campo-invalido", "shake"));
@@ -125,6 +185,24 @@ limitarLongitud.forEach(({ id, max }) => {
                 setTimeout(() => passwordInput.classList.remove("shake"), 600);
                 return;
             }
+
+            // Confirmar contraseña
+            const confirmInput = document.getElementById("password_confirmation");
+            if (passwordInput.value !== confirmInput.value) {
+                e.preventDefault();
+                passwordInput.classList.add("campo-invalido", "shake");
+                confirmInput.classList.add("campo-invalido", "shake");
+                Swal.fire({
+                    icon: "error",
+                    title: "Contraseñas no coinciden",
+                    text: "Verifica que ambas contraseñas sean iguales.",
+                }).then(() => confirmInput.focus());
+                setTimeout(() => {
+                    passwordInput.classList.remove("shake");
+                    confirmInput.classList.remove("shake");
+                }, 600);
+                return;
+            }
         });
-    } 
+    }
 });

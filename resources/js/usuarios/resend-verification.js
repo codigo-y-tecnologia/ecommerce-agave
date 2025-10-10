@@ -1,23 +1,21 @@
 import Swal from "sweetalert2";
 
 document.addEventListener("DOMContentLoaded", () => {
-    console.log("login.js cargado correctamente");
+    console.log("resend-verification.js cargado correctamente");
 
     // Diccionario global reutilizable
   const nombresLegibles = {
     vEmail: "Correo Electrónico",
-    vPassword: "Contraseña",
   };
 
-    const loginForm = document.getElementById("loginForm");
-    const passwordInput = document.querySelector("#vPassword");
+    const resendVerificationForm = document.getElementById("resendVerificationForm");
 
     // =============================
     // Validaciones del formulario
     // =============================
-    if (loginForm) {
+    if (resendVerificationForm) {
         // Evitar espacios al inicio (incluye email)
-        loginForm.querySelectorAll("input").forEach((campo) => {
+        resendVerificationForm.querySelectorAll("input").forEach((campo) => {
             campo.addEventListener("input", () => {
                 if (campo.value.length === 1 && campo.value.startsWith(" ")) {
                     campo.value = "";
@@ -36,12 +34,11 @@ document.addEventListener("DOMContentLoaded", () => {
 // Configuración de campos a limitar
 const limitarLongitud = [
   { id: "vEmail", max: 80 }, 
-  { id: "vPassword", max: 80 },
 ];
 
 // Limitar longitud de email y contraseñas
 limitarLongitud.forEach(({ id, max }) => {
-  const input = loginForm.querySelector(`input#${id}`);
+  const input = resendVerificationForm.querySelector(`input#${id}`);
   if (!input) return;
 
   input.addEventListener("input", () => {
@@ -65,9 +62,9 @@ limitarLongitud.forEach(({ id, max }) => {
         // =============================
         // Validar al enviar
         // =============================
-        loginForm.addEventListener("submit", (e) => {
-            const campos = loginForm.querySelectorAll(
-                'input[type="email"], input[type="password"]');
+        resendVerificationForm.addEventListener("submit", (e) => {
+            const campos = resendVerificationForm.querySelectorAll(
+                'input[type="email"]');
 
             let camposVacios = [];
 
@@ -110,19 +107,6 @@ limitarLongitud.forEach(({ id, max }) => {
                     text: "Por favor ingresa un correo electrónico válido.",
                 }).then(() => emailInput.focus());
                 setTimeout(() => emailInput.classList.remove("shake"), 600);
-                return;
-            }
-
-            // Contraseña mínima
-            if (passwordInput.value.length < 8) {
-                e.preventDefault();
-                passwordInput.classList.add("campo-invalido", "shake");
-                Swal.fire({
-                    icon: "error",
-                    title: "Contraseña débil",
-                    text: "La contraseña debe tener al menos 8 caracteres.",
-                }).then(() => passwordInput.focus());
-                setTimeout(() => passwordInput.classList.remove("shake"), 600);
                 return;
             }
         });

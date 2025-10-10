@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Reenviar Verificación de Email</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    @vite(['resources/css/styles.css', 'resources/js/usuarios/resend-verification.js'])
 </head>
 <body class="bg-light d-flex align-items-center justify-content-center vh-100">
 
@@ -24,7 +24,7 @@
 
     <p class="text-muted small text-center mb-4">Ingresa tu correo electrónico para reenviar el enlace de verificación.</p>
 
-    <form method="POST" action="{{ route('verification.resend') }}">
+    <form id="resendVerificationForm" method="POST" action="{{ route('verification.resend') }}">
         @csrf
         <div class="mb-3">
             <label for="vEmail" class="form-label">Correo Electrónico</label>

@@ -104,9 +104,9 @@ const soloLetrasCampos = [
 ];
 
 const limitarLongitud = [
-  { id: "vEmail", max: 60 }, 
-  { id: "vPassword", max: 60 },
-  { id: "vPassword_confirmation", max: 60 },
+  { id: "vEmail", max: 80 }, 
+  { id: "vPassword", max: 80 },
+  { id: "vPassword_confirmation", max: 80 },
 ];
 
 soloLetrasCampos.forEach(({ name, max }) => {

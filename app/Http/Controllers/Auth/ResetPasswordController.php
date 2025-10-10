@@ -7,9 +7,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
+use App\Traits\InputSanitizer;
 
 class ResetPasswordController extends Controller
 {
+
+    use InputSanitizer;
+    
     public function showResetForm(Request $request, $token = null)
     {
         return view('auth.reset-password', [
@@ -22,8 +26,10 @@ class ResetPasswordController extends Controller
         $request->validate([
             'token' => 'required',
             'vEmail' => 'required|email',
-            'password' => 'required|min:8|confirmed',
+            'password' => 'required|min:8|max:150|confirmed',
         ]);
+
+        $this->verificarYLimpiar($data, config('security.sql_keywords'));
         
         $status = Password::broker('users')->reset(
             $request->only('vEmail', 'password', 'password_confirmation', 'token'),
