@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Carrito de Compras</title>
+    <!-- Bootstrap CSS desde CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-5">
+    <h2 class="mb-4">🛒 Mi Carrito de Compras</h2>
+
+    <!-- Mostrar mensaje si el carrito está vacío -->
+    @if(session('carrito_vacio'))
+        <div class="alert alert-info">
+            {{ session('carrito_vacio') }}
+        </div>
+    @endif
+
+    <!-- Tabla de productos en el carrito -->
+    <table class="table table-bordered">
+    <thead class="table-light">
+        <tr>
+            <th>Producto</th>
+            <th>Precio Unitario</th>
+            <th>Cantidad</th>
+            <th>Subtotal</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @forelse($detalles as $detalle)
+        <tr>
+            <!-- Producto -->
+            <td>{{ $detalle->producto->vNombre }}</td>
+
+            <!-- Precio unitario -->
+            <td>${{ number_format($detalle->dPrecio_unitario, 2) }}</td>
+
+            <!-- Cantidad con formulario de actualización -->
+            <td>
+                <form action="{{ route('carrito.update', $detalle->id_detalle_carrito) }}" method="POST" class="d-flex align-items-center">
+                    @csrf
+                    @method('PUT')
+                    <input type="number" name="cantidad" value="{{ $detalle->iCantidad }}" min="1" class="form-control w-50 me-2">
+                    <button type="submit" class="btn btn-sm btn-primary">Actualizar</button>
+                </form>
+            </td>
+
+            <!-- Subtotal -->
+            <td>${{ number_format($detalle->dSubtotal, 2) }}</td>
+
+            <!-- Acciones -->
+            <td>
+                <form action="{{ route('carrito.destroy', $detalle->id_detalle_carrito) }}" method="POST" class="d-inline">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-sm btn-danger">Eliminar</button>
+                </form>
+            </td>
+        </tr>
+        @empty
+        <tr>
+            <td colspan="5" class="text-center">Tu carrito está vacío.</td>
+        </tr>
+        @endforelse
+    </tbody>
+</table>
+
+    <!-- Resumen -->
+    @if(isset($total) && $total > 0)
+    <div class="text-end">
+        <h4>Total: ${{ number_format($total, 2) }}</h4>
+        <a href="{{ route('checkout.index') }}" class="btn btn-success">Finalizar Compra</a>
+    </div>
+    @endif
+</div>
+
+<!-- Bootstrap JS (opcional, solo si usarás cosas como modal o dropdowns) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

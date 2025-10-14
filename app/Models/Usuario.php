@@ -85,9 +85,9 @@ class Usuario extends Authenticatable implements CanResetPassword
     //     return 'vEmail';
     // }
 
-    // // Relación: un usuario tiene muchos carritos
-    // public function carritos()
-    // {
-    //     return $this->hasMany(Carrito::class, 'id_usuario', 'id_usuario');
-    // }
+    //Relación: un usuario tiene muchos carritos
+    public function carritos()
+    {
+        return $this->hasMany(Carrito::class, 'id_usuario', 'id_usuario');
+    }
 }

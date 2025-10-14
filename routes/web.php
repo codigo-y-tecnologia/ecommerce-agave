@@ -3,13 +3,23 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\CarritoController;
+use App\Http\Controllers\CheckoutController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\VerificationController;
+use App\Models\Producto;
+
+// Route::get('/', function () {
+//     return view('inicio');
+// })->name('home');
 
 Route::get('/', function () {
-    return view('inicio');
+    // Trae productos activos (evita traer todo si la tabla es grande)
+    $productos = Producto::where('bActivo', 1)->orderBy('tFecha_registro','desc')->get();
+
+    return view('inicio', compact('productos'));
 })->name('home');
 
 // Login y registro solo para invitados
@@ -47,16 +57,25 @@ Route::middleware('auth')->group(function () {
     
 });
 
+// --------------------
 // Rutas para clientes
 // --------------------
-// Route::middleware(['auth', 'role:cliente'])->group(function () {
-//     Route::get('/carrito', [CarritoController::class, 'index'])->name('carrito.index');
-//     Route::post('/carrito/{producto}', [CarritoController::class, 'store'])->name('carrito.store');
-//     Route::put('/carrito/{detalle}', [CarritoController::class, 'update'])->name('carrito.update');
-//     Route::delete('/carrito/{detalle}', [CarritoController::class, 'destroy'])->name('carrito.destroy');
+Route::middleware(['auth', 'role:cliente'])->group(function () {
 
-//     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
-// });
+// --------------------
+// Rutas de Carrito
+// --------------------
+    Route::get('/carrito', [CarritoController::class, 'index'])->name('carrito.index');
+    Route::post('/carrito/{producto}', [CarritoController::class, 'store'])->name('carrito.store');
+    Route::put('/carrito/{detalle}', [CarritoController::class, 'update'])->name('carrito.update');
+    Route::delete('/carrito/{detalle}', [CarritoController::class, 'destroy'])->name('carrito.destroy');
+
+// --------------------
+// Rutas de Checkout
+// --------------------
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+ 
+});
 
 // --------------------
 // Rutas para admin
