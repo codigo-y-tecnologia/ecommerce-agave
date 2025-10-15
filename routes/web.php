@@ -60,7 +60,7 @@ Route::middleware('auth')->group(function () {
 // --------------------
 // Rutas para clientes
 // --------------------
-Route::middleware(['auth', 'role:cliente'])->group(function () {
+Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])->group(function () {
 
 // --------------------
 // Rutas de Carrito

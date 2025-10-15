@@ -6,6 +6,8 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+
 
 class CheckRole
 {
@@ -19,11 +21,16 @@ class CheckRole
     public function handle(Request $request, Closure $next, ...$roles)
     {
 
-        if (!Auth::check()) {
-            return redirect()->route('login'); // si no está logueado
-        }
+        Log::info('CheckRole middleware ejecutándose', ['roles' => $roles]);
 
         $user = Auth::user();
+
+        if (!$user) {
+            // No autenticado
+            return redirect('/login')->withErrors([
+                'vEmail' => 'Debes iniciar sesión para acceder a esta sección.'
+            ]);
+        }
 
         // Verifica si el rol del usuario está en la lista de roles permitidos
         if (!in_array($user->eRol, $roles)) {
