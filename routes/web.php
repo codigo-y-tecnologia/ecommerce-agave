@@ -10,6 +10,8 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\VerificationController;
 use App\Models\Producto;
+use App\Http\Controllers\CuponesController;
+use App\Http\Controllers\ImpuestosController;
 
 // Route::get('/', function () {
 //     return view('inicio');
@@ -86,7 +88,25 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
 //     })->name('admin.dashboard');
 
 //     Route::get('/admin/usuarios', [UsuarioController::class, 'index'])->name('admin.usuarios');
+//     Route::get('/cupones', [CuponesController::class, 'index'])->name('cupones.index');
+//     Route::get('/cupones/create', [CuponesController::class, 'create'])->name('cupones.create');
+//     Route::post('/cupones', [CuponesController::class, 'store'])->name('cupones.store');
+
+//     Route::resource('impuestos', ImpuestosController::class);
 // });
+
+Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':admin'])->group(function () {
+    Route::get('/admin/dashboard', function () {
+        return "Bienvenido al panel de administración 👨‍💻";
+    })->name('admin.dashboard');
+
+    Route::get('/admin/usuarios', [UsuarioController::class, 'index'])->name('admin.usuarios');
+    Route::get('/cupones', [CuponesController::class, 'index'])->name('cupones.index');
+    Route::get('/cupones/create', [CuponesController::class, 'create'])->name('cupones.create');
+    Route::post('/cupones', [CuponesController::class, 'store'])->name('cupones.store');
+
+    Route::resource('impuestos', ImpuestosController::class);
+});
 
 // --------------------
 // Rutas para superadmin
