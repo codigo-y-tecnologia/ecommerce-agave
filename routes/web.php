@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Carrito\CarritoController;
-use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\Checkout\CheckoutController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
@@ -74,6 +74,7 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
 // Rutas de Checkout
 // --------------------
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+    Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
  
 });
 
