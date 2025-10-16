@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Cupones extends Model  // Cambiado a "Cupones" (plural)
+class Cupones extends Model  
 {
     use HasFactory;
 

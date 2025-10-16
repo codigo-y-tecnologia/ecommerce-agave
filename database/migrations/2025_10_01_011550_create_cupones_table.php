@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('tbl_cupones', function (Blueprint $table) {
-            $table->id('id_cupon'); // Esto está correcto
+            $table->id('id_cupon');  
             $table->string('vCodigo_cupon', 50)->unique();
             $table->decimal('dDescuento', 8, 2);
             $table->enum('eTipo', ['porcentaje', 'monto']);

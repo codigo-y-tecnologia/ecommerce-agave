@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CuponesController;
+use App\Http\Controllers\ImpuestosController;
+
 
 
 
@@ -26,4 +28,6 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/cupones', [CuponesController::class, 'index'])->name('cupones.index');
 Route::get('/cupones/create', [CuponesController::class, 'create'])->name('cupones.create');
 Route::post('/cupones', [CuponesController::class, 'store'])->name('cupones.store');
+
+Route::resource('impuestos', ImpuestosController::class);
 
