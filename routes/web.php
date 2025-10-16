@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\CarritoController;
+use App\Http\Controllers\Carrito\CarritoController;
 use App\Http\Controllers\CheckoutController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Auth\ForgotPasswordController;
