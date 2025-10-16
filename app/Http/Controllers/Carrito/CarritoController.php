@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Carrito;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Carrito;
 use App\Models\CarritoDetalle;
 use App\Models\Producto;
+use App\Http\Controllers\Controller;
 
 class CarritoController extends Controller
 {
