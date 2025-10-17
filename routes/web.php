@@ -7,6 +7,9 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\VerificationController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\CarritoController;
+use App\Http\Controllers\CheckoutController;
 
 Route::get('/', function () {
     return view('inicio');
@@ -43,13 +46,17 @@ Route::post('/reset-password', [ResetPasswordController::class, 'reset'])
 });
 
 Route::middleware('auth')->group(function () {
+
+    Route::get('/dashboard/cliente', [DashboardController::class, 'cliente'])->name('dashboard.cliente');
+    Route::get('/dashboard/admin', [DashboardController::class, 'admin'])->name('dashboard.admin');
+    Route::get('/dashboard/superadmin', [DashboardController::class, 'superadmin'])->name('dashboard.superadmin');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     
 });
 
 // Rutas para clientes
 // --------------------
-// Route::middleware(['auth', 'role:cliente'])->group(function () {
+// Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])->group(function () {
 //     Route::get('/carrito', [CarritoController::class, 'index'])->name('carrito.index');
 //     Route::post('/carrito/{producto}', [CarritoController::class, 'store'])->name('carrito.store');
 //     Route::put('/carrito/{detalle}', [CarritoController::class, 'update'])->name('carrito.update');

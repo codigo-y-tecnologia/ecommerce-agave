@@ -53,7 +53,6 @@
         @endguest
     </header>
     <main>
-
     </main>
 </body>
 </html>

@@ -55,13 +55,30 @@ class AuthController extends Controller
             }
 
             $request->session()->regenerate();
-            return redirect()->intended('/');
+            //return redirect()->intended('/');
+
+            // Redirigir al dashboard según rol
+            return $this->redirectToDashboard($user);
         }
 
         return back()->withErrors([
             'vEmail' => 'Credenciales incorrectas.',
         ])->onlyInput('vEmail');
     }
+
+    private function redirectToDashboard($user)
+{
+    switch ($user->eRol) {
+        case 'cliente':
+            return redirect()->route('dashboard.cliente');
+        case 'admin':
+            return redirect()->route('dashboard.admin');
+        case 'superadmin':
+            return redirect()->route('dashboard.superadmin');
+        default:
+            return redirect()->route('home');
+    }
+}
 
     public function showRegister()
     {
