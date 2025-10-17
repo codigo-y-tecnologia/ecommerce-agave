@@ -107,7 +107,7 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':admin'])->g
 
     Route::resource('impuestos', ImpuestosController::class);
 });
-
+//
 // --------------------
 // Rutas para superadmin
 // --------------------
