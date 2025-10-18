@@ -1,16 +1,30 @@
-FROM node:20-alpine AS build-frontend
+# ============================================================
+# Etapa de construcción del frontend (Node + Vite)
+# ============================================================
+FROM node:20-bullseye AS build-frontend
 
+# Establecer directorio de trabajo
 WORKDIR /app
 
+# Copiar archivos esenciales del proyecto
 COPY package*.json vite.config.* postcss.config.* tailwind.config.* ./
-RUN npm install
 
+# Instalar dependencias con limpieza de cache
+RUN npm ci
+
+# Copiar el resto del código
 COPY . .
 
+# Compilar los assets de Vite para producción
 RUN npm run build
 
+
+# ============================================================
+# Etapa del backend con PHP (Laravel)
+# ============================================================
 FROM php:8.3-fpm
 
+# Instalar dependencias del sistema necesarias
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -25,22 +39,22 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
-# Copiar Composer desde la imagen oficial
+# Copiar Composer desde imagen oficial
 COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 
 # Crear directorio de trabajo
 WORKDIR /var/www/html
 
-# Copiar todo el proyecto Laravel al contenedor
+# Copiar todo el proyecto
 COPY . .
 
-# Copiar los assets compilados desde la etapa de Node (Vite)
+# Copiar los assets compilados desde el build de Node
 COPY --from=build-frontend /app/public/build ./public/build
 
 # Instalar dependencias PHP
 RUN composer install --optimize-autoloader --no-scripts --no-interaction --no-dev
 
-# Limpiar cachés y optimizar Laravel
+# Optimizar Laravel
 RUN php artisan config:clear || true
 RUN php artisan route:clear || true
 RUN php artisan view:clear || true
