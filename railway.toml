@@ -1,0 +1,7 @@
+[build]
+builder = "railpack"
+buildCommand = """
+apt-get update && apt-get install -y libbcmath-dev \
+&& docker-php-ext-install bcmath \
+&& composer install --optimize-autoloader --no-scripts --no-interaction
+"""
