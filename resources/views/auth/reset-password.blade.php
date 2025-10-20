@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>Restablecer Contraseña</title>
-    @vite(['resources/css/styles.css', 'resources/js/usuarios/reset-password.js'])
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.min.css">
+  <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+    @vite(['resources/js/usuarios/reset-password.js'])
 </head>
 <body class="bg-light d-flex align-items-center justify-content-center vh-100">
 
@@ -46,6 +49,8 @@
         <button type="submit" class="btn btn-success w-100">Restablecer Contraseña</button>
     </form>
 </div>
-
+  <script src="{{ asset('js/usuarios/reset-password.js') }}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

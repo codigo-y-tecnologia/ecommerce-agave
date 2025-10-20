@@ -1,7 +1,15 @@
-#!/bin/sh
+echo "Running composer"
 
-echo "Starting PHP-FPM..."
-php-fpm83 -D
+composer install --no-dev --working-dir=/var/www/html
 
-echo "Starting Nginx..."
-nginx -g "daemon off;"
+echo "Caching config..."
+php artisan config:cache
+
+echo "Caching routes..."
+php artisan route:cache
+
+echo "Publishing cloudinary provider..."
+php artisan vendor:publish --provider="CloudinaryLabs\CloudinaryLaravel\CloudinaryServiceProvider" --tag="cloudinary-laravel-config"
+
+echo "Running migrations..."
+php artisan migrate --force

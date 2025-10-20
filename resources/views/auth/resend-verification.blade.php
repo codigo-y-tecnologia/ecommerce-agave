@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>Reenviar Verificación de Email</title>
-    @vite(['resources/css/styles.css', 'resources/js/usuarios/resend-verification.js'])
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.min.css">
+  <link rel="stylesheet" href="{{ asset('css/style.css') }}">
 </head>
 <body class="bg-light d-flex align-items-center justify-content-center vh-100">
 
@@ -42,6 +44,8 @@
         <a href="{{ route('login') }}" class="text-decoration-none small">← Volver al inicio de sesión</a>
     </div>
 </div>
-
+<script src="{{ asset('js/usuarios/resend-verification.js') }}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.0/dist/sweetalert2.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
