@@ -16,9 +16,7 @@ RUN composer install --no-dev --optimize-autoloader
 RUN npm ci && npm run build
 
 # Cache de Laravel
-RUN php artisan config:cache && php artisan route:cache && php artisan view:cache
-
----
+RUN php artisan config:cache && php artisan route:cache && php artisan view:cache ---
 
 # Etapa 2 — Imagen final con Nginx y PHP-FPM
 FROM nginx:stable-alpine
