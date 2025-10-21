@@ -1,8 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Controllers\Auth\AuthController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
@@ -12,7 +13,24 @@ use App\Http\Controllers\CarritoController;
 use App\Http\Controllers\CheckoutController;
 
 Route::get('/', function () {
-    return view('inicio');
+    // Si el usuario está autenticado, lo redirigimos a su dashboard según su rol
+    if (Auth::check()) {
+        $rol = Auth::user()->eRol;
+
+        switch ($rol) {
+            case 'cliente':
+                return view('dashboards.cliente');
+            case 'admin':
+                return view('dashboards.admin');
+            case 'superadmin':
+                return view('dashboards.superadmin');
+            default:
+                return view('dashboards.cliente');
+        }
+    }
+
+    // Si no está autenticado, muestra la vista pública
+    return view('dashboards.cliente');
 })->name('home');
 
 // Login y registro solo para invitados
@@ -68,13 +86,16 @@ Route::middleware('auth')->group(function () {
 // --------------------
 // Rutas para admin
 // --------------------
-// Route::middleware(['auth', 'role:admin'])->group(function () {
-//     Route::get('/admin/dashboard', function () {
-//         return "Bienvenido al panel de administración 👨‍💻";
-//     })->name('admin.dashboard');
+Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':admin'])->group(function () {
+    Route::get('/admin/dashboard', function () {
+        return "Bienvenido al panel de administración 👨‍💻";
+    })->name('admin.dashboard');
 
-//     Route::get('/admin/usuarios', [UsuarioController::class, 'index'])->name('admin.usuarios');
-// });
+    Route::get('/admin/usuarios', [UsuarioController::class, 'index'])->name('admin.usuarios');
+    Route::get('/admin/usuarios/{id}/edit', [UsuarioController::class, 'edit'])->name('admin.usuarios.edit');
+    Route::put('/admin/usuarios/{id}', [UsuarioController::class, 'update'])->name('admin.usuarios.update');
+    Route::delete('/admin/usuarios/{id}', [UsuarioController::class, 'destroy'])->name('admin.usuarios.destroy');
+});
 
 // --------------------
 // Rutas para superadmin

@@ -2,8 +2,10 @@
 @section('title', 'Panel del Cliente')
 
 @section('content')
+@auth
 <h1 class="mb-4">Bienvenido {{ Auth::user()->vNombre }}</h1>
 <p>Desde aquí puedes gestionar tus pedidos, direcciones y métodos de pago.</p>
+@endauth
 
 <div class="row g-4">
     <div class="col-md-4">

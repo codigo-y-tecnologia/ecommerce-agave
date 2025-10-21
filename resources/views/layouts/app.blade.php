@@ -41,7 +41,7 @@
                                         👨‍💼 Administración
                                     </a>
                                     <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#">Usuarios registrados</a></li>
+                                        <li><a class="dropdown-item" href="{{ route('admin.usuarios') }}">Usuarios registrados</a></li>
                                         <li><a class="dropdown-item" href="#">Cupones</a></li>
                                         <li><a class="dropdown-item" href="#">Impuestos</a></li>
                                         <li><a class="dropdown-item" href="#">Productos</a></li>
