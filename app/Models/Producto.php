@@ -3,16 +3,17 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-
 use Illuminate\Database\Eloquent\Model;
 
 class Producto extends Model
 {
-    //
-      use HasFactory;
-      
-     protected $table = 'tbl_productos';
+    use HasFactory;
+    
+    protected $table = 'tbl_productos';
     protected $primaryKey = 'id_producto';
+    
+    // Desactivar timestamps automáticos
+    public $timestamps = false;
     
     protected $fillable = [
         'vCodigo_barras',
@@ -34,6 +35,11 @@ class Producto extends Model
         'iStock' => 'integer'
     ];
 
+    public function setVCodigoBarrasAttribute($value)
+    {
+        $this->attributes['vCodigo_barras'] = strtoupper($value);
+    }
+
     public function marca()
     {
         return $this->belongsTo(Marca::class, 'id_marca');
@@ -47,5 +53,10 @@ class Producto extends Model
     public function etiquetas()
     {
         return $this->belongsToMany(Etiqueta::class, 'tbl_producto_etiquetas', 'id_producto', 'id_etiqueta');
+    }
+    
+    public function atributos()
+    {
+        return $this->hasMany(ProductoAtributo::class, 'id_producto');
     }
 }

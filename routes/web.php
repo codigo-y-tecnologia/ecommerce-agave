@@ -8,11 +8,8 @@ use App\Http\Controllers\EtiquetaController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\MarcaController; 
 
-
-Route::get('/', function () {
-    return view('inicio');
-});
-
+// Cambiar esta ruta para usar AuthController en lugar de la función anónima
+Route::get('/', [AuthController::class, 'index'])->name('inicio');
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);

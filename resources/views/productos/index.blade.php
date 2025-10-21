@@ -9,6 +9,16 @@
     </a>
 </div>
 
+{{-- ELIMINA ESTA SECCIÓN COMPLETA - YA EXISTE EN LAYOUTS.APP --}}
+{{--
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+--}}
+
 <div class="card shadow-sm">
     <div class="card-body">
         @if($productos->count() > 0)
@@ -80,4 +90,12 @@
         @endif
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+function confirmDelete() {
+    return confirm('¿Estás seguro de que deseas eliminar este producto? Esta acción no se puede deshacer.');
+}
+</script>
 @endsection

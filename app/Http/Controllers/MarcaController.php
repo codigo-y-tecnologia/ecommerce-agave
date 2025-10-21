@@ -71,29 +71,14 @@ class MarcaController extends Controller
     {
         //
          $request->validate([
-        'vNombre' => 'required|max:100|unique:tbl_marcas,vNombre,' . $marca->id_marca . ',id_marca',
-        'tDescripcion' => 'nullable|max:500'
-    ], [
-        'vNombre.required' => 'El nombre de la marca es obligatorio',
-        'vNombre.unique' => 'Ya existe una marca con este nombre',
-        'vNombre.max' => 'El nombre no puede tener más de 100 caracteres',
-        'tDescripcion.max' => 'La descripción no puede tener más de 500 caracteres'
-    ]);
-
-    try {
-        $marca->update([
-            'vNombre' => $request->vNombre,
-            'tDescripcion' => $request->tDescripcion
+            'vNombre' => 'required|max:100|unique:tbl_marcas,vNombre,' . $marca->id_marca . ',id_marca',
+            'tDescripcion' => 'nullable|max:500'
         ]);
+
+        $marca->update($request->all());
         
         return redirect()->route('marcas.index')
             ->with('success', 'Marca actualizada exitosamente');
-            
-    } catch (\Exception $e) {
-        return redirect()->back()
-            ->with('error', 'Error al actualizar la marca: ' . $e->getMessage())
-            ->withInput();
-         }
     }
 
     /**

@@ -6,9 +6,19 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\Usuario;
+use App\Models\Producto; 
 
 class AuthController extends Controller
 {
+    public function index()
+{
+    $productos = Producto::with(['marca', 'categoria', 'etiquetas'])
+                        ->where('bActivo', 1)
+                        ->get();
+    
+    return view('inicio', compact('productos'));
+}
+
     public function showLogin()
     {
         return view('auth.login');

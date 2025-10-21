@@ -13,7 +13,7 @@
 
         <div class="card shadow-sm">
             <div class="card-body">
-                <form action="{{ route('marcas.store') }}" method="POST">
+                <form action="{{ route('marcas.store') }}" method="POST" id="marcaForm">
                     @csrf
                     
                     <div class="mb-3">
@@ -37,7 +37,7 @@
                     </div>
 
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <button type="reset" class="btn btn-secondary me-md-2">
+                        <button type="button" class="btn btn-secondary me-md-2" onclick="limpiarFormulario()">
                             <i class="fas fa-undo me-1"></i> Limpiar
                         </button>
                         <button type="submit" class="btn btn-primary">
@@ -49,4 +49,28 @@
         </div>
     </div>
 </div>
+
+<script>
+function limpiarFormulario() {
+    // Método 1: Resetear el formulario completo
+    document.getElementById('marcaForm').reset();
+    
+    // Método 2: Limpiar manualmente cada campo
+    document.getElementById('vNombre').value = '';
+    document.getElementById('tDescripcion').value = '';
+    
+    // Método 3: Remover clases de error y mensajes
+    const elementosConError = document.querySelectorAll('.is-invalid');
+    elementosConError.forEach(elemento => {
+        elemento.classList.remove('is-invalid');
+    });
+    
+    const mensajesError = document.querySelectorAll('.invalid-feedback');
+    mensajesError.forEach(mensaje => {
+        mensaje.remove();
+    });
+    
+    
+}
+</script>
 @endsection

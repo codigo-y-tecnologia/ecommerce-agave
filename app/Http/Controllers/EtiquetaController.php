@@ -70,10 +70,10 @@ class EtiquetaController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Etiqueta $etiqueta)
-    {
-        //
-         $request->validate([
+   public function update(Request $request, Etiqueta $etiqueta)
+{
+    //
+    $request->validate([
         'vNombre' => 'required|max:100|unique:tbl_etiquetas,vNombre,' . $etiqueta->id_etiqueta . ',id_etiqueta',
         'tDescripcion' => 'nullable|max:500'
     ], [
@@ -97,7 +97,7 @@ class EtiquetaController extends Controller
             ->with('error', 'Error al actualizar la etiqueta: ' . $e->getMessage())
             ->withInput();
     }
-    }
+}
 
     /**
      * Remove the specified resource from storage.
