@@ -25,12 +25,11 @@ class RegistrarAdminController extends Controller
             'vEmail' => ['required', 'email', 'max:100', 'unique:tbl_usuarios,vEmail'],
             'vPassword' => ['required', 'string', 'min:8', 'max:150', 'confirmed'],
             'dFecha_nacimiento' => ['required', 'date'],
-            'terminos' => ['accepted'],
         ], [
             // Mensajes personalizados claros
             'regex' => 'El campo :attribute solo puede contener letras y espacios.',
-            'accepted' => 'Debes aceptar los términos y condiciones.',
             'vEmail.email' => 'El correo electrónico debe tener un formato válido.',
+            'unique' => 'El correo electrónico ya está en uso por otro usuario.',
             'confirmed' => 'Las contraseñas no coinciden.',
             'vPassword.min' => 'La contraseña debe tener al menos 8 caracteres.',
         ]);

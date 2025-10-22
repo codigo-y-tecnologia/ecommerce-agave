@@ -1,12 +1,27 @@
 @extends('layouts.app')
 
-@section('title', 'Editar Usuario')
+@section('title', 'Editar Cliente')
+
+@push('scripts')
+    @vite(['resources/js/admin/editar-usuario.js'])
+@endpush
 
 @section('content')
 <div class="container">
-    <h2 class="mb-4 text-center">✏️ Editar Usuario</h2>
+    <h2 class="mb-4 text-center">✏️ Editar Cliente</h2>
 
-    <form method="POST" action="{{ route('admin.usuarios.update', $usuario->id_usuario) }}" class="shadow-sm p-4 bg-white rounded">
+    <!-- Mostrar errores de validación -->
+    @if ($errors->any())
+        <div class="alert alert-danger">
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <form method="POST" id="editClientForm" action="{{ route('admin.usuarios.update', $usuario->id_usuario) }}" class="shadow-sm p-4 bg-white rounded">
         @csrf
         @method('PUT')
 
@@ -16,17 +31,18 @@
         </div>
 
         <div class="mb-3">
-            <label for="vEmail" class="form-label">Correo electrónico</label>
-            <input type="email" name="vEmail" id="vEmail" value="{{ old('vEmail', $usuario->vEmail) }}" class="form-control" required>
+            <label for="vApaterno" class="form-label">Apellido Paterno</label>
+            <input type="text" name="vApaterno" id="vApaterno" value="{{ old('vApaterno', $usuario->vApaterno) }}" class="form-control" required>
         </div>
 
         <div class="mb-3">
-            <label for="eRol" class="form-label">Rol</label>
-            <select name="eRol" id="eRol" class="form-select" required>
-                <option value="cliente" @selected($usuario->eRol === 'cliente')>Cliente</option>
-                <option value="admin" @selected($usuario->eRol === 'admin')>Administrador</option>
-                <option value="superadmin" @selected($usuario->eRol === 'superadmin')>Superadmin</option>
-            </select>
+            <label for="vAmaterno" class="form-label">Apellido Materno</label>
+            <input type="text" name="vAmaterno" id="vAmaterno" value="{{ old('vAmaterno', $usuario->vAmaterno) }}" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="vEmail" class="form-label">Correo electrónico</label>
+            <input type="email" name="vEmail" id="vEmail" value="{{ old('vEmail', $usuario->vEmail) }}" class="form-control" required>
         </div>
 
         <div class="text-end">
