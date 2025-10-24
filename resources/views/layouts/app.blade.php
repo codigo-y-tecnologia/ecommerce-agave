@@ -59,7 +59,7 @@
                                         👑 Panel Superadmin
                                     </a>
                                     <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#">Gestión de administradores</a></li>
+                                        <li><a class="dropdown-item" href="{{ route('superadmin.admins.index') }}">Gestión de administradores</a></li>
                                         <li><a class="dropdown-item" href="#">Monitoreo del sistema</a></li>
                                         <li><a class="dropdown-item" href="#">Logs de seguridad</a></li>
                                         <li><a class="dropdown-item" href="#">Configuración global</a></li>

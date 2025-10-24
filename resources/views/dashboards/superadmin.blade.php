@@ -24,7 +24,7 @@
             <div class="card-body text-center">
                 <h5>🧑‍💼 Administradores</h5>
                 <p>Agrega o elimina administradores y asigna permisos.</p>
-                <a href="#" class="btn btn-primary w-100">Gestionar administradores</a>
+                <a href="{{ route('superadmin.admins.index') }}" class="btn btn-primary w-100">Gestionar administradores</a>
             </div>
         </div>
     </div>

@@ -35,13 +35,13 @@ class UsuarioController extends Controller
         ->orderBy('id_usuario', 'desc')
         ->paginate(8);
 
-    // ✅ Si es una petición AJAX, devolver solo el HTML parcial
+    // Si es una petición AJAX, devolver solo el HTML parcial
     if ($request->ajax()) {
         $html = View::make('admin.usuarios.partials.table', compact('usuarios'))->render();
         return response()->json(['html' => $html]);
     }
 
-    // ✅ Si es carga normal, devuelve la vista completa
+    // Si es carga normal, devuelve la vista completa
     return view('admin.usuarios.index', compact('usuarios'));
 }
 

@@ -11,6 +11,7 @@ use App\Http\Controllers\Auth\VerificationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CarritoController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\Superadmin\SuperadminController;
 
 Route::get('/', function () {
     // Si el usuario está autenticado, lo redirigimos a su dashboard según su rol
@@ -100,8 +101,17 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':admin'])->g
 // --------------------
 // Rutas para superadmin
 // --------------------
-// Route::middleware(['auth', 'role:superadmin'])->group(function () {
-//     Route::get('/superadmin/panel', function () {
-//         return "Bienvenido al panel del superadmin 👑";
-//     })->name('superadmin.panel');
-// });
+Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':superadmin'])->group(function () {
+    Route::get('/superadmin/panel', function () {
+        return "Bienvenido al panel del superadmin 👑";
+    })->name('superadmin.panel');
+
+    Route::get('/admins', [SuperadminController::class, 'index'])->name('superadmin.admins.index');
+    Route::post('/admins/promote/{id}', [SuperadminController::class, 'promoteToAdmin'])->name('superadmin.admins.promote');
+    Route::post('/admins/demote/{id}', [SuperadminController::class, 'demoteToClient'])->name('superadmin.admins.demote');
+    Route::delete('/admins/{id}', [SuperadminController::class, 'destroy'])->name('superadmin.admins.destroy');
+
+    Route::get('/admins/create', [SuperadminController::class, 'create'])->name('superadmin.admins.create');
+    Route::post('/admins', [SuperadminController::class, 'store'])->name('superadmin.admins.store');
+
+});

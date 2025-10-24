@@ -6,6 +6,13 @@
 <div class="container py-4">
     <h2 class="mb-4 text-center">👥 Clientes Registrados</h2>
 
+    @if (session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {!! session('success') !!}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
     {{-- 🔍 Buscador dinámico --}}
     <div class="input-group mb-4">
         <input type="text" id="search" class="form-control" placeholder="Buscar cliente por nombre, apellido o correo...">
@@ -18,7 +25,7 @@
     </div>
 </div>
 
-{{-- ✅ Script AJAX (búsqueda + paginación dinámica) --}}
+{{--Script AJAX (búsqueda + paginación dinámica) --}}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.querySelector('#search');
