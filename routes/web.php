@@ -111,7 +111,6 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':superadmin'
     Route::post('/admins/demote/{id}', [SuperadminController::class, 'demoteToClient'])->name('superadmin.admins.demote');
     Route::delete('/admins/{id}', [SuperadminController::class, 'destroy'])->name('superadmin.admins.destroy');
 
-    Route::get('/admins/create', [SuperadminController::class, 'create'])->name('superadmin.admins.create');
-    Route::post('/admins', [SuperadminController::class, 'store'])->name('superadmin.admins.store');
-
+    Route::get('/superadmin/admins/create', [SuperadminController::class, 'create'])->name('superadmin.admins.create');
+    Route::post('/superadmin/admins', [SuperadminController::class, 'store'])->name('superadmin.admins.store');
 });

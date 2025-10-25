@@ -9,9 +9,13 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use App\Traits\InputSanitizer;
 
 class SuperadminController extends Controller
 {
+
+    use InputSanitizer;
+
     // Listado de administradores
     public function index(Request $request)
     {
@@ -76,24 +80,44 @@ class SuperadminController extends Controller
 
 public function store(Request $request)
 {
-    $request->validate([
-        'vNombre' => 'required|string|max:100',
-        'vApaterno' => 'nullable|string|max:100',
-        'vAmaterno' => 'nullable|string|max:100',
-        'vEmail' => 'required|email|unique:tbl_usuarios,vEmail',
-    ]);
+    
+        $data = $request->validate([
+            'vNombre' => ['required', 'string', 'max:60', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/u'],
+            'vApaterno' => ['required', 'string', 'max:50', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/u'],
+            'vAmaterno' => ['required', 'string', 'max:50', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/u'],
+            'vEmail' => ['required', 'email', 'max:100', 'unique:tbl_usuarios,vEmail'],
+            'dFecha_nacimiento' => ['required', 'date', 'before_or_equal:today'],
+        ], [
+            // Mensajes personalizados claros
+            'regex' => 'El campo :attribute solo puede contener letras y espacios.',
+            'vEmail.email' => 'El correo electrónico debe tener un formato válido.',
+            'vEmail.unique' => 'El correo electrónico ya está registrado.',
+            'dFecha_nacimiento.before_or_equal' => 'La fecha de nacimiento no puede ser mayor a la fecha actual.',
+        ]);
+
+    // Validación: mayor de edad
+    $fechaNac = new \DateTime($data['dFecha_nacimiento']);
+    $hoy = new \DateTime();
+    $edad = $hoy->diff($fechaNac)->y;
+
+    if ($edad < 18) {
+        return back()->withErrors(['dFecha_nacimiento' => 'El administrador debe ser mayor de edad para registrarse.'])->withInput();
+    }
+
+    $this->verificarYLimpiar($data, config('security.sql_keywords'));
 
     // Generar contraseña aleatoria segura
     $passwordPlain = Str::random(10);
 
-    $admin = \App\Models\Usuario::create([
-        'vNombre' => $request->vNombre,
-        'vApaterno' => $request->vApaterno,
-        'vAmaterno' => $request->vAmaterno,
-        'vEmail' => $request->vEmail,
+    $admin = Usuario::create([
+        'vNombre' => $data['vNombre'],
+        'vApaterno' => $data['vApaterno'],
+        'vAmaterno' => $data['vAmaterno'],
+        'vEmail' => $data['vEmail'],
+        'dFecha_nacimiento' => $data['dFecha_nacimiento'],
         'vPassword' => Hash::make($passwordPlain),
         'eRol' => 'admin',
-        'bActivo' => 1,
+        'is_verified' => true,
     ]);
 
     // Enviar correo al nuevo admin
