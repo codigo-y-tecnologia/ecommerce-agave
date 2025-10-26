@@ -55,13 +55,30 @@ class AuthController extends Controller
             }
 
             $request->session()->regenerate();
-            return redirect()->intended('/');
+            //return redirect()->intended('/');
+
+            // Redirigir al dashboard según rol
+            return $this->redirectToDashboard($user);
         }
 
         return back()->withErrors([
             'vEmail' => 'Credenciales incorrectas.',
         ])->onlyInput('vEmail');
     }
+
+    private function redirectToDashboard($user)
+{
+    switch ($user->eRol) {
+        case 'cliente':
+            return redirect()->route('dashboard.cliente');
+        case 'admin':
+            return redirect()->route('dashboard.admin');
+        case 'superadmin':
+            return redirect()->route('dashboard.superadmin');
+        default:
+            return redirect()->route('home');
+    }
+}
 
     public function showRegister()
     {
@@ -80,18 +97,20 @@ class AuthController extends Controller
             'vAmaterno' => ['required', 'string', 'max:50', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/u'],
             'vEmail' => ['required', 'email', 'max:100', 'unique:tbl_usuarios,vEmail'],
             'vPassword' => ['required', 'string', 'min:8', 'max:150', 'confirmed'],
-            'dFecha_nacimiento' => ['required', 'date'],
+            'dFecha_nacimiento' => ['required', 'date', 'before_or_equal:today'],
             'terminos' => ['accepted'],
         ], [
             // Mensajes personalizados claros
             'regex' => 'El campo :attribute solo puede contener letras y espacios.',
             'accepted' => 'Debes aceptar los términos y condiciones.',
             'vEmail.email' => 'El correo electrónico debe tener un formato válido.',
+            'vEmail.unique' => 'El correo electrónico ya está registrado.',
             'confirmed' => 'Las contraseñas no coinciden.',
             'vPassword.min' => 'La contraseña debe tener al menos 8 caracteres.',
+            'dFecha_nacimiento.before_or_equal' => 'La fecha de nacimiento no puede ser mayor a la fecha actual.',
         ]);
 
-        // Validación extra: mayor de edad
+        // Validación: mayor de edad
     $fechaNac = new \DateTime($data['dFecha_nacimiento']);
     $hoy = new \DateTime();
     $edad = $hoy->diff($fechaNac)->y;

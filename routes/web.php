@@ -1,10 +1,11 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Carrito\CarritoController;
 use App\Http\Controllers\CheckoutController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
@@ -12,17 +13,10 @@ use App\Http\Controllers\Auth\VerificationController;
 use App\Models\Producto;
 use App\Http\Controllers\CuponesController;
 use App\Http\Controllers\ImpuestosController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Superadmin\SuperadminController;
 
-// Route::get('/', function () {
-//     return view('inicio');
-// })->name('home');
-
-Route::get('/', function () {
-    // Trae productos activos (evita traer todo si la tabla es grande)
-    $productos = Producto::where('bActivo', 1)->orderBy('tFecha_registro','desc')->get();
-
-    return view('inicio', compact('productos'));
-})->name('home');
+Route::get('/', [DashboardController::class, 'index'])->name('home');
 
 // Login y registro solo para invitados
 Route::middleware('guest')->group(function () {
@@ -55,6 +49,10 @@ Route::post('/reset-password', [ResetPasswordController::class, 'reset'])
 });
 
 Route::middleware('auth')->group(function () {
+
+    Route::get('/dashboard/cliente', [DashboardController::class, 'cliente'])->name('dashboard.cliente');
+    Route::get('/dashboard/admin', [DashboardController::class, 'admin'])->name('dashboard.admin');
+    Route::get('/dashboard/superadmin', [DashboardController::class, 'superadmin'])->name('dashboard.superadmin');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     
 });
@@ -82,37 +80,37 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
 // --------------------
 // Rutas para admin
 // --------------------
-// Route::middleware(['auth', 'role:admin'])->group(function () {
-//     Route::get('/admin/dashboard', function () {
-//         return "Bienvenido al panel de administración 👨‍💻";
-//     })->name('admin.dashboard');
-
-//     Route::get('/admin/usuarios', [UsuarioController::class, 'index'])->name('admin.usuarios');
-//     Route::get('/cupones', [CuponesController::class, 'index'])->name('cupones.index');
-//     Route::get('/cupones/create', [CuponesController::class, 'create'])->name('cupones.create');
-//     Route::post('/cupones', [CuponesController::class, 'store'])->name('cupones.store');
-
-//     Route::resource('impuestos', ImpuestosController::class);
-// });
-
 Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':admin'])->group(function () {
     Route::get('/admin/dashboard', function () {
         return "Bienvenido al panel de administración 👨‍💻";
     })->name('admin.dashboard');
 
     Route::get('/admin/usuarios', [UsuarioController::class, 'index'])->name('admin.usuarios');
+    Route::get('/admin/usuarios/{id}/edit', [UsuarioController::class, 'edit'])->name('admin.usuarios.edit');
+    Route::put('/admin/usuarios/{id}', [UsuarioController::class, 'update'])->name('admin.usuarios.update');
+    Route::delete('/admin/usuarios/{id}', [UsuarioController::class, 'destroy'])->name('admin.usuarios.destroy');
+
     Route::get('/cupones', [CuponesController::class, 'index'])->name('cupones.index');
     Route::get('/cupones/create', [CuponesController::class, 'create'])->name('cupones.create');
     Route::post('/cupones', [CuponesController::class, 'store'])->name('cupones.store');
 
     Route::resource('impuestos', ImpuestosController::class);
 });
-//
+
+
 // --------------------
 // Rutas para superadmin
 // --------------------
-// Route::middleware(['auth', 'role:superadmin'])->group(function () {
-//     Route::get('/superadmin/panel', function () {
-//         return "Bienvenido al panel del superadmin 👑";
-//     })->name('superadmin.panel');
-// });
+Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':superadmin'])->group(function () {
+    Route::get('/superadmin/panel', function () {
+        return "Bienvenido al panel del superadmin 👑";
+    })->name('superadmin.panel');
+
+    Route::get('/admins', [SuperadminController::class, 'index'])->name('superadmin.admins.index');
+    Route::post('/admins/promote/{id}', [SuperadminController::class, 'promoteToAdmin'])->name('superadmin.admins.promote');
+    Route::post('/admins/demote/{id}', [SuperadminController::class, 'demoteToClient'])->name('superadmin.admins.demote');
+    Route::delete('/admins/{id}', [SuperadminController::class, 'destroy'])->name('superadmin.admins.destroy');
+
+    Route::get('/superadmin/admins/create', [SuperadminController::class, 'create'])->name('superadmin.admins.create');
+    Route::post('/superadmin/admins', [SuperadminController::class, 'store'])->name('superadmin.admins.store');
+});
