@@ -4,9 +4,7 @@ namespace App\Http\Controllers\Checkout;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\Models\Carrito;
-use App\Models\Pedido;
-use App\Models\PedidoDetalle;
+use App\Models\{Carrito, Pedido, PedidoDetalle, Direccion, Cupon, CuponUso, Pago, Venta, DetalleVenta};
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -20,17 +18,19 @@ class CheckoutController extends Controller
     {
         $usuario = Auth::user();
 
-        $carrito = Carrito::where('id_usuario', $usuario->id_usuario)
-            ->with('detalles.producto')
+        $carrito = Carrito::with('detalles.producto')
+            ->where('id_usuario', $usuario->id_usuario)
             ->first();
 
         if (!$carrito || $carrito->detalles->isEmpty()) {
             return redirect()->route('carrito.index')->with('warning', 'Tu carrito está vacío.');
         }
 
-        $total = $carrito->detalles->sum(fn($d) => $d->cantidad * $d->precio_unitario);
+        $direcciones = Direccion::where('id_usuario', $usuario->id_usuario)->get();
 
-        return view('checkout.index', compact('carrito', 'total'));
+        $subtotal = $carrito->detalles->sum(fn($d) => $d->cantidad * $d->precio_unitario);
+
+        return view('checkout.index', compact('carrito', 'subtotal', 'direcciones'));
     }
 
     /**
@@ -38,43 +38,78 @@ class CheckoutController extends Controller
      */
     public function store(Request $request)
     {
+        $request->validate([
+            'id_direccion' => 'required|exists:tbl_direcciones,id_direccion',
+            'metodo_pago'  => 'required|in:paypal,stripe',
+            'codigo_cupon' => 'nullable|string|max:50',
+        ]);
+
         $usuario = Auth::user();
 
-        DB::transaction(function () use ($usuario) {
-            $carrito = Carrito::where('id_usuario', $usuario->id_usuario)
-                ->with('detalles')
-                ->firstOrFail();
+        DB::transaction(function () use ($usuario, $request) {
+            $carrito = Carrito::with('detalles.producto')->where('id_usuario', $usuario->id_usuario)->firstOrFail();
 
-            if ($carrito->detalles->isEmpty()) {
-                abort(400, 'El carrito está vacío.');
+            // 🧾 Calcular subtotal
+            $subtotal = $carrito->detalles->sum(fn($d) => $d->cantidad * $d->precio_unitario);
+            $descuento = 0;
+
+            // 🎟 Aplicar cupón si existe
+            if ($request->filled('codigo_cupon')) {
+                $cupon = Cupon::where('vCodigo_cupon', $request->codigo_cupon)
+                    ->where('bActivo', 1)
+                    ->whereDate('dValido_desde', '<=', now())
+                    ->whereDate('dValido_hasta', '>=', now())
+                    ->first();
+
+                if ($cupon) {
+                    $descuento = $cupon->eTipo === 'porcentaje'
+                        ? $subtotal * ($cupon->dDescuento / 100)
+                        : $cupon->dDescuento;
+                }
             }
 
-            $total = $carrito->detalles->sum(fn($d) => $d->cantidad * $d->precio_unitario);
+            $total = max(0, $subtotal - $descuento);
 
-            // Crear pedido principal
+            // 📦 Crear pedido
             $pedido = Pedido::create([
-                'id_usuario'    => $usuario->id_usuario,
-                'id_direccion'  => null, // más adelante puedes enlazar la dirección
-                'eEstado'       => 'pendiente',
-                'dTotal'        => $total,
+                'id_usuario' => $usuario->id_usuario,
+                'id_direccion' => $request->id_direccion,
+                'eEstado' => 'pendiente',
+                'dTotal' => $total,
                 'tFecha_pedido' => Carbon::now(),
             ]);
 
-            // Insertar los detalles del pedido
-            foreach ($carrito->detalles as $detalle) {
+            foreach ($carrito->detalles as $item) {
                 PedidoDetalle::create([
-                    'id_pedido'        => $pedido->id_pedido,
-                    'id_producto'      => $detalle->id_producto,
-                    'iCantidad'        => $detalle->cantidad,
-                    'dPrecio_unitario' => $detalle->precio_unitario,
+                    'id_pedido' => $pedido->id_pedido,
+                    'id_producto' => $item->id_producto,
+                    'iCantidad' => $item->cantidad,
+                    'dPrecio_unitario' => $item->precio_unitario,
                 ]);
             }
 
-            // Vaciar carrito después de crear el pedido
+            // 💳 Registrar pago
+            $pago = Pago::create([
+                'id_pedido' => $pedido->id_pedido,
+                'eMetodo_pago' => $request->metodo_pago,
+                'dMonto' => $total,
+                'eEstado' => 'pendiente', // luego se actualiza al confirmarse
+            ]);
+
+            // 🛒 Vaciar carrito
             $carrito->detalles()->delete();
+
+            // 🎟 Registrar uso de cupón
+            if (!empty($cupon)) {
+                CuponUso::create([
+                    'id_cupon' => $cupon->id_cupon,
+                    'id_venta' => null, // se vincula al completar la venta
+                    'tFecha_uso' => now(),
+                ]);
+            }
         });
 
-        return redirect()->route('home')->with('success', '✅ Tu pedido fue creado exitosamente.');
+        return redirect()->route('home')->with('success', '✅ Pedido realizado con éxito. Te notificaremos cuando se confirme el pago.');
     }
 
 }
