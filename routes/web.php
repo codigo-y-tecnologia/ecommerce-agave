@@ -23,3 +23,6 @@ Route::resource('/categorias', CategoriaController::class);
 Route::resource('productos', ProductoController::class);
 Route::resource('marcas', MarcaController::class);
 Route::resource('etiquetas', EtiquetaController::class);
+
+Route::get('/producto/{id}', [ProductoController::class, 'showPublic'])->name('productos.show.public');
+Route::get('/catalogo', [ProductoController::class, 'catalogo'])->name('productos.catalogo');

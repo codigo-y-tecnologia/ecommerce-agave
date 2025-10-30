@@ -4,7 +4,7 @@
 <div class="container">
     <h1>Registrar Producto</h1>
 
-    <form action="{{ route('productos.store') }}" method="POST">
+    <form action="{{ route('productos.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
 
         <div class="form-group mb-3">
@@ -101,6 +101,23 @@
             @enderror
         </div>
 
+        <!-- NUEVO CAMPO PARA IMÁGENES -->
+        <div class="form-group mb-3">
+            <label for="imagenes">Imágenes del producto (Máximo 6 imágenes)</label>
+            <input type="file" name="imagenes[]" id="imagenes" class="form-control @error('imagenes') is-invalid @enderror" 
+                   multiple accept="image/*">
+            @error('imagenes')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+            @error('imagenes.*')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+            <small class="form-text text-muted">
+                Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP. Máximo 2MB por imagen.
+            </small>
+            <div id="preview-container" class="mt-2 row"></div>
+        </div>
+
         <div class="form-group mb-3">
             <label>Etiquetas</label><br>
             @foreach ($etiquetas as $etiqueta)
@@ -164,6 +181,42 @@
         // Remover clase de error cuando el usuario escribe
         input.classList.remove('is-invalid');
     }
+
+    // Preview de imágenes
+    document.getElementById('imagenes').addEventListener('change', function(e) {
+        const previewContainer = document.getElementById('preview-container');
+        previewContainer.innerHTML = '';
+        
+        const files = e.target.files;
+        const maxFiles = 6;
+        
+        if (files.length > maxFiles) {
+            alert('Solo puedes seleccionar máximo ' + maxFiles + ' imágenes.');
+            this.value = '';
+            return;
+        }
+        
+        for (let i = 0; i < files.length && i < maxFiles; i++) {
+            const file = files[i];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const col = document.createElement('div');
+                col.className = 'col-4 col-md-3 mb-2';
+                col.innerHTML = `
+                    <div class="card">
+                        <img src="${e.target.result}" class="card-img-top" style="height: 100px; object-fit: cover;">
+                        <div class="card-body p-2">
+                            <small class="text-muted">${file.name}</small>
+                        </div>
+                    </div>
+                `;
+                previewContainer.appendChild(col);
+            }
+            
+            reader.readAsDataURL(file);
+        }
+    });
 
     // Remover error cuando se selecciona una opción en los selects
     document.addEventListener('DOMContentLoaded', function() {

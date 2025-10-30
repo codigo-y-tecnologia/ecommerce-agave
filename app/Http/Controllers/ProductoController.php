@@ -7,8 +7,8 @@ use App\Models\Categoria;
 use App\Models\Marca;
 use App\Models\Etiqueta;
 use Illuminate\Validation\Rule;
-
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class ProductoController extends Controller
 {
@@ -17,9 +17,8 @@ class ProductoController extends Controller
      */
     public function index()
     {
-        //
-          $productos = Producto::with(['marca', 'categoria', 'etiquetas'])->get();
-          return view('productos.index', compact('productos'));
+        $productos = Producto::with(['marca', 'categoria', 'etiquetas'])->get();
+        return view('productos.index', compact('productos'));
     }
 
     /**
@@ -27,7 +26,6 @@ class ProductoController extends Controller
      */
     public function create()
     {
-        //
         $categorias = Categoria::all();
         $marcas = Marca::all();
         $etiquetas = Etiqueta::all();
@@ -39,8 +37,7 @@ class ProductoController extends Controller
      */
     public function store(Request $request)
     {
-        //
-         $request->validate([
+        $request->validate([
             'vCodigo_barras' => [
                 'required',
                 'max:20',
@@ -54,16 +51,15 @@ class ProductoController extends Controller
             ],
             'tDescripcion_corta' => 'nullable|max:255',
             'tDescripcion_larga' => 'nullable',
-
-            // Permitir números con punto decimal
             'dPrecio_compra' => ['nullable', 'regex:/^[0-9]+(\.[0-9]{1,2})?$/'],
             'dPrecio_venta' => ['required', 'regex:/^[0-9]+(\.[0-9]{1,2})?$/'],
             'iStock' => ['required', 'regex:/^[0-9]+$/'],
-
             'id_categoria' => 'required|exists:tbl_categorias,id_categoria',
             'id_marca' => 'required|exists:tbl_marcas,id_marca',
             'etiquetas' => 'nullable|array',
-            'etiquetas.*' => 'exists:tbl_etiquetas,id_etiqueta'
+            'etiquetas.*' => 'exists:tbl_etiquetas,id_etiqueta',
+            'imagenes' => 'nullable|array',
+            'imagenes.*' => 'image|mimes:jpg,jpeg,png,gif,webp|max:2048'
         ], [
             'vCodigo_barras.required' => 'El código de barras es obligatorio',
             'vCodigo_barras.unique' => 'Ya existe un producto con este código de barras',
@@ -81,7 +77,11 @@ class ProductoController extends Controller
             'iStock.regex' => 'El stock solo puede contener números enteros (0-9)',
 
             'id_categoria.required' => 'La categoría es obligatoria',
-            'id_marca.required' => 'La marca es obligatoria'
+            'id_marca.required' => 'La marca es obligatoria',
+
+            'imagenes.*.image' => 'Cada archivo debe ser una imagen válida',
+            'imagenes.*.mimes' => 'Las imágenes deben ser de tipo: jpg, jpeg, png, gif o webp',
+            'imagenes.*.max' => 'Cada imagen no debe pesar más de 2MB'
         ]);
 
         $productoData = $request->all();
@@ -89,12 +89,13 @@ class ProductoController extends Controller
 
         $producto = Producto::create($productoData);
 
-        if ($request->has('etiquetas')) {
-            $producto->etiquetas()->sync($request->etiquetas);
+        // Guardar imágenes si se enviaron
+        if ($request->hasFile('imagenes')) {
+            $producto->guardarImagenes($request->file('imagenes'));
         }
 
-        if ($request->has('atributos')) {
-            session()->flash('atributos_seleccionados', $request->atributos);
+        if ($request->has('etiquetas')) {
+            $producto->etiquetas()->sync($request->etiquetas);
         }
 
         return redirect()->route('productos.index')
@@ -102,12 +103,36 @@ class ProductoController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Display the specified resource (VISTA PÚBLICA para clientes)
+     */
+    public function showPublic($id)
+    {
+        $producto = Producto::with(['marca', 'categoria', 'etiquetas'])
+                            ->where('bActivo', true)
+                            ->findOrFail($id);
+        
+        return view('productos.show-public', compact('producto'));
+    }
+
+    /**
+     * Catálogo público de productos
+     */
+    public function catalogo()
+    {
+        $productos = Producto::with(['marca', 'categoria', 'etiquetas'])
+                            ->where('bActivo', true)
+                            ->orderBy('vNombre')
+                            ->get();
+        
+        return view('productos.catalogo', compact('productos'));
+    }
+
+    /**
+     * Display the specified resource (VISTA ADMIN)
      */
     public function show(Producto $producto)
     {
-        //
-         $producto->load(['marca', 'categoria', 'etiquetas']);
+        $producto->load(['marca', 'categoria', 'etiquetas']);
         return view('productos.show', compact('producto'));
     }
 
@@ -116,7 +141,6 @@ class ProductoController extends Controller
      */
     public function edit(Producto $producto)
     {
-        //
         $categorias = Categoria::all();
         $marcas = Marca::all();
         $etiquetas = Etiqueta::all();
@@ -130,8 +154,7 @@ class ProductoController extends Controller
      */
     public function update(Request $request, Producto $producto)
     {
-        //
-          $request->validate([
+        $request->validate([
             'vCodigo_barras' => [
                 'required',
                 'max:20',
@@ -145,16 +168,15 @@ class ProductoController extends Controller
             ],
             'tDescripcion_corta' => 'nullable|max:255',
             'tDescripcion_larga' => 'nullable',
-
-            // Permitir números con punto decimal
             'dPrecio_compra' => ['nullable', 'regex:/^[0-9]+(\.[0-9]{1,2})?$/'],
             'dPrecio_venta' => ['required', 'regex:/^[0-9]+(\.[0-9]{1,2})?$/'],
             'iStock' => ['required', 'regex:/^[0-9]+$/'],
-
             'id_categoria' => 'required|exists:tbl_categorias,id_categoria',
             'id_marca' => 'required|exists:tbl_marcas,id_marca',
             'etiquetas' => 'nullable|array',
-            'etiquetas.*' => 'exists:tbl_etiquetas,id_etiqueta'
+            'etiquetas.*' => 'exists:tbl_etiquetas,id_etiqueta',
+            'imagenes' => 'nullable|array',
+            'imagenes.*' => 'image|mimes:jpg,jpeg,png,gif,webp|max:2048'
         ], [
             'vCodigo_barras.required' => 'El código de barras es obligatorio',
             'vCodigo_barras.unique' => 'Ya existe un producto con este código de barras',
@@ -172,19 +194,27 @@ class ProductoController extends Controller
             'iStock.regex' => 'El stock solo puede contener números enteros (0-9)',
 
             'id_categoria.required' => 'La categoría es obligatoria',
-            'id_marca.required' => 'La marca es obligatoria'
+            'id_marca.required' => 'La marca es obligatoria',
+
+            'imagenes.*.image' => 'Cada archivo debe ser una imagen válida',
+            'imagenes.*.mimes' => 'Las imágenes deben ser de tipo: jpg, jpeg, png, gif o webp',
+            'imagenes.*.max' => 'Cada imagen no debe pesar más de 2MB'
         ]);
 
-         $productoData = $request->all();
+        $productoData = $request->all();
         $productoData['bActivo'] = $request->has('bActivo') ? true : false;
 
         $producto->update($productoData);
         
+        // Guardar nuevas imágenes si se enviaron
+        if ($request->hasFile('imagenes')) {
+            $producto->guardarImagenes($request->file('imagenes'));
+        }
+
         $producto->etiquetas()->sync($request->etiquetas ?? []);
 
         return redirect()->route('productos.index')
             ->with('success', 'Producto actualizado exitosamente');
-
     }
 
     /**
@@ -192,12 +222,13 @@ class ProductoController extends Controller
      */
     public function destroy(Producto $producto)
     {
-        //
+        // Eliminar imágenes del producto
+        $producto->eliminarImagenes();
+        
         $producto->etiquetas()->detach();
         $producto->delete();
         
         return redirect()->route('productos.index')
             ->with('success', 'Producto eliminado exitosamente');
-            
     }
 }

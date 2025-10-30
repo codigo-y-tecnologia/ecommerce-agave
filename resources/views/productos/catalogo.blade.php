@@ -3,56 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Página de Inicio</title>
+    <title>Catálogo de Productos</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
+            background-color: #f8f9fa;
         }
-        header {
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
             background-color: #f8f9fa;
             padding: 15px 0;
-            text-align: center;
             border-bottom: 1px solid #dee2e6;
+            margin-bottom: 30px;
         }
-        nav.navbar {
-            background-color: #e9ecef;
-            padding: 10px 0;
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
         }
-        nav.navbar ul {
-            list-style: none;
-            display: flex;
-            justify-content: center;
-            gap: 25px;
-            padding: 0;
-            margin: 0;
-        }
-        nav.navbar ul li {
-            display: inline;
-        }
-        nav.navbar ul li a {
+        .back-btn {
             color: #495057;
             text-decoration: none;
             font-weight: bold;
+            padding: 8px 16px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background: white;
         }
-        nav.navbar ul li a:hover {
-            text-decoration: underline;
-        }
-        main {
-            padding: 30px;
-            text-align: center;
-        }
-        button.logout-btn {
-            background: none; 
-            color: #495057; 
-            border: none; 
-            cursor: pointer;
-            font-weight: bold;
+        .back-btn:hover {
+            color: #007bff;
+            border-color: #007bff;
         }
         .productos-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
             margin-top: 30px;
         }
@@ -71,14 +61,14 @@
         }
         .producto-imagen {
             width: 100%;
-            height: 150px;
+            height: 200px;
             object-fit: cover;
             border-radius: 4px;
             margin-bottom: 10px;
         }
         .no-imagen {
             width: 100%;
-            height: 150px;
+            height: 200px;
             background-color: #f8f9fa;
             display: flex;
             align-items: center;
@@ -96,6 +86,7 @@
             font-weight: bold;
             color: #28a745;
             margin-bottom: 5px;
+            font-size: 1.2rem;
         }
         .badge {
             display: inline-block;
@@ -113,6 +104,7 @@
         .ver-detalle a {
             color: #007bff;
             text-decoration: none;
+            font-weight: bold;
         }
         .ver-detalle a:hover {
             text-decoration: underline;
@@ -120,52 +112,21 @@
     </style>
 </head>
 <body>
-    <header>
-        <h1>Bienvenido a la página de inicio</h1>
-    </header>
+    <div class="header">
+        <div class="header-content">
+            <a href="javascript:history.back()" class="back-btn">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
 
-    <nav class="navbar">
-        <p style="text-align:center; font-size:14px;">
-            Auth::check() = {{ Auth::check() ? 'true' : 'false' }} |
-            Usuario = {{ Auth::user() ? Auth::user()->id_usuario : 'ninguno' }}
-        </p>
-
-        <ul>
-            @auth('web')
-                <li>Hola, {{ Auth::user()->vNombre }}</li>
-                <li><a href="#">Mi Carrito</a></li>
-                <li><a href="#">Mis Pedidos</a></li>
-                <li>
-                    <form method="POST" action="{{ route('logout') }}" style="display:inline;">
-                        @csrf
-                        <button type="submit" class="logout-btn">Cerrar Sesión</button>
-                    </form>
-                </li>
-            @endauth
-
-            @guest
-                <li><a href="{{ route('login') }}">Ingresar</a></li>
-                <li><a href="{{ route('usuarios.create') }}">Crear Cuenta</a></li>
-            @endguest
-        </ul>
-    </nav>
-
-    <main>
-        @auth
-            <p>Hola, {{ Auth::user()->vNombre }}. Has iniciado sesión correctamente.</p>
-        @else
-            <p>No has iniciado sesión.</p>
-            <a href="{{ route('login') }}">Iniciar sesión</a> |
-            <a href="{{ route('usuarios.create') }}">Registrarse</a>
-        @endauth
-
-        {{-- Mostrar productos registrados --}}
+    <div class="container">
+        <h1>Catálogo de Productos</h1>
+        
         @if ($productos->count() > 0)
-            <h2>Productos Disponibles</h2>
             <div class="productos-container">
                 @foreach ($productos as $producto)
                     <div class="producto-card" onclick="window.location.href='{{ route('productos.show.public', $producto->id_producto) }}'">
-                        {{-- Mostrar primera imagen si existe --}}
                         @if(count($producto->imagenes) > 0)
                             <img src="{{ $producto->imagenes[0] }}" alt="{{ $producto->vNombre }}" class="producto-imagen">
                         @else
@@ -194,8 +155,8 @@
                 @endforeach
             </div>
         @else
-            <p>No hay productos registrados aún.</p>
+            <p>No hay productos disponibles.</p>
         @endif
-    </main>
+    </div>
 </body>
 </html>

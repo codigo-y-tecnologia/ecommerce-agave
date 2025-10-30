@@ -4,7 +4,7 @@
 <div class="container">
     <h1>Editar Producto</h1>
 
-    <form action="{{ route('productos.update', $producto->id_producto) }}" method="POST">
+    <form action="{{ route('productos.update', $producto->id_producto) }}" method="POST" enctype="multipart/form-data">
         @csrf
         @method('PUT')
 
@@ -106,6 +106,47 @@
             @enderror
         </div>
 
+        <!-- Campo para imágenes existentes -->
+        <div class="form-group mb-3">
+            <label>Imágenes actuales</label>
+            @if(count($producto->imagenes) > 0)
+                <div class="row">
+                    @foreach($producto->imagenes as $index => $imagen)
+                        <div class="col-4 col-md-3 mb-2">
+                            <div class="card">
+                                <img src="{{ $imagen }}" class="card-img-top" 
+                                     style="height: 100px; object-fit: cover;"
+                                     alt="Imagen {{ $index + 1 }}">
+                                <div class="card-body p-2 text-center">
+                                    <small class="text-muted">Imagen {{ $index + 1 }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <p class="text-muted">No hay imágenes cargadas</p>
+            @endif
+        </div>
+
+        <!-- Campo para agregar nuevas imágenes -->
+        <div class="form-group mb-3">
+            <label for="imagenes">Agregar nuevas imágenes (Máximo 6 imágenes en total)</label>
+            <input type="file" name="imagenes[]" id="imagenes" class="form-control @error('imagenes') is-invalid @enderror" 
+                   multiple accept="image/*">
+            @error('imagenes')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+            @error('imagenes.*')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+            <small class="form-text text-muted">
+                Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP. Máximo 2MB por imagen.
+                Las nuevas imágenes se agregarán a las existentes.
+            </small>
+            <div id="preview-container" class="mt-2 row"></div>
+        </div>
+
         <div class="form-group mb-3">
             <label>Etiquetas</label><br>
             @foreach ($etiquetas as $etiqueta)
@@ -131,6 +172,7 @@
 
         <button type="submit" class="btn btn-primary">Actualizar</button>
         <a href="{{ route('productos.index') }}" class="btn btn-secondary">Cancelar</a>
+        <a href="{{ route('productos.show', $producto) }}" class="btn btn-info">Ver Detalle</a>
     </form>
 </div>
 
@@ -160,6 +202,46 @@
         // Remover clase de error cuando el usuario escribe
         input.classList.remove('is-invalid');
     }
+
+    function removerError(input) {
+        input.classList.remove('is-invalid');
+    }
+
+    // Preview de nuevas imágenes
+    document.getElementById('imagenes').addEventListener('change', function(e) {
+        const previewContainer = document.getElementById('preview-container');
+        previewContainer.innerHTML = '';
+        
+        const files = e.target.files;
+        const maxFiles = 6;
+        
+        if (files.length > maxFiles) {
+            alert('Solo puedes seleccionar máximo ' + maxFiles + ' imágenes.');
+            this.value = '';
+            return;
+        }
+        
+        for (let i = 0; i < files.length && i < maxFiles; i++) {
+            const file = files[i];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const col = document.createElement('div');
+                col.className = 'col-4 col-md-3 mb-2';
+                col.innerHTML = `
+                    <div class="card">
+                        <img src="${e.target.result}" class="card-img-top" style="height: 100px; object-fit: cover;">
+                        <div class="card-body p-2">
+                            <small class="text-muted">${file.name}</small>
+                        </div>
+                    </div>
+                `;
+                previewContainer.appendChild(col);
+            }
+            
+            reader.readAsDataURL(file);
+        }
+    });
 
     // Remover error cuando se selecciona una opción en los selects
     document.addEventListener('DOMContentLoaded', function() {

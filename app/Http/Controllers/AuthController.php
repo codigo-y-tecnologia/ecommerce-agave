@@ -7,17 +7,40 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\Usuario;
 use App\Models\Producto; 
+use Illuminate\Support\Facades\File;
 
 class AuthController extends Controller
 {
     public function index()
-{
-    $productos = Producto::with(['marca', 'categoria', 'etiquetas'])
+    {
+        $productos = Producto::with(['marca', 'categoria', 'etiquetas'])
                         ->where('bActivo', 1)
                         ->get();
+        
+        // Obtener imágenes para cada producto - CORREGIDO
+        foreach ($productos as $producto) {
+            $carpetaProducto = public_path('images/productos/' . $producto->vCodigo_barras);
+            $imagenes = [];
+            
+            if (File::exists($carpetaProducto)) {
+                $archivos = File::files($carpetaProducto);
+                foreach ($archivos as $archivo) {
+                    $extension = strtolower($archivo->getExtension());
+                    if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                        $imagenes[] = $archivo->getFilename();
+                    }
+                }
+                // Ordenar imágenes por nombre numéricamente
+                natsort($imagenes);
+                $imagenes = array_values($imagenes);
+            }
+            
+            // Agregar imágenes al producto
+            $producto->imagenes = $imagenes;
+        }
     
-    return view('inicio', compact('productos'));
-}
+        return view('inicio', compact('productos'));
+    }
 
     public function showLogin()
     {
