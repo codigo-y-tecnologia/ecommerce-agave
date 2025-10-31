@@ -108,7 +108,8 @@
 
         <!-- Campo para imágenes existentes -->
         <div class="form-group mb-3">
-            <label>Imágenes actuales</label>
+            <label>Imágenes actuales ({{ count($producto->imagenes) }}/6)</label>
+            <p class="text-muted small">Carpeta: products/{{ $producto->id_producto }}/</p>
             @if(count($producto->imagenes) > 0)
                 <div class="row">
                     @foreach($producto->imagenes as $index => $imagen)
@@ -119,6 +120,10 @@
                                      alt="Imagen {{ $index + 1 }}">
                                 <div class="card-body p-2 text-center">
                                     <small class="text-muted">Imagen {{ $index + 1 }}</small>
+                                    <br>
+                                    <small class="text-muted">
+                                        imagen_{{ $index + 1 }}.jpg
+                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -142,7 +147,8 @@
             @enderror
             <small class="form-text text-muted">
                 Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP. Máximo 2MB por imagen.
-                Las nuevas imágenes se agregarán a las existentes.
+                Espacio disponible para {{ 6 - count($producto->imagenes) }} imágenes más.
+                Las imágenes se guardarán en: products/{{ $producto->id_producto }}/
             </small>
             <div id="preview-container" class="mt-2 row"></div>
         </div>
@@ -213,10 +219,10 @@
         previewContainer.innerHTML = '';
         
         const files = e.target.files;
-        const maxFiles = 6;
+        const maxFiles = 6 - {{ count($producto->imagenes) }};
         
         if (files.length > maxFiles) {
-            alert('Solo puedes seleccionar máximo ' + maxFiles + ' imágenes.');
+            alert('Solo puedes seleccionar máximo ' + maxFiles + ' imágenes más.');
             this.value = '';
             return;
         }

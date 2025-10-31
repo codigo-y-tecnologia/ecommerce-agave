@@ -9,6 +9,7 @@ use App\Models\Etiqueta;
 use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class ProductoController extends Controller
 {
@@ -58,7 +59,7 @@ class ProductoController extends Controller
             'id_marca' => 'required|exists:tbl_marcas,id_marca',
             'etiquetas' => 'nullable|array',
             'etiquetas.*' => 'exists:tbl_etiquetas,id_etiqueta',
-            'imagenes' => 'nullable|array',
+            'imagenes' => 'nullable|array|max:6',
             'imagenes.*' => 'image|mimes:jpg,jpeg,png,gif,webp|max:2048'
         ], [
             'vCodigo_barras.required' => 'El código de barras es obligatorio',
@@ -79,27 +80,44 @@ class ProductoController extends Controller
             'id_categoria.required' => 'La categoría es obligatoria',
             'id_marca.required' => 'La marca es obligatoria',
 
+            'imagenes.max' => 'No puedes subir más de 6 imágenes',
             'imagenes.*.image' => 'Cada archivo debe ser una imagen válida',
             'imagenes.*.mimes' => 'Las imágenes deben ser de tipo: jpg, jpeg, png, gif o webp',
             'imagenes.*.max' => 'Cada imagen no debe pesar más de 2MB'
         ]);
 
-        $productoData = $request->all();
-        $productoData['bActivo'] = $request->has('bActivo');
+        try {
+            // Iniciar una transacción para asegurar la consistencia
+            DB::beginTransaction();
 
-        $producto = Producto::create($productoData);
+            $productoData = $request->all();
+            $productoData['bActivo'] = $request->has('bActivo');
 
-        // Guardar imágenes si se enviaron
-        if ($request->hasFile('imagenes')) {
-            $producto->guardarImagenes($request->file('imagenes'));
+            // Crear el producto
+            $producto = Producto::create($productoData);
+
+            // Guardar imágenes si se enviaron
+            if ($request->hasFile('imagenes')) {
+                $producto->guardarImagenes($request->file('imagenes'));
+            }
+
+            // Sincronizar etiquetas
+            if ($request->has('etiquetas')) {
+                $producto->etiquetas()->sync($request->etiquetas);
+            }
+
+            DB::commit();
+
+            return redirect()->route('productos.index')
+                ->with('success', 'Producto creado exitosamente');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['error' => 'Error al crear el producto: ' . $e->getMessage()]);
         }
-
-        if ($request->has('etiquetas')) {
-            $producto->etiquetas()->sync($request->etiquetas);
-        }
-
-        return redirect()->route('productos.index')
-            ->with('success', 'Producto creado exitosamente');
     }
 
     /**
@@ -201,20 +219,43 @@ class ProductoController extends Controller
             'imagenes.*.max' => 'Cada imagen no debe pesar más de 2MB'
         ]);
 
-        $productoData = $request->all();
-        $productoData['bActivo'] = $request->has('bActivo') ? true : false;
+        try {
+            DB::beginTransaction();
 
-        $producto->update($productoData);
-        
-        // Guardar nuevas imágenes si se enviaron
-        if ($request->hasFile('imagenes')) {
-            $producto->guardarImagenes($request->file('imagenes'));
+            // Validar que no se excedan 6 imágenes en total
+            $imagenesActuales = $producto->getNumeroImagenes();
+            $nuevasImagenes = $request->hasFile('imagenes') ? count($request->file('imagenes')) : 0;
+            
+            if (($imagenesActuales + $nuevasImagenes) > 6) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors(['imagenes' => 'No puedes tener más de 6 imágenes. Actualmente tienes ' . $imagenesActuales . ' imágenes.']);
+            }
+
+            $productoData = $request->all();
+            $productoData['bActivo'] = $request->has('bActivo') ? true : false;
+
+            $producto->update($productoData);
+            
+            // Guardar nuevas imágenes si se enviaron
+            if ($request->hasFile('imagenes')) {
+                $producto->guardarImagenes($request->file('imagenes'));
+            }
+
+            $producto->etiquetas()->sync($request->etiquetas ?? []);
+
+            DB::commit();
+
+            return redirect()->route('productos.index')
+                ->with('success', 'Producto actualizado exitosamente');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['error' => 'Error al actualizar el producto: ' . $e->getMessage()]);
         }
-
-        $producto->etiquetas()->sync($request->etiquetas ?? []);
-
-        return redirect()->route('productos.index')
-            ->with('success', 'Producto actualizado exitosamente');
     }
 
     /**
@@ -222,13 +263,25 @@ class ProductoController extends Controller
      */
     public function destroy(Producto $producto)
     {
-        // Eliminar imágenes del producto
-        $producto->eliminarImagenes();
-        
-        $producto->etiquetas()->detach();
-        $producto->delete();
-        
-        return redirect()->route('productos.index')
-            ->with('success', 'Producto eliminado exitosamente');
+        try {
+            DB::beginTransaction();
+
+            // Eliminar imágenes del producto
+            $producto->eliminarImagenes();
+            
+            $producto->etiquetas()->detach();
+            $producto->delete();
+            
+            DB::commit();
+
+            return redirect()->route('productos.index')
+                ->with('success', 'Producto eliminado exitosamente');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return redirect()->route('productos.index')
+                ->with('error', 'Error al eliminar el producto: ' . $e->getMessage());
+        }
     }
 }

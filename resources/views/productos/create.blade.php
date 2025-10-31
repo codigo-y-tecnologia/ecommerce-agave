@@ -114,6 +114,7 @@
             @enderror
             <small class="form-text text-muted">
                 Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP. Máximo 2MB por imagen.
+                Las imágenes se guardarán en una carpeta con el ID del producto.
             </small>
             <div id="preview-container" class="mt-2 row"></div>
         </div>

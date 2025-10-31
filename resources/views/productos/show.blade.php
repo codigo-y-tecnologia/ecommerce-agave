@@ -1,77 +1,161 @@
-@extends('layouts.app')
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ $producto->vNombre }} - Detalles del Producto</title>
+</head>
+<body>
+    <div>
+        <a href="javascript:history.back()">← Volver</a>
+        <h1>Detalles del Producto</h1>
+    </div>
 
-@section('content')
-<div class="container">
-    <h1>Detalle del Producto</h1>
-
-    <div class="row">
-        <div class="col-md-6">
-            {{-- Mostrar imágenes del producto --}}
-            @if(count($producto->imagenes) > 0)
-                <div class="mb-3">
-                    <img src="{{ $producto->imagenes[0] }}" alt="{{ $producto->vNombre }}" 
-                         class="img-fluid rounded" style="max-height: 400px; width: 100%; object-fit: cover;">
+    <div>
+        <div>
+            <div>
+                <!-- Columna de imágenes -->
+                <div>
+                    @if(count($producto->imagenes) > 0)
+                        <div>
+                            <div>
+                                <img id="mainImage" src="{{ $producto->imagenes[0] }}" 
+                                     alt="{{ $producto->vNombre }}" style="max-width: 100%; height: auto;">
+                                
+                                @if(count($producto->imagenes) > 1)
+                                    <div>
+                                        <span id="currentImage">1</span> / <span id="totalImages">{{ count($producto->imagenes) }}</span>
+                                    </div>
+                                    <div>
+                                        <button onclick="changeImage(-1)">←</button>
+                                        <button onclick="changeImage(1)">→</button>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                        
+                        <!-- Miniaturas -->
+                        @if(count($producto->imagenes) > 1)
+                            <div>
+                                @foreach($producto->imagenes as $index => $imagen)
+                                    <img src="{{ $imagen }}" 
+                                         alt="{{ $producto->vNombre }} - Imagen {{ $index + 1 }}"
+                                         style="width: 80px; height: 80px; object-fit: cover; cursor: pointer; border: 2px solid {{ $index === 0 ? '#007bff' : 'transparent' }};"
+                                         onclick="selectImage({{ $index }})">
+                                @endforeach
+                            </div>
+                        @endif
+                    @else
+                        <div>
+                            <p>No hay imágenes disponibles</p>
+                        </div>
+                    @endif
                 </div>
-                
-                {{-- Miniaturas de imágenes adicionales --}}
-                @if(count($producto->imagenes) > 1)
-                    <div class="row">
-                        @foreach($producto->imagenes as $index => $imagen)
-                            @if($index > 0)
-                                <div class="col-3 mb-2">
-                                    <img src="{{ $imagen }}" alt="{{ $producto->vNombre }} - Imagen {{ $index + 1 }}"
-                                         class="img-thumbnail" style="height: 80px; width: 100%; object-fit: cover;">
-                                </div>
-                            @endif
-                        @endforeach
+
+                <!-- Columna de información -->
+                <div>
+                    <h1>{{ $producto->vNombre }}</h1>
+                    
+                    <div>
+                        <strong>Precio: ${{ number_format($producto->dPrecio_venta, 2) }}</strong>
                     </div>
-                @endif
-            @else
-                <div class="text-center py-5 bg-light rounded">
-                    <p class="text-muted">No hay imágenes disponibles</p>
-                </div>
-            @endif
-        </div>
 
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-body">
-                    <h2 class="card-title">{{ $producto->vNombre }}</h2>
-                    
-                    <p><strong>Código de barras:</strong> {{ $producto->vCodigo_barras }}</p>
-                    <p><strong>Precio de compra:</strong> ${{ number_format($producto->dPrecio_compra, 2) }}</p>
-                    <p><strong>Precio de venta:</strong> ${{ number_format($producto->dPrecio_venta, 2) }}</p>
-                    <p><strong>Stock:</strong> {{ $producto->iStock }}</p>
-                    <p><strong>Categoría:</strong> {{ $producto->categoria->vNombre ?? 'N/A' }}</p>
-                    <p><strong>Marca:</strong> {{ $producto->marca->vNombre ?? 'N/A' }}</p>
-                    
+                    <div>
+                        @if($producto->iStock > 10)
+                            ✅ En stock ({{ $producto->iStock }} unidades)
+                        @elseif($producto->iStock > 0)
+                            ⚠️ Stock bajo ({{ $producto->iStock }} unidades)
+                        @else
+                            ❌ Sin stock
+                        @endif
+                    </div>
+
+                    <div>
+                        <div>
+                            <strong>Código:</strong> {{ $producto->vCodigo_barras }}
+                        </div>
+                        <div>
+                            <strong>Categoría:</strong> {{ $producto->categoria->vNombre ?? 'N/A' }}
+                        </div>
+                        <div>
+                            <strong>Marca:</strong> {{ $producto->marca->vNombre ?? 'N/A' }}
+                        </div>
+                    </div>
+
+                    @if($producto->etiquetas->count() > 0)
+                        <div>
+                            <strong>Etiquetas:</strong><br>
+                            @foreach($producto->etiquetas as $etiqueta)
+                                <span>{{ $etiqueta->vNombre }}</span>
+                            @endforeach
+                        </div>
+                    @endif
+
                     @if($producto->tDescripcion_corta)
-                        <p><strong>Descripción corta:</strong> {{ $producto->tDescripcion_corta }}</p>
+                        <div>
+                            <h3>Descripción</h3>
+                            <p>{{ $producto->tDescripcion_corta }}</p>
+                        </div>
                     @endif
-                    
-                    @if($producto->tDescripcion_larga)
-                        <p><strong>Descripción larga:</strong> {{ $producto->tDescripcion_larga }}</p>
-                    @endif
-                    
-                    <p><strong>Estado:</strong> 
-                        <span class="badge {{ $producto->bActivo ? 'bg-success' : 'bg-secondary' }}">
-                            {{ $producto->bActivo ? 'Activo' : 'Inactivo' }}
-                        </span>
-                    </p>
-                    
-                    <p><strong>Etiquetas:</strong>
-                        @foreach ($producto->etiquetas as $etiqueta)
-                            <span class="badge bg-info text-dark">{{ $etiqueta->vNombre }}</span>
-                        @endforeach
-                    </p>
-                </div>
-            </div>
 
-            <div class="mt-3">
-                <a href="{{ route('productos.index') }}" class="btn btn-secondary">Volver a Productos</a>
-                <a href="{{ route('productos.edit', $producto) }}" class="btn btn-warning">Editar</a>
+                    @if($producto->tDescripcion_larga)
+                        <div>
+                            <h3>Información detallada</h3>
+                            <p>{{ $producto->tDescripcion_larga }}</p>
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
     </div>
-</div>
-@endsection
+
+    <script>
+        let currentImageIndex = 0;
+        const totalImages = {{ count($producto->imagenes) }};
+        const images = @json($producto->imagenes);
+
+        function changeImage(direction) {
+            currentImageIndex += direction;
+            
+            if (currentImageIndex < 0) {
+                currentImageIndex = totalImages - 1;
+            } else if (currentImageIndex >= totalImages) {
+                currentImageIndex = 0;
+            }
+            
+            updateMainImage();
+        }
+
+        function selectImage(index) {
+            currentImageIndex = index;
+            updateMainImage();
+        }
+
+        function updateMainImage() {
+            // Update main image
+            document.getElementById('mainImage').src = images[currentImageIndex];
+            
+            // Update counter
+            document.getElementById('currentImage').textContent = currentImageIndex + 1;
+            
+            // Update thumbnails
+            document.querySelectorAll('img[style*="cursor: pointer"]').forEach((thumb, index) => {
+                if (index === currentImageIndex) {
+                    thumb.style.border = '2px solid #007bff';
+                } else {
+                    thumb.style.border = '2px solid transparent';
+                }
+            });
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowLeft') {
+                changeImage(-1);
+            } else if (e.key === 'ArrowRight') {
+                changeImage(1);
+            }
+        });
+    </script>
+</body>
+</html>
