@@ -21,4 +21,10 @@ class Producto extends Model
         return $this->hasMany(CarritoDetalle::class, 'id_producto', 'id_producto');
     }
 
+    public function impuestos()
+{
+    return $this->belongsToMany(Impuesto::class, 'tbl_producto_impuestos', 'id_producto', 'id_impuesto');
+}
+
+
 }
