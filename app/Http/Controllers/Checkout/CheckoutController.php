@@ -216,6 +216,7 @@ public function aplicarCupon(Request $request)
 
     return response()->json([
         'success' => true,
+        'codigo' => $cupon->vCodigo_cupon,
         'descuento' => $descuento,
         'totalFinal' => max(0, $total - $descuento)
     ]);
