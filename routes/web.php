@@ -75,7 +75,12 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
 // --------------------
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
- 
+
+    Route::post('/checkout/crear-direccion', [CheckoutController::class, 'crearDireccion'])
+        ->name('checkout.crearDireccion');
+
+    Route::post('/cupon/aplicar', [CheckoutController::class, 'aplicarCupon'])->name('cupon.aplicar');
+
 });
 
 // --------------------
