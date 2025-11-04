@@ -63,7 +63,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="vPlaceholder">Placeholder</label>
+                                    <label for="vPlaceholder">Texto de ejemplo</label>
                                     <input type="text" class="form-control @error('vPlaceholder') is-invalid @enderror" 
                                            id="vPlaceholder" name="vPlaceholder" value="{{ old('vPlaceholder', $atributo->vPlaceholder) }}" 
                                            placeholder="Ej: Escribe aquí...">

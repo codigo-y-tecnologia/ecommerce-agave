@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Atributo;
 use App\Models\AtributoOpcion;
-use Illuminate\Http\Request; // ¡FALTABA ESTA IMPORTACIÓN!
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class AtributoController extends Controller

@@ -40,9 +40,9 @@
                                                     <select class="form-control @error('id_atributo') is-invalid @enderror" 
                                                             id="id_atributo" name="id_atributo" required>
                                                         <option value="">Seleccione un atributo</option>
-                                                        @foreach($atributosDisponibles as $atributo)
-                                                            <option value="{{ $atributo->id_atributo }}">
-                                                                {{ $atributo->vNombre }} ({{ $atributo->eTipo }})
+                                                        @foreach($atributosDisponibles as $atributoDisponible)
+                                                            <option value="{{ $atributoDisponible->id_atributo }}">
+                                                                {{ $atributoDisponible->vNombre }} ({{ $atributoDisponible->eTipo }})
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -100,7 +100,7 @@
                                                 <th>Atributo</th>
                                                 <th>Tipo</th>
                                                 <th>Valor/Opción</th>
-                                                <th width="120">Acciones</th>
+                                                <th width="80">Acciones</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -137,81 +137,18 @@
                                                         @endif
                                                     </td>
                                                     <td>
-                                                        <div class="btn-group btn-group-sm">
-                                                            <button type="button" class="btn btn-warning" 
-                                                                    data-bs-toggle="modal" 
-                                                                    data-bs-target="#editModal{{ $loop->index }}">
-                                                                <i class="fas fa-edit"></i>
+                                                        <form action="{{ route('productos.atributos.destroy', [
+                                                            'producto' => $producto->id_producto, 
+                                                            'atributo' => $productoAtributo->id_atributo
+                                                        ]) }}" 
+                                                              method="POST" class="d-inline">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="btn btn-danger btn-sm" 
+                                                                    onclick="return confirm('¿Estás seguro de eliminar este atributo?')">
+                                                                <i class="fas fa-trash"></i>
                                                             </button>
-                                                            <!-- CORRECCIÓN: Usar los parámetros corregidos -->
-                                                            <form action="{{ route('productos.atributos.destroy', [
-                                                                'producto' => $producto->id_producto, 
-                                                                'atributo' => $productoAtributo->id_atributo
-                                                            ]) }}" 
-                                                                  method="POST" class="d-inline">
-                                                                @csrf
-                                                                @method('DELETE')
-                                                                <button type="submit" class="btn btn-danger" 
-                                                                        onclick="return confirm('¿Estás seguro de eliminar este atributo?')">
-                                                                    <i class="fas fa-trash"></i>
-                                                                </button>
-                                                            </form>
-                                                        </div>
-
-                                                        <!-- Modal para editar -->
-                                                        <div class="modal fade" id="editModal{{ $loop->index }}" tabindex="-1">
-                                                            <div class="modal-dialog">
-                                                                <div class="modal-content">
-                                                                    <div class="modal-header">
-                                                                        <h5 class="modal-title">Editar Atributo</h5>
-                                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                                    </div>
-                                                                    <!-- CORRECCIÓN: Usar los parámetros corregidos -->
-                                                                    <form action="{{ route('productos.atributos.update', [
-                                                                        'producto' => $producto->id_producto, 
-                                                                        'atributo' => $productoAtributo->id_atributo
-                                                                    ]) }}" method="POST">
-                                                                        @csrf
-                                                                        @method('PUT')
-                                                                        <div class="modal-body">
-                                                                            <div class="form-group">
-                                                                                <label>Atributo</label>
-                                                                                <input type="text" class="form-control" 
-                                                                                       value="{{ $productoAtributo->atributo->vNombre }}" disabled>
-                                                                            </div>
-                                                                            @if($productoAtributo->atributo->opciones->count() > 0)
-                                                                                <div class="form-group">
-                                                                                    <label for="edit_opcion_{{ $loop->index }}">Opción</label>
-                                                                                    <select class="form-control" 
-                                                                                            id="edit_opcion_{{ $loop->index }}" 
-                                                                                            name="id_opcion">
-                                                                                        <option value="">Seleccione una opción</option>
-                                                                                        @foreach($productoAtributo->atributo->opciones as $opcion)
-                                                                                            <option value="{{ $opcion->id_opcion }}" 
-                                                                                                {{ $productoAtributo->id_opcion == $opcion->id_opcion ? 'selected' : '' }}>
-                                                                                                {{ $opcion->vEtiqueta }}
-                                                                                            </option>
-                                                                                        @endforeach
-                                                                                    </select>
-                                                                                </div>
-                                                                            @endif
-                                                                            <div class="form-group">
-                                                                                <label for="edit_valor_{{ $loop->index }}">Valor Personalizado</label>
-                                                                                <input type="text" class="form-control" 
-                                                                                       id="edit_valor_{{ $loop->index }}" 
-                                                                                       name="vValor" 
-                                                                                       value="{{ $productoAtributo->vValor }}"
-                                                                                       placeholder="Ingrese un valor personalizado">
-                                                                            </div>
-                                                                        </div>
-                                                                        <div class="modal-footer">
-                                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                                            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-                                                                        </div>
-                                                                    </form>
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                                        </form>
                                                     </td>
                                                 </tr>
                                             @endforeach
