@@ -6,10 +6,13 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Carrito\CarritoController;
 use App\Http\Controllers\Checkout\CheckoutController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Direccion;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\VerificationController;
 use App\Models\Producto;
+
 
 // Route::get('/', function () {
 //     return view('inicio');
@@ -78,6 +81,21 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
 
     Route::post('/checkout/crear-direccion', [CheckoutController::class, 'crearDireccion'])
         ->name('checkout.crearDireccion');
+    
+    Route::put('/checkout/actualizar-direccion/{id}', [CheckoutController::class, 'actualizarDireccion'])
+        ->name('checkout.actualizarDireccion');
+
+
+    Route::get('/api/direccion/{id}', function ($id) {
+    $direccion = Direccion::where('id_direccion', $id)
+        ->where('id_usuario', Auth::user()->id_usuario)
+        ->first();
+
+    return response()->json([
+        'success' => (bool) $direccion,
+        'direccion' => $direccion
+    ]);
+});
 
     Route::post('/cupon/aplicar', [CheckoutController::class, 'aplicarCupon'])->name('cupon.aplicar');
 

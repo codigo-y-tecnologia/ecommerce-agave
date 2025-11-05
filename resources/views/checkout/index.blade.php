@@ -97,30 +97,36 @@
             <h5 class="card-title">Dirección de envío</h5>
 
             @if($direcciones->count() > 0)
-                <form action="{{ route('checkout.store') }}" method="POST" id="checkout-form">
-                    @csrf
-                    <div class="mb-3">
-                        <label for="id_direccion" class="form-label fw-bold">Selecciona una dirección guardada:</label>
-                        <select name="id_direccion" id="id_direccion" class="form-select" required>
-                            <option value="">-- Selecciona una dirección --</option>
-                            @foreach($direcciones as $dir)
-                                <option value="{{ $dir->id_direccion }}">
-                                    {{ $dir->vCalle }} {{ $dir->vNumero_exterior }}, {{ $dir->vColonia }}, {{ $dir->vCiudad }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="d-flex justify-content-end">
-                        <button type="submit" class="btn btn-success px-4">Confirmar pedido</button>
-                    </div>
-                </form>
-            @else
-                <p class="text-muted">No tienes direcciones guardadas.</p>
-                <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalDireccion">
-                    + Agregar nueva dirección
+    <form action="{{ route('checkout.store') }}" method="POST" id="checkout-form">
+        @csrf
+        <div class="mb-3">
+            <label for="id_direccion" class="form-label fw-bold">Selecciona una dirección guardada:</label>
+            <div class="input-group">
+                <select name="id_direccion" id="id_direccion" class="form-select" required>
+                    <option value="">-- Selecciona una dirección --</option>
+                    @foreach($direcciones as $dir)
+                        <option value="{{ $dir->id_direccion }}">
+                            {{ $dir->vCalle }} {{ $dir->vNumero_exterior }}, {{ $dir->vColonia }}, {{ $dir->vCiudad }}
+                        </option>
+                    @endforeach
+                </select>
+                <button type="button" class="btn btn-outline-primary" id="btn-editar-direccion">✏️ Editar</button>
+                <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalDireccion" id="btn-nueva-direccion">
+                    ➕ Nueva
                 </button>
-            @endif
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end mt-3">
+            <button type="submit" class="btn btn-success px-4">Confirmar pedido</button>
+        </div>
+    </form>
+@else
+    <p class="text-muted">No tienes direcciones guardadas.</p>
+    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalDireccion" id="btn-nueva-direccion">
+        + Agregar nueva dirección
+    </button>
+@endif
         </div>
     </div>
 </div>
@@ -130,6 +136,7 @@
     <div class="modal-dialog modal-lg">
         <form id="form-nueva-direccion" class="modal-content">
             @csrf
+            <input type="hidden" id="id_direccion_editar" name="id_direccion_editar"> {{-- 🔹 para modo edición --}}
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title" id="modalDireccionLabel">Agregar nueva dirección</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -221,38 +228,149 @@
 {{-- 💻 Script AJAX --}}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('btn-aplicar-cupon')?.addEventListener('click', async (e) => {
+        e.preventDefault(); // evita recargar la página
 
-    // Aplicar cupón dinámicamente
-document.getElementById('btn-aplicar-cupon')?.addEventListener('click', async () => {
-    const codigo = document.getElementById('codigo_cupon').value;
-    const mensaje = document.getElementById('mensaje-cupon');
-    const totalFinal = document.getElementById('total-final');
+        const codigo = document.getElementById('codigo_cupon').value.trim();
+        const mensaje = document.getElementById('mensaje-cupon');
+        const totalFinal = document.getElementById('total-final');
 
-    const res = await fetch("{{ route('cupon.aplicar') }}", {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify({ codigo })
+        if (!codigo) {
+            mensaje.textContent = "Por favor ingresa un código de cupón.";
+            mensaje.classList.add('text-danger');
+            return;
+        }
+
+        try {
+            const res = await fetch("{{ route('cupon.aplicar') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ codigo })
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                mensaje.textContent = data.message;
+                mensaje.classList.remove('text-danger');
+                mensaje.classList.add('text-success');
+                totalFinal.textContent = `$${data.totalFinal.toFixed(2)}`;
+            } else {
+                mensaje.textContent = data.message;
+                mensaje.classList.remove('text-success');
+                mensaje.classList.add('text-danger');
+            }
+
+        } catch (error) {
+            console.error('Error al aplicar cupón:', error);
+            mensaje.textContent = "Ocurrió un error al aplicar el cupón.";
+            mensaje.classList.add('text-danger');
+        }
+    });
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = new bootstrap.Modal(document.getElementById('modalDireccion'));
+    const formDireccion = document.getElementById('form-nueva-direccion');
+    const idInput = document.getElementById('id_direccion');
+    const idEditar = document.getElementById('id_direccion_editar');
+    const modalTitle = document.getElementById('modalDireccionLabel');
+
+    // 🔹 Botón NUEVA DIRECCIÓN
+    document.getElementById('btn-nueva-direccion')?.addEventListener('click', () => {
+        formDireccion.reset();
+        idEditar.value = '';
+        modalTitle.textContent = 'Agregar nueva dirección';
     });
 
-    const data = await res.json();
+    // 🔹 Botón EDITAR DIRECCIÓN
+    document.getElementById('btn-editar-direccion')?.addEventListener('click', async () => {
+        const id = idInput.value;
+        if (!id) {
+            alert('Por favor selecciona una dirección para editar.');
+            return;
+        }
 
-    if (data.success) {
-        mensaje.innerHTML = `
-            Cupón aplicado: <span class="text-uppercase">${data.codigo}</span>
-            — Descuento: $${data.descuento.toFixed(2)}
-        `;
-        mensaje.classList.remove('text-danger');
-        mensaje.classList.add('text-success');
-        totalFinal.textContent = `$${data.totalFinal.toFixed(2)}`;
-    } else {
-        mensaje.textContent = data.message;
-        mensaje.classList.remove('text-success');
-        mensaje.classList.add('text-danger');
+        try {
+            const res = await fetch(`/api/direccion/${id}`);
+            const data = await res.json();
+
+            if (data.success) {
+                const d = data.direccion;
+                for (const key in d) {
+                    if (formDireccion.elements[key]) {
+                        formDireccion.elements[key].value = d[key];
+                    }
+                }
+
+                const checkPrincipal = document.getElementById('checkPrincipal');
+                checkPrincipal.checked = (parseInt(d.bDireccion_principal) === 1);
+
+                idEditar.value = id;
+                modalTitle.textContent = 'Editar dirección';
+                modal.show();
+            } else {
+                alert('No se pudo cargar la dirección.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error al obtener la dirección.');
+        }
+    });
+
+    // 🔹 GUARDAR (crear o actualizar)
+    formDireccion.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(formDireccion);
+    const id = idEditar.value;
+
+    // 🔹 Forzar Laravel a reconocer PUT
+    if (id) {
+        formData.append('_method', 'PUT');
+    }
+
+    const url = id
+        ? `/checkout/actualizar-direccion/${id}`
+        : `{{ route('checkout.crearDireccion') }}`;
+
+    try {
+        const res = await fetch(url, {
+            method: 'POST', // <-- SIEMPRE POST
+            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+            body: formData
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            modal.hide();
+            alert(id ? 'Dirección actualizada correctamente.' : 'Dirección creada correctamente.');
+
+            if (!id) {
+                const opt = document.createElement('option');
+                opt.value = data.direccion.id_direccion;
+                opt.textContent = `${data.direccion.vCalle} ${data.direccion.vNumero_exterior}, ${data.direccion.vColonia}, ${data.direccion.vCiudad}`;
+                idInput.appendChild(opt);
+                idInput.value = data.direccion.id_direccion;
+            } else {
+                const selected = idInput.querySelector(`option[value="${id}"]`);
+                selected.textContent = `${data.direccion.vCalle} ${data.direccion.vNumero_exterior}, ${data.direccion.vColonia}, ${data.direccion.vCiudad}`;
+            }
+        } else {
+            alert('❌ Error al guardar la dirección.');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('❌ Error de conexión al guardar la dirección.');
     }
 });
 });
 </script>
+
 @endsection

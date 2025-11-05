@@ -5,12 +5,17 @@ namespace App\Http\Controllers\Checkout;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\{Carrito, Pedido, PedidoDetalle, Direccion, Cupon, CuponUso, Pago, Venta, DetalleVenta};
+use App\Traits\InputSanitizer;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Exception;
 use Carbon\Carbon;
 
 class CheckoutController extends Controller
 {
+
+    use InputSanitizer;
+
     public function index()
 {
     $usuario = Auth::user();
@@ -129,6 +134,8 @@ public function store(Request $request)
  */
 public function crearDireccion(Request $request)
 {
+    try {
+
     $data = $request->validate([
         'vTelefono_contacto' => 'required|string|max:20',
         'vCalle' => 'required|string|max:150',
@@ -144,12 +151,63 @@ public function crearDireccion(Request $request)
         'bDireccion_principal' => 'nullable|boolean',
     ]);
 
+    $this->verificarYLimpiar($data, config('security.sql_keywords'));
+
     $data['bDireccion_principal'] = $request->has('bDireccion_principal') ? 1 : 0;
     $data['id_usuario'] = Auth::user()->id_usuario;
 
     $direccion = Direccion::create($data);
 
     return response()->json(['success' => true, 'direccion' => $direccion]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error al guardar la dirección',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Actualizar dirección existente (AJAX)
+ */
+public function actualizarDireccion(Request $request, $id)
+{
+    try {
+        $direccion = Direccion::where('id_direccion', $id)
+            ->where('id_usuario', Auth::user()->id_usuario)
+            ->firstOrFail();
+
+        $data = $request->validate([
+            'vTelefono_contacto' => 'required|string|max:20',
+            'vCalle' => 'required|string|max:150',
+            'vNumero_exterior' => 'nullable|string|max:20',
+            'vNumero_interior' => 'nullable|string|max:20',
+            'vColonia' => 'nullable|string|max:150',
+            'vCodigo_postal' => 'nullable|string|max:10',
+            'vCiudad' => 'nullable|string|max:80',
+            'vEstado' => 'nullable|string|max:80',
+            'vEntre_calle_1' => 'nullable|string|max:150',
+            'vEntre_calle_2' => 'nullable|string|max:150',
+            'tReferencias' => 'nullable|string',
+            'bDireccion_principal' => 'nullable|boolean',
+        ]);
+
+        $this->verificarYLimpiar($data, config('security.sql_keywords'));
+        
+        $data['bDireccion_principal'] = $request->has('bDireccion_principal') ? 1 : 0;
+
+        $direccion->update($data);
+
+        return response()->json(['success' => true, 'direccion' => $direccion]);
+
+    } catch (\Throwable $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error interno: ' . $e->getMessage(),
+        ], 500);
+    }
 }
 
 /**
@@ -208,19 +266,34 @@ public function aplicarCupon(Request $request)
         return response()->json(['success' => false, 'message' => 'Cupón inválido o expirado.']);
     }
 
-    $descuento = $cupon->eTipo === 'porcentaje'
-        ? $total * ($cupon->dDescuento / 100)
-        : $cupon->dDescuento;
+    // 🔹 Calcular descuento (puede ser 0 si es tipo "envío gratis" u otro)
+    $descuento = 0;
 
+    if ($cupon->eTipo === 'porcentaje') {
+        $descuento = $total * ($cupon->dDescuento / 100);
+    } elseif ($cupon->eTipo === 'monto' && $cupon->dDescuento > 0) {
+        $descuento = $cupon->dDescuento;
+    }
+
+    // 🔹 Guardar el cupón en la sesión
     session(['codigo_cupon' => $codigo]);
+
+    // 🔹 Mensaje personalizado según el tipo de cupón
+    $mensaje = "Cupón aplicado correctamente: {$cupon->vCodigo_cupon}";
+
+    if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
+        $mensaje .= " — Envío gratis activado 🚚";
+    } elseif ($descuento > 0) {
+        $mensaje .= " — Descuento: $" . number_format($descuento, 2);
+    }
 
     return response()->json([
         'success' => true,
         'codigo' => $cupon->vCodigo_cupon,
         'descuento' => $descuento,
-        'totalFinal' => max(0, $total - $descuento)
+        'totalFinal' => max(0, $total - $descuento),
+        'message' => $mensaje
     ]);
 }
-
 
 }
