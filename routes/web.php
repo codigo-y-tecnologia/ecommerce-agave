@@ -47,3 +47,4 @@ Route::delete('/productos/{producto}/atributos/{atributo}', [ProductoAtributoCon
 // API para obtener opciones de atributos
 Route::get('/atributos/{atributo}/opciones', [ProductoAtributoController::class, 'getOpciones'])
      ->name('atributos.opciones');
+

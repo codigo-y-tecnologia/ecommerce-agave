@@ -18,11 +18,11 @@ class AtributoController extends Controller
     public function create()
     {
         $tipos = [
-            'texto' => 'Campo de Texto',
-            'textarea' => 'Área de Texto',
-            'select' => 'Lista Desplegable',
-            'radio' => 'Botones de Radio',
-            'checkbox' => 'Casilla de Verificación',
+            'texto' => 'texto',
+            'textarea' => 'textarea',
+            'select' => 'select',
+            'radio' => 'radio button',
+            'checkbox' => 'checkbox',
             'archivo' => 'Archivo'
         ];
         

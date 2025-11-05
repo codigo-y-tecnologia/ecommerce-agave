@@ -38,10 +38,4 @@ class ProductoAtributo extends Pivot
     {
         return $this->belongsTo(AtributoOpcion::class, 'id_opcion');
     }
-
-    // Método para obtener el route key name
-    public function getRouteKeyName()
-    {
-        return 'id_atributo';
-    }
 }
