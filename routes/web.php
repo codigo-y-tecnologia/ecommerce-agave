@@ -9,6 +9,7 @@ use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\MarcaController; 
 use App\Http\Controllers\AtributoController;
 use App\Http\Controllers\ProductoAtributoController;
+use App\Http\Controllers\BusquedaController;
 
 // Cambiar esta ruta para usar AuthController en lugar de la función anónima
 Route::get('/', [AuthController::class, 'index'])->name('inicio');
@@ -48,3 +49,7 @@ Route::delete('/productos/{producto}/atributos/{atributo}', [ProductoAtributoCon
 Route::get('/atributos/{atributo}/opciones', [ProductoAtributoController::class, 'getOpciones'])
      ->name('atributos.opciones');
 
+// Rutas de búsqueda
+Route::get('/buscar', [BusquedaController::class, 'buscar'])->name('busqueda.resultados');
+Route::get('/busqueda-rapida', [BusquedaController::class, 'busquedaRapida'])->name('busqueda.rapida');
+Route::get('/buscar-productos', [BusquedaController::class, 'buscarProductos'])->name('busqueda.productos');
