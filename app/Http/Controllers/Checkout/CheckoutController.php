@@ -156,6 +156,12 @@ public function crearDireccion(Request $request)
     $data['bDireccion_principal'] = $request->has('bDireccion_principal') ? 1 : 0;
     $data['id_usuario'] = Auth::user()->id_usuario;
 
+    // Si marca esta nueva como principal, desmarcamos las demás
+        if (!empty($data['bDireccion_principal']) && $data['bDireccion_principal'] == 1) {
+            Direccion::where('id_usuario', Auth::user()->id_usuario)
+                ->update(['bDireccion_principal' => 0]);
+        }
+
     $direccion = Direccion::create($data);
 
     return response()->json(['success' => true, 'direccion' => $direccion]);
@@ -197,6 +203,13 @@ public function actualizarDireccion(Request $request, $id)
         $this->verificarYLimpiar($data, config('security.sql_keywords'));
         
         $data['bDireccion_principal'] = $request->has('bDireccion_principal') ? 1 : 0;
+
+        // Si el usuario marca esta como principal, desmarcamos todas las demás
+        if (!empty($data['bDireccion_principal']) && $data['bDireccion_principal'] == 1) {
+            Direccion::where('id_usuario', Auth::user()->id_usuario)
+                ->where('id_direccion', '!=', $id)
+                ->update(['bDireccion_principal' => 0]);
+        }
 
         $direccion->update($data);
 
