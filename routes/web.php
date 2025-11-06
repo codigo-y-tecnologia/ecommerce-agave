@@ -12,6 +12,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CarritoController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Superadmin\SuperadminController;
+use App\Http\Controllers\Perfil\DireccionController;
 
 Route::get('/', function () {
     // Si el usuario está autenticado, lo redirigimos a su dashboard según su rol
@@ -75,14 +76,27 @@ Route::middleware('auth')->group(function () {
 
 // Rutas para clientes
 // --------------------
-// Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])->group(function () {
-//     Route::get('/carrito', [CarritoController::class, 'index'])->name('carrito.index');
-//     Route::post('/carrito/{producto}', [CarritoController::class, 'store'])->name('carrito.store');
-//     Route::put('/carrito/{detalle}', [CarritoController::class, 'update'])->name('carrito.update');
-//     Route::delete('/carrito/{detalle}', [CarritoController::class, 'destroy'])->name('carrito.destroy');
+// --------------------
+Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])->group(function () {
 
-//     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
-// });
+    // Perfil
+    Route::get('/perfil', function () {
+        return view('perfil.index');
+    })->name('perfil.index');
+
+    // Módulo de direcciones
+    Route::get('/perfil/direcciones', [DireccionController::class, 'index'])->name('direcciones.index');
+    Route::post('/perfil/direcciones', [DireccionController::class, 'store'])->name('direcciones.store');
+    Route::put('/perfil/direcciones/{id}', [DireccionController::class, 'update'])->name('direcciones.update');
+    Route::delete('/perfil/direcciones/{id}', [DireccionController::class, 'destroy'])->name('direcciones.destroy');
+
+    // Route::get('/carrito', [CarritoController::class, 'index'])->name('carrito.index');
+    // Route::post('/carrito/{producto}', [CarritoController::class, 'store'])->name('carrito.store');
+    // Route::put('/carrito/{detalle}', [CarritoController::class, 'update'])->name('carrito.update');
+    // Route::delete('/carrito/{detalle}', [CarritoController::class, 'destroy'])->name('carrito.destroy');
+
+    // Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+});
 
 // --------------------
 // Rutas para admin

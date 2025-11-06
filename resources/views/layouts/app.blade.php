@@ -34,7 +34,7 @@
                                 <li class="nav-item"><a class="nav-link" href="#">🛒 Mi Carrito</a></li>
                                 <li class="nav-item"><a class="nav-link" href="#">🧾 Checkout</a></li>
                                 <li class="nav-item"><a class="nav-link" href="#">📦 Mis Pedidos</a></li>
-                                <li class="nav-item"><a class="nav-link" href="#">👤 Mi Perfil</a></li>
+                                <li class="nav-item"><a class="nav-link" href="{{ route('perfil.index') }}">👤 Mi Perfil</a></li>
 
                             {{-- ⚙️ Admin --}}
                             @elseif(Auth::user()->eRol === 'admin')
