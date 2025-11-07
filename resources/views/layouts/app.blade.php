@@ -48,7 +48,7 @@
                                         <li><a class="dropdown-item" href="{{ route('impuestos.index') }}">Impuestos</a></li>
                                         <li><a class="dropdown-item" href="#">Productos</a></li>
                                         <li><a class="dropdown-item" href="#">Pedidos</a></li>
-                                        <li><a class="dropdown-item" href="#">Reportes</a></li>
+                                        <li><a class="dropdown-item" href="{{ route('ventas.index') }}">Reportes</a></li>
                                     </ul>
                                 </li>
 
