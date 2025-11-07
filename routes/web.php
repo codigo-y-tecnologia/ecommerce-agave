@@ -13,6 +13,7 @@ use App\Http\Controllers\CarritoController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Superadmin\SuperadminController;
 use App\Http\Controllers\Perfil\DireccionController;
+use App\Models\Direccion;
 
 Route::get('/', function () {
     // Si el usuario está autenticado, lo redirigimos a su dashboard según su rol
@@ -89,6 +90,20 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
     Route::post('/perfil/direcciones', [DireccionController::class, 'store'])->name('direcciones.store');
     Route::put('/perfil/direcciones/{id}', [DireccionController::class, 'update'])->name('direcciones.update');
     Route::delete('/perfil/direcciones/{id}', [DireccionController::class, 'destroy'])->name('direcciones.destroy');
+
+    // Obtener una dirección por ID (para editar)
+Route::get('/api/direccion/{id}', function ($id) {
+    $direccion = Direccion::where('id_direccion', $id)
+        ->where('id_usuario', Auth::user()->id_usuario)
+        ->first();
+
+    if (!$direccion) {
+        return response()->json(['success' => false, 'message' => 'Dirección no encontrada']);
+    }
+
+    return response()->json(['success' => true, 'direccion' => $direccion]);
+});
+
 
     // Route::get('/carrito', [CarritoController::class, 'index'])->name('carrito.index');
     // Route::post('/carrito/{producto}', [CarritoController::class, 'store'])->name('carrito.store');

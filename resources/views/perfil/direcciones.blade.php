@@ -61,27 +61,81 @@
                 <h5 class="modal-title" id="modalDireccionLabel">Agregar dirección</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Teléfono</label>
-                        <input type="text" name="vTelefono_contacto" class="form-control" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Calle</label>
-                        <input type="text" name="vCalle" class="form-control" required>
-                    </div>
-                    <div class="col-md-4"><label class="form-label">Número exterior</label><input type="text" name="vNumero_exterior" class="form-control"></div>
-                    <div class="col-md-4"><label class="form-label">Colonia</label><input type="text" name="vColonia" class="form-control"></div>
-                    <div class="col-md-4"><label class="form-label">Código postal</label><input type="text" name="vCodigo_postal" class="form-control"></div>
-                    <div class="col-md-6"><label class="form-label">Ciudad</label><input type="text" name="vCiudad" class="form-control"></div>
-                    <div class="col-md-6"><label class="form-label">Estado</label><input type="text" name="vEstado" class="form-control"></div>
-                    <div class="col-12 form-check mt-2">
-                        <input type="checkbox" class="form-check-input" id="checkPrincipal" name="bDireccion_principal">
-                        <label for="checkPrincipal" class="form-check-label">Establecer como dirección principal</label>
-                    </div>
-                </div>
-            </div>
+            <div class="row g-3">
+
+    {{-- 📞 Teléfono --}}
+    <div class="col-md-4">
+        <label class="form-label fw-bold">Teléfono de contacto</label>
+        <input type="text" name="vTelefono_contacto" class="form-control" required>
+    </div>
+
+    {{-- 🏠 Calle --}}
+    <div class="col-md-8">
+        <label class="form-label fw-bold">Calle</label>
+        <input type="text" name="vCalle" class="form-control" required>
+    </div>
+
+    {{-- 🔢 Números --}}
+    <div class="col-md-4">
+        <label class="form-label">Número exterior</label>
+        <input type="text" name="vNumero_exterior" class="form-control">
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label">Número interior</label>
+        <input type="text" name="vNumero_interior" class="form-control">
+    </div>
+
+    {{-- 🏘 Colonia y CP --}}
+    <div class="col-md-4">
+        <label class="form-label">Colonia</label>
+        <input type="text" name="vColonia" class="form-control">
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label">Código postal</label>
+        <input type="text" name="vCodigo_postal" class="form-control">
+    </div>
+
+    {{-- 🏙 Ciudad y estado --}}
+    <div class="col-md-4">
+        <label class="form-label">Ciudad</label>
+        <input type="text" name="vCiudad" class="form-control">
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label">Estado</label>
+        <input type="text" name="vEstado" class="form-control">
+    </div>
+
+    {{-- 🚏 Entre calles --}}
+    <div class="col-md-6">
+        <label class="form-label">Entre calle 1</label>
+        <input type="text" name="vEntre_calle_1" class="form-control">
+    </div>
+
+    <div class="col-md-6">
+        <label class="form-label">Entre calle 2</label>
+        <input type="text" name="vEntre_calle_2" class="form-control">
+    </div>
+
+    {{-- 📝 Referencias --}}
+    <div class="col-12">
+        <label class="form-label">Referencias adicionales</label>
+        <textarea name="tReferencias" class="form-control" rows="2" placeholder="Ejemplo: Portón azul, frente a la tienda..."></textarea>
+    </div>
+
+    {{-- ⭐ Dirección principal --}}
+    <div class="col-12">
+        <div class="form-check mt-2">
+            <input type="checkbox" class="form-check-input" id="checkPrincipal" name="bDireccion_principal" value="1">
+            <label class="form-check-label" for="checkPrincipal">
+                Establecer como dirección principal
+            </label>
+        </div>
+    </div>
+
+</div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button type="submit" class="btn btn-primary">Guardar</button>
@@ -94,20 +148,39 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('formDireccion');
-    const modal = new bootstrap.Modal(document.getElementById('modalDireccion'));
+    const modalElement = document.getElementById('modalDireccion');
+    const modal = new bootstrap.Modal(modalElement);
     const idField = document.getElementById('id_direccion');
     const modalTitle = document.getElementById('modalDireccionLabel');
 
-    // 🔹 Crear / actualizar
+    // 🔹 NUEVA DIRECCIÓN → limpiar formulario y mostrar modal vacío
+    document.querySelector('[data-bs-target="#modalDireccion"]').addEventListener('click', () => {
+        form.reset(); // limpia todos los campos
+        idField.value = ''; // limpia el ID oculto
+        modalTitle.textContent = 'Agregar dirección';
+        // Asegurarse que el checkbox quede desmarcado
+        const check = document.getElementById('checkPrincipal');
+        if (check) check.checked = false;
+    });
+
+    // 🔹 CREAR / ACTUALIZAR
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
+
         const id = idField.value;
         const url = id ? `/perfil/direcciones/${id}` : `/perfil/direcciones`;
-        const method = id ? 'PUT' : 'POST';
-
         const formData = new FormData(form);
+
+        // Siempre usar POST (Laravel entiende _method)
+        formData.append('_method', id ? 'PUT' : 'POST');
+
         try {
-            const res = await fetch(url, { method, headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}, body: formData });
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                body: formData
+            });
+
             const data = await res.json();
 
             if (data.success) {
@@ -118,43 +191,75 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('❌ Error al guardar la dirección.');
             }
         } catch (err) {
+            console.error(err);
             alert('⚠️ Error de conexión.');
         }
     });
 
-    // 🔹 Editar
+    // 🔹 EDITAR
     document.querySelectorAll('.btn-editar').forEach(btn => {
         btn.addEventListener('click', async () => {
             const id = btn.dataset.id;
-            const res = await fetch(`/api/direccion/${id}`);
-            const data = await res.json();
+            try {
+                const res = await fetch(`/api/direccion/${id}`);
+                const data = await res.json();
 
-            if (data.success) {
-                const d = data.direccion;
-                for (const key in d) {
-                    if (form.elements[key]) form.elements[key].value = d[key];
+                if (data.success) {
+                    const d = data.direccion;
+
+                    // Limpiamos primero para evitar valores residuales
+                    form.reset();
+                    idField.value = id;
+
+                    // Rellenar con los valores de la dirección
+                    for (const key in d) {
+                        if (form.elements[key]) {
+                            // Si es checkbox
+                            if (form.elements[key].type === 'checkbox') {
+                                form.elements[key].checked = d[key] == 1;
+                            } else {
+                                form.elements[key].value = d[key] ?? '';
+                            }
+                        }
+                    }
+
+                    modalTitle.textContent = 'Editar dirección';
+                    modal.show();
+                } else {
+                    alert('❌ No se pudo cargar la dirección.');
                 }
-                idField.value = id;
-                modalTitle.textContent = 'Editar dirección';
-                modal.show();
+            } catch (err) {
+                console.error(err);
+                alert('⚠️ Error al cargar los datos de la dirección.');
             }
         });
     });
 
-    // 🔹 Eliminar
+    // 🔹 ELIMINAR
     document.querySelectorAll('.btn-eliminar').forEach(btn => {
         btn.addEventListener('click', async () => {
             if (!confirm('¿Eliminar esta dirección?')) return;
             const id = btn.dataset.id;
-            const res = await fetch(`/perfil/direcciones/${id}`, {
-                method: 'DELETE',
-                headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}
-            });
-            const data = await res.json();
-            if (data.success) location.reload();
-            else alert('❌ Error al eliminar.');
+            try {
+                const res = await fetch(`/perfil/direcciones/${id}`, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                    body: new URLSearchParams({ _method: 'DELETE' })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('🗑️ Dirección eliminada correctamente.');
+                    location.reload();
+                } else {
+                    alert('❌ Error al eliminar.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('⚠️ Error de conexión.');
+            }
         });
     });
 });
 </script>
+
 @endsection
