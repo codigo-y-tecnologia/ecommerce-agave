@@ -15,6 +15,8 @@ use App\Http\Controllers\CuponesController;
 use App\Http\Controllers\ImpuestosController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Superadmin\SuperadminController;
+use App\Http\Controllers\Perfil\DireccionController;
+use App\Models\Direccion;
 
 Route::get('/', [DashboardController::class, 'index'])->name('home');
 
@@ -61,6 +63,30 @@ Route::middleware('auth')->group(function () {
 // Rutas para clientes
 // --------------------
 Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])->group(function () {
+
+// Perfil
+    Route::get('/perfil', function () {
+        return view('perfil.index');
+    })->name('perfil.index');
+
+    // Módulo de direcciones
+    Route::get('/perfil/direcciones', [DireccionController::class, 'index'])->name('direcciones.index');
+    Route::post('/perfil/direcciones', [DireccionController::class, 'store'])->name('direcciones.store');
+    Route::put('/perfil/direcciones/{id}', [DireccionController::class, 'update'])->name('direcciones.update');
+    Route::delete('/perfil/direcciones/{id}', [DireccionController::class, 'destroy'])->name('direcciones.destroy');
+
+    // Obtener una dirección por ID (para editar)
+    Route::get('/api/direccion/{id}', function ($id) {
+    $direccion = Direccion::where('id_direccion', $id)
+        ->where('id_usuario', Auth::user()->id_usuario)
+        ->first();
+
+    if (!$direccion) {
+        return response()->json(['success' => false, 'message' => 'Dirección no encontrada']);
+    }
+
+    return response()->json(['success' => true, 'direccion' => $direccion]);
+});
 
 // --------------------
 // Rutas de Carrito
