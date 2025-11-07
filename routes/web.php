@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\VerificationController;
 use App\Models\Producto;
+use App\Http\Controllers\VentaController;
 
 // Route::get('/', function () {
 //     return view('inicio');
@@ -96,3 +97,4 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
 //         return "Bienvenido al panel del superadmin 👑";
 //     })->name('superadmin.panel');
 // });
+Route::resource('ventas', VentaController::class)->except(['create', 'store', 'destroy']);
