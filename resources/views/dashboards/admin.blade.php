@@ -60,7 +60,7 @@
             <div class="card-body text-center">
                 <h5>📊 Reportes</h5>
                 <p>Genera reportes de ventas, usuarios y más.</p>
-                <a href="#" class="btn btn-danger w-100">Ver reportes</a>
+                <a href="{{ route('ventas.index') }}" class="btn btn-danger w-100">Ver reportes</a>
             </div>
         </div>
     </div>
