@@ -10,8 +10,8 @@
         <a href="{{ route('direcciones.index') }}" class="list-group-item list-group-item-action">
             📍 Mis direcciones de envío
         </a>
-        <a href="#" class="list-group-item list-group-item-action disabled">
-            ⚙️ Configuración de cuenta (próximamente)
+        <a href="{{ route('perfil.configuracion') }}" class="list-group-item list-group-item-action">
+            ⚙️ Configuración de cuenta
         </a>
         <a href="#" class="list-group-item list-group-item-action disabled">
             🧾 Historial de pedidos (próximamente)

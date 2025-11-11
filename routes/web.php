@@ -18,6 +18,7 @@ use App\Http\Controllers\Superadmin\SuperadminController;
 use App\Http\Controllers\Perfil\DireccionController;
 use App\Models\Direccion;
 use App\Http\Controllers\VentaController;
+use App\Http\Controllers\Perfil\PerfilController;
 
 Route::get('/', [DashboardController::class, 'index'])->name('home');
 
@@ -88,6 +89,13 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
 
     return response()->json(['success' => true, 'direccion' => $direccion]);
 });
+
+// Configuración de perfil
+    Route::get('/perfil/configuracion', [PerfilController::class, 'configuracion'])->name('perfil.configuracion');
+
+    Route::put('/perfil/actualizar', [PerfilController::class, 'actualizar'])->name('perfil.actualizar');
+    Route::put('/perfil/cambiar-password', [PerfilController::class, 'cambiarPassword'])->name('perfil.cambiarPassword');
+    Route::delete('/perfil/eliminar', [PerfilController::class, 'eliminar'])->name('perfil.eliminar');
 
 // --------------------
 // Rutas de Carrito
