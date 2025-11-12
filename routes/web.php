@@ -10,6 +10,7 @@ use App\Http\Controllers\MarcaController;
 use App\Http\Controllers\AtributoController;
 use App\Http\Controllers\ProductoAtributoController;
 use App\Http\Controllers\BusquedaController;
+use App\Http\Controllers\FavoritoController;
 
 // Cambiar esta ruta para usar AuthController en lugar de la función anónima
 Route::get('/', [AuthController::class, 'index'])->name('inicio');
@@ -53,3 +54,10 @@ Route::get('/atributos/{atributo}/opciones', [ProductoAtributoController::class,
 Route::get('/buscar', [BusquedaController::class, 'buscar'])->name('busqueda.resultados');
 Route::get('/busqueda-rapida', [BusquedaController::class, 'busquedaRapida'])->name('busqueda.rapida');
 Route::get('/buscar-productos', [BusquedaController::class, 'buscarProductos'])->name('busqueda.productos');
+
+Route::post('/favoritos/toggle/{producto}', [FavoritoController::class, 'toggle'])
+     ->name('favoritos.toggle');
+Route::get('/favoritos', [FavoritoController::class, 'index'])
+     ->name('favoritos.index');
+Route::delete('/favoritos/{producto}', [FavoritoController::class, 'destroy'])
+     ->name('favoritos.destroy');

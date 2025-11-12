@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class Producto extends Model
 {
@@ -140,5 +142,86 @@ class Producto extends Model
         return $this->belongsToMany(Atributo::class, 'tbl_producto_atributos', 'id_producto', 'id_atributo')
                     ->withPivot('vValor', 'id_opcion')
                     ->using(ProductoAtributo::class);
+    }
+
+    // =========================================================================
+    // MÉTODOS PARA FAVORITOS
+    // =========================================================================
+
+    /**
+     * Relación con la tabla de favoritos
+     */
+    public function favoritos()
+    {
+        return $this->hasMany(Favorito::class, 'id_producto');
+    }
+
+    /**
+     * Verifica si el producto está en favoritos del usuario actual
+     */
+    public function esFavorito()
+    {
+        try {
+            // Si no hay usuario autenticado, retornar false
+            if (!Auth::check()) {
+                return false;
+            }
+
+            $userId = Auth::id();
+            
+            // Verificar directamente en la base de datos
+            return DB::table('tbl_favoritos')
+                     ->where('id_usuario', $userId)
+                     ->where('id_producto', $this->id_producto)
+                     ->exists();
+                     
+        } catch (\Exception $e) {
+            // En caso de error, retornar false
+            return false;
+        }
+    }
+
+    /**
+     * Verifica si el producto está bajo en stock (5 unidades o menos)
+     */
+    public function estaBajoEnStock()
+    {
+        return $this->iStock > 0 && $this->iStock <= 5;
+    }
+
+    /**
+     * Verifica si el producto tiene descuento
+     */
+    public function tieneDescuento()
+    {
+        return $this->dPrecio_venta < $this->dPrecio_compra;
+    }
+
+    /**
+     * Calcula el porcentaje de descuento del producto
+     */
+    public function porcentajeDescuento()
+    {
+        if (!$this->tieneDescuento()) {
+            return 0;
+        }
+
+        return round((($this->dPrecio_compra - $this->dPrecio_venta) / $this->dPrecio_compra) * 100);
+    }
+
+    /**
+     * Boot method para eliminar relaciones al borrar el producto
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($producto) {
+            // Eliminar favoritos relacionados
+            $producto->favoritos()->delete();
+            
+            // Eliminar imágenes
+            $producto->eliminarImagenes();
+        });
     }
 }
