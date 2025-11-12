@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.checkout')
 
 @section('title', 'Checkout - Confirmar Pedido')
 
@@ -69,6 +69,15 @@
                 <p class="text-end mb-1"><strong>Subtotal:</strong> ${{ number_format($subtotal, 2) }}</p>
                 <p class="text-end mb-1"><strong>Impuestos:</strong> ${{ number_format($totalImpuestos, 2) }}</p>
 
+                <p class="text-end mb-1" id="envio-linea">
+        <strong>Envío:</strong>
+        @if ($envio == 0)
+        <span class="text-success">Gratis 🚚</span>
+        @else
+            ${{ number_format($envio, 2) }}
+        @endif
+    </p>
+
                 {{-- 💸 Cupón --}}
                 <div class="d-flex justify-content-end mt-3">
                     <input type="text" id="codigo_cupon" class="form-control w-auto me-2" placeholder="Código de cupón" value="{{ $codigoCupon ?? '' }}">
@@ -78,8 +87,11 @@
                 {{-- 💸 Mensaje de cupón aplicado --}}
 @if(!empty($codigoCupon))
     <p class="text-end mt-3 text-success fw-bold" id="mensaje-cupon">
-        Cupón aplicado: <span class="text-uppercase">{{ $codigoCupon }}</span>
-        — Descuento: ${{ number_format($descuento, 2) }}
+        @if(($codigoCupon) === 'ENVIOGRATIS')
+            Cupón aplicado correctamente: {{ $codigoCupon }} — Envío gratis activado 🚚
+        @else
+            Cupón aplicado correctamente: {{ $codigoCupon }} — Descuento: ${{ number_format($descuento, 2) }}
+        @endif
     </p>
 @else
     <p class="text-end mt-3 text-success fw-bold" id="mensaje-cupon"></p>
@@ -234,6 +246,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const codigo = document.getElementById('codigo_cupon').value.trim();
         const mensaje = document.getElementById('mensaje-cupon');
         const totalFinal = document.getElementById('total-final');
+        const envioElemento = document.getElementById('envio-linea');
+
+        function formatCurrency(value) {
+    return '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
         if (!codigo) {
             mensaje.textContent = "Por favor ingresa un código de cupón.";
@@ -257,7 +274,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 mensaje.textContent = data.message;
                 mensaje.classList.remove('text-danger');
                 mensaje.classList.add('text-success');
-                totalFinal.textContent = `$${data.totalFinal.toFixed(2)}`;
+                totalFinal.textContent = formatCurrency(data.totalFinal);
+
+                // Actualizar Envío dinámicamente
+                if (typeof data.envio !== 'undefined' && envioElemento) {
+                    const envioValor = data.envio == 0
+                        ? '<span class="text-success">Gratis 🚚</span>'
+                        : formatCurrency(data.envio);
+                        envioElemento.innerHTML = `<strong>Envío:</strong> ${envioValor}`;
+                }
             } else {
                 mensaje.textContent = data.message;
                 mensaje.classList.remove('text-success');

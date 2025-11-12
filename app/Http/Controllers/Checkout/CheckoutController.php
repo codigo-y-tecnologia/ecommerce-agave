@@ -36,7 +36,7 @@ class CheckoutController extends Controller
     $descuento = 0;
 
     if ($codigoCupon) {
-        $cupon = Cupon::where('vCodigo_cupon', $codigoCupon)
+        $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])
             ->where('bActivo', 1)
             ->whereDate('dValido_desde', '<=', now())
             ->whereDate('dValido_hasta', '>=', now())
@@ -51,6 +51,32 @@ class CheckoutController extends Controller
 
     $totalFinal = max(0, $total - $descuento);
 
+    // Definir reglas de envío
+$montoEnvioGratis = 1500; // Envío gratis si el total >= 1500
+$costoEnvioFijo = 150;   // Costo de envío si no alcanza
+$envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
+
+// === Aplicar cupón ===
+$descuento = 0;
+
+if (!empty($codigoCupon) && isset($cupon)) {
+    if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
+        // Cupón especial: solo elimina el costo de envío
+        $envio = 0;
+    } else {
+        // Cupones normales (porcentaje o monto)
+        if ($cupon->eTipo === 'porcentaje') {
+            $descuento = $total * ($cupon->dDescuento / 100);
+        } elseif ($cupon->eTipo === 'monto') {
+            $descuento = $cupon->dDescuento;
+        }
+    }
+}
+
+// Recalcular total final
+$totalFinal = max(0, $total - $descuento + $envio);
+
+
     return view('checkout.index', compact(
         'carrito',
         'subtotal',
@@ -59,7 +85,8 @@ class CheckoutController extends Controller
         'descuento',
         'totalFinal',
         'codigoCupon',
-        'direcciones'
+        'direcciones',
+        'envio'
     ));
 }
 
@@ -84,7 +111,7 @@ public function store(Request $request)
         $cupon = null;
 
         if ($codigoCupon) {
-            $cupon = Cupon::where('vCodigo_cupon', $codigoCupon)
+            $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])
                 ->where('bActivo', 1)
                 ->first();
             if ($cupon) {
@@ -96,6 +123,35 @@ public function store(Request $request)
 
         $totalFinal = max(0, $total - $descuento);
 
+        // Definir reglas de envío
+$montoEnvioGratis = 1500; // Envío gratis si el total >= 1500
+$costoEnvioFijo = 150;   // Costo de envío si no alcanza
+$envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
+
+// === Aplicar cupón ===
+$descuento = 0;
+
+if (!empty($codigoCupon) && isset($cupon)) {
+    if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
+        // Cupón especial: solo elimina el costo de envío
+        $envio = 0;
+    } else {
+        // Cupones normales (porcentaje o monto)
+        if ($cupon->eTipo === 'porcentaje') {
+            $descuento = $total * ($cupon->dDescuento / 100);
+        } elseif ($cupon->eTipo === 'monto') {
+            $descuento = $cupon->dDescuento;
+        }
+    }
+}
+
+// Recalcular total final
+$totalFinal = max(0, $total - $descuento + $envio);
+        if ($totalFinal <= 0) {
+            throw new Exception('El total del pedido no puede ser cero o negativo.');
+        }
+
+        // Crear el pedido
         $pedido = Pedido::create([
             'id_usuario' => $usuario->id_usuario,
             'id_direccion' => $idDireccion,
@@ -269,7 +325,7 @@ public function aplicarCupon(Request $request)
 
     [$subtotal, $totalImpuestos, $total] = $this->calcularTotales($carrito);
 
-    $cupon = Cupon::where('vCodigo_cupon', $codigo)
+    $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigo])
         ->where('bActivo', 1)
         ->whereDate('dValido_desde', '<=', now())
         ->whereDate('dValido_hasta', '>=', now())
@@ -279,32 +335,55 @@ public function aplicarCupon(Request $request)
         return response()->json(['success' => false, 'message' => 'Cupón inválido o expirado.']);
     }
 
-    // 🔹 Calcular descuento (puede ser 0 si es tipo "envío gratis" u otro)
-    $descuento = 0;
+    // 🚚 Cálculo de envío
+    $montoEnvioGratis = 1500;
+    $costoEnvioFijo = 150;
+    $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
 
-    if ($cupon->eTipo === 'porcentaje') {
-        $descuento = $total * ($cupon->dDescuento / 100);
-    } elseif ($cupon->eTipo === 'monto' && $cupon->dDescuento > 0) {
-        $descuento = $cupon->dDescuento;
+    // 💸 Cálculo de descuento
+    $descuento = 0;
+    $mensaje = "Cupón aplicado correctamente: {$cupon->vCodigo_cupon}";
+
+    if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
+        // Solo quitar el envío
+        $envio = 0;
+        $mensaje .= " — Envío gratis activado 🚚";
+    } else {
+        if ($cupon->eTipo === 'porcentaje') {
+            $descuento = $total * ($cupon->dDescuento / 100);
+        } elseif ($cupon->eTipo === 'monto') {
+            $descuento = $cupon->dDescuento;
+        }
+        $mensaje .= " — Descuento: $" . number_format($descuento, 2, '.', ',');
     }
+
+     // 🧮 Recalcular total
+    $totalFinal = max(0, $total - $descuento + $envio);
+
+    // if ($cupon->eTipo === 'porcentaje') {
+    //     $descuento = $total * ($cupon->dDescuento / 100);
+    // } elseif ($cupon->eTipo === 'monto' && $cupon->dDescuento > 0) {
+    //     $descuento = $cupon->dDescuento;
+    // }
 
     // 🔹 Guardar el cupón en la sesión
     session(['codigo_cupon' => $codigo]);
 
-    // 🔹 Mensaje personalizado según el tipo de cupón
-    $mensaje = "Cupón aplicado correctamente: {$cupon->vCodigo_cupon}";
+    // // 🔹 Mensaje personalizado según el tipo de cupón
+    // $mensaje = "Cupón aplicado correctamente: {$cupon->vCodigo_cupon}";
 
-    if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
-        $mensaje .= " — Envío gratis activado 🚚";
-    } elseif ($descuento > 0) {
-        $mensaje .= " — Descuento: $" . number_format($descuento, 2);
-    }
+    // if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
+    //     $mensaje .= " — Envío gratis activado 🚚";
+    // } elseif ($descuento > 0) {
+    //     $mensaje .= " — Descuento: $" . number_format($descuento, 2);
+    // }
 
     return response()->json([
         'success' => true,
         'codigo' => $cupon->vCodigo_cupon,
         'descuento' => $descuento,
-        'totalFinal' => max(0, $total - $descuento),
+        'envio' => $envio,
+        'totalFinal' => $totalFinal,
         'message' => $mensaje
     ]);
 }
