@@ -15,6 +15,25 @@ class Producto extends Model
         'id_marca','id_categoria','bActivo'
     ];
 
+    public function impuesto()
+{
+    return $this->belongsToMany(
+        Impuesto::class,
+        'tbl_producto_impuestos',
+        'id_producto',
+        'id_impuesto'
+    )->where('bActivo', 1);
+}
+
+/**
+ * Calcula el precio de venta con impuestos incluidos.
+ */
+public function getPrecioConImpuestosAttribute()
+{
+    $porcentajeTotal = $this->impuestos->sum('dPorcentaje');
+    return round($this->dPrecio_venta * (1 + ($porcentajeTotal / 100)), 2);
+}
+
     //Relación con CarritoDetalle: Un producto puede estar en muchos carritos
     public function detalles()
     {
