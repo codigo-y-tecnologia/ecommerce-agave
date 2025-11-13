@@ -87,7 +87,7 @@ class CarritoController extends Controller
                 'id_carrito' => $carrito->id_carrito,
                 'id_producto' => $producto->id_producto,
                 'iCantidad' => $request->input('cantidad', 1),
-                'dPrecio_unitario' => $producto->dPrecio_venta,
+                'dPrecio_unitario' => $producto->precio_con_impuestos,
             ]);
         }
 
