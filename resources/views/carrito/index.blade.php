@@ -36,7 +36,9 @@
             <td>{{ $detalle->producto->vNombre }}</td>
 
             <!-- Precio unitario -->
-            <td>${{ number_format($detalle->dPrecio_unitario, 2) }}</td>
+            <td>
+    ${{ number_format($detalle->producto->precio_con_impuestos, 2) }}
+</td>
 
             <!-- Cantidad con formulario de actualización -->
             <td>
@@ -49,7 +51,9 @@
             </td>
 
             <!-- Subtotal -->
-            <td>${{ number_format($detalle->dSubtotal, 2) }}</td>
+            <td>
+    ${{ number_format($detalle->producto->precio_con_impuestos * $detalle->iCantidad, 2) }}
+</td>
 
             <!-- Acciones -->
             <td>
@@ -71,7 +75,10 @@
     <!-- Resumen -->
     @if(isset($total) && $total > 0)
     <div class="text-end">
-        <h4>Total: ${{ number_format($total, 2) }}</h4>
+        @php
+    $total = $detalles->sum(fn($d) => $d->producto->precio_con_impuestos * $d->iCantidad);
+@endphp
+<h4>Total: ${{ number_format($total, 2) }}</h4>
         <a href="{{ route('checkout.index') }}" class="btn btn-success">Finalizar Compra</a>
     </div>
     @endif
