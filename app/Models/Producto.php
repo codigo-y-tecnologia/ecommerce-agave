@@ -34,6 +34,17 @@ public function getPrecioConImpuestosAttribute()
     return round($this->dPrecio_venta * (1 + ($porcentajeTotal / 100)), 2);
 }
 
+
+/**
+ * Calcula el monto total de impuestos (IVA + IEPS + otros) aplicados al producto.
+ */
+public function getMontoImpuestosAttribute()
+{
+    $porcentajeTotal = $this->impuestos->sum('dPorcentaje');
+    return round($this->dPrecio_venta * ($porcentajeTotal / 100), 2);
+}
+
+
     //Relación con CarritoDetalle: Un producto puede estar en muchos carritos
     public function detalles()
     {

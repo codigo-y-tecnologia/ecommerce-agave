@@ -31,35 +31,48 @@
                     </thead>
                     <tbody>
                         @foreach ($carrito->detalles as $detalle)
-                            @php
-                                $producto = $detalle->producto;
-                                $subtotalProducto = $detalle->cantidad * $detalle->precio_unitario;
-                                $impuestosProducto = 0;
-                                $desglose = [];
+    @php
+        $producto = $detalle->producto;
+        $subtotalProducto = $detalle->cantidad * $detalle->precio_unitario;
+        $desglose = [];
+        $totalPorcentaje = 0;
 
-                                foreach ($producto->impuestos as $imp) {
-                                    if ($imp->bActivo) {
-                                        $monto = $subtotalProducto * ($imp->dPorcentaje / 100);
-                                        $impuestosProducto += $monto;
-                                        $desglose[] = "{$imp->eTipo} ({$imp->dPorcentaje}%)";
-                                    }
-                                }
-                            @endphp
-                            <tr>
-                                <td>{{ $producto->vNombre }}</td>
-                                <td class="text-center">{{ $detalle->cantidad }}</td>
-                                <td class="text-end">${{ number_format($detalle->precio_unitario, 2) }}</td>
-                                <td class="text-end">
-                                    @if(count($desglose) > 0)
-                                        <small class="text-muted d-block">{{ implode(', ', $desglose) }}</small>
-                                        ${{ number_format($impuestosProducto, 2) }}
-                                    @else
-                                        <span class="text-muted">—</span>
-                                    @endif
-                                </td>
-                                <td class="text-end fw-bold">${{ number_format($subtotalProducto + $impuestosProducto, 2) }}</td>
-                            </tr>
-                        @endforeach
+        foreach ($producto->impuestos as $imp) {
+            if ($imp->bActivo) {
+                $totalPorcentaje += $imp->dPorcentaje;
+                $desglose[] = "{$imp->eTipo} ({$imp->dPorcentaje}%)";
+            }
+        }
+
+        // 🔹 Precio base (sin impuestos)
+        $precioSinImpuestos = $detalle->precio_unitario / (1 + ($totalPorcentaje / 100));
+
+        // 🔹 Impuestos por unidad y total
+        $impuestosUnitarios = $detalle->precio_unitario - $precioSinImpuestos;
+        $impuestosTotales = $impuestosUnitarios * $detalle->cantidad;
+    @endphp
+
+    <tr>
+        <td>{{ $producto->vNombre }}</td>
+        <td class="text-center">{{ $detalle->cantidad }}</td>
+
+        {{-- Precio unitario sin impuestos --}}
+        <td class="text-end">${{ number_format($precioSinImpuestos, 2) }}</td>
+
+        {{-- Impuestos --}}
+        <td class="text-end">
+            @if(count($desglose) > 0)
+                <small class="text-muted d-block">{{ implode(', ', $desglose) }}</small>
+                ${{ number_format($impuestosTotales, 2) }}
+            @else
+                <span class="text-muted">—</span>
+            @endif
+        </td>
+
+        {{-- Subtotal con impuestos --}}
+        <td class="text-end fw-bold">${{ number_format($detalle->cantidad * $detalle->precio_unitario, 2) }}</td>
+    </tr>
+@endforeach
                     </tbody>
                 </table>
             </div>

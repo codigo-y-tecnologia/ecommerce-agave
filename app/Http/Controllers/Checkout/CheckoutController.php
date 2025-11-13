@@ -147,6 +147,7 @@ if (!empty($codigoCupon) && isset($cupon)) {
 
 // Recalcular total final
 $totalFinal = max(0, $total - $descuento + $envio);
+
         if ($totalFinal <= 0) {
             throw new Exception('El total del pedido no puede ser cero o negativo.');
         }
@@ -289,22 +290,27 @@ private function calcularTotales($carrito)
 
     foreach ($carrito->detalles as $detalle) {
         $producto = $detalle->producto;
-        $precio = $detalle->precio_unitario;
+        $precioConImpuestos = $detalle->precio_unitario;
         $cantidad = $detalle->cantidad;
 
-        $subtotalProducto = $precio * $cantidad;
-        $subtotal += $subtotalProducto;
+        // Obtener porcentaje total de impuestos activos del producto
+        $porcentajeTotal = $producto->impuestos
+            ->where('bActivo', 1)
+            ->sum('dPorcentaje');
 
-        // Calcular impuestos asociados a ese producto
-        if ($producto->impuestos && $producto->impuestos->count() > 0) {
-            foreach ($producto->impuestos as $impuesto) {
-                if ($impuesto->bActivo) {
-                    $totalImpuestos += ($subtotalProducto * ($impuesto->dPorcentaje / 100));
-                }
-            }
-        }
+        // Calcular precio sin impuestos
+        $precioSinImpuestos = $precioConImpuestos / (1 + ($porcentajeTotal / 100));
+
+        // Calcular totales
+        $subtotalProducto = $precioSinImpuestos * $cantidad;
+        $impuestosProducto = ($precioConImpuestos - $precioSinImpuestos) * $cantidad;
+
+        // Acumular
+        $subtotal += $subtotalProducto;
+        $totalImpuestos += $impuestosProducto;
     }
 
+    // El total es la suma del subtotal sin impuestos + los impuestos
     $total = $subtotal + $totalImpuestos;
 
     return [$subtotal, $totalImpuestos, $total];
