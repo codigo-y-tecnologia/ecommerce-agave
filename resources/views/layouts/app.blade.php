@@ -32,7 +32,7 @@
                         @auth
                             @if(Auth::user()->eRol === 'cliente')
                                 <li class="nav-item"><a class="nav-link" href="{{ route('carrito.index') }}">🛒 Mi Carrito</a></li>
-                                <li class="nav-item"><a class="nav-link" href="#">🧾 Checkout</a></li>
+                                <li class="nav-item"><a class="nav-link" href="{{ route('checkout.index') }}">🧾 Checkout</a></li>
                                 <li class="nav-item"><a class="nav-link" href="#">📦 Mis Pedidos</a></li>
                                 <li class="nav-item"><a class="nav-link" href="#">👤 Mi Perfil</a></li>
 
