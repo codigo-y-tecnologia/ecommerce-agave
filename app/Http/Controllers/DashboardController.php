@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Producto;
+use Illuminate\Support\Facades\File;
 
 class DashboardController extends Controller
 {
@@ -12,9 +13,31 @@ class DashboardController extends Controller
     public function index()
     {
         // Traer productos activos
-        $productos = Producto::where('bActivo', 1)
-            ->orderBy('tFecha_registro', 'desc')
-            ->get();
+        $productos = Producto::with(['marca', 'categoria', 'etiquetas'])
+                        ->where('bActivo', 1)
+                        ->get();
+        
+        // Obtener imágenes para cada producto - CORREGIDO
+        foreach ($productos as $producto) {
+            $carpetaProducto = public_path('images/productos/' . $producto->vCodigo_barras);
+            $imagenes = [];
+            
+            if (File::exists($carpetaProducto)) {
+                $archivos = File::files($carpetaProducto);
+                foreach ($archivos as $archivo) {
+                    $extension = strtolower($archivo->getExtension());
+                    if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                        $imagenes[] = $archivo->getFilename();
+                    }
+                }
+                // Ordenar imágenes por nombre numéricamente
+                natsort($imagenes);
+                $imagenes = array_values($imagenes);
+            }
+            
+            // Agregar imágenes al producto
+            $producto->imagenes = $imagenes;
+        }
 
         // Si el usuario está autenticado, lo redirigimos a su panel correspondiente
         if (Auth::check()) {
@@ -38,9 +61,32 @@ class DashboardController extends Controller
 
     public function cliente()
     {
-        $productos = Producto::where('bActivo', 1)
-            ->orderBy('tFecha_registro', 'desc')
-            ->get();
+        // Traer productos activos
+        $productos = Producto::with(['marca', 'categoria', 'etiquetas'])
+                        ->where('bActivo', 1)
+                        ->get();
+        
+        // Obtener imágenes para cada producto - CORREGIDO
+        foreach ($productos as $producto) {
+            $carpetaProducto = public_path('images/productos/' . $producto->vCodigo_barras);
+            $imagenes = [];
+            
+            if (File::exists($carpetaProducto)) {
+                $archivos = File::files($carpetaProducto);
+                foreach ($archivos as $archivo) {
+                    $extension = strtolower($archivo->getExtension());
+                    if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                        $imagenes[] = $archivo->getFilename();
+                    }
+                }
+                // Ordenar imágenes por nombre numéricamente
+                natsort($imagenes);
+                $imagenes = array_values($imagenes);
+            }
+            
+            // Agregar imágenes al producto
+            $producto->imagenes = $imagenes;
+        }
 
         return view('dashboards.cliente', compact('productos'));
     }

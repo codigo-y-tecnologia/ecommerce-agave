@@ -4,10 +4,13 @@ use Illuminate\Support\Str;
 
 @extends('layouts.app')
 
+@push('styles')
+    @vite(['resources/css/dashboard-cliente.css'])
+@endpush
+
 @section('title', 'Panel del Cliente')
 
 @section('content')
-<div class="container my-4">
 
     {{-- 👋 Mensaje de bienvenida --}}
     @auth
@@ -24,48 +27,142 @@ use Illuminate\Support\Str;
         </p>
     @endguest
 
-
+    <main>
     {{-- 🛒 Sección de productos --}}
     <hr class="my-4">
     <h2 class="mb-4">Explora nuestros productos</h2>
 
-    @if(isset($productos) && $productos->isNotEmpty())
-        <div class="row">
-            @foreach($productos as $producto)
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100 shadow-sm border-0">
-                        <div class="card-body d-flex flex-column">
-                            <h5 class="card-title">{{ $producto->vNombre }}</h5>
-                            <p class="card-text text-muted mb-2">
-                                Precio: ${{ number_format($producto->dPrecio_venta, 2) }}
+    <!-- Barra de búsqueda -->
+        <div class="barra-busqueda-inicio">
+            <form action="{{ route('busqueda.resultados') }}" method="GET">
+                <input type="text" name="q" placeholder="Buscar productos (agave, mezcal, espadín, ancestral...)">
+                <button type="submit">Buscar</button>
+            </form>
+        </div>
+
+        @if ($productos->count() > 0)
+            <p>Encontramos <strong>{{ $productos->count() }}</strong> productos disponibles</p>
+            
+            <div class="productos-container">
+                @foreach ($productos as $producto)
+                    <div class="producto-card" onclick="window.location.href='{{ route('productos.show.public', $producto->id_producto) }}'">
+                        {{-- Mostrar primera imagen si existe --}}
+                        @if(count($producto->imagenes) > 0)
+                            <img src="{{ $producto->imagenes[0] }}" alt="{{ $producto->vNombre }}" class="producto-imagen">
+                        @else
+                            <div class="no-imagen">
+                                <span>Sin imagen</span>
+                            </div>
+                        @endif
+                        
+                        <h3>{{ $producto->vNombre }}</h3>
+                        <p class="producto-precio">${{ number_format($producto->dPrecio_venta, 2) }}</p>
+                        <p><strong>Stock:</strong> {{ $producto->iStock }}</p>
+                        <p><strong>Categoría:</strong> {{ $producto->categoria->vNombre ?? 'N/A' }}</p>
+                        <p><strong>Marca:</strong> {{ $producto->marca->vNombre ?? 'N/A' }}</p>
+                        
+                        @if ($producto->etiquetas->count() > 0)
+                            <p>
+                                <strong>Etiquetas:</strong>
+                                @foreach ($producto->etiquetas as $etiqueta)
+                                    <span class="badge">{{ $etiqueta->vNombre }}</span>
+                                @endforeach
                             </p>
-
-                            {{-- Descripción opcional --}}
-                            @if(!empty($producto->vDescripcion))
-                                <p class="small text-secondary flex-grow-1">
-                                    {{ Str::limit($producto->vDescripcion, 80) }}
-                                </p>
-                            @endif
-
-                            {{-- Botón para agregar al carrito --}}
-                            <form action="{{ route('carrito.store', $producto->id_producto) }}" method="POST" class="mt-auto">
-                                @csrf
-                                <div class="d-flex align-items-center">
-                                    <input type="number" name="cantidad" value="1" min="1" class="form-control w-25 me-2" required>
-                                    <button type="submit" class="btn btn-success btn-sm">
-                                        🛒 Agregar
-                                    </button>
-                                </div>
-                            </form>
+                        @endif
+                        
+                        <div class="ver-detalle">
+                            <a href="{{ route('productos.show.public', $producto->id_producto) }}">Ver detalle del producto</a>
                         </div>
                     </div>
-                </div>
-            @endforeach
-        </div>
-    @else
-        <div class="alert alert-info text-center">
-            No hay productos disponibles por ahora. ¡Vuelve pronto! 😊
+                @endforeach
+            </div>
+
+            <!-- Sugerencia de búsqueda -->
+            <div style="margin-top: 30px; padding: 15px; background: #e7f3ff; border-radius: 8px; border: 1px solid #b3d9ff;">
+                <h3>¿No encuentras lo que buscas?</h3>
+                <p>Usa nuestra barra de búsqueda para encontrar productos específicos por nombre, categoría o marca.</p>
+                <p>Por ejemplo, busca: 
+                    <a href="{{ route('busqueda.resultados') }}?q=agave" style="color: #007bff; text-decoration: none; margin: 0 5px;">"agave"</a>, 
+                    <a href="{{ route('busqueda.resultados') }}?q=mezcal" style="color: #007bff; text-decoration: none; margin: 0 5px;">"mezcal"</a>, 
+                    <a href="{{ route('busqueda.resultados') }}?q=ancestral" style="color: #007bff; text-decoration: none; margin: 0 5px;">"ancestral"</a>
+                </p>
+            </div>
+
+        @else
+            <div style="padding: 40px; background: #fff; border-radius: 8px; border: 1px solid #dee2e6;">
+                <h3>No hay productos registrados aún</h3>
+                <p>Próximamente tendremos disponibles nuestros productos de agave.</p>
         </div>
     @endif
 </div>
+</main>
+
+<script>
+        // Funcionalidad adicional para mejorar la experiencia
+        document.addEventListener('DOMContentLoaded', function() {
+            // Agregar confirmación al cerrar sesión
+            const logoutForms = document.querySelectorAll('form[action*="logout"]');
+            logoutForms.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    if (!confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+                        e.preventDefault();
+                    }
+                });
+            });
+
+            // Mejorar la interactividad de las tarjetas de producto
+            const productCards = document.querySelectorAll('.producto-card');
+            productCards.forEach(card => {
+                // Efecto de hover mejorado
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-5px)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+
+                // Click en cualquier parte de la tarjeta
+                card.addEventListener('click', function() {
+                    const link = this.querySelector('.ver-detalle a');
+                    if (link) {
+                        window.location.href = link.href;
+                    }
+                });
+            });
+
+            // Focus en la barra de búsqueda al presionar Ctrl+K
+            document.addEventListener('keydown', function(e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    const searchInput = document.querySelector('.barra-busqueda-inicio input[type="text"]');
+                    if (searchInput) {
+                        searchInput.focus();
+                    }
+                }
+            });
+
+            // Mostrar atajo de teclado en la barra de búsqueda
+            const searchInput = document.querySelector('.barra-busqueda-inicio input[type="text"]');
+            if (searchInput) {
+                // Agregar placeholder dinámico
+                const placeholders = [
+                    "Buscar productos (agave, mezcal, espadín...)",
+                    "Buscar por nombre, categoría o marca...",
+                    "Presiona Ctrl+K para buscar rápidamente"
+                ];
+                let currentPlaceholder = 0;
+                
+                setInterval(() => {
+                    searchInput.placeholder = placeholders[currentPlaceholder];
+                    currentPlaceholder = (currentPlaceholder + 1) % placeholders.length;
+                }, 3000);
+            }
+        });
+
+        // Función para búsqueda rápida
+        function busquedaRapida(termino) {
+            window.location.href = "{{ route('busqueda.resultados') }}?q=" + encodeURIComponent(termino);
+        }
+    </script>
 @endsection
