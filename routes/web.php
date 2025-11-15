@@ -160,6 +160,10 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':admin'])->g
         return "Bienvenido al panel de administración 👨‍💻";
     })->name('admin.dashboard');
 
+    Route::get('/admin/administrar-productos', function () {
+    return view('admin.productos.administrar-productos');
+})->name('admin.administrar-productos');
+
     Route::get('/admin/usuarios', [UsuarioController::class, 'index'])->name('admin.usuarios');
     Route::get('/admin/usuarios/{id}/edit', [UsuarioController::class, 'edit'])->name('admin.usuarios.edit');
     Route::put('/admin/usuarios/{id}', [UsuarioController::class, 'update'])->name('admin.usuarios.update');

@@ -42,7 +42,7 @@
             <div class="card-body text-center">
                 <h5>🛍️ Productos</h5>
                 <p>Gestiona los productos del catálogo.</p>
-                <a href="#" class="btn btn-info w-100">Administrar productos</a>
+                <a href="{{ route('admin.administrar-productos') }}" class="btn btn-info w-100">Administrar productos</a>
             </div>
         </div>
     </div>
