@@ -403,7 +403,7 @@
             <li><a href="{{ route('home') }}">Inicio</a></li>
             <li><a href="{{ route('busqueda.resultados') }}">Todos los Productos</a></li>
             @auth('web')
-                <li><a href="#">Mi Carrito</a></li>
+                <li><a href="{{ route('carrito.index') }}">Mi Carrito</a></li>
                 <li><a href="#">Mis Pedidos</a></li>
                 <li>
                     <form method="POST" action="{{ route('logout') }}" style="display:inline;">
