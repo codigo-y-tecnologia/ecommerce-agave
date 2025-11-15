@@ -96,11 +96,13 @@
         
         .filtro-opcion label {
             cursor: pointer;
+            flex: 1;
         }
         
         .precio-inputs {
             display: flex;
             gap: 10px;
+            margin-bottom: 10px;
         }
         
         .precio-inputs input {
@@ -109,6 +111,21 @@
             border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 14px;
+        }
+        
+        .btn-precio {
+            width: 100%;
+            padding: 8px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn-precio:hover {
+            background: #218838;
         }
         
         .busqueda-superior {
@@ -418,59 +435,62 @@
             <form id="filtrosForm" method="GET" action="{{ route('busqueda.resultados') }}">
                 <input type="hidden" name="q" value="{{ request('q') }}">
                 
-                <!-- Filtro de Categorías -->
+                <!-- Filtro de Categorías (MÚLTIPLE SELECCIÓN) -->
                 <div class="filtro-grupo">
                     <div class="filtro-titulo">Categorías</div>
                     @foreach($categorias as $categoria)
                     <div class="filtro-opcion">
-                        <input type="checkbox" name="categoria" value="{{ $categoria->id_categoria }}" 
+                        <input type="checkbox" name="categorias[]" value="{{ $categoria->id_categoria }}" 
                                id="cat_{{ $categoria->id_categoria }}"
-                               {{ request('categoria') == $categoria->id_categoria ? 'checked' : '' }}
-                               onchange="this.form.submit()">
+                               {{ is_array(request('categorias')) && in_array($categoria->id_categoria, request('categorias')) ? 'checked' : '' }}
+                               onchange="document.getElementById('filtrosForm').submit()">
                         <label for="cat_{{ $categoria->id_categoria }}">{{ $categoria->vNombre }}</label>
                     </div>
                     @endforeach
                 </div>
 
-                <!-- Filtro de Marcas -->
+                <!-- Filtro de Marcas (MÚLTIPLE SELECCIÓN) -->
                 <div class="filtro-grupo">
                     <div class="filtro-titulo">Marcas</div>
                     @foreach($marcas as $marca)
                     <div class="filtro-opcion">
-                        <input type="checkbox" name="marca" value="{{ $marca->id_marca }}"
+                        <input type="checkbox" name="marcas[]" value="{{ $marca->id_marca }}"
                                id="marca_{{ $marca->id_marca }}"
-                               {{ request('marca') == $marca->id_marca ? 'checked' : '' }}
-                               onchange="this.form.submit()">
+                               {{ is_array(request('marcas')) && in_array($marca->id_marca, request('marcas')) ? 'checked' : '' }}
+                               onchange="document.getElementById('filtrosForm').submit()">
                         <label for="marca_{{ $marca->id_marca }}">{{ $marca->vNombre }}</label>
                     </div>
                     @endforeach
                 </div>
 
-                <!-- Filtro de Etiquetas -->
+                <!-- Filtro de Etiquetas (MÚLTIPLE SELECCIÓN) -->
                 <div class="filtro-grupo">
                     <div class="filtro-titulo">Etiquetas</div>
                     @foreach($etiquetas as $etiqueta)
                     <div class="filtro-opcion">
-                        <input type="checkbox" name="etiqueta" value="{{ $etiqueta->id_etiqueta }}"
+                        <input type="checkbox" name="etiquetas[]" value="{{ $etiqueta->id_etiqueta }}"
                                id="etiqueta_{{ $etiqueta->id_etiqueta }}"
-                               {{ request('etiqueta') == $etiqueta->id_etiqueta ? 'checked' : '' }}
-                               onchange="this.form.submit()">
+                               {{ is_array(request('etiquetas')) && in_array($etiqueta->id_etiqueta, request('etiquetas')) ? 'checked' : '' }}
+                               onchange="document.getElementById('filtrosForm').submit()">
                         <label for="etiqueta_{{ $etiqueta->id_etiqueta }}">{{ $etiqueta->vNombre }}</label>
                     </div>
                     @endforeach
                 </div>
 
-                <!-- Filtro de Precio -->
+                <!-- Filtro de Precio MEJORADO -->
                 <div class="filtro-grupo">
                     <div class="filtro-titulo">Rango de Precio</div>
                     <div class="precio-inputs">
                         <input type="number" name="precio_min" placeholder="Mín $" 
                                value="{{ request('precio_min') }}" min="0" step="0.01"
-                               onchange="this.form.submit()">
+                               id="precio_min">
                         <input type="number" name="precio_max" placeholder="Máx $" 
                                value="{{ request('precio_max') }}" min="0" step="0.01"
-                               onchange="this.form.submit()">
+                               id="precio_max">
                     </div>
+                    <button type="button" onclick="aplicarFiltroPrecio()" class="btn-precio">
+                        Aplicar Precio
+                    </button>
                 </div>
 
                 <!-- Filtro de Stock -->
@@ -478,7 +498,7 @@
                     <div class="filtro-opcion">
                         <input type="checkbox" name="con_stock" value="1" id="con_stock"
                                {{ request('con_stock') == '1' ? 'checked' : '' }}
-                               onchange="this.form.submit()">
+                               onchange="document.getElementById('filtrosForm').submit()">
                         <label for="con_stock">Solo productos con stock</label>
                     </div>
                 </div>
@@ -503,12 +523,30 @@
                 <div class="ordenamiento">
                     <form method="GET" id="ordenForm">
                         <input type="hidden" name="q" value="{{ request('q') }}">
-                        <input type="hidden" name="categoria" value="{{ request('categoria') }}">
-                        <input type="hidden" name="marca" value="{{ request('marca') }}">
-                        <input type="hidden" name="etiqueta" value="{{ request('etiqueta') }}">
                         <input type="hidden" name="precio_min" value="{{ request('precio_min') }}">
                         <input type="hidden" name="precio_max" value="{{ request('precio_max') }}">
                         <input type="hidden" name="con_stock" value="{{ request('con_stock') }}">
+                        
+                        <!-- Pasar todas las categorías seleccionadas -->
+                        @if(is_array(request('categorias')))
+                            @foreach(request('categorias') as $categoria_id)
+                                <input type="hidden" name="categorias[]" value="{{ $categoria_id }}">
+                            @endforeach
+                        @endif
+                        
+                        <!-- Pasar todas las marcas seleccionadas -->
+                        @if(is_array(request('marcas')))
+                            @foreach(request('marcas') as $marca_id)
+                                <input type="hidden" name="marcas[]" value="{{ $marca_id }}">
+                            @endforeach
+                        @endif
+                        
+                        <!-- Pasar todas las etiquetas seleccionadas -->
+                        @if(is_array(request('etiquetas')))
+                            @foreach(request('etiquetas') as $etiqueta_id)
+                                <input type="hidden" name="etiquetas[]" value="{{ $etiqueta_id }}">
+                            @endforeach
+                        @endif
                         
                         <select name="orden" onchange="document.getElementById('ordenForm').submit()">
                             <option value="nombre" {{ request('orden') == 'nombre' ? 'selected' : '' }}>Ordenar por nombre</option>
@@ -582,6 +620,30 @@
             }
         }
 
+        function aplicarFiltroPrecio() {
+            const precioMin = document.getElementById('precio_min').value;
+            const precioMax = document.getElementById('precio_max').value;
+            
+            // Obtener todos los parámetros actuales
+            const url = new URL(window.location.href);
+            
+            // Actualizar solo los parámetros de precio
+            if (precioMin) {
+                url.searchParams.set('precio_min', precioMin);
+            } else {
+                url.searchParams.delete('precio_min');
+            }
+            
+            if (precioMax) {
+                url.searchParams.set('precio_max', precioMax);
+            } else {
+                url.searchParams.delete('precio_max');
+            }
+            
+            // Recargar la página con los nuevos parámetros
+            window.location.href = url.toString();
+        }
+
         // Auto-focus en la barra de búsqueda al cargar la página
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.querySelector('.barra-busqueda-principal input[type="text"]');
@@ -590,6 +652,30 @@
                 // Seleccionar el texto para facilitar nueva búsqueda
                 searchInput.select();
             }
+
+            // Agregar delay para evitar múltiples envíos rápidos (solo para checkboxes)
+            let timeoutId;
+            document.querySelectorAll('#filtrosForm input[type="checkbox"]').forEach(input => {
+                input.addEventListener('change', function() {
+                    clearTimeout(timeoutId);
+                    timeoutId = setTimeout(() => {
+                        document.getElementById('filtrosForm').submit();
+                    }, 500);
+                });
+            });
+
+            // Permitir Enter en los campos de precio
+            document.getElementById('precio_min').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    aplicarFiltroPrecio();
+                }
+            });
+
+            document.getElementById('precio_max').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    aplicarFiltroPrecio();
+                }
+            });
         });
     </script>
 </body>

@@ -25,33 +25,35 @@ class BusquedaController extends Controller
                   ->orWhere('tDescripcion_corta', 'LIKE', "%{$searchTerm}%")
                   ->orWhere('tDescripcion_larga', 'LIKE', "%{$searchTerm}%")
                   ->orWhereHas('categoria', function($catQuery) use ($searchTerm) {
-                      $catQuery->where('vNombre', 'LIKE', "%{$searchTerm}%");
+                      $catQuery->where('tbl_categorias.vNombre', 'LIKE', "%{$searchTerm}%");
                   })
                   ->orWhereHas('marca', function($brandQuery) use ($searchTerm) {
-                      $brandQuery->where('vNombre', 'LIKE', "%{$searchTerm}%");
+                      $brandQuery->where('tbl_marcas.vNombre', 'LIKE', "%{$searchTerm}%");
                   })
                   ->orWhereHas('etiquetas', function($tagQuery) use ($searchTerm) {
-                      $tagQuery->where('vNombre', 'LIKE', "%{$searchTerm}%");
+                      $tagQuery->where('tbl_etiquetas.vNombre', 'LIKE', "%{$searchTerm}%");
                   });
             });
         }
 
-        // Filtros
-        if ($request->has('categoria') && !empty($request->categoria)) {
+        // Filtro de Categorías (MÚLTIPLE SELECCIÓN)
+        if ($request->has('categorias') && !empty($request->categorias)) {
             $query->whereHas('categoria', function($q) use ($request) {
-                $q->where('id_categoria', $request->categoria);
+                $q->whereIn('tbl_categorias.id_categoria', $request->categorias);
             });
         }
 
-        if ($request->has('marca') && !empty($request->marca)) {
+        // Filtro de Marcas (MÚLTIPLE SELECCIÓN)
+        if ($request->has('marcas') && !empty($request->marcas)) {
             $query->whereHas('marca', function($q) use ($request) {
-                $q->where('id_marca', $request->marca);
+                $q->whereIn('tbl_marcas.id_marca', $request->marcas);
             });
         }
 
-        if ($request->has('etiqueta') && !empty($request->etiqueta)) {
+        // Filtro por etiquetas (MÚLTIPLE SELECCIÓN)
+        if ($request->has('etiquetas') && !empty($request->etiquetas)) {
             $query->whereHas('etiquetas', function($q) use ($request) {
-                $q->where('id_etiqueta', $request->etiqueta);
+                $q->whereIn('tbl_etiquetas.id_etiqueta', $request->etiquetas);
             });
         }
 
@@ -114,7 +116,7 @@ class BusquedaController extends Controller
                 $q->where('vNombre', 'LIKE', "%{$term}%")
                   ->orWhere('tDescripcion_corta', 'LIKE', "%{$term}%")
                   ->orWhereHas('categoria', function($catQuery) use ($term) {
-                      $catQuery->where('vNombre', 'LIKE', "%{$term}%");
+                      $catQuery->where('tbl_categorias.vNombre', 'LIKE', "%{$term}%");
                   });
             })
             ->take(5)
