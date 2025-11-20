@@ -142,9 +142,38 @@
             </div>
         </div>
 
-        <div class="d-flex justify-content-end mt-3">
-            <button type="submit" class="btn btn-success px-4">Confirmar pedido</button>
+        {{-- MÉTODOS DE PAGO --}}
+<div class="card shadow-sm mt-4">
+    <div class="card-body">
+        <h5 class="card-title fw-bold mb-3">Método de pago</h5>
+
+        <p class="text-muted mb-3">
+            Selecciona cómo deseas realizar tu pago. Serás redirigido de manera segura para completar tu compra.
+        </p>
+
+        <div class="d-flex flex-column flex-md-row justify-content-end gap-3">
+
+            {{-- BOTÓN STRIPE --}}
+            <button id="btn-stripe" class="btn btn-primary px-4 py-2 d-flex align-items-center justify-content-center"
+                style="font-size: 1.1rem; font-weight: 600;">
+                <i class="bi bi-credit-card-2-front me-2"></i>
+                Pagar con tarjeta
+            </button>
+
+            {{-- BOTÓN PAYPAL --}}
+            <div id="paypal-button-container" class="paypal-buttons"></div>
+
         </div>
+    </div>
+</div>
+
+<style>
+    .paypal-buttons iframe {
+        transform: scale(1.05);
+    }
+</style>
+
+
     </form>
 @else
     <p class="text-muted">No tienes direcciones guardadas.</p>
@@ -408,6 +437,92 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('❌ Error de conexión al guardar la dirección.');
     }
 });
+});
+</script>
+
+<!-- Stripe JS -->
+<script src="https://js.stripe.com/v3/"></script>
+<!-- PayPal JS -->
+<script src="https://www.paypal.com/sdk/js?client-id={{ env('PAYPAL_CLIENT_ID') }}&currency=MXN"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // ---------- STRIPE ----------
+document.getElementById('btn-stripe')?.addEventListener('click', async () => {
+    try {
+        const res = await fetch("{{ route('payment.stripe.session') }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": "{{ csrf_token() }}"
+            },
+            body: JSON.stringify({})
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+            Swal.fire("Error", data.message || "Error al crear la sesión de pago.", "error");
+            return;
+        }
+
+        // Redirigir a Stripe Checkout
+        window.location.href = data.url;
+
+    } catch (err) {
+        console.error(err);
+        Swal.fire("Error", "No se pudo iniciar el pago con Stripe.", "error");
+    }
+});
+
+    // ---------- PAYPAL ----------
+    paypal.Buttons({
+        createOrder: function(data, actions) {
+            // pide al servidor crear la orden
+            return fetch("{{ route('payment.paypal.create') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({})
+            }).then(function(res) { return res.json(); })
+            .then(function(json) {
+                if (!json.success) {
+                    alert(json.message || 'Error creando orden PayPal');
+                    throw new Error('no order');
+                }
+                return json.orderID;
+            });
+        },
+        onApprove: function(data, actions) {
+            // cuando usuario aprueba en PayPal, capturamos en el servidor
+            return fetch("{{ route('payment.paypal.capture') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ orderID: data.orderID })
+            }).then(function(res){ return res.json(); })
+            .then(function(json) {
+                if (json.success) {
+                    // pago completado: redirige o muestra mensaje
+                    window.location.href = "{{ route('home') }}?paid=1&method=paypal";
+                } else {
+                    alert('Error capturando pago en PayPal');
+                }
+            });
+        },
+        onCancel: function (data) {
+            alert('Pago cancelado.');
+        },
+        onError: function (err) {
+            console.error(err);
+            alert('Error en PayPal');
+        }
+    }).render('#paypal-button-container'); // Renderiza botón en la página
+
 });
 </script>
 

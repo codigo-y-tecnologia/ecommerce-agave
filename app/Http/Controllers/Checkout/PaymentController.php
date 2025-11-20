@@ -1,0 +1,411 @@
+<?php
+
+namespace App\Http\Controllers\Checkout;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Exception;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
+
+use App\Models\{
+    Carrito,
+    Pedido,
+    PedidoDetalle,
+    Direccion,
+    Cupon,
+    CuponUso,
+    Pago,
+    Venta,
+    DetalleVenta
+};
+
+use Stripe\Stripe;
+use Stripe\Checkout\Session as StripeSession;
+use Stripe\Webhook as StripeWebhook;
+use Stripe\PaymentIntent;
+
+// PayPal (we will use Guzzle)
+use GuzzleHttp\Client;
+
+class PaymentController extends Controller
+{
+    /**
+     * Crea una Stripe Checkout Session y devuelve la URL (cliente redirige).
+     */
+    public function createStripeSession(Request $request)
+    {
+        $user = Auth::user();
+
+        // Cargar carrito
+        $carrito = Carrito::where('id_usuario', $user->id_usuario)
+            ->with(['detalles.producto.impuestos'])
+            ->first();
+
+        if (!$carrito || $carrito->detalles->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'Carrito vacío.'], 400);
+        }
+
+        // Reusar calcularTotales de tu CheckoutController: replicamos el mismo cálculo
+        [$subtotal, $totalImpuestos, $total] = (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
+
+        // envío y cupón (usa la misma lógica que tu CheckoutController)
+        $codigoCupon = session('codigo_cupon');
+        $descuento = 0;
+        $cupon = null;
+        if ($codigoCupon) {
+            $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])
+                ->where('bActivo', 1)
+                ->whereDate('dValido_desde','<=', now())
+                ->whereDate('dValido_hasta','>=', now())
+                ->first();
+            if ($cupon) {
+                if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
+                    // handled in $envio below
+                } else {
+                    $descuento = ($cupon->eTipo === 'porcentaje') ? $total * ($cupon->dDescuento / 100) : $cupon->dDescuento;
+                }
+            }
+        }
+
+        $montoEnvioGratis = 1500;
+        $costoEnvioFijo = 150;
+        $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
+        if ($cupon && $cupon->vCodigo_cupon === 'ENVIOGRATIS') {
+            $envio = 0;
+        }
+
+        $totalFinal = max(0, $total - $descuento + $envio);
+
+        // Stripe requiere monto en centavos y un currency (ej. MXN)
+        $currency = config('app.currency', 'MXN');
+        $amountCents = (int) round($totalFinal * 100);
+
+        Stripe::setApiKey(env('STRIPE_SECRET'));
+
+        // Generar metadata para el session para identificar al usuario y carrito
+        $metadata = [
+            'user_id' => $user->id_usuario,
+            'carrito_id' => $carrito->id_carrito,
+            'codigo_cupon' => $codigoCupon ?? ''
+        ];
+
+        // Crear linea resumen simple (no producto por producto aparte porque usas checkout)
+        try {
+            $session = StripeSession::create([
+                'payment_method_types' => ['card'],
+                'mode' => 'payment',
+                'line_items' => [[
+                    'price_data' => [
+                        'currency' => strtolower($currency),
+                        'product_data' => [
+                            'name' => 'Compra en ' . config('app.name', 'Tienda'),
+                        ],
+                        'unit_amount' => $amountCents,
+                    ],
+                    'quantity' => 1,
+                ]],
+                'metadata' => $metadata,
+                'success_url' => route('checkout.index') . '?paid=1&payment=stripe&session_id={CHECKOUT_SESSION_ID}',
+                'cancel_url' => route('checkout.index') . '?paid=0',
+            ]);
+
+            return response()->json(['success' => true, 'url' => $session->url, 'id' => $session->id]);
+
+        } catch (\Throwable $e) {
+            Log::error('Stripe create session error: '.$e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error al crear sesión de pago.'], 500);
+        }
+    }
+
+    /**
+     * Endpoint público para recibir webhook de Stripe.
+     * Recomiendo registrar este endpoint en el dashboard de Stripe con STRIPE_WEBHOOK_SECRET.
+     */
+    public function stripeWebhook(Request $request)
+    {
+        $payload = $request->getContent();
+        $sigHeader = $request->header('Stripe-Signature');
+        $webhookSecret = env('STRIPE_WEBHOOK_SECRET');
+
+        try {
+            $event = StripeWebhook::constructEvent($payload, $sigHeader, $webhookSecret);
+        } catch (\UnexpectedValueException $e) {
+            // Invalid payload
+            return response('Invalid payload', 400);
+        } catch (\Stripe\Exception\SignatureVerificationException $e) {
+            // Invalid signature
+            return response('Invalid signature', 400);
+        }
+
+        // Handle the checkout.session.completed event
+        if ($event->type === 'checkout.session.completed') {
+            $session = $event->data->object;
+
+            // metadata previously attached
+            $metadata = $session->metadata ?? null;
+            $userId = $metadata->user_id ?? null;
+            $carritoId = $metadata->carrito_id ?? null;
+            $codigoCupon = $metadata->codigo_cupon ?? null;
+
+            // Asegúrate de no duplicar: busca si ya existe un pago/venta con referencia de Stripe
+            DB::transaction(function () use ($session, $userId, $carritoId, $codigoCupon) {
+                // Finaliza el pedido / crea ventas aquí
+                $this->finalizeOrderFromCart($userId, $carritoId, 'stripe', $session->id, $codigoCupon);
+            });
+        }
+
+        return response('Received', 200);
+    }
+
+    /**
+     * Crea una orden PayPal (server side) y devuelve id (cliente usa approve).
+     */
+    public function createPaypalOrder(Request $request)
+    {
+        $user = Auth::user();
+
+        $carrito = Carrito::where('id_usuario', $user->id_usuario)
+            ->with(['detalles.producto.impuestos'])
+            ->first();
+
+        if (!$carrito || $carrito->detalles->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'Carrito vacío.'], 400);
+        }
+
+        // Recalcular totales (misma lógica)
+        [$subtotal, $totalImpuestos, $total] = (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
+
+        $codigoCupon = session('codigo_cupon');
+        $descuento = 0;
+        $cupon = null;
+        if ($codigoCupon) {
+            $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])->where('bActivo',1)
+                ->whereDate('dValido_desde','<=', now())
+                ->whereDate('dValido_hasta','>=', now())
+                ->first();
+            if ($cupon && $cupon->vCodigo_cupon !== 'ENVIOGRATIS') {
+                $descuento = ($cupon->eTipo === 'porcentaje') ? $total * ($cupon->dDescuento / 100) : $cupon->dDescuento;
+            }
+        }
+
+        $montoEnvioGratis = 1500;
+        $costoEnvioFijo = 150;
+        $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
+        if ($cupon && $cupon->vCodigo_cupon === 'ENVIOGRATIS') $envio = 0;
+
+        $totalFinal = max(0, $total - $descuento + $envio);
+
+        // Crear orden en PayPal
+        $client = new Client();
+        $base = env('PAYPAL_MODE', 'sandbox') === 'live'
+            ? 'https://api-m.paypal.com'
+            : 'https://api-m.sandbox.paypal.com';
+
+        try {
+            // Get access token
+            $resp = $client->post($base . '/v1/oauth2/token', [
+                'auth' => [env('PAYPAL_CLIENT_ID'), env('PAYPAL_CLIENT_SECRET')],
+                'form_params' => ['grant_type' => 'client_credentials']
+            ]);
+            $tokenData = json_decode((string) $resp->getBody(), true);
+            $accessToken = $tokenData['access_token'];
+
+            // Create order
+            $orderResp = $client->post($base . '/v2/checkout/orders', [
+                'headers' => [
+                    'Authorization' => "Bearer {$accessToken}",
+                    'Content-Type' => 'application/json'
+                ],
+                'json' => [
+                    'intent' => 'CAPTURE',
+                    'purchase_units' => [
+                        [
+                            'amount' => [
+                                'currency_code' => 'MXN',
+                                'value' => number_format($totalFinal, 2, '.', '')
+                            ],
+                            'description' => 'Compra en ' . config('app.name', 'Tienda')
+                        ]
+                    ],
+                    'application_context' => [
+                        'return_url' => route('checkout.index') . '?paid=1&payment=paypal',
+                        'cancel_url' => route('checkout.index') . '?paid=0'
+                    ]
+                ]
+            ]);
+
+            $order = json_decode((string) $orderResp->getBody(), true);
+
+            return response()->json(['success' => true, 'orderID' => $order['id']]);
+        } catch (\Throwable $e) {
+            Log::error('PayPal create order: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error al crear orden PayPal'], 500);
+        }
+    }
+
+    /**
+     * Captura la orden PayPal (llamada por cliente tras approve).
+     * Luego finaliza la orden (crea pedido/venta/pago).
+     */
+    public function capturePaypalOrder(Request $request)
+    {
+        $orderId = $request->orderID;
+        $user = Auth::user();
+
+        if (!$orderId) {
+            return response()->json(['success' => false, 'message' => 'orderID requerido'], 400);
+        }
+
+        $client = new Client();
+        $base = env('PAYPAL_MODE', 'sandbox') === 'live'
+            ? 'https://api-m.paypal.com'
+            : 'https://api-m.sandbox.paypal.com';
+
+        try {
+            // token
+            $resp = $client->post($base . '/v1/oauth2/token', [
+                'auth' => [env('PAYPAL_CLIENT_ID'), env('PAYPAL_CLIENT_SECRET')],
+                'form_params' => ['grant_type' => 'client_credentials']
+            ]);
+            $tokenData = json_decode((string) $resp->getBody(), true);
+            $accessToken = $tokenData['access_token'];
+
+            // capture
+            $capResp = $client->post($base . "/v2/checkout/orders/{$orderId}/capture", [
+                'headers' => [
+                    'Authorization' => "Bearer {$accessToken}",
+                    'Content-Type' => 'application/json'
+                ]
+            ]);
+
+            $capData = json_decode((string) $capResp->getBody(), true);
+
+            // Aquí puedes obtener detalles como captura id y status
+            $status = $capData['status'] ?? null;
+            $captureId = $capData['purchase_units'][0]['payments']['captures'][0]['id'] ?? null;
+            $amount = $capData['purchase_units'][0]['payments']['captures'][0]['amount']['value'] ?? null;
+
+            // Finalizar pedido localmente (crear Pedido, Venta, Pago, etc.)
+            DB::transaction(function () use ($user, $orderId, $captureId) {
+                // buscamos carrito id por user
+                $carrito = Carrito::where('id_usuario', $user->id_usuario)
+                    ->with(['detalles.producto.impuestos'])
+                    ->firstOrFail();
+
+                $this->finalizeOrderFromCart($user->id_usuario, $carrito->id_carrito, 'paypal', $captureId, session('codigo_cupon') ?? null);
+            });
+
+            return response()->json(['success' => true, 'capture' => $captureId, 'status' => $status]);
+        } catch (\Throwable $e) {
+            Log::error('PayPal capture error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error capturando orden PayPal.'], 500);
+        }
+    }
+
+    /**
+     * Función que centraliza la creación de Pedido/Venta/Pago/Detalle y limpieza del carrito.
+     * - $userId or null allowed (if passing user id)
+     * - $carritoId required
+     * - $method: 'stripe'|'paypal'
+     * - $reference: session id (stripe) or captureId (paypal)
+     */
+    private function finalizeOrderFromCart($userId, $carritoId, $method, $reference, $codigoCupon = null)
+    {
+        // Buscar usuario y carrito
+        $carrito = Carrito::where('id_carrito', $carritoId)
+            ->with(['detalles.producto.impuestos'])
+            ->firstOrFail();
+
+        $userId = $userId ?? $carrito->id_usuario;
+
+        // recalcular totales con la misma lógica
+        [$subtotal, $totalImpuestos, $total] = (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
+
+        $montoEnvioGratis = 1500;
+        $costoEnvioFijo = 150;
+        $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
+
+        $descuento = 0;
+        $cupon = null;
+        if ($codigoCupon) {
+            $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])->where('bActivo',1)->first();
+            if ($cupon) {
+                if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
+                    $envio = 0;
+                } else {
+                    $descuento = ($cupon->eTipo === 'porcentaje') ? $total * ($cupon->dDescuento / 100) : $cupon->dDescuento;
+                }
+            }
+        }
+
+        $totalFinal = max(0, $total - $descuento + $envio);
+
+        // Crear pedido + detalles + venta + pago en una transacción
+        $pedido = Pedido::create([
+            'id_usuario' => $userId,
+            'id_direccion' => session('id_direccion') ?? null, // idealmente manda id_direccion desde la UI
+            'eEstado' => 'pagado',
+            'dTotal' => $totalFinal,
+            'tFecha_pedido' => now(),
+        ]);
+
+        foreach ($carrito->detalles as $detalle) {
+            PedidoDetalle::create([
+                'id_pedido' => $pedido->id_pedido,
+                'id_producto' => $detalle->id_producto,
+                'iCantidad' => $detalle->cantidad,
+                'dPrecio_unitario' => $detalle->precio_unitario,
+            ]);
+        }
+
+        // Crear Venta
+        $venta = Venta::create([
+            'id_pedido' => $pedido->id_pedido,
+            'id_usuario' => $userId,
+            'dTotal' => $totalFinal,
+            'tFecha_venta' => now(),
+        ]);
+
+        // Detalle de venta (por cada pedido_detalle)
+        foreach ($carrito->detalles as $detalle) {
+            DetalleVenta::create([
+                'id_venta' => $venta->id_venta,
+                'id_producto' => $detalle->id_producto,
+                'iCantidad' => $detalle->cantidad,
+                'dPrecio_unitario' => $detalle->precio_unitario,
+            ]);
+        }
+
+        // Registrar pago
+        $pago = Pago::create([
+            'id_venta' => $venta->id_venta,
+            'vMetodo' => $method,
+            'dMonto' => $totalFinal,
+            'tFecha_pago' => now(),
+            'eEstado' => 'completado',
+            'vReferencia' => $reference,
+        ]);
+
+        // Cupon uso
+        if ($cupon) {
+            CuponUso::create([
+                'id_cupon' => $cupon->id_cupon,
+                'id_venta' => $venta->id_venta,
+                'tFecha_uso' => now(),
+            ]);
+        }
+
+        // Limpiar carrito: borrar detalles y marcar carrito convertido
+        $carrito->detalles()->delete();
+        $carrito->eEstado = 'convertido';
+        $carrito->save();
+
+        // eliminar cupón de session
+        session()->forget('codigo_cupon');
+
+        return true;
+    }
+}

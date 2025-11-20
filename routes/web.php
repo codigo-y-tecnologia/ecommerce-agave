@@ -12,6 +12,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\VerificationController;
 use App\Models\Producto;
+use App\Http\Controllers\Checkout\PaymentController;
 
 
 // Route::get('/', function () {
@@ -98,6 +99,14 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
 });
 
     Route::post('/cupon/aplicar', [CheckoutController::class, 'aplicarCupon'])->name('cupon.aplicar');
+
+    // Stripe
+    Route::post('/payment/stripe-session', [PaymentController::class, 'createStripeSession'])->name('payment.stripe.session');
+    Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook'])->name('webhook.stripe'); // POST from Stripe
+
+    // PayPal
+    Route::post('/payment/paypal-create', [PaymentController::class, 'createPaypalOrder'])->name('payment.paypal.create');
+    Route::post('/payment/paypal-capture', [PaymentController::class, 'capturePaypalOrder'])->name('payment.paypal.capture');
 
 });
 

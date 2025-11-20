@@ -170,15 +170,15 @@ $totalFinal = max(0, $total - $descuento + $envio);
             ]);
         }
 
-        if ($cupon) {
-            CuponUso::create([
-                'id_cupon' => $cupon->id_cupon,
-                'id_venta' => $pedido->id_pedido,
-                'tFecha_uso' => now(),
-            ]);
-        }
+        // if ($cupon) {
+        //     CuponUso::create([
+        //         'id_cupon' => $cupon->id_cupon,
+        //         'id_venta' => $pedido->id_pedido,
+        //         'tFecha_uso' => now(),
+        //     ]);
+        // }
 
-        $carrito->detalles()->delete();
+        // $carrito->detalles()->delete();
     });
 
     session()->forget('codigo_cupon');
@@ -283,7 +283,7 @@ public function actualizarDireccion(Request $request, $id)
 /**
  * Calcula subtotal, total de impuestos y total general del carrito
  */
-private function calcularTotales($carrito)
+public function calcularTotales($carrito)
 {
     $subtotal = 0;
     $totalImpuestos = 0;
