@@ -36,8 +36,21 @@ class PaymentController extends Controller
      * Crea una Stripe Checkout Session y devuelve la URL (cliente redirige).
      */
     public function createStripeSession(Request $request)
-    {
+{
+    try {
+
         $user = Auth::user();
+
+        // VALIDAR DIRECCION
+        if (!$request->id_direccion) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Debes seleccionar una dirección.'
+            ]);
+        }
+
+        // Guardar la dirección en sesión para finalizar pedido
+        session(['id_direccion' => $request->id_direccion]);
 
         // Cargar carrito
         $carrito = Carrito::where('id_usuario', $user->id_usuario)
@@ -45,80 +58,93 @@ class PaymentController extends Controller
             ->first();
 
         if (!$carrito || $carrito->detalles->isEmpty()) {
-            return response()->json(['success' => false, 'message' => 'Carrito vacío.'], 400);
+            return response()->json(['success' => false, 'message' => 'Carrito vacío.']);
         }
 
-        // Reusar calcularTotales de tu CheckoutController: replicamos el mismo cálculo
-        [$subtotal, $totalImpuestos, $total] = (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
+        // Calcular totales
+        [$subtotal, $totalImpuestos, $total] =
+            (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
 
-        // envío y cupón (usa la misma lógica que tu CheckoutController)
+        // Cupón
         $codigoCupon = session('codigo_cupon');
         $descuento = 0;
         $cupon = null;
+
         if ($codigoCupon) {
             $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])
                 ->where('bActivo', 1)
-                ->whereDate('dValido_desde','<=', now())
-                ->whereDate('dValido_hasta','>=', now())
                 ->first();
+
             if ($cupon) {
-                if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
-                    // handled in $envio below
+                if ($cupon->eTipo === 'porcentaje') {
+                    $descuento = $total * ($cupon->dDescuento / 100);
                 } else {
-                    $descuento = ($cupon->eTipo === 'porcentaje') ? $total * ($cupon->dDescuento / 100) : $cupon->dDescuento;
+                    $descuento = $cupon->dDescuento;
                 }
             }
         }
 
+        // Envío
         $montoEnvioGratis = 1500;
         $costoEnvioFijo = 150;
         $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
+
         if ($cupon && $cupon->vCodigo_cupon === 'ENVIOGRATIS') {
             $envio = 0;
         }
 
         $totalFinal = max(0, $total - $descuento + $envio);
 
-        // Stripe requiere monto en centavos y un currency (ej. MXN)
-        $currency = config('app.currency', 'MXN');
-        $amountCents = (int) round($totalFinal * 100);
-
+        // Stripe
         Stripe::setApiKey(env('STRIPE_SECRET'));
 
-        // Generar metadata para el session para identificar al usuario y carrito
+        $amountCents = (int) round($totalFinal * 100);
+
+        // Metadata COMPLETA
         $metadata = [
-            'user_id' => $user->id_usuario,
-            'carrito_id' => $carrito->id_carrito,
-            'codigo_cupon' => $codigoCupon ?? ''
+            'user_id'        => $user->id_usuario,
+            'carrito_id'     => $carrito->id_carrito,
+            'id_direccion'   => $request->id_direccion,
+            'codigo_cupon'   => $codigoCupon ?? ''
         ];
 
-        // Crear linea resumen simple (no producto por producto aparte porque usas checkout)
-        try {
-            $session = StripeSession::create([
-                'payment_method_types' => ['card'],
-                'mode' => 'payment',
-                'line_items' => [[
-                    'price_data' => [
-                        'currency' => strtolower($currency),
-                        'product_data' => [
-                            'name' => 'Compra en ' . config('app.name', 'Tienda'),
-                        ],
-                        'unit_amount' => $amountCents,
-                    ],
-                    'quantity' => 1,
-                ]],
-                'metadata' => $metadata,
-                'success_url' => route('checkout.index') . '?paid=1&payment=stripe&session_id={CHECKOUT_SESSION_ID}',
-                'cancel_url' => route('checkout.index') . '?paid=0',
-            ]);
+        // Crear sesión Stripe
+        $session = StripeSession::create([
+    'mode' => 'payment',
 
-            return response()->json(['success' => true, 'url' => $session->url, 'id' => $session->id]);
+    'line_items' => [[
+        'price_data' => [
+            'currency' => 'mxn',
+            'product_data' => [
+                'name' => 'Compra en ' . config('app.name', 'Tienda'),
+            ],
+            'unit_amount' => $amountCents,
+        ],
+        'quantity' => 1,
+    ]],
 
-        } catch (\Throwable $e) {
-            Log::error('Stripe create session error: '.$e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Error al crear sesión de pago.'], 500);
-        }
+    'metadata' => $metadata,
+
+    'success_url' => route('checkout.index') . '?paid=1&payment=stripe&session_id={CHECKOUT_SESSION_ID}',
+    'cancel_url' => route('checkout.index') . '?paid=0',
+]);
+
+        return response()->json([
+            'success' => true,
+            'url' => $session->url,
+            'id' => $session->id
+        ]);
+
+    } catch (\Throwable $e) {
+
+        Log::error("🔥 Stripe error: " . $e->getMessage());
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Error al crear la sesión de pago.'
+        ]);
     }
+}
 
     /**
      * Endpoint público para recibir webhook de Stripe.

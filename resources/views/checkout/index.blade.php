@@ -128,13 +128,18 @@
             <label for="id_direccion" class="form-label fw-bold">Selecciona una dirección guardada:</label>
             <div class="input-group">
                 <select name="id_direccion" id="id_direccion" class="form-select" required>
-                    <option value="">-- Selecciona una dirección --</option>
-                    @foreach($direcciones as $dir)
-                        <option value="{{ $dir->id_direccion }}">
-                            {{ $dir->vCalle }} {{ $dir->vNumero_exterior }}, {{ $dir->vColonia }}, {{ $dir->vCiudad }}
-                        </option>
-                    @endforeach
-                </select>
+    <option value="">-- Selecciona una dirección --</option>
+
+    @foreach($direcciones as $dir)
+        <option value="{{ $dir->id_direccion }}"
+            @if(isset($direccionPrincipal) && $direccionPrincipal->id_direccion === $dir->id_direccion)
+                selected
+            @endif
+        >
+            {{ $dir->vCalle }} {{ $dir->vNumero_exterior }}, {{ $dir->vColonia }}, {{ $dir->vCiudad }}
+        </option>
+    @endforeach
+</select>
                 <button type="button" class="btn btn-outline-primary" id="btn-editar-direccion">✏️ Editar</button>
                 <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalDireccion" id="btn-nueva-direccion">
                     ➕ Nueva
@@ -154,11 +159,11 @@
         <div class="d-flex flex-column flex-md-row justify-content-end gap-3">
 
             {{-- BOTÓN STRIPE --}}
-            <button id="btn-stripe" class="btn btn-primary px-4 py-2 d-flex align-items-center justify-content-center"
-                style="font-size: 1.1rem; font-weight: 600;">
-                <i class="bi bi-credit-card-2-front me-2"></i>
-                Pagar con tarjeta
-            </button>
+            <button id="btn-stripe" type="button" class="btn btn-primary px-4 py-2 d-flex align-items-center justify-content-center"
+    style="font-size: 1.1rem; font-weight: 600;">
+    <i class="bi bi-credit-card-2-front me-2"></i>
+    Pagar con tarjeta
+</button>
 
             {{-- BOTÓN PAYPAL --}}
             <div id="paypal-button-container" class="paypal-buttons"></div>
@@ -443,60 +448,101 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- Stripe JS -->
 <script src="https://js.stripe.com/v3/"></script>
 <!-- PayPal JS -->
-<script src="https://www.paypal.com/sdk/js?client-id={{ env('PAYPAL_CLIENT_ID') }}&currency=MXN"></script>
+<script src="https://www.paypal.com/sdk/js?client-id={{ env('PAYPAL_CLIENT_ID') }}&currency=MXN&disable-funding=card"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // ---------- STRIPE ----------
-document.getElementById('btn-stripe')?.addEventListener('click', async () => {
-    try {
-        const res = await fetch("{{ route('payment.stripe.session') }}", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN": "{{ csrf_token() }}"
-            },
-            body: JSON.stringify({})
-        });
 
-        const data = await res.json();
+    const selectDireccion = document.getElementById('id_direccion');
 
-        if (!data.success) {
-            Swal.fire("Error", data.message || "Error al crear la sesión de pago.", "error");
-            return;
+    // VALIDACIÓN — CORREGIDA
+    function validarDireccion() {
+        const valor = selectDireccion.value;
+
+        // Si está vacío o no es un número válido → inválido
+        if (!valor || valor === "" || parseInt(valor) <= 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Selecciona una dirección',
+                text: 'Debes elegir una dirección de envío antes de continuar.',
+            });
+            return false;
         }
 
-        // Redirigir a Stripe Checkout
-        window.location.href = data.url;
-
-    } catch (err) {
-        console.error(err);
-        Swal.fire("Error", "No se pudo iniciar el pago con Stripe.", "error");
+        return true;
     }
-});
+
+    // ---------- STRIPE ----------
+    document.getElementById('btn-stripe')?.addEventListener('click', async (e) => {
+
+        e.preventDefault(); // <-- Ahora sí, con "e"
+
+        if (!validarDireccion()) return;
+
+        try {
+            const res = await fetch("{{ route('payment.stripe.session') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": "{{ csrf_token() }}"
+                },
+                body: JSON.stringify({
+                    id_direccion: selectDireccion.value
+                })
+            });
+
+            const data = await res.json();
+
+            if (!data.success) {
+                Swal.fire("Error", data.message || "Error al crear la sesión de pago.", "error");
+                return;
+            }
+
+            window.location.href = data.url;
+
+        } catch (err) {
+            console.error(err);
+            Swal.fire("Error", "No se pudo iniciar el pago con Stripe.", "error");
+        }
+    });
+
 
     // ---------- PAYPAL ----------
     paypal.Buttons({
         createOrder: function(data, actions) {
-            // pide al servidor crear la orden
+
+            if (!validarDireccion()) {
+                // Mostrar alerta manualmente
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Selecciona una dirección',
+                    text: 'Debes elegir una dirección de envío antes de continuar.',
+                });
+
+                return actions.reject();
+            }
+
             return fetch("{{ route('payment.paypal.create') }}", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
-                body: JSON.stringify({})
-            }).then(function(res) { return res.json(); })
-            .then(function(json) {
+                body: JSON.stringify({
+                    id_direccion: selectDireccion.value
+                })
+            })
+            .then(res => res.json())
+            .then(json => {
                 if (!json.success) {
-                    alert(json.message || 'Error creando orden PayPal');
-                    throw new Error('no order');
+                    Swal.fire("Error", json.message || "Error creando orden PayPal", "error");
+                    throw new Error('Error creando orden PayPal');
                 }
                 return json.orderID;
             });
         },
+
         onApprove: function(data, actions) {
-            // cuando usuario aprueba en PayPal, capturamos en el servidor
             return fetch("{{ route('payment.paypal.capture') }}", {
                 method: 'POST',
                 headers: {
@@ -504,24 +550,26 @@ document.getElementById('btn-stripe')?.addEventListener('click', async () => {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
                 body: JSON.stringify({ orderID: data.orderID })
-            }).then(function(res){ return res.json(); })
-            .then(function(json) {
+            })
+            .then(res => res.json())
+            .then(json => {
                 if (json.success) {
-                    // pago completado: redirige o muestra mensaje
                     window.location.href = "{{ route('home') }}?paid=1&method=paypal";
                 } else {
-                    alert('Error capturando pago en PayPal');
+                    Swal.fire("Error", "Error capturando pago en PayPal", "error");
                 }
             });
         },
-        onCancel: function (data) {
-            alert('Pago cancelado.');
+
+        onCancel: function () {
+            Swal.fire("Cancelado", "Pago cancelado.", "info");
         },
+
         onError: function (err) {
             console.error(err);
-            alert('Error en PayPal');
+            Swal.fire("Error", "Error en PayPal", "error");
         }
-    }).render('#paypal-button-container'); // Renderiza botón en la página
+    }).render('#paypal-button-container');
 
 });
 </script>

@@ -32,6 +32,9 @@ class CheckoutController extends Controller
 
     $direcciones = Direccion::where('id_usuario', $usuario->id_usuario)->get();
 
+    // seleccionar la dirección principal
+$direccionPrincipal = $direcciones->firstWhere('bDireccion_principal', 1);
+
     $codigoCupon = session('codigo_cupon');
     $descuento = 0;
 
@@ -86,6 +89,7 @@ $totalFinal = max(0, $total - $descuento + $envio);
         'totalFinal',
         'codigoCupon',
         'direcciones',
+        'direccionPrincipal',
         'envio'
     ));
 }
