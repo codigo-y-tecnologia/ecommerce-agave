@@ -284,6 +284,9 @@
     </div>
 </div>
 
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 {{-- 💻 Script AJAX --}}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -477,7 +480,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         e.preventDefault(); // <-- Ahora sí, con "e"
 
-        if (!validarDireccion()) return;
+        if (!validarDireccion()) {
+            return;
+        }
 
         try {
             const res = await fetch("{{ route('payment.stripe.session') }}", {
@@ -508,18 +513,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ---------- PAYPAL ----------
+    if (typeof paypal !== 'undefined') {
     paypal.Buttons({
+
+        onClick: function(data, actions) {
+                if (!validarDireccion()) {
+                    // Rechazar la acción (detiene el flujo)
+                    try {
+                        return actions.reject();
+                    } catch (err) {
+                        // Algunos entornos aceptan actions.reject(), otros requieren Promise.reject()
+                        return Promise.reject();
+                    }
+                }
+                // permite continuar
+                try {
+                    return actions.resolve();
+                } catch (err) {
+                    return Promise.resolve();
+                }
+            },
+
         createOrder: function(data, actions) {
 
             if (!validarDireccion()) {
-                // Mostrar alerta manualmente
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Selecciona una dirección',
-                    text: 'Debes elegir una dirección de envío antes de continuar.',
-                });
-
-                return actions.reject();
+                if (!validarDireccion()) {
+                    return Promise.reject();
+                }
             }
 
             return fetch("{{ route('payment.paypal.create') }}", {
@@ -535,10 +555,14 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(res => res.json())
             .then(json => {
                 if (!json.success) {
-                    Swal.fire("Error", json.message || "Error creando orden PayPal", "error");
-                    throw new Error('Error creando orden PayPal');
-                }
-                return json.orderID;
+                    if (typeof Swal !== 'undefined') {
+                            Swal.fire("Error", json.message || "Error creando orden PayPal", "error");
+                        } else {
+                            alert(json.message || "Error creando orden PayPal");
+                        }
+                        throw new Error('Error creando orden PayPal');
+                    }
+                    return json.orderID;
             });
         },
 
@@ -556,21 +580,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (json.success) {
                     window.location.href = "{{ route('home') }}?paid=1&method=paypal";
                 } else {
-                    Swal.fire("Error", "Error capturando pago en PayPal", "error");
+                    if (typeof Swal !== 'undefined') {
+                            Swal.fire("Error", "Error capturando pago en PayPal", "error");
+                        } else {
+                            alert("Error capturando pago en PayPal");
+                        }
                 }
             });
         },
 
         onCancel: function () {
-            Swal.fire("Cancelado", "Pago cancelado.", "info");
+            if (typeof Swal !== 'undefined') {
+                    Swal.fire("Cancelado", "Pago cancelado.", "info");
+                } else {
+                    alert("Pago cancelado.");
+                }
         },
 
         onError: function (err) {
-            console.error(err);
-            Swal.fire("Error", "Error en PayPal", "error");
+            console.error('PayPal error:', err);
+            if (typeof Swal !== 'undefined') {
+                    Swal.fire("Error", "Error en PayPal", "error");
+                } else {
+                    alert("Error en PayPal");
+                }
         }
     }).render('#paypal-button-container');
 
+    } else {
+        console.warn('PayPal SDK no cargado (paypal undefined). Verifica client-id y que el script se haya cargado.');
+    }
 });
 </script>
 

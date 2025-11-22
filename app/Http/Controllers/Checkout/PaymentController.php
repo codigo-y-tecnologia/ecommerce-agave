@@ -387,6 +387,26 @@ class PaymentController extends Controller
             ]);
         }
 
+        // ========================================
+        // DESCONTAR STOCK DEL PRODUCTO (iStock)
+        // ========================================
+foreach ($carrito->detalles as $detalle) {
+
+    $producto = \App\Models\Producto::find($detalle->id_producto);
+
+    if ($producto) {
+
+        // Validación para evitar inventario negativo
+        if ($producto->iStock < $detalle->cantidad) {
+            throw new Exception("Inventario insuficiente para el producto: {$producto->vNombre}");
+        }
+
+        // Descontar inventario
+        $producto->iStock -= $detalle->cantidad;
+        $producto->save();
+    }
+}
+
         // Crear Venta
         $venta = Venta::create([
             'id_pedido' => $pedido->id_pedido,
