@@ -26,6 +26,8 @@ Route::get('/', function () {
     return view('inicio', compact('productos'));
 })->name('home');
 
+Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook'])->name('webhook.stripe'); // POST from Stripe
+
 // Login y registro solo para invitados
 Route::middleware('guest')->group(function () {
     
@@ -102,7 +104,6 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
 
     // Stripe
     Route::post('/payment/stripe-session', [PaymentController::class, 'createStripeSession'])->name('payment.stripe.session');
-    Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook'])->name('webhook.stripe'); // POST from Stripe
 
     // PayPal
     Route::post('/payment/paypal-create', [PaymentController::class, 'createPaypalOrder'])->name('payment.paypal.create');
