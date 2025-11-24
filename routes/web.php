@@ -17,6 +17,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Superadmin\SuperadminController;
 use App\Http\Controllers\Perfil\DireccionController;
 use App\Models\Direccion;
+use App\Http\Controllers\ReembolsosController;
 
 Route::get('/', [DashboardController::class, 'index'])->name('home');
 
@@ -121,6 +122,10 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':admin'])->g
     Route::post('/cupones', [CuponesController::class, 'store'])->name('cupones.store');
 
     Route::resource('impuestos', ImpuestosController::class);
+
+
+   
+
 });
 
 
@@ -140,3 +145,5 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':superadmin'
     Route::get('/superadmin/admins/create', [SuperadminController::class, 'create'])->name('superadmin.admins.create');
     Route::post('/superadmin/admins', [SuperadminController::class, 'store'])->name('superadmin.admins.store');
 });
+
+       Route::resource('reembolsos', ReembolsosController::class);
