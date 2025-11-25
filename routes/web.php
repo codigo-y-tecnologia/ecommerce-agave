@@ -19,6 +19,10 @@ use App\Http\Controllers\Checkout\PaymentController;
 //     return view('inicio');
 // })->name('home');
 
+Route::post('/test-csrf', function () {
+    return 'OK';
+});
+
 Route::get('/', function () {
     // Trae productos activos (evita traer todo si la tabla es grande)
     $productos = Producto::where('bActivo', 1)->orderBy('tFecha_registro','desc')->get();
@@ -26,7 +30,7 @@ Route::get('/', function () {
     return view('inicio', compact('productos'));
 })->name('home');
 
-Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook'])->name('webhook.stripe'); // POST from Stripe
+Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook'])->name('webhook.stripe'); 
 
 // Login y registro solo para invitados
 Route::middleware('guest')->group(function () {
