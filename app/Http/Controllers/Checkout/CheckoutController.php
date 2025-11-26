@@ -21,6 +21,8 @@ class CheckoutController extends Controller
     $usuario = Auth::user();
 
     $carrito = Carrito::where('id_usuario', $usuario->id_usuario)
+        ->where('eEstado', 'activo')
+        ->orderByDesc('id_carrito')
         ->with(['detalles.producto.impuestos'])
         ->first();
 

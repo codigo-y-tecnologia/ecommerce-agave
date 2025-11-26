@@ -30,8 +30,10 @@ use Stripe\PaymentIntent;
 // PayPal (we will use Guzzle)
 use GuzzleHttp\Client;
 
-class PaymentController extends Controller
+class PaymentController extends Controller 
+
 {
+
     /**
      * Crea una Stripe Checkout Session y devuelve la URL (cliente redirige).
      */
@@ -150,41 +152,105 @@ class PaymentController extends Controller
      * Endpoint público para recibir webhook de Stripe.
      * Recomiendo registrar este endpoint en el dashboard de Stripe con STRIPE_WEBHOOK_SECRET.
      */
+    // public function stripeWebhook(Request $request)
+    // {
+
+    //     Log::info('🔔 Webhook de Stripe recibido', [
+    //     'type' => $request->getContent() ? 'has content' : 'empty',
+    //     'headers' => $request->headers->all()
+    // ]);
+
+    //     $payload = $request->getContent();
+    //     $sigHeader = $request->header('Stripe-Signature');
+    //     $webhookSecret = env('STRIPE_WEBHOOK_SECRET');
+
+    //     try {
+    //         $event = StripeWebhook::constructEvent($payload, $sigHeader, $webhookSecret);
+    //     } catch (\UnexpectedValueException $e) {
+    //         // Invalid payload
+    //         return response('Invalid payload', 400);
+    //     } catch (\Stripe\Exception\SignatureVerificationException $e) {
+    //         // Invalid signature
+    //         return response('Invalid signature', 400);
+    //     }
+
+    //     // Handle the checkout.session.completed event
+    //     if ($event->type === 'checkout.session.completed') {
+    //         $session = $event->data->object;
+
+    //         // metadata previously attached
+    //         $metadata = $session->metadata ?? null;
+    //         $userId = $metadata->user_id ?? null;
+    //         $carritoId = $metadata->carrito_id ?? null;
+    //         $codigoCupon = $metadata->codigo_cupon ?? null;
+
+    //         // Asegúrate de no duplicar: busca si ya existe un pago/venta con referencia de Stripe
+    //         DB::transaction(function () use ($session, $userId, $carritoId, $codigoCupon) {
+    //             // Finaliza el pedido / crea ventas aquí
+    //             $this->finalizeOrderFromCart($userId, $carritoId, 'stripe', $session->id, $codigoCupon);
+    //         });
+    //     }
+
+    //     return response('Received', 200);
+    // }
+
     public function stripeWebhook(Request $request)
-    {
-        $payload = $request->getContent();
-        $sigHeader = $request->header('Stripe-Signature');
-        $webhookSecret = env('STRIPE_WEBHOOK_SECRET');
+{
+    Log::info('🔔 Webhook de Stripe recibido', [
+        'type' => $request->getContent() ? 'has content' : 'empty',
+        'headers' => $request->headers->all()
+    ]);
 
-        try {
-            $event = StripeWebhook::constructEvent($payload, $sigHeader, $webhookSecret);
-        } catch (\UnexpectedValueException $e) {
-            // Invalid payload
-            return response('Invalid payload', 400);
-        } catch (\Stripe\Exception\SignatureVerificationException $e) {
-            // Invalid signature
-            return response('Invalid signature', 400);
-        }
+    $payload = $request->getContent();
+    $sigHeader = $request->header('Stripe-Signature');
+    $webhookSecret = env('STRIPE_WEBHOOK_SECRET');
 
-        // Handle the checkout.session.completed event
+    Log::info('Webhook details', [
+        'payload_length' => strlen($payload),
+        'sig_header' => $sigHeader ? 'present' : 'missing',
+        'webhook_secret' => $webhookSecret ? 'set' : 'not set'
+    ]);
+
+    try {
+        $event = \Stripe\Webhook::constructEvent(
+            $payload, $sigHeader, $webhookSecret
+        );
+        
+        Log::info('✅ Evento de Stripe verificado', ['type' => $event->type]);
+
         if ($event->type === 'checkout.session.completed') {
             $session = $event->data->object;
-
-            // metadata previously attached
             $metadata = $session->metadata ?? null;
-            $userId = $metadata->user_id ?? null;
-            $carritoId = $metadata->carrito_id ?? null;
-            $codigoCupon = $metadata->codigo_cupon ?? null;
+            
+            Log::info('✅ checkout.session.completed', [
+                'session_id' => $session->id,
+                'metadata' => $metadata
+            ]);
 
-            // Asegúrate de no duplicar: busca si ya existe un pago/venta con referencia de Stripe
-            DB::transaction(function () use ($session, $userId, $carritoId, $codigoCupon) {
-                // Finaliza el pedido / crea ventas aquí
+            DB::transaction(function () use ($session, $metadata) {
+                $userId = $metadata->user_id ?? null;
+                $carritoId = $metadata->carrito_id ?? null;
+                $codigoCupon = $metadata->codigo_cupon ?? null;
+
                 $this->finalizeOrderFromCart($userId, $carritoId, 'stripe', $session->id, $codigoCupon);
+                
+                Log::info('✅ Pedido finalizado exitosamente');
             });
         }
 
-        return response('Received', 200);
+        return response()->json(['received' => true]);
+
+    } catch (\UnexpectedValueException $e) {
+        Log::error('❌ Invalid payload en webhook', ['error' => $e->getMessage()]);
+        return response('Invalid payload', 400);
+    } catch (\Stripe\Exception\SignatureVerificationException $e) {
+        Log::error('❌ Invalid signature en webhook', ['error' => $e->getMessage()]);
+        return response('Invalid signature', 400);
+    } catch (\Exception $e) {
+        Log::error('❌ Error general en webhook', ['error' => $e->getMessage()]);
+        return response('Error', 500);
     }
+}
 
     /**
      * Crea una orden PayPal (server side) y devuelve id (cliente usa approve).
@@ -338,7 +404,124 @@ class PaymentController extends Controller
      * - $method: 'stripe'|'paypal'
      * - $reference: session id (stripe) or captureId (paypal)
      */
-    private function finalizeOrderFromCart($userId, $carritoId, $method, $reference, $codigoCupon = null)
+//     private function finalizeOrderFromCart($userId, $carritoId, $method, $reference, $codigoCupon = null)
+//     {
+//         // Buscar usuario y carrito
+//         $carrito = Carrito::where('id_carrito', $carritoId)
+//             ->with(['detalles.producto.impuestos'])
+//             ->firstOrFail();
+
+//         $userId = $userId ?? $carrito->id_usuario;
+
+//         // recalcular totales con la misma lógica
+//         [$subtotal, $totalImpuestos, $total] = (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
+
+//         $montoEnvioGratis = 1500;
+//         $costoEnvioFijo = 150;
+//         $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
+
+//         $descuento = 0;
+//         $cupon = null;
+//         if ($codigoCupon) {
+//             $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])->where('bActivo',1)->first();
+//             if ($cupon) {
+//                 if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
+//                     $envio = 0;
+//                 } else {
+//                     $descuento = ($cupon->eTipo === 'porcentaje') ? $total * ($cupon->dDescuento / 100) : $cupon->dDescuento;
+//                 }
+//             }
+//         }
+
+//         $totalFinal = max(0, $total - $descuento + $envio);
+
+//         // Crear pedido + detalles + venta + pago en una transacción
+//         $pedido = Pedido::create([
+//             'id_usuario' => $userId,
+//             'id_direccion' => session('id_direccion') ?? null, // idealmente manda id_direccion desde la UI
+//             'eEstado' => 'pagado',
+//             'dTotal' => $totalFinal,
+//             'tFecha_pedido' => now(),
+//         ]);
+
+//         foreach ($carrito->detalles as $detalle) {
+//             PedidoDetalle::create([
+//                 'id_pedido' => $pedido->id_pedido,
+//                 'id_producto' => $detalle->id_producto,
+//                 'iCantidad' => $detalle->cantidad,
+//                 'dPrecio_unitario' => $detalle->precio_unitario,
+//             ]);
+//         }
+
+//         // ========================================
+//         // DESCONTAR STOCK DEL PRODUCTO (iStock)
+//         // ========================================
+// foreach ($carrito->detalles as $detalle) {
+
+//     $producto = \App\Models\Producto::find($detalle->id_producto);
+
+//     if ($producto) {
+
+//         // Validación para evitar inventario negativo
+//         if ($producto->iStock < $detalle->cantidad) {
+//             throw new Exception("Inventario insuficiente para el producto: {$producto->vNombre}");
+//         }
+
+//         // Descontar inventario
+//         $producto->iStock -= $detalle->cantidad;
+//         $producto->save();
+//     }
+// }
+
+//         // Crear Venta
+//         $venta = Venta::create([
+//             'id_pedido' => $pedido->id_pedido,
+//             'id_usuario' => $userId,
+//             'dTotal' => $totalFinal,
+//             'tFecha_venta' => now(),
+//         ]);
+
+//         // Detalle de venta (por cada pedido_detalle)
+//         foreach ($carrito->detalles as $detalle) {
+//             DetalleVenta::create([
+//                 'id_venta' => $venta->id_venta,
+//                 'id_producto' => $detalle->id_producto,
+//                 'iCantidad' => $detalle->cantidad,
+//                 'dPrecio_unitario' => $detalle->precio_unitario,
+//             ]);
+//         }
+
+//         // Registrar pago
+//         $pago = Pago::create([
+//             'id_venta' => $venta->id_venta,
+//             'vMetodo' => $method,
+//             'dMonto' => $totalFinal,
+//             'tFecha_pago' => now(),
+//             'eEstado' => 'completado',
+//             'vReferencia' => $reference,
+//         ]);
+
+//         // Cupon uso
+//         if ($cupon) {
+//             CuponUso::create([
+//                 'id_cupon' => $cupon->id_cupon,
+//                 'id_venta' => $venta->id_venta,
+//                 'tFecha_uso' => now(),
+//             ]);
+//         }
+
+//         // Limpiar carrito: borrar detalles y marcar carrito convertido
+//         $carrito->detalles()->delete();
+//         $carrito->eEstado = 'convertido';
+//         $carrito->save();
+
+//         // eliminar cupón de session
+//         session()->forget('codigo_cupon');
+
+//         return true;
+//     }
+
+private function finalizeOrderFromCart($userId, $carritoId, $method, $reference, $codigoCupon = null)
     {
         // Buscar usuario y carrito
         $carrito = Carrito::where('id_carrito', $carritoId)
@@ -375,7 +558,7 @@ class PaymentController extends Controller
             'id_direccion' => session('id_direccion') ?? null, // idealmente manda id_direccion desde la UI
             'eEstado' => 'pagado',
             'dTotal' => $totalFinal,
-            'tFecha_pedido' => now(),
+            //'tFecha_pedido' => now(),
         ]);
 
         foreach ($carrito->detalles as $detalle) {
@@ -412,7 +595,7 @@ foreach ($carrito->detalles as $detalle) {
             'id_pedido' => $pedido->id_pedido,
             'id_usuario' => $userId,
             'dTotal' => $totalFinal,
-            'tFecha_venta' => now(),
+            //'tFecha_venta' => now(),
         ]);
 
         // Detalle de venta (por cada pedido_detalle)
@@ -427,12 +610,12 @@ foreach ($carrito->detalles as $detalle) {
 
         // Registrar pago
         $pago = Pago::create([
-            'id_venta' => $venta->id_venta,
-            'vMetodo' => $method,
+            'id_pedido' => $pedido->id_pedido,
+            'eMetodo_pago' => $method,   
             'dMonto' => $totalFinal,
+            'eEstado' => 'exitoso',   
             'tFecha_pago' => now(),
-            'eEstado' => 'completado',
-            'vReferencia' => $reference,
+            //'vReferencia' => $reference,
         ]);
 
         // Cupon uso
@@ -440,7 +623,7 @@ foreach ($carrito->detalles as $detalle) {
             CuponUso::create([
                 'id_cupon' => $cupon->id_cupon,
                 'id_venta' => $venta->id_venta,
-                'tFecha_uso' => now(),
+                //'tFecha_uso' => now(),
             ]);
         }
 

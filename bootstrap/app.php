@@ -14,6 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web([
         \App\Http\Middleware\VerifyCsrfToken::class,
     ]);
+
+    // Excluir explícitamente el webhook de Stripe
+    $middleware->validateCsrfTokens(except: [
+        'stripe/webhook',
+    ]);
+    
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
