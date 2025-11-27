@@ -55,7 +55,9 @@ class PaymentController extends Controller
         session(['id_direccion' => $request->id_direccion]);
 
         // Cargar carrito
+
         $carrito = Carrito::where('id_usuario', $user->id_usuario)
+            ->where('eEstado', 'activo')
             ->with(['detalles.producto.impuestos'])
             ->first();
 
@@ -260,8 +262,10 @@ class PaymentController extends Controller
         $user = Auth::user();
 
         $carrito = Carrito::where('id_usuario', $user->id_usuario)
+            ->where('eEstado', 'activo')
             ->with(['detalles.producto.impuestos'])
             ->first();
+
 
         if (!$carrito || $carrito->detalles->isEmpty()) {
             return response()->json(['success' => false, 'message' => 'Carrito vacío.'], 400);
@@ -384,6 +388,7 @@ class PaymentController extends Controller
             DB::transaction(function () use ($user, $orderId, $captureId) {
                 // buscamos carrito id por user
                 $carrito = Carrito::where('id_usuario', $user->id_usuario)
+                    ->where('eEstado', 'activo')
                     ->with(['detalles.producto.impuestos'])
                     ->firstOrFail();
 
@@ -558,7 +563,6 @@ private function finalizeOrderFromCart($userId, $carritoId, $method, $reference,
             'id_direccion' => session('id_direccion') ?? null, // idealmente manda id_direccion desde la UI
             'eEstado' => 'pagado',
             'dTotal' => $totalFinal,
-            //'tFecha_pedido' => now(),
         ]);
 
         foreach ($carrito->detalles as $detalle) {
@@ -595,7 +599,6 @@ foreach ($carrito->detalles as $detalle) {
             'id_pedido' => $pedido->id_pedido,
             'id_usuario' => $userId,
             'dTotal' => $totalFinal,
-            //'tFecha_venta' => now(),
         ]);
 
         // Detalle de venta (por cada pedido_detalle)
@@ -614,7 +617,6 @@ foreach ($carrito->detalles as $detalle) {
             'eMetodo_pago' => $method,   
             'dMonto' => $totalFinal,
             'eEstado' => 'exitoso',   
-            'tFecha_pago' => now(),
             //'vReferencia' => $reference,
         ]);
 
@@ -623,7 +625,6 @@ foreach ($carrito->detalles as $detalle) {
             CuponUso::create([
                 'id_cupon' => $cupon->id_cupon,
                 'id_venta' => $venta->id_venta,
-                //'tFecha_uso' => now(),
             ]);
         }
 
