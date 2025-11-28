@@ -233,8 +233,9 @@ class PaymentController extends Controller
                 $userId = $metadata->user_id ?? null;
                 $carritoId = $metadata->carrito_id ?? null;
                 $codigoCupon = $metadata->codigo_cupon ?? null;
+                $idDireccion = $metadata->id_direccion ?? null;
 
-                $this->finalizeOrderFromCart($userId, $carritoId, 'stripe', $session->id, $codigoCupon);
+                $this->finalizeOrderFromCart($userId, $carritoId, 'stripe', $session->id, $codigoCupon, $idDireccion);
                 
                 Log::info('✅ Pedido finalizado exitosamente');
             });
@@ -270,6 +271,9 @@ class PaymentController extends Controller
         if (!$carrito || $carrito->detalles->isEmpty()) {
             return response()->json(['success' => false, 'message' => 'Carrito vacío.'], 400);
         }
+
+         // Guardar id_direccion en sesión para PayPal
+        session(['id_direccion_paypal' => $request->id_direccion]);
 
         // Recalcular totales (misma lógica)
         [$subtotal, $totalImpuestos, $total] = (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
@@ -355,6 +359,9 @@ class PaymentController extends Controller
             return response()->json(['success' => false, 'message' => 'orderID requerido'], 400);
         }
 
+        // Obtener id_direccion de la sesión
+        $idDireccion = session('id_direccion_paypal');
+
         $client = new Client();
         $base = env('PAYPAL_MODE', 'sandbox') === 'live'
             ? 'https://api-m.paypal.com'
@@ -385,15 +392,18 @@ class PaymentController extends Controller
             $amount = $capData['purchase_units'][0]['payments']['captures'][0]['amount']['value'] ?? null;
 
             // Finalizar pedido localmente (crear Pedido, Venta, Pago, etc.)
-            DB::transaction(function () use ($user, $orderId, $captureId) {
+            DB::transaction(function () use ($user, $orderId, $captureId, $idDireccion) {
                 // buscamos carrito id por user
                 $carrito = Carrito::where('id_usuario', $user->id_usuario)
                     ->where('eEstado', 'activo')
                     ->with(['detalles.producto.impuestos'])
                     ->firstOrFail();
 
-                $this->finalizeOrderFromCart($user->id_usuario, $carrito->id_carrito, 'paypal', $captureId, session('codigo_cupon') ?? null);
+                $this->finalizeOrderFromCart($user->id_usuario, $carrito->id_carrito, 'paypal', $captureId, session('codigo_cupon') ?? null, $idDireccion);
             });
+
+             // Limpiar sesión
+            session()->forget('id_direccion_paypal');
 
             return response()->json(['success' => true, 'capture' => $captureId, 'status' => $status]);
         } catch (\Throwable $e) {
@@ -526,7 +536,7 @@ class PaymentController extends Controller
 //         return true;
 //     }
 
-private function finalizeOrderFromCart($userId, $carritoId, $method, $reference, $codigoCupon = null)
+private function finalizeOrderFromCart($userId, $carritoId, $method, $reference, $codigoCupon = null, $idDireccion = null)
     {
         // Buscar usuario y carrito
         $carrito = Carrito::where('id_carrito', $carritoId)
@@ -560,7 +570,7 @@ private function finalizeOrderFromCart($userId, $carritoId, $method, $reference,
         // Crear pedido + detalles + venta + pago en una transacción
         $pedido = Pedido::create([
             'id_usuario' => $userId,
-            'id_direccion' => session('id_direccion') ?? null, // idealmente manda id_direccion desde la UI
+            'id_direccion' => $idDireccion, 
             'eEstado' => 'pagado',
             'dTotal' => $totalFinal,
         ]);
@@ -599,6 +609,7 @@ foreach ($carrito->detalles as $detalle) {
             'id_pedido' => $pedido->id_pedido,
             'id_usuario' => $userId,
             'dTotal' => $totalFinal,
+            'eMetodo_pago' => $method, 
         ]);
 
         // Detalle de venta (por cada pedido_detalle)

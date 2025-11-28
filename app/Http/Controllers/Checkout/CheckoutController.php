@@ -18,6 +18,12 @@ class CheckoutController extends Controller
 
     public function index()
 {
+
+    // Si el usuario viene de Stripe o PayPal y el pago fue exitoso
+    if (request()->paid == 1) {
+        session()->forget('codigo_cupon');
+    }
+
     $usuario = Auth::user();
 
     $carrito = Carrito::where('id_usuario', $usuario->id_usuario)
@@ -107,6 +113,7 @@ public function store(Request $request)
 
     DB::transaction(function () use ($usuario, $idDireccion) {
         $carrito = Carrito::where('id_usuario', $usuario->id_usuario)
+            ->where('eEstado', 'activo')
             ->with(['detalles.producto.impuestos'])
             ->firstOrFail();
 
@@ -328,6 +335,7 @@ public function aplicarCupon(Request $request)
     $usuario = Auth::user();
 
     $carrito = Carrito::where('id_usuario', $usuario->id_usuario)
+        ->where('eEstado', 'activo')
         ->with(['detalles.producto.impuestos'])
         ->first();
 
