@@ -535,7 +535,7 @@ foreach ($carrito->detalles as $detalle) {
             'eMetodo_pago' => $method,   
             'dMonto' => $totalFinal,
             'eEstado' => 'exitoso',   
-            //'vReferencia' => $reference,
+            'vReferencia' => $reference,
         ]);
 
         // Cupon uso

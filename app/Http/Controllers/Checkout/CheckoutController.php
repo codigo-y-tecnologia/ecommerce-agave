@@ -209,12 +209,12 @@ public function crearDireccion(Request $request)
     $data = $request->validate([
         'vTelefono_contacto' => 'required|string|max:20',
         'vCalle' => 'required|string|max:150',
-        'vNumero_exterior' => 'nullable|string|max:20',
+        'vNumero_exterior' => 'required|string|max:20',
         'vNumero_interior' => 'nullable|string|max:20',
-        'vColonia' => 'nullable|string|max:150',
-        'vCodigo_postal' => 'nullable|string|max:10',
-        'vCiudad' => 'nullable|string|max:80',
-        'vEstado' => 'nullable|string|max:80',
+        'vColonia' => 'required|string|max:150',
+        'vCodigo_postal' => 'required|string|max:10',
+        'vCiudad' => 'required|string|max:80',
+        'vEstado' => 'required|string|max:80',
         'vEntre_calle_1' => 'nullable|string|max:150',
         'vEntre_calle_2' => 'nullable|string|max:150',
         'tReferencias' => 'nullable|string',
@@ -236,6 +236,12 @@ public function crearDireccion(Request $request)
 
     return response()->json(['success' => true, 'direccion' => $direccion]);
 
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error de validación',
+            'errors' => $e->errors()
+        ], 422);
     } catch (\Exception $e) {
         return response()->json([
             'success' => false,
@@ -258,12 +264,12 @@ public function actualizarDireccion(Request $request, $id)
         $data = $request->validate([
             'vTelefono_contacto' => 'required|string|max:20',
             'vCalle' => 'required|string|max:150',
-            'vNumero_exterior' => 'nullable|string|max:20',
+            'vNumero_exterior' => 'required|string|max:20',
             'vNumero_interior' => 'nullable|string|max:20',
-            'vColonia' => 'nullable|string|max:150',
-            'vCodigo_postal' => 'nullable|string|max:10',
-            'vCiudad' => 'nullable|string|max:80',
-            'vEstado' => 'nullable|string|max:80',
+            'vColonia' => 'required|string|max:150',
+            'vCodigo_postal' => 'required|string|max:10',
+            'vCiudad' => 'required|string|max:80',
+            'vEstado' => 'required|string|max:80',
             'vEntre_calle_1' => 'nullable|string|max:150',
             'vEntre_calle_2' => 'nullable|string|max:150',
             'tReferencias' => 'nullable|string',
@@ -285,6 +291,12 @@ public function actualizarDireccion(Request $request, $id)
 
         return response()->json(['success' => true, 'direccion' => $direccion]);
 
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error de validación',
+            'errors' => $e->errors()
+        ], 422);
     } catch (\Throwable $e) {
         return response()->json([
             'success' => false,
