@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container mt-5">
-    <h2 class="mb-4 text-center fw-bold">🧾 Resumen de tu pedido</h2>
+    <h2 class="mb-4 text-center fw-bold">🧾 Finalizar Compra</h2>
 
     {{-- ✅ Mensajes --}}
     @if(session('warning'))
@@ -14,188 +14,280 @@
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
-    {{-- 🛒 Tabla de productos --}}
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <h5 class="card-title">Productos en tu carrito</h5>
-            <div class="table-responsive">
-                <table class="table table-striped align-middle">
-                    <thead>
-                        <tr>
-                            <th>Producto</th>
-                            <th class="text-center">Cantidad</th>
-                            <th class="text-end">Precio Unitario</th>
-                            <th class="text-end">Impuestos</th>
-                            <th class="text-end">Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($carrito->detalles as $detalle)
-    @php
-        $producto = $detalle->producto;
-        $subtotalProducto = $detalle->cantidad * $detalle->precio_unitario;
-        $desglose = [];
-        $totalPorcentaje = 0;
-
-        foreach ($producto->impuestos as $imp) {
-            if ($imp->bActivo) {
-                $totalPorcentaje += $imp->dPorcentaje;
-                $desglose[] = "{$imp->eTipo} ({$imp->dPorcentaje}%)";
-            }
-        }
-
-        // 🔹 Precio base (sin impuestos)
-        $precioSinImpuestos = $detalle->precio_unitario / (1 + ($totalPorcentaje / 100));
-
-        // 🔹 Impuestos por unidad y total
-        $impuestosUnitarios = $detalle->precio_unitario - $precioSinImpuestos;
-        $impuestosTotales = $impuestosUnitarios * $detalle->cantidad;
-    @endphp
-
-    <tr>
-        <td>{{ $producto->vNombre }}</td>
-        <td class="text-center">{{ $detalle->cantidad }}</td>
-
-        {{-- Precio unitario sin impuestos --}}
-        <td class="text-end">${{ number_format($precioSinImpuestos, 2) }}</td>
-
-        {{-- Impuestos --}}
-        <td class="text-end">
-            @if(count($desglose) > 0)
-                <small class="text-muted d-block">{{ implode(', ', $desglose) }}</small>
-                ${{ number_format($impuestosTotales, 2) }}
-            @else
-                <span class="text-muted">—</span>
-            @endif
-        </td>
-
-        {{-- Subtotal con impuestos --}}
-        <td class="text-end fw-bold">${{ number_format($detalle->cantidad * $detalle->precio_unitario, 2) }}</td>
-    </tr>
-@endforeach
-                    </tbody>
-                </table>
-            </div>
-
-            {{-- 💰 Totales --}}
-            <div class="mt-4">
-                <p class="text-end mb-1"><strong>Subtotal:</strong> ${{ number_format($subtotal, 2) }}</p>
-                <p class="text-end mb-1"><strong>Impuestos:</strong> ${{ number_format($totalImpuestos, 2) }}</p>
-
-                <p class="text-end mb-1" id="envio-linea">
-        <strong>Envío:</strong>
-        @if ($envio == 0)
-        <span class="text-success">Gratis 🚚</span>
-        @else
-            ${{ number_format($envio, 2) }}
-        @endif
-    </p>
-
-                {{-- 💸 Cupón --}}
-                <div class="d-flex justify-content-end mt-3">
-                    <input type="text" id="codigo_cupon" class="form-control w-auto me-2" placeholder="Código de cupón" value="{{ $codigoCupon ?? '' }}">
-                    <button id="btn-aplicar-cupon" class="btn btn-outline-primary">Aplicar</button>
-                </div>
-
-                {{-- 💸 Mensaje de cupón aplicado --}}
-@if(!empty($codigoCupon))
-    <p class="text-end mt-3 text-success fw-bold" id="mensaje-cupon">
-        @if(($codigoCupon) === 'ENVIOGRATIS')
-            Cupón aplicado correctamente: {{ $codigoCupon }} — Envío gratis activado 🚚
-        @else
-            Cupón aplicado correctamente: {{ $codigoCupon }} — Descuento: ${{ number_format($descuento, 2) }}
-        @endif
-    </p>
-@else
-    <p class="text-end mt-3 text-success fw-bold" id="mensaje-cupon"></p>
-@endif
-
-                <hr>
-                <p class="text-end fs-5 fw-bold">Total Final: <span id="total-final">${{ number_format($totalFinal, 2) }}</span></p>
-            </div>
-        </div>
-    </div>
-
-    {{-- 🚚 Dirección de envío --}}
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <h5 class="card-title">Dirección de envío</h5>
-
-            @if($direcciones->count() > 0)
+    @if($direcciones->count() > 0)
     <form action="{{ route('checkout.store') }}" method="POST" id="checkout-form">
         @csrf
-        <div class="mb-3">
-            <label for="id_direccion" class="form-label fw-bold">Selecciona una dirección guardada:</label>
-            <div class="input-group">
-                <select name="id_direccion" id="id_direccion" class="form-select" required>
-    <option value="">-- Selecciona una dirección --</option>
-
-    @foreach($direcciones as $dir)
-        <option value="{{ $dir->id_direccion }}"
-            @if(isset($direccionPrincipal) && $direccionPrincipal->id_direccion === $dir->id_direccion)
-                selected
-            @endif
-        >
-            {{ $dir->vCalle }} {{ $dir->vNumero_exterior }}, {{ $dir->vColonia }}, {{ $dir->vCiudad }}
-        </option>
-    @endforeach
-</select>
-                <button type="button" class="btn btn-outline-primary" id="btn-editar-direccion">✏️ Editar</button>
-                <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalDireccion" id="btn-nueva-direccion">
-                    ➕ Nueva
-                </button>
+        
+        {{-- ========================================= --}}
+        {{-- 1. DIRECCIÓN DE ENVÍO --}}
+        {{-- ========================================= --}}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">📍 Dirección de Envío</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="id_direccion" class="form-label fw-bold">Selecciona una dirección guardada:</label>
+                    <div class="input-group">
+                        <select name="id_direccion" id="id_direccion" class="form-select" required>
+                            <option value="">-- Selecciona una dirección --</option>
+                            @foreach($direcciones as $dir)
+                                <option value="{{ $dir->id_direccion }}"
+                                    @if(isset($direccionPrincipal) && $direccionPrincipal->id_direccion === $dir->id_direccion)
+                                        selected
+                                    @endif
+                                >
+                                    {{ $dir->vCalle }} {{ $dir->vNumero_exterior }}, {{ $dir->vColonia }}, {{ $dir->vCiudad }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <button type="button" class="btn btn-outline-primary" id="btn-editar-direccion">✏️ Editar</button>
+                        <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalDireccion" id="btn-nueva-direccion">
+                            ➕ Nueva
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        {{-- MÉTODOS DE PAGO --}}
-<div class="card shadow-sm mt-4">
-    <div class="card-body">
-        <h5 class="card-title fw-bold mb-3">Método de pago</h5>
-
-        <p class="text-muted mb-3">
-            Selecciona cómo deseas realizar tu pago. Serás redirigido de manera segura para completar tu compra.
-        </p>
-
-        <div class="d-flex flex-column flex-md-row justify-content-end gap-3">
-
-            {{-- BOTÓN STRIPE --}}
-            <button id="btn-stripe" type="button" class="btn btn-primary px-4 py-2 d-flex align-items-center justify-content-center"
-    style="font-size: 1.1rem; font-weight: 600;">
-    <i class="bi bi-credit-card-2-front me-2"></i>
-    Pagar con tarjeta
-</button>
-
-            {{-- BOTÓN PAYPAL --}}
-            <div id="paypal-button-container" class="paypal-buttons"></div>
-
+        {{-- ========================================= --}}
+        {{-- 2. DIRECCIÓN DE FACTURACIÓN --}}
+        {{-- ========================================= --}}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">🧾 Dirección de Facturación</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="misma_direccion_facturacion" checked>
+                    <label class="form-check-label" for="misma_direccion_facturacion">
+                        Usar la misma dirección para facturación
+                    </label>
+                </div>
+                
+                {{-- Contenedor para dirección de facturación diferente --}}
+                <div id="direccion-facturacion-container" class="mt-3" style="display: none;">
+                    <label for="id_direccion_facturacion" class="form-label fw-bold">Dirección de facturación:</label>
+                    <select name="id_direccion_facturacion" id="id_direccion_facturacion" class="form-select">
+                        <option value="">-- Selecciona una dirección de facturación --</option>
+                        @foreach($direcciones as $dir)
+                            <option value="{{ $dir->id_direccion }}">
+                                {{ $dir->vCalle }} {{ $dir->vNumero_exterior }}, {{ $dir->vColonia }}, {{ $dir->vCiudad }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
 
-<style>
-    .paypal-buttons iframe {
-        transform: scale(1.05);
-    }
-</style>
+        {{-- ========================================= --}}
+        {{-- 3. MÉTODO DE PAGO --}}
+        {{-- ========================================= --}}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">💳 Método de Pago</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input metodo-pago" type="radio" name="metodo_pago" id="stripe_pago" value="stripe" checked>
+                            <label class="form-check-label fw-bold" for="stripe_pago">
+                                <i class="bi bi-credit-card-2-front me-2"></i> Tarjeta de Crédito/Débito (Stripe)
+                            </label>
+                            <p class="text-muted small mb-0">Paga de forma segura con tu tarjeta</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input metodo-pago" type="radio" name="metodo_pago" id="paypal_pago" value="paypal">
+                            <label class="form-check-label fw-bold" for="paypal_pago">
+                                <i class="bi bi-paypal me-2"></i> PayPal
+                            </label>
+                            <p class="text-muted small mb-0">Paga a través de tu cuenta PayPal</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
+        {{-- ========================================= --}}
+        {{-- 4. NOTA DEL PEDIDO --}}
+        {{-- ========================================= --}}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">📝 Nota del Pedido</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="agregar_nota">
+                    <label class="form-check-label" for="agregar_nota">
+                        Agregar nota a su orden
+                    </label>
+                </div>
+                
+                <div id="nota-container" class="mt-2" style="display: none;">
+                    <textarea name="nota_pedido" id="nota_pedido" class="form-control" rows="4" 
+                              placeholder="Ejemplo: Llamar antes de entregar, dejar el paquete en la puerta, instrucciones especiales, etc."></textarea>
+                    <small class="text-muted">Esta nota se incluirá con tu pedido.</small>
+                </div>
+            </div>
+        </div>
 
+        {{-- ========================================= --}}
+        {{-- 5. RESUMEN DEL PEDIDO --}}
+        {{-- ========================================= --}}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">🧾 Resumen de tu Pedido</h5>
+            </div>
+            <div class="card-body">
+                {{-- 🛒 Tabla de productos --}}
+                <div class="table-responsive mb-4">
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th class="text-center">Cantidad</th>
+                                <th class="text-end">Precio Unitario</th>
+                                <th class="text-end">Impuestos</th>
+                                <th class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($carrito->detalles as $detalle)
+                                @php
+                                    $producto = $detalle->producto;
+                                    $subtotalProducto = $detalle->cantidad * $detalle->precio_unitario;
+                                    $desglose = [];
+                                    $totalPorcentaje = 0;
+
+                                    foreach ($producto->impuestos as $imp) {
+                                        if ($imp->bActivo) {
+                                            $totalPorcentaje += $imp->dPorcentaje;
+                                            $desglose[] = "{$imp->eTipo} ({$imp->dPorcentaje}%)";
+                                        }
+                                    }
+
+                                    $precioSinImpuestos = $detalle->precio_unitario / (1 + ($totalPorcentaje / 100));
+                                    $impuestosUnitarios = $detalle->precio_unitario - $precioSinImpuestos;
+                                    $impuestosTotales = $impuestosUnitarios * $detalle->cantidad;
+                                @endphp
+                                <tr>
+                                    <td>{{ $producto->vNombre }}</td>
+                                    <td class="text-center">{{ $detalle->cantidad }}</td>
+                                    <td class="text-end">${{ number_format($precioSinImpuestos, 2) }}</td>
+                                    <td class="text-end">
+                                        @if(count($desglose) > 0)
+                                            <small class="text-muted d-block">{{ implode(', ', $desglose) }}</small>
+                                            ${{ number_format($impuestosTotales, 2) }}
+                                        @else
+                                            <span class="text-muted">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-end fw-bold">${{ number_format($detalle->cantidad * $detalle->precio_unitario, 2) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                {{-- 💰 Totales --}}
+                <div class="border-top pt-3">
+                    <div class="row justify-content-end">
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span><strong>Subtotal:</strong></span>
+                                <span>${{ number_format($subtotal, 2) }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span><strong>Impuestos:</strong></span>
+                                <span>${{ number_format($totalImpuestos, 2) }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2" id="envio-linea">
+                                <span><strong>Envío:</strong></span>
+                                <span>
+                                    @if ($envio == 0)
+                                        <span class="text-success">Gratis 🚚</span>
+                                    @else
+                                        ${{ number_format($envio, 2) }}
+                                    @endif
+                                </span>
+                            </div>
+
+                            {{-- 💸 Cupón --}}
+                            <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
+                                <input type="text" id="codigo_cupon" class="form-control me-2" placeholder="Código de cupón" value="{{ $codigoCupon ?? '' }}">
+                                <button id="btn-aplicar-cupon" class="btn btn-outline-primary">Aplicar</button>
+                            </div>
+
+                            {{-- Mensaje de cupón aplicado --}}
+                            <div id="mensaje-cupon-container">
+                                @if(!empty($codigoCupon))
+                                    <p class="text-success fw-bold mb-2" id="mensaje-cupon">
+                                        @if($codigoCupon === 'ENVIOGRATIS')
+                                            Cupón aplicado correctamente: {{ $codigoCupon }} — Envío gratis activado 🚚
+                                        @else
+                                            Cupón aplicado correctamente: {{ $codigoCupon }} — Descuento: ${{ number_format($descuento, 2) }}
+                                        @endif
+                                    </p>
+                                @else
+                                    <p class="text-success fw-bold mb-2" id="mensaje-cupon" style="display: none;"></p>
+                                @endif
+                            </div>
+
+                            <hr>
+                            <div class="d-flex justify-content-between fs-5 fw-bold">
+                                <span>Total Final:</span>
+                                <span id="total-final">${{ number_format($totalFinal, 2) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- ========================================= --}}
+        {{-- 6. BOTONES DE PAGO --}}
+        {{-- ========================================= --}}
+        <div class="card shadow-sm mb-4">
+            <div class="card-body text-center">
+                <h5 class="card-title mb-3">Finalizar Compra</h5>
+                
+                {{-- Botón Stripe --}}
+                <button id="btn-stripe" type="button" class="btn btn-primary btn-lg px-5 py-3 d-none" 
+                        style="font-size: 1.1rem; font-weight: 600;">
+                    <i class="bi bi-credit-card-2-front me-2"></i>
+                    Pagar con Tarjeta - $<span id="stripe-total">{{ number_format($totalFinal, 2) }}</span>
+                </button>
+
+                {{-- Botón PayPal --}}
+                <div id="paypal-button-container" class="d-none"></div>
+
+                <p class="text-muted mt-3">
+                    Al completar tu compra, aceptas nuestros <a href="#">Términos y Condiciones</a>
+                </p>
+            </div>
+        </div>
     </form>
-@else
-    <p class="text-muted">No tienes direcciones guardadas.</p>
-    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalDireccion" id="btn-nueva-direccion">
-        + Agregar nueva dirección
-    </button>
-@endif
+    @else
+        {{-- Mensaje cuando no hay direcciones --}}
+        <div class="alert alert-warning">
+            <p class="mb-3">No tienes direcciones guardadas. Debes agregar una dirección para continuar con la compra.</p>
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalDireccion" id="btn-nueva-direccion">
+                + Agregar nueva dirección
+            </button>
         </div>
-    </div>
+    @endif
 </div>
 
 {{-- 🏠 Modal para agregar nueva dirección --}}
 <div class="modal fade" id="modalDireccion" tabindex="-1" aria-labelledby="modalDireccionLabel" aria-hidden="true">
+    {{-- El contenido del modal permanece igual --}}
     <div class="modal-dialog modal-lg">
         <form id="form-nueva-direccion" class="modal-content">
             @csrf
-            <input type="hidden" id="id_direccion_editar" name="id_direccion_editar"> {{-- 🔹 para modo edición --}}
+            <input type="hidden" id="id_direccion_editar" name="id_direccion_editar">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title" id="modalDireccionLabel">Agregar nueva dirección</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -287,24 +379,107 @@
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+<!-- Stripe JS -->
+<script src="https://js.stripe.com/v3/"></script>
+<!-- PayPal JS -->
+<script src="https://www.paypal.com/sdk/js?client-id={{ env('PAYPAL_CLIENT_ID') }}&currency=MXN&disable-funding=card"></script>
+
 {{-- 💻 Script AJAX --}}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    // =========================================
+    // VARIABLES GLOBALES
+    // =========================================
+    let notaTexto = ''; // Variable para guardar el texto de la nota
+
+    // =========================================
+    // 1. MANEJO DE DIRECCIÓN DE FACTURACIÓN
+    // =========================================
+    const mismaDireccionCheckbox = document.getElementById('misma_direccion_facturacion');
+    const direccionFacturacionContainer = document.getElementById('direccion-facturacion-container');
+
+    mismaDireccionCheckbox?.addEventListener('change', function() {
+        if (this.checked) {
+            direccionFacturacionContainer.style.display = 'none';
+        } else {
+            direccionFacturacionContainer.style.display = 'block';
+        }
+    });
+
+    // =========================================
+    // 2. MANEJO DE NOTA DEL PEDIDO
+    // =========================================
+    const agregarNotaCheckbox = document.getElementById('agregar_nota');
+    const notaContainer = document.getElementById('nota-container');
+    const notaTextarea = document.getElementById('nota_pedido');
+
+    agregarNotaCheckbox?.addEventListener('change', function() {
+        if (this.checked) {
+            notaContainer.style.display = 'block';
+            // Restaurar el texto si existe
+            if (notaTexto) {
+                notaTextarea.value = notaTexto;
+            }
+        } else {
+            // Guardar el texto antes de ocultar
+            notaTexto = notaTextarea.value;
+            notaContainer.style.display = 'none';
+        }
+    });
+
+    // =========================================
+    // 3. MANEJO DE MÉTODO DE PAGO
+    // =========================================
+    const metodoPagoRadios = document.querySelectorAll('.metodo-pago');
+    const btnStripe = document.getElementById('btn-stripe');
+    const paypalContainer = document.getElementById('paypal-button-container');
+
+    function actualizarBotonesPago() {
+        const metodoSeleccionado = document.querySelector('input[name="metodo_pago"]:checked').value;
+        
+        // Ocultar todos los botones primero
+        btnStripe.classList.add('d-none');
+        paypalContainer.classList.add('d-none');
+
+        // Mostrar solo el botón seleccionado
+        if (metodoSeleccionado === 'stripe') {
+            btnStripe.classList.remove('d-none');
+        } else if (metodoSeleccionado === 'paypal') {
+            paypalContainer.classList.remove('d-none');
+        }
+    }
+
+    // Event listeners para los radio buttons
+    metodoPagoRadios.forEach(radio => {
+        radio.addEventListener('change', actualizarBotonesPago);
+    });
+
+    // Inicializar botones al cargar la página
+    actualizarBotonesPago();
+
+    // =========================================
+    // 4. CUPÓN (código existente)
+    // =========================================
     document.getElementById('btn-aplicar-cupon')?.addEventListener('click', async (e) => {
-        e.preventDefault(); // evita recargar la página
+        e.preventDefault();
 
         const codigo = document.getElementById('codigo_cupon').value.trim();
         const mensaje = document.getElementById('mensaje-cupon');
         const totalFinal = document.getElementById('total-final');
+        const stripeTotal = document.getElementById('stripe-total');
         const envioElemento = document.getElementById('envio-linea');
 
         function formatCurrency(value) {
-    return '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+            return '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
 
         if (!codigo) {
-            mensaje.textContent = "Por favor ingresa un código de cupón.";
-            mensaje.classList.add('text-danger');
+            Swal.fire({
+                icon: "warning",
+                title: "Código vacío",
+                text: "Por favor ingresa un código de cupón.",
+                confirmButtonText: "Entendido"
+            });
             return;
         }
 
@@ -322,34 +497,183 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (data.success) {
                 mensaje.textContent = data.message;
+                mensaje.style.display = 'block';
                 mensaje.classList.remove('text-danger');
                 mensaje.classList.add('text-success');
+                
                 totalFinal.textContent = formatCurrency(data.totalFinal);
+                stripeTotal.textContent = data.totalFinal.toFixed(2);
 
                 // Actualizar Envío dinámicamente
                 if (typeof data.envio !== 'undefined' && envioElemento) {
                     const envioValor = data.envio == 0
                         ? '<span class="text-success">Gratis 🚚</span>'
                         : formatCurrency(data.envio);
-                        envioElemento.innerHTML = `<strong>Envío:</strong> ${envioValor}`;
+                    envioElemento.innerHTML = `<span><strong>Envío:</strong></span><span>${envioValor}</span>`;
                 }
             } else {
+                Swal.fire({
+                    icon: "warning",
+                    title: "Cupón no disponible",
+                    text: data.message,
+                    confirmButtonText: "Entendido"
+                });
+
                 mensaje.textContent = data.message;
+                mensaje.style.display = 'block';
                 mensaje.classList.remove('text-success');
                 mensaje.classList.add('text-danger');
             }
 
         } catch (error) {
             console.error('Error al aplicar cupón:', error);
-            mensaje.textContent = "Ocurrió un error al aplicar el cupón.";
-            mensaje.classList.add('text-danger');
+            Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "Ocurrió un error al aplicar el cupón.",
+                confirmButtonText: "Entendido"
+            });
         }
     });
-});
-</script>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
+    // =========================================
+    // 5. VALIDACIÓN DE DIRECCIÓN
+    // =========================================
+    function validarDireccion() {
+        const selectDireccion = document.getElementById('id_direccion');
+        const valor = selectDireccion.value;
+
+        if (!valor || valor === "" || parseInt(valor) <= 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Selecciona una dirección',
+                text: 'Debes elegir una dirección de envío antes de continuar.',
+            });
+            return false;
+        }
+
+        return true;
+    }
+
+    // =========================================
+    // 6. STRIPE
+    // =========================================
+    document.getElementById('btn-stripe')?.addEventListener('click', async (e) => {
+        e.preventDefault();
+
+        if (!validarDireccion()) {
+            return;
+        }
+
+        // Obtener datos del formulario
+        const idDireccion = document.getElementById('id_direccion').value;
+        const mismaDireccion = document.getElementById('misma_direccion_facturacion').checked;
+        const idDireccionFacturacion = mismaDireccion ? idDireccion : document.getElementById('id_direccion_facturacion').value;
+        const nota = document.getElementById('nota_pedido').value;
+
+        try {
+            const res = await fetch("{{ route('payment.stripe.session') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": "{{ csrf_token() }}"
+                },
+                body: JSON.stringify({
+                    id_direccion: idDireccion,
+                    id_direccion_facturacion: idDireccionFacturacion,
+                    nota: nota
+                })
+            });
+
+            const data = await res.json();
+
+            if (!data.success) {
+                Swal.fire("Error", data.message || "Error al crear la sesión de pago.", "error");
+                return;
+            }
+
+            window.location.href = data.url;
+
+        } catch (err) {
+            console.error(err);
+            Swal.fire("Error", "No se pudo iniciar el pago con Stripe.", "error");
+        }
+    });
+
+    // =========================================
+    // 7. PAYPAL
+    // =========================================
+    if (typeof paypal !== 'undefined') {
+        paypal.Buttons({
+            onClick: function(data, actions) {
+                if (!validarDireccion()) {
+                    return Promise.reject();
+                }
+                return Promise.resolve();
+            },
+
+            createOrder: function(data, actions) {
+                // Obtener datos del formulario
+                const idDireccion = document.getElementById('id_direccion').value;
+                const mismaDireccion = document.getElementById('misma_direccion_facturacion').checked;
+                const idDireccionFacturacion = mismaDireccion ? idDireccion : document.getElementById('id_direccion_facturacion').value;
+                const nota = document.getElementById('nota_pedido').value;
+
+                return fetch("{{ route('payment.paypal.create') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        id_direccion: idDireccion,
+                        id_direccion_facturacion: idDireccionFacturacion,
+                        nota: nota
+                    })
+                })
+                .then(res => res.json())
+                .then(json => {
+                    if (!json.success) {
+                        Swal.fire("Error", json.message || "Error creando orden PayPal", "error");
+                        throw new Error('Error creando orden PayPal');
+                    }
+                    return json.orderID;
+                });
+            },
+
+            onApprove: function(data, actions) {
+                return fetch("{{ route('payment.paypal.capture') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ orderID: data.orderID })
+                })
+                .then(res => res.json())
+                .then(json => {
+                    if (json.success) {
+                        window.location.href = "{{ route('home') }}?paid=1&method=paypal";
+                    } else {
+                        Swal.fire("Error", "Error capturando pago en PayPal", "error");
+                    }
+                });
+            },
+
+            onCancel: function () {
+                Swal.fire("Cancelado", "Pago cancelado.", "info");
+            },
+
+            onError: function (err) {
+                console.error('PayPal error:', err);
+                Swal.fire("Error", "Error en PayPal", "error");
+            }
+        }).render('#paypal-button-container');
+    }
+
+    // =========================================
+    // 8. MANEJO DE DIRECCIONES (código existente)
+    // =========================================
     const modal = new bootstrap.Modal(document.getElementById('modalDireccion'));
     const formDireccion = document.getElementById('form-nueva-direccion');
     const idInput = document.getElementById('id_direccion');
@@ -400,217 +724,91 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 🔹 GUARDAR (crear o actualizar)
     formDireccion.addEventListener('submit', async (e) => {
-    e.preventDefault();
+        e.preventDefault();
 
-    const formData = new FormData(formDireccion);
-    const id = idEditar.value;
+        const formData = new FormData(formDireccion);
+        const id = idEditar.value;
 
-    // 🔹 Forzar Laravel a reconocer PUT
-    if (id) {
-        formData.append('_method', 'PUT');
-    }
-
-    const url = id
-        ? `/checkout/actualizar-direccion/${id}`
-        : `{{ route('checkout.crearDireccion') }}`;
-
-    try {
-        const res = await fetch(url, {
-            method: 'POST', // <-- SIEMPRE POST
-            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-            body: formData
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-            modal.hide();
-            alert(id ? 'Dirección actualizada correctamente.' : 'Dirección creada correctamente.');
-
-            if (!id) {
-                const opt = document.createElement('option');
-                opt.value = data.direccion.id_direccion;
-                opt.textContent = `${data.direccion.vCalle} ${data.direccion.vNumero_exterior}, ${data.direccion.vColonia}, ${data.direccion.vCiudad}`;
-                idInput.appendChild(opt);
-                idInput.value = data.direccion.id_direccion;
-            } else {
-                const selected = idInput.querySelector(`option[value="${id}"]`);
-                selected.textContent = `${data.direccion.vCalle} ${data.direccion.vNumero_exterior}, ${data.direccion.vColonia}, ${data.direccion.vCiudad}`;
-            }
-        } else {
-            alert('❌ Error al guardar la dirección.');
-        }
-    } catch (err) {
-        console.error(err);
-        alert('❌ Error de conexión al guardar la dirección.');
-    }
-});
-});
-</script>
-
-<!-- Stripe JS -->
-<script src="https://js.stripe.com/v3/"></script>
-<!-- PayPal JS -->
-<script src="https://www.paypal.com/sdk/js?client-id={{ env('PAYPAL_CLIENT_ID') }}&currency=MXN&disable-funding=card"></script>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-
-    const selectDireccion = document.getElementById('id_direccion');
-
-    // VALIDACIÓN — CORREGIDA
-    function validarDireccion() {
-        const valor = selectDireccion.value;
-
-        // Si está vacío o no es un número válido → inválido
-        if (!valor || valor === "" || parseInt(valor) <= 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Selecciona una dirección',
-                text: 'Debes elegir una dirección de envío antes de continuar.',
-            });
-            return false;
+        if (id) {
+            formData.append('_method', 'PUT');
         }
 
-        return true;
-    }
-
-    // ---------- STRIPE ----------
-    document.getElementById('btn-stripe')?.addEventListener('click', async (e) => {
-
-        e.preventDefault(); // <-- Ahora sí, con "e"
-
-        if (!validarDireccion()) {
-            return;
-        }
+        const url = id
+            ? `/checkout/actualizar-direccion/${id}`
+            : `{{ route('checkout.crearDireccion') }}`;
 
         try {
-            const res = await fetch("{{ route('payment.stripe.session') }}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": "{{ csrf_token() }}"
-                },
-                body: JSON.stringify({
-                    id_direccion: selectDireccion.value
-                })
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                body: formData
             });
 
             const data = await res.json();
 
-            if (!data.success) {
-                Swal.fire("Error", data.message || "Error al crear la sesión de pago.", "error");
-                return;
+            if (data.success) {
+                modal.hide();
+                Swal.fire({
+                    icon: 'success',
+                    title: id ? 'Dirección actualizada' : 'Dirección creada',
+                    text: id ? 'Dirección actualizada correctamente.' : 'Dirección creada correctamente.',
+                    confirmButtonText: 'Entendido'
+                });
+
+                if (!id) {
+                    const opt = document.createElement('option');
+                    opt.value = data.direccion.id_direccion;
+                    opt.textContent = `${data.direccion.vCalle} ${data.direccion.vNumero_exterior}, ${data.direccion.vColonia}, ${data.direccion.vCiudad}`;
+                    idInput.appendChild(opt);
+                    idInput.value = data.direccion.id_direccion;
+                    
+                    // También agregar a la lista de facturación
+                    const optFacturacion = document.createElement('option');
+                    optFacturacion.value = data.direccion.id_direccion;
+                    optFacturacion.textContent = `${data.direccion.vCalle} ${data.direccion.vNumero_exterior}, ${data.direccion.vColonia}, ${data.direccion.vCiudad}`;
+                    document.getElementById('id_direccion_facturacion').appendChild(optFacturacion);
+                } else {
+                    const selected = idInput.querySelector(`option[value="${id}"]`);
+                    selected.textContent = `${data.direccion.vCalle} ${data.direccion.vNumero_exterior}, ${data.direccion.vColonia}, ${data.direccion.vCiudad}`;
+                    
+                    // Actualizar también en facturación si existe
+                    const selectedFacturacion = document.querySelector(`#id_direccion_facturacion option[value="${id}"]`);
+                    if (selectedFacturacion) {
+                        selectedFacturacion.textContent = `${data.direccion.vCalle} ${data.direccion.vNumero_exterior}, ${data.direccion.vColonia}, ${data.direccion.vCiudad}`;
+                    }
+                }
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error al guardar la dirección.',
+                    confirmButtonText: 'Entendido'
+                });
             }
-
-            window.location.href = data.url;
-
         } catch (err) {
             console.error(err);
-            Swal.fire("Error", "No se pudo iniciar el pago con Stripe.", "error");
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de conexión',
+                text: 'Error de conexión al guardar la dirección.',
+                confirmButtonText: 'Entendido'
+            });
         }
     });
-
-
-    // ---------- PAYPAL ----------
-    if (typeof paypal !== 'undefined') {
-    paypal.Buttons({
-
-        onClick: function(data, actions) {
-                if (!validarDireccion()) {
-                    // Rechazar la acción (detiene el flujo)
-                    try {
-                        return actions.reject();
-                    } catch (err) {
-                        // Algunos entornos aceptan actions.reject(), otros requieren Promise.reject()
-                        return Promise.reject();
-                    }
-                }
-                // permite continuar
-                try {
-                    return actions.resolve();
-                } catch (err) {
-                    return Promise.resolve();
-                }
-            },
-
-        createOrder: function(data, actions) {
-
-            if (!validarDireccion()) {
-                if (!validarDireccion()) {
-                    return Promise.reject();
-                }
-            }
-
-            return fetch("{{ route('payment.paypal.create') }}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({
-                    id_direccion: selectDireccion.value
-                })
-            })
-            .then(res => res.json())
-            .then(json => {
-                if (!json.success) {
-                    if (typeof Swal !== 'undefined') {
-                            Swal.fire("Error", json.message || "Error creando orden PayPal", "error");
-                        } else {
-                            alert(json.message || "Error creando orden PayPal");
-                        }
-                        throw new Error('Error creando orden PayPal');
-                    }
-                    return json.orderID;
-            });
-        },
-
-        onApprove: function(data, actions) {
-            return fetch("{{ route('payment.paypal.capture') }}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({ orderID: data.orderID })
-            })
-            .then(res => res.json())
-            .then(json => {
-                if (json.success) {
-                    window.location.href = "{{ route('home') }}?paid=1&method=paypal";
-                } else {
-                    if (typeof Swal !== 'undefined') {
-                            Swal.fire("Error", "Error capturando pago en PayPal", "error");
-                        } else {
-                            alert("Error capturando pago en PayPal");
-                        }
-                }
-            });
-        },
-
-        onCancel: function () {
-            if (typeof Swal !== 'undefined') {
-                    Swal.fire("Cancelado", "Pago cancelado.", "info");
-                } else {
-                    alert("Pago cancelado.");
-                }
-        },
-
-        onError: function (err) {
-            console.error('PayPal error:', err);
-            if (typeof Swal !== 'undefined') {
-                    Swal.fire("Error", "Error en PayPal", "error");
-                } else {
-                    alert("Error en PayPal");
-                }
-        }
-    }).render('#paypal-button-container');
-
-    } else {
-        console.warn('PayPal SDK no cargado (paypal undefined). Verifica client-id y que el script se haya cargado.');
-    }
 });
 </script>
+
+<style>
+.metodo-pago:checked + label {
+    color: #0d6efd;
+    font-weight: bold;
+}
+.paypal-buttons iframe {
+    transform: scale(1.05);
+}
+.card-header {
+    border-bottom: 2px solid #e9ecef;
+}
+</style>
 
 @endsection

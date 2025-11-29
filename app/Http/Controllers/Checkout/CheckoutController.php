@@ -355,6 +355,16 @@ public function aplicarCupon(Request $request)
         return response()->json(['success' => false, 'message' => 'Cupón inválido o expirado.']);
     }
 
+    // Validar uso máximo
+$usosActuales = CuponUso::where('id_cupon', $cupon->id_cupon)->count();
+
+if ($usosActuales >= $cupon->iUso_maximo) {
+    return response()->json([
+        'success' => false,
+        'message' => 'Este cupón ya alcanzó su límite de usos.'
+    ]);
+}
+
     // 🚚 Cálculo de envío
     $montoEnvioGratis = 1500;
     $costoEnvioFijo = 150;

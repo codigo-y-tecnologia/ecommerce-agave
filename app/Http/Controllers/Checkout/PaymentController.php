@@ -51,8 +51,12 @@ class PaymentController extends Controller
             ]);
         }
 
-        // Guardar la dirección en sesión para finalizar pedido
-        session(['id_direccion' => $request->id_direccion]);
+        // Guardar en sesión
+        session([
+            'id_direccion' => $request->id_direccion,
+            'id_direccion_facturacion' => $request->id_direccion_facturacion ?? $request->id_direccion,
+            'nota_pedido' => $request->nota ?? null
+        ]);
 
         // Cargar carrito
 
@@ -109,6 +113,8 @@ class PaymentController extends Controller
             'user_id'        => $user->id_usuario,
             'carrito_id'     => $carrito->id_carrito,
             'id_direccion'   => $request->id_direccion,
+            'id_direccion_facturacion' => $request->id_direccion_facturacion ?? $request->id_direccion,
+            'nota_pedido' => $request->nota ?? '',
             'codigo_cupon'   => $codigoCupon ?? ''
         ];
 
@@ -234,8 +240,9 @@ class PaymentController extends Controller
                 $carritoId = $metadata->carrito_id ?? null;
                 $codigoCupon = $metadata->codigo_cupon ?? null;
                 $idDireccion = $metadata->id_direccion ?? null;
+                $notaPedido = $metadata->nota_pedido ?? null;
 
-                $this->finalizeOrderFromCart($userId, $carritoId, 'stripe', $session->id, $codigoCupon, $idDireccion);
+                $this->finalizeOrderFromCart($userId, $carritoId, 'stripe', $session->id, $codigoCupon, $idDireccion, $notaPedido);
                 
                 Log::info('✅ Pedido finalizado exitosamente');
             });
@@ -262,6 +269,14 @@ class PaymentController extends Controller
     {
         $user = Auth::user();
 
+        // VALIDAR DIRECCION
+        if (!$request->id_direccion) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Debes seleccionar una dirección.'
+            ]);
+        }
+
         $carrito = Carrito::where('id_usuario', $user->id_usuario)
             ->where('eEstado', 'activo')
             ->with(['detalles.producto.impuestos'])
@@ -272,8 +287,12 @@ class PaymentController extends Controller
             return response()->json(['success' => false, 'message' => 'Carrito vacío.'], 400);
         }
 
-         // Guardar id_direccion en sesión para PayPal
-        session(['id_direccion_paypal' => $request->id_direccion]);
+        // Guardar en sesión
+        session([
+            'id_direccion' => $request->id_direccion,
+            'id_direccion_facturacion' => $request->id_direccion_facturacion ?? $request->id_direccion,
+            'nota_pedido' => $request->nota ?? null
+        ]);
 
         // Recalcular totales (misma lógica)
         [$subtotal, $totalImpuestos, $total] = (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
@@ -412,131 +431,7 @@ class PaymentController extends Controller
         }
     }
 
-    /**
-     * Función que centraliza la creación de Pedido/Venta/Pago/Detalle y limpieza del carrito.
-     * - $userId or null allowed (if passing user id)
-     * - $carritoId required
-     * - $method: 'stripe'|'paypal'
-     * - $reference: session id (stripe) or captureId (paypal)
-     */
-//     private function finalizeOrderFromCart($userId, $carritoId, $method, $reference, $codigoCupon = null)
-//     {
-//         // Buscar usuario y carrito
-//         $carrito = Carrito::where('id_carrito', $carritoId)
-//             ->with(['detalles.producto.impuestos'])
-//             ->firstOrFail();
-
-//         $userId = $userId ?? $carrito->id_usuario;
-
-//         // recalcular totales con la misma lógica
-//         [$subtotal, $totalImpuestos, $total] = (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
-
-//         $montoEnvioGratis = 1500;
-//         $costoEnvioFijo = 150;
-//         $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
-
-//         $descuento = 0;
-//         $cupon = null;
-//         if ($codigoCupon) {
-//             $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])->where('bActivo',1)->first();
-//             if ($cupon) {
-//                 if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
-//                     $envio = 0;
-//                 } else {
-//                     $descuento = ($cupon->eTipo === 'porcentaje') ? $total * ($cupon->dDescuento / 100) : $cupon->dDescuento;
-//                 }
-//             }
-//         }
-
-//         $totalFinal = max(0, $total - $descuento + $envio);
-
-//         // Crear pedido + detalles + venta + pago en una transacción
-//         $pedido = Pedido::create([
-//             'id_usuario' => $userId,
-//             'id_direccion' => session('id_direccion') ?? null, // idealmente manda id_direccion desde la UI
-//             'eEstado' => 'pagado',
-//             'dTotal' => $totalFinal,
-//             'tFecha_pedido' => now(),
-//         ]);
-
-//         foreach ($carrito->detalles as $detalle) {
-//             PedidoDetalle::create([
-//                 'id_pedido' => $pedido->id_pedido,
-//                 'id_producto' => $detalle->id_producto,
-//                 'iCantidad' => $detalle->cantidad,
-//                 'dPrecio_unitario' => $detalle->precio_unitario,
-//             ]);
-//         }
-
-//         // ========================================
-//         // DESCONTAR STOCK DEL PRODUCTO (iStock)
-//         // ========================================
-// foreach ($carrito->detalles as $detalle) {
-
-//     $producto = \App\Models\Producto::find($detalle->id_producto);
-
-//     if ($producto) {
-
-//         // Validación para evitar inventario negativo
-//         if ($producto->iStock < $detalle->cantidad) {
-//             throw new Exception("Inventario insuficiente para el producto: {$producto->vNombre}");
-//         }
-
-//         // Descontar inventario
-//         $producto->iStock -= $detalle->cantidad;
-//         $producto->save();
-//     }
-// }
-
-//         // Crear Venta
-//         $venta = Venta::create([
-//             'id_pedido' => $pedido->id_pedido,
-//             'id_usuario' => $userId,
-//             'dTotal' => $totalFinal,
-//             'tFecha_venta' => now(),
-//         ]);
-
-//         // Detalle de venta (por cada pedido_detalle)
-//         foreach ($carrito->detalles as $detalle) {
-//             DetalleVenta::create([
-//                 'id_venta' => $venta->id_venta,
-//                 'id_producto' => $detalle->id_producto,
-//                 'iCantidad' => $detalle->cantidad,
-//                 'dPrecio_unitario' => $detalle->precio_unitario,
-//             ]);
-//         }
-
-//         // Registrar pago
-//         $pago = Pago::create([
-//             'id_venta' => $venta->id_venta,
-//             'vMetodo' => $method,
-//             'dMonto' => $totalFinal,
-//             'tFecha_pago' => now(),
-//             'eEstado' => 'completado',
-//             'vReferencia' => $reference,
-//         ]);
-
-//         // Cupon uso
-//         if ($cupon) {
-//             CuponUso::create([
-//                 'id_cupon' => $cupon->id_cupon,
-//                 'id_venta' => $venta->id_venta,
-//                 'tFecha_uso' => now(),
-//             ]);
-//         }
-
-//         // Limpiar carrito: borrar detalles y marcar carrito convertido
-//         $carrito->detalles()->delete();
-//         $carrito->eEstado = 'convertido';
-//         $carrito->save();
-
-//         // eliminar cupón de session
-//         session()->forget('codigo_cupon');
-
-//         return true;
-//     }
-
-private function finalizeOrderFromCart($userId, $carritoId, $method, $reference, $codigoCupon = null, $idDireccion = null)
+private function finalizeOrderFromCart($userId, $carritoId, $method, $reference, $codigoCupon = null, $idDireccion = null, $notaPedido = null)
     {
         // Buscar usuario y carrito
         $carrito = Carrito::where('id_carrito', $carritoId)
@@ -554,9 +449,20 @@ private function finalizeOrderFromCart($userId, $carritoId, $method, $reference,
 
         $descuento = 0;
         $cupon = null;
+
         if ($codigoCupon) {
             $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])->where('bActivo',1)->first();
+
             if ($cupon) {
+
+                // ✅ VERIFICAR USOS ACTUALES vs USOS MÁXIMOS
+            $usosActuales = CuponUso::where('id_cupon', $cupon->id_cupon)->count();
+
+             if ($usosActuales >= $cupon->iUso_maximo) {
+                Log::warning("Cupón {$codigoCupon} excedió el límite de usos ({$usosActuales}/{$cupon->iUso_maximo})");
+                $cupon = null; // No aplicar el cupón
+            } else {
+
                 if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
                     $envio = 0;
                 } else {
@@ -564,6 +470,7 @@ private function finalizeOrderFromCart($userId, $carritoId, $method, $reference,
                 }
             }
         }
+}
 
         $totalFinal = max(0, $total - $descuento + $envio);
 
@@ -633,12 +540,29 @@ foreach ($carrito->detalles as $detalle) {
 
         // Cupon uso
         if ($cupon) {
+
+            // ✅ VERIFICAR UNA VEZ MÁS ANTES DE CREAR EL USO (por si hay race conditions)
+        $usosActuales = CuponUso::where('id_cupon', $cupon->id_cupon)->count();
+
+        if ($usosActuales < $cupon->iUso_maximo) {
             CuponUso::create([
                 'id_cupon' => $cupon->id_cupon,
                 'id_venta' => $venta->id_venta,
             ]);
-        }
 
+            $nuevosUsos = $usosActuales + 1;
+            Log::info("✅ Cupón {$cupon->vCodigo_cupon} aplicado. Usos: {$nuevosUsos}/{$cupon->iUso_maximo}");
+
+            // Desactivar el cupón si alcanzó el límite
+            if ($nuevosUsos >= $cupon->iUso_maximo) {
+                $cupon->update(['bActivo' => 0]);
+                Log::info("🔒 Cupón {$cupon->vCodigo_cupon} desactivado por alcanzar el límite de usos");
+            }
+        } else {
+            Log::warning("Cupón {$cupon->vCodigo_cupon} ya no tiene usos disponibles al momento de guardar");
+        }
+        }
+    
         // Limpiar carrito: borrar detalles y marcar carrito convertido
         $carrito->detalles()->delete();
         $carrito->eEstado = 'convertido';
