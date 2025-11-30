@@ -26,6 +26,7 @@ use App\Http\Controllers\MarcaController;
 use App\Http\Controllers\AtributoController;
 use App\Http\Controllers\ProductoAtributoController;
 use App\Http\Controllers\BusquedaController;
+use App\Http\Controllers\FavoritoController;
 
 Route::get('/', [DashboardController::class, 'index'])->name('home');
 
@@ -104,6 +105,15 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
 
     return response()->json(['success' => true, 'direccion' => $direccion]);
 });
+
+// RUTAS PÚBLICAS PARA FAVORITOS - Redirigen a login si no está autenticado
+    Route::get('/favoritos', [FavoritoController::class, 'index'])
+        ->name('favoritos.index');
+
+     Route::post('/favoritos/toggle/{producto}', [FavoritoController::class, 'toggle'])
+         ->name('favoritos.toggle');
+    Route::delete('/favoritos/{producto}', [FavoritoController::class, 'destroy'])
+         ->name('favoritos.destroy');
 
 // Configuración de perfil
     Route::get('/perfil/configuracion', [PerfilController::class, 'configuracion'])->name('perfil.configuracion');

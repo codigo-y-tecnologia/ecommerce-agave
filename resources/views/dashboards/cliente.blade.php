@@ -28,141 +28,199 @@ use Illuminate\Support\Str;
     @endguest
 
     <main>
-    {{-- 🛒 Sección de productos --}}
+
+        <!-- Mostrar mensajes de éxito -->
+    @if(session('success'))
+        <div class="alert alert-success">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if(session('info'))
+        <div class="alert alert-info">
+            {{ session('info') }}
+        </div>
+    @endif
+
     <hr class="my-4">
-    <h2 class="mb-4">Explora nuestros productos</h2>
+    <!-- Banner de bienvenida -->
+    <div class="banner-inicio">
+        <h2>Bienvenido a Ecommerce Agave</h2>
+        <p>Descubre nuestra exclusiva selección de productos de agave y mezcal</p>
+        <a href="{{ route('busqueda.resultados') }}" class="btn-banner">Explorar Productos</a>
+    </div>
 
     <!-- Barra de búsqueda -->
-        <div class="barra-busqueda-inicio">
+        <div class="barra-busqueda-principal">
             <form action="{{ route('busqueda.resultados') }}" method="GET">
-                <input type="text" name="q" placeholder="Buscar productos (agave, mezcal, espadín, ancestral...)">
+                <input type="text" name="q" placeholder="Buscar productos (agave, mezcal, espadín...)" 
+                       value="{{ request('q') }}" autocomplete="off">
                 <button type="submit">Buscar</button>
             </form>
         </div>
 
-        @if ($productos->count() > 0)
-            <p>Encontramos <strong>{{ $productos->count() }}</strong> productos disponibles</p>
-            
-            <div class="productos-container">
-                @foreach ($productos as $producto)
+        {{-- 🛒 Sección de productos --}}
+        <!-- Sección de productos destacados -->
+    <div class="seccion-destacados">
+        <h2 class="titulo-seccion">Productos Destacados</h2>
+        
+        @if(isset($productos) && $productos->count() > 0)
+            <div class="productos-grid">
+                @foreach($productos as $producto)
+                    @php
+                        $estaBajoStock = $producto->estaBajoEnStock();
+                        $esFavorito = $producto->esFavorito();
+                    @endphp
+                    
                     <div class="producto-card" onclick="window.location.href='{{ route('productos.show.public', $producto->id_producto) }}'">
-                        {{-- Mostrar primera imagen si existe --}}
-                        @if(count($producto->imagenes) > 0)
-                            <img src="{{ $producto->imagenes[0] }}" alt="{{ $producto->vNombre }}" class="producto-imagen">
-                        @else
-                            <div class="no-imagen">
-                                <span>Sin imagen</span>
+                        
+                        <div class="producto-imagen-container">
+                            <!-- BOTÓN DEL CORAZÓN - DENTRO DEL CONTENEDOR DE IMAGEN -->
+                            <button class="corazon-favorito {{ $esFavorito ? 'activo' : 'inactivo' }}" 
+                                    data-producto="{{ $producto->id_producto }}"
+                                    data-es-favorito="{{ $esFavorito ? 'true' : 'false' }}"
+                                    onclick="event.stopPropagation(); toggleFavorito(this, {{ $producto->id_producto }})">
+                                <!-- El contenido se maneja con CSS -->
+                            </button>
+
+                            <!-- Solo badge de stock bajo si aplica -->
+                            @if($estaBajoStock)
+                                <div style="position: absolute; top: 10px; left: 10px; z-index: 99;">
+                                    <span class="badge badge-stock">¡Últimas!</span>
+                                </div>
+                            @endif
+
+                            @if(count($producto->imagenes) > 0)
+                                <img src="{{ $producto->imagenes[0] }}" alt="{{ $producto->vNombre }}" class="producto-imagen">
+                            @else
+                                <div class="no-imagen">
+                                    <span>🛒 Sin imagen</span>
+                                </div>
+                            @endif
+                        </div>
+                        
+                        <div class="producto-info">
+                            <h3>{{ $producto->vNombre }}</h3>
+
+                            <!-- Precio - DATOS REALES -->
+                            <div class="producto-precio">
+                                ${{ number_format($producto->dPrecio_venta, 2) }}
                             </div>
-                        @endif
-                        
-                        <h3>{{ $producto->vNombre }}</h3>
-                        <p class="producto-precio">${{ number_format($producto->dPrecio_venta, 2) }}</p>
-                        <p><strong>Stock:</strong> {{ $producto->iStock }}</p>
-                        <p><strong>Categoría:</strong> {{ $producto->categoria->vNombre ?? 'N/A' }}</p>
-                        <p><strong>Marca:</strong> {{ $producto->marca->vNombre ?? 'N/A' }}</p>
-                        
-                        @if ($producto->etiquetas->count() > 0)
-                            <p>
-                                <strong>Etiquetas:</strong>
-                                @foreach ($producto->etiquetas as $etiqueta)
-                                    <span class="badge">{{ $etiqueta->vNombre }}</span>
-                                @endforeach
-                            </p>
-                        @endif
-                        
-                        <div class="ver-detalle">
-                            <a href="{{ route('productos.show.public', $producto->id_producto) }}">Ver detalle del producto</a>
+
+                            <!-- Envío - INFORMACIÓN REAL -->
+                            <div style="color: #666; font-size: 14px;">
+                                📦 Envío gratis
+                            </div>
+
+                            <!-- Stock - DATOS REALES -->
+                            <div class="stock-info {{ $producto->iStock > 10 ? 'stock-bueno' : ($producto->iStock > 0 ? 'stock-bajo' : 'sin-stock') }}">
+                                @if($producto->iStock > 10)
+                                    ✅ En stock
+                                @elseif($producto->iStock > 0)
+                                    ⚠️ Solo {{ $producto->iStock }} unidades
+                                @else
+                                    ❌ Sin stock
+                                @endif
+                            </div>
+
+                            <div class="ver-detalle">
+                                <a href="{{ route('productos.show.public', $producto->id_producto) }}" onclick="event.stopPropagation();">Ver detalle →</a>
+                            </div>
                         </div>
                     </div>
                 @endforeach
             </div>
 
-            <!-- Sugerencia de búsqueda -->
-            <div style="margin-top: 30px; padding: 15px; background: #e7f3ff; border-radius: 8px; border: 1px solid #b3d9ff;">
-                <h3>¿No encuentras lo que buscas?</h3>
-                <p>Usa nuestra barra de búsqueda para encontrar productos específicos por nombre, categoría o marca.</p>
-                <p>Por ejemplo, busca: 
-                    <a href="{{ route('busqueda.resultados') }}?q=agave" style="color: #007bff; text-decoration: none; margin: 0 5px;">"agave"</a>, 
-                    <a href="{{ route('busqueda.resultados') }}?q=mezcal" style="color: #007bff; text-decoration: none; margin: 0 5px;">"mezcal"</a>, 
-                    <a href="{{ route('busqueda.resultados') }}?q=ancestral" style="color: #007bff; text-decoration: none; margin: 0 5px;">"ancestral"</a>
-                </p>
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="{{ route('busqueda.resultados') }}" class="btn">Ver Todos los Productos</a>
             </div>
-
         @else
-            <div style="padding: 40px; background: #fff; border-radius: 8px; border: 1px solid #dee2e6;">
-                <h3>No hay productos registrados aún</h3>
-                <p>Próximamente tendremos disponibles nuestros productos de agave.</p>
-        </div>
-    @endif
-</div>
+            <div class="sin-resultados">
+                <h3>No hay productos disponibles</h3>
+                <p>Pronto agregaremos nuevos productos a nuestro catálogo.</p>
+            </div>
+        @endif
+    </div>
 </main>
 
 <script>
-        // Funcionalidad adicional para mejorar la experiencia
-        document.addEventListener('DOMContentLoaded', function() {
-            // Agregar confirmación al cerrar sesión
-            const logoutForms = document.querySelectorAll('form[action*="logout"]');
-            logoutForms.forEach(form => {
-                form.addEventListener('submit', function(e) {
-                    if (!confirm('¿Estás seguro de que deseas cerrar sesión?')) {
-                        e.preventDefault();
-                    }
-                });
-            });
+        // Función para toggle favoritos en productos
+        function toggleFavorito(button, productoId) {
+            // Verificar primero si el usuario está autenticado
+            @if(!Auth::check())
+                // Si no está autenticado, redirigir directamente al login
+                window.location.href = '{{ route("login") }}';
+                return;
+            @endif
 
-            // Mejorar la interactividad de las tarjetas de producto
-            const productCards = document.querySelectorAll('.producto-card');
-            productCards.forEach(card => {
-                // Efecto de hover mejorado
-                card.addEventListener('mouseenter', function() {
-                    this.style.transform = 'translateY(-5px)';
-                });
-                
-                card.addEventListener('mouseleave', function() {
-                    this.style.transform = 'translateY(0)';
-                });
-
-                // Click en cualquier parte de la tarjeta
-                card.addEventListener('click', function() {
-                    const link = this.querySelector('.ver-detalle a');
-                    if (link) {
-                        window.location.href = link.href;
-                    }
-                });
-            });
-
-            // Focus en la barra de búsqueda al presionar Ctrl+K
-            document.addEventListener('keydown', function(e) {
-                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-                    e.preventDefault();
-                    const searchInput = document.querySelector('.barra-busqueda-inicio input[type="text"]');
-                    if (searchInput) {
-                        searchInput.focus();
-                    }
+            const esFavorito = button.getAttribute('data-es-favorito') === 'true';
+            
+            fetch(`/favoritos/toggle/${productoId}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json'
                 }
-            });
-
-            // Mostrar atajo de teclado en la barra de búsqueda
-            const searchInput = document.querySelector('.barra-busqueda-inicio input[type="text"]');
-            if (searchInput) {
-                // Agregar placeholder dinámico
-                const placeholders = [
-                    "Buscar productos (agave, mezcal, espadín...)",
-                    "Buscar por nombre, categoría o marca...",
-                    "Presiona Ctrl+K para buscar rápidamente"
-                ];
-                let currentPlaceholder = 0;
+            })
+            .then(response => {
+                if (response.status === 401) {
+                    // No autenticado - redirigir al login
+                    window.location.href = '{{ route("login") }}';
+                    return null;
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data) return; // Si es null (401), ya redirigimos
                 
-                setInterval(() => {
-                    searchInput.placeholder = placeholders[currentPlaceholder];
-                    currentPlaceholder = (currentPlaceholder + 1) % placeholders.length;
-                }, 3000);
+                if (data.success) {
+                    if (data.action === 'added') {
+                        button.classList.remove('inactivo');
+                        button.classList.add('activo');
+                        button.setAttribute('data-es-favorito', 'true');
+                        showNotification('✅ Producto agregado a favoritos');
+                    } else {
+                        button.classList.remove('activo');
+                        button.classList.add('inactivo');
+                        button.setAttribute('data-es-favorito', 'false');
+                        showNotification('❌ Producto eliminado de favoritos');
+                    }
+                } else {
+                    showNotification('❌ ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('❌ Error al gestionar favoritos');
+            });
+        }
+
+        // Función para mostrar notificaciones
+        function showNotification(message) {
+            // Crear elemento de notificación
+            const notification = document.createElement('div');
+            notification.className = 'toast';
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Remover después de 3 segundos
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // Auto-focus en la barra de búsqueda al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.querySelector('.barra-busqueda-principal input[type="text"]');
+            if (searchInput) {
+                searchInput.focus();
             }
         });
-
-        // Función para búsqueda rápida
-        function busquedaRapida(termino) {
-            window.location.href = "{{ route('busqueda.resultados') }}?q=" + encodeURIComponent(termino);
-        }
     </script>
 @endsection

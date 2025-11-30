@@ -33,6 +33,7 @@
                         {{-- 👤 Cliente --}}
                         @auth
                             @if(Auth::user()->eRol === 'cliente')
+                                <li class="nav-item"><a class="nav-link" href="{{ route('favoritos.index') }}" style="color: #dc3545;">❤️ Mis Favoritos</a></li>
                                 <li class="nav-item"><a class="nav-link" href="{{ route('carrito.index') }}">🛒 Mi Carrito</a></li>
                                 <li class="nav-item"><a class="nav-link" href="#">🧾 Checkout</a></li>
                                 <li class="nav-item"><a class="nav-link" href="#">📦 Mis Pedidos</a></li>
