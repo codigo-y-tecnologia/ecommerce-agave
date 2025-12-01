@@ -6,6 +6,7 @@ use App\Models\Producto;
 use App\Models\Categoria;
 use App\Models\Marca;
 use App\Models\Etiqueta;
+use App\Models\Atributo;
 use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -13,18 +14,12 @@ use Illuminate\Support\Facades\DB;
 
 class ProductoController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         $productos = Producto::with(['marca', 'categoria', 'etiquetas'])->get();
         return view('productos.index', compact('productos'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         $categorias = Categoria::all();
@@ -33,9 +28,6 @@ class ProductoController extends Controller
         return view('productos.create', compact('categorias', 'marcas', 'etiquetas'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $request->validate([
@@ -87,7 +79,6 @@ class ProductoController extends Controller
         ]);
 
         try {
-            // Iniciar una transacción para asegurar la consistencia
             DB::beginTransaction();
 
             $productoData = $request->all();
@@ -120,9 +111,6 @@ class ProductoController extends Controller
         }
     }
 
-    /**
-     * Display the specified resource (VISTA PÚBLICA para clientes)
-     */
     public function showPublic($id)
     {
         $producto = Producto::with(['marca', 'categoria', 'etiquetas'])
@@ -132,9 +120,6 @@ class ProductoController extends Controller
         return view('productos.show-public', compact('producto'));
     }
 
-    /**
-     * Catálogo público de productos
-     */
     public function catalogo()
     {
         $productos = Producto::with(['marca', 'categoria', 'etiquetas'])
@@ -145,18 +130,12 @@ class ProductoController extends Controller
         return view('productos.catalogo', compact('productos'));
     }
 
-    /**
-     * Display the specified resource (VISTA ADMIN)
-     */
     public function show(Producto $producto)
     {
         $producto->load(['marca', 'categoria', 'etiquetas']);
         return view('productos.show', compact('producto'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Producto $producto)
     {
         $categorias = Categoria::all();
@@ -167,9 +146,6 @@ class ProductoController extends Controller
         return view('productos.edit', compact('producto', 'categorias', 'marcas', 'etiquetas'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Producto $producto)
     {
         $request->validate([
@@ -258,9 +234,6 @@ class ProductoController extends Controller
         }
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Producto $producto)
     {
         try {
@@ -283,5 +256,24 @@ class ProductoController extends Controller
             return redirect()->route('productos.index')
                 ->with('error', 'Error al eliminar el producto: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Gestionar atributos del producto
+     */
+    public function atributos(Producto $producto)
+    {
+        $atributosDisponibles = Atributo::where('bActivo', true)
+                                   ->whereNotIn('id_atributo', function($query) use ($producto) {
+                                       $query->select('id_atributo')
+                                             ->from('tbl_producto_atributos')
+                                             ->where('id_producto', $producto->id_producto);
+                                   })
+                                   ->orderBy('iOrden')
+                                   ->get();
+
+        $producto->load('productoAtributos.atributo', 'productoAtributos.opcion');
+
+        return view('productos.atributos', compact('producto', 'atributosDisponibles'));
     }
 }
