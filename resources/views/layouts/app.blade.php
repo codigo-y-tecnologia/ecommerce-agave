@@ -70,6 +70,12 @@
                                 <i class="fas fa-tag"></i> Etiquetas
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->is('atributos*') ? 'active' : '' }}" 
+                               href="{{ route('atributos.index') }}">
+                                <i class="fas fa-list-alt"></i> Atributos
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -111,7 +117,11 @@
     <script>
         // Auto-dismiss alerts after 5 seconds
         setTimeout(function() {
-            $('.alert').alert('close');
+            var alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
         }, 5000);
 
         // Confirmación para eliminar
@@ -120,5 +130,6 @@
         }
     </script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    @stack('scripts')
 </body>
 </html>
