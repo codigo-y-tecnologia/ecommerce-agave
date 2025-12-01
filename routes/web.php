@@ -12,6 +12,7 @@ use App\Http\Controllers\Auth\VerificationController;
 use App\Models\Producto;
 use App\Http\Controllers\VentaController;
 
+
 // Route::get('/', function () {
 //     return view('inicio');
 // })->name('home');
@@ -98,3 +99,4 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
 //     })->name('superadmin.panel');
 // });
 Route::resource('ventas', VentaController::class)->except(['create', 'store', 'destroy']);
+
