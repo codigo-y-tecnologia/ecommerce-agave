@@ -13,6 +13,7 @@ class Producto extends Model
     protected $table = 'tbl_productos';
     protected $primaryKey = 'id_producto';
     
+    // Desactivar timestamps automáticos
     public $timestamps = false;
     
     protected $fillable = [
@@ -43,6 +44,7 @@ class Producto extends Model
             $archivos = Storage::disk('public')->files($carpetaImagenes);
             $imagenes = [];
             
+            // Ordenar archivos para mostrar en orden correcto
             sort($archivos);
             
             foreach ($archivos as $archivo) {
@@ -60,16 +62,19 @@ class Producto extends Model
     // Método para guardar imágenes
     public function guardarImagenes($imagenes)
     {
+        // Asegurarnos de que tenemos un ID de producto
         if (!$this->id_producto) {
             throw new \Exception('No se puede guardar imágenes sin un ID de producto');
         }
         
         $carpetaImagenes = 'products/' . $this->id_producto;
         
+        // Crear directorio si no existe
         if (!Storage::disk('public')->exists($carpetaImagenes)) {
             Storage::disk('public')->makeDirectory($carpetaImagenes);
         }
         
+        // Obtener imágenes existentes para determinar el siguiente número
         $imagenesExistentes = Storage::disk('public')->files($carpetaImagenes);
         $numeroInicio = count($imagenesExistentes) + 1;
         
@@ -77,7 +82,7 @@ class Producto extends Model
         $contador = 0;
         
         foreach ($imagenes as $imagen) {
-            if (($numeroInicio + $contador) > 6) break;
+            if (($numeroInicio + $contador) > 6) break; // Máximo 6 imágenes
             
             $extension = $imagen->getClientOriginalExtension();
             $nombreArchivo = 'imagen_' . ($numeroInicio + $contador) . '.' . $extension;
@@ -98,6 +103,17 @@ class Producto extends Model
         }
     }
 
+    // Método para eliminar una imagen específica
+    public function eliminarImagen($nombreArchivo)
+    {
+        $rutaCompleta = 'products/' . $this->id_producto . '/' . $nombreArchivo;
+        if (Storage::disk('public')->exists($rutaCompleta)) {
+            Storage::disk('public')->delete($rutaCompleta);
+            return true;
+        }
+        return false;
+    }
+
     // Método para obtener el número de imágenes actuales
     public function getNumeroImagenes()
     {
@@ -107,6 +123,21 @@ class Producto extends Model
             return count($archivos);
         }
         return 0;
+    }
+
+    // Método para debug - verificar si la carpeta se crea correctamente
+    public function debugImagenes()
+    {
+        $carpetaImagenes = 'products/' . $this->id_producto;
+        
+        return [
+            'id_producto' => $this->id_producto,
+            'carpeta' => $carpetaImagenes,
+            'existe_carpeta' => Storage::disk('public')->exists($carpetaImagenes),
+            'archivos_en_carpeta' => Storage::disk('public')->exists($carpetaImagenes) 
+                ? Storage::disk('public')->files($carpetaImagenes) 
+                : []
+        ];
     }
 
     public function setVCodigoBarrasAttribute($value)
@@ -129,16 +160,8 @@ class Producto extends Model
         return $this->belongsToMany(Etiqueta::class, 'tbl_producto_etiquetas', 'id_producto', 'id_etiqueta');
     }
     
-    // MÉTODOS PARA ATRIBUTOS
-    public function productoAtributos()
-    {
-        return $this->hasMany(ProductoAtributo::class, 'id_producto');
-    }
-
     public function atributos()
     {
-        return $this->belongsToMany(Atributo::class, 'tbl_producto_atributos', 'id_producto', 'id_atributo')
-                    ->withPivot('vValor', 'id_opcion')
-                    ->using(ProductoAtributo::class);
+        return $this->hasMany(ProductoAtributo::class, 'id_producto');
     }
 }

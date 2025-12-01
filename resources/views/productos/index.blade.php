@@ -9,6 +9,16 @@
     </a>
 </div>
 
+{{-- ELIMINA ESTA SECCIÓN COMPLETA - YA EXISTE EN LAYOUTS.APP --}}
+{{--
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+--}}
+
 <div class="card shadow-sm">
     <div class="card-body">
         @if($productos->count() > 0)
@@ -49,10 +59,6 @@
                                 <a href="{{ route('productos.show', $producto) }}" class="btn btn-info" 
                                    title="Ver detalles">
                                     <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{{ route('productos.atributos', $producto) }}" class="btn btn-success" 
-                                   title="Gestionar atributos">
-                                    <i class="fas fa-tags"></i>
                                 </a>
                                 <a href="{{ route('productos.edit', $producto) }}" class="btn btn-warning" 
                                    title="Editar">
