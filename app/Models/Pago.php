@@ -18,6 +18,7 @@ class Pago extends Model
         'eMetodo_pago',
         'dMonto',
         'eEstado',
+        'vReferencia',
         'tFecha_pago',
     ];
 

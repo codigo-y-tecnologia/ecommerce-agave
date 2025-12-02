@@ -156,52 +156,6 @@ class PaymentController extends Controller
     }
 }
 
-    /**
-     * Endpoint público para recibir webhook de Stripe.
-     * Recomiendo registrar este endpoint en el dashboard de Stripe con STRIPE_WEBHOOK_SECRET.
-     */
-    // public function stripeWebhook(Request $request)
-    // {
-
-    //     Log::info('🔔 Webhook de Stripe recibido', [
-    //     'type' => $request->getContent() ? 'has content' : 'empty',
-    //     'headers' => $request->headers->all()
-    // ]);
-
-    //     $payload = $request->getContent();
-    //     $sigHeader = $request->header('Stripe-Signature');
-    //     $webhookSecret = env('STRIPE_WEBHOOK_SECRET');
-
-    //     try {
-    //         $event = StripeWebhook::constructEvent($payload, $sigHeader, $webhookSecret);
-    //     } catch (\UnexpectedValueException $e) {
-    //         // Invalid payload
-    //         return response('Invalid payload', 400);
-    //     } catch (\Stripe\Exception\SignatureVerificationException $e) {
-    //         // Invalid signature
-    //         return response('Invalid signature', 400);
-    //     }
-
-    //     // Handle the checkout.session.completed event
-    //     if ($event->type === 'checkout.session.completed') {
-    //         $session = $event->data->object;
-
-    //         // metadata previously attached
-    //         $metadata = $session->metadata ?? null;
-    //         $userId = $metadata->user_id ?? null;
-    //         $carritoId = $metadata->carrito_id ?? null;
-    //         $codigoCupon = $metadata->codigo_cupon ?? null;
-
-    //         // Asegúrate de no duplicar: busca si ya existe un pago/venta con referencia de Stripe
-    //         DB::transaction(function () use ($session, $userId, $carritoId, $codigoCupon) {
-    //             // Finaliza el pedido / crea ventas aquí
-    //             $this->finalizeOrderFromCart($userId, $carritoId, 'stripe', $session->id, $codigoCupon);
-    //         });
-    //     }
-
-    //     return response('Received', 200);
-    // }
-
     public function stripeWebhook(Request $request)
 {
     Log::info('🔔 Webhook de Stripe recibido', [
@@ -235,6 +189,7 @@ class PaymentController extends Controller
                 'metadata' => $metadata
             ]);
 
+        if ($session->payment_status === 'paid') {
             DB::transaction(function () use ($session, $metadata) {
                 $userId = $metadata->user_id ?? null;
                 $carritoId = $metadata->carrito_id ?? null;
@@ -242,10 +197,21 @@ class PaymentController extends Controller
                 $idDireccion = $metadata->id_direccion ?? null;
                 $notaPedido = $metadata->nota_pedido ?? null;
 
-                $this->finalizeOrderFromCart($userId, $carritoId, 'stripe', $session->id, $codigoCupon, $idDireccion, $notaPedido);
+                
+                //$reference = $session->id;
+                $reference = $session->payment_intent; 
+                Log::info('🔔 Referencia a guardar: ' . $reference);
+
+                $this->finalizeOrderFromCart($userId, $carritoId, 'stripe', $reference, $codigoCupon, $idDireccion, $notaPedido);
                 
                 Log::info('✅ Pedido finalizado exitosamente');
             });
+        } else {
+                Log::warning('La sesión no está pagada', [
+                    'session_id' => $session->id, 
+                    'payment_status' => $session->payment_status
+                ]);
+            }
         }
 
         return response()->json(['received' => true]);
@@ -433,6 +399,16 @@ class PaymentController extends Controller
 
 private function finalizeOrderFromCart($userId, $carritoId, $method, $reference, $codigoCupon = null, $idDireccion = null, $notaPedido = null)
     {
+
+        Log::info('📦 Iniciando finalizeOrderFromCart', [
+        'userId' => $userId,
+        'carritoId' => $carritoId,
+        'method' => $method,
+        'reference' => $reference,  // ← Verificar este valor
+        'codigoCupon' => $codigoCupon,
+        'idDireccion' => $idDireccion
+    ]);
+
         // Buscar usuario y carrito
         $carrito = Carrito::where('id_carrito', $carritoId)
             ->with(['detalles.producto.impuestos'])
@@ -529,6 +505,14 @@ foreach ($carrito->detalles as $detalle) {
             ]);
         }
 
+        Log::info('💳 Creando registro de pago', [
+        'id_pedido' => $pedido->id_pedido,
+        'metodo' => $method,
+        'monto' => $totalFinal,
+        'referencia' => $reference,
+        'estado' => 'exitoso'
+    ]);
+
         // Registrar pago
         $pago = Pago::create([
             'id_pedido' => $pedido->id_pedido,
@@ -536,6 +520,12 @@ foreach ($carrito->detalles as $detalle) {
             'dMonto' => $totalFinal,
             'eEstado' => 'exitoso',   
             'vReferencia' => $reference,
+        ]);
+
+        // LOG después de crear el pago
+        Log::info('✅ Pago creado exitosamente', [
+            'id_pago' => $pago->id_pago,
+            'referencia' => $pago->vReferencia  // ← Verificar qué se guardó
         ]);
 
         // Cupon uso
