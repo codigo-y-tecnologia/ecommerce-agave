@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Exception;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 use App\Models\{
     Carrito,
@@ -135,9 +136,18 @@ class PaymentController extends Controller
 
     'metadata' => $metadata,
 
-    'success_url' => route('checkout.index') . '?paid=1&payment=stripe&session_id={CHECKOUT_SESSION_ID}',
+    // 'success_url' => route('checkout.index') . '?paid=1&payment=stripe&session_id={CHECKOUT_SESSION_ID}',
+    // 'success_url' => route('checkout.success') . '?paid=1&payment=stripe&session_id={CHECKOUT_SESSION_ID}',
+    'success_url' => route('checkout.success') . '?session_id={CHECKOUT_SESSION_ID}',
     'cancel_url' => route('checkout.index') . '?paid=0',
 ]);
+
+// \Stripe\Checkout\Session::update(
+//     $session->id,
+//     ['metadata' => array_merge($metadata, [
+//         'session_id' => $session->id
+//     ])]
+// );
 
         return response()->json([
             'success' => true,
@@ -201,8 +211,8 @@ class PaymentController extends Controller
                 //$reference = $session->id;
                 $reference = $session->payment_intent; 
                 Log::info('🔔 Referencia a guardar: ' . $reference);
-
-                $this->finalizeOrderFromCart($userId, $carritoId, 'stripe', $reference, $codigoCupon, $idDireccion, $notaPedido);
+                
+                $this->finalizeOrderFromCart($userId, $carritoId, 'stripe', $reference, $codigoCupon, $idDireccion, $notaPedido, $session->id);
                 
                 Log::info('✅ Pedido finalizado exitosamente');
             });
@@ -397,7 +407,7 @@ class PaymentController extends Controller
         }
     }
 
-private function finalizeOrderFromCart($userId, $carritoId, $method, $reference, $codigoCupon = null, $idDireccion = null, $notaPedido = null)
+private function finalizeOrderFromCart($userId, $carritoId, $method, $reference, $codigoCupon = null, $idDireccion = null, $notaPedido = null, $sessionId = null)
     {
 
         Log::info('📦 Iniciando finalizeOrderFromCart', [
@@ -406,7 +416,8 @@ private function finalizeOrderFromCart($userId, $carritoId, $method, $reference,
         'method' => $method,
         'reference' => $reference,  // ← Verificar este valor
         'codigoCupon' => $codigoCupon,
-        'idDireccion' => $idDireccion
+        'idDireccion' => $idDireccion,
+        'sessionId' => $sessionId
     ]);
 
         // Buscar usuario y carrito
@@ -510,7 +521,8 @@ foreach ($carrito->detalles as $detalle) {
         'metodo' => $method,
         'monto' => $totalFinal,
         'referencia' => $reference,
-        'estado' => 'exitoso'
+        'session_id' => $sessionId,
+        'estado' => 'exitoso',
     ]);
 
         // Registrar pago
@@ -520,6 +532,7 @@ foreach ($carrito->detalles as $detalle) {
             'dMonto' => $totalFinal,
             'eEstado' => 'exitoso',   
             'vReferencia' => $reference,
+            'vSessionID' => $sessionId,
         ]);
 
         // LOG después de crear el pago
@@ -560,6 +573,23 @@ foreach ($carrito->detalles as $detalle) {
 
         // eliminar cupón de session
         session()->forget('codigo_cupon');
+
+// ==================
+// ENVIAR EMAIL CLIENTE
+// ==================
+Mail::to($pedido->usuario->vEmail)
+    ->send(new \App\Mail\PedidoRealizadoCliente($pedido));
+
+    // ==================
+// ENVIAR EMAIL ADMIN
+// ==================
+$adminEmail = \App\Models\Usuario::whereIn('eRol', ['admin','superadmin'])
+    ->value('vEmail'); // el primero encontrado
+
+if ($adminEmail) {
+    Mail::to($adminEmail)
+        ->send(new \App\Mail\PedidoNuevoAdmin($pedido));
+}
 
         return true;
     }

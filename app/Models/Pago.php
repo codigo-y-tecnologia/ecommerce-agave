@@ -19,6 +19,7 @@ class Pago extends Model
         'dMonto',
         'eEstado',
         'vReferencia',
+        'vSessionID',
         'tFecha_pago',
     ];
 

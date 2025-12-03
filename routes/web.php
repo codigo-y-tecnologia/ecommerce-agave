@@ -13,6 +13,8 @@ use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\VerificationController;
 use App\Models\Producto;
 use App\Http\Controllers\Checkout\PaymentController;
+use App\Http\Controllers\Checkout\OrderReceivedController;
+use App\Http\Controllers\Checkout\CheckoutSuccessController;
 
 
 // Route::get('/', function () {
@@ -30,6 +32,13 @@ Route::get('/', function () {
     Route::post('/payment/stripe-session', [PaymentController::class, 'createStripeSession'])->name('payment.stripe.session');
 
     Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook'])->name('webhook.stripe'); 
+
+    // Order Received
+    Route::get('/order-received/{id}', [OrderReceivedController::class, 'show'])
+    ->name('order.received');
+
+    Route::get('/checkout/success', [CheckoutSuccessController::class, 'index'])
+    ->name('checkout.success');
 
 // Login y registro solo para invitados
 Route::middleware('guest')->group(function () {
@@ -108,7 +117,6 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
     // PayPal
     Route::post('/payment/paypal-create', [PaymentController::class, 'createPaypalOrder'])->name('payment.paypal.create');
     Route::post('/payment/paypal-capture', [PaymentController::class, 'capturePaypalOrder'])->name('payment.paypal.capture');
-
 });
 
 // --------------------
