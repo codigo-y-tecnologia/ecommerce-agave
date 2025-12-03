@@ -22,9 +22,11 @@ class ProductoController extends Controller
 
     public function create()
     {
-        $categorias = Categoria::all();
+        // CATEGORÍAS SIMPLES - SIN JERARQUÍA
+        $categorias = Categoria::orderBy('vNombre', 'asc')->get();
         $marcas = Marca::all();
         $etiquetas = Etiqueta::all();
+        
         return view('productos.create', compact('categorias', 'marcas', 'etiquetas'));
     }
 
@@ -138,7 +140,8 @@ class ProductoController extends Controller
 
     public function edit(Producto $producto)
     {
-        $categorias = Categoria::all();
+        // CATEGORÍAS SIMPLES - SIN JERARQUÍA
+        $categorias = Categoria::orderBy('vNombre', 'asc')->get();
         $marcas = Marca::all();
         $etiquetas = Etiqueta::all();
         $producto->load('etiquetas');

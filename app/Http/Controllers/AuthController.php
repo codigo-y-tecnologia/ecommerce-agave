@@ -4,85 +4,72 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use App\Models\Usuario;
-use App\Models\Producto; 
-use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
-    public function index()
+    // Mostrar formulario de login
+    public function showLoginForm()
     {
-        $productos = Producto::with(['marca', 'categoria', 'etiquetas'])
-                        ->where('bActivo', 1)
-                        ->get();
-        
-        // Obtener imágenes para cada producto - CORREGIDO
-        foreach ($productos as $producto) {
-            $carpetaProducto = public_path('images/productos/' . $producto->vCodigo_barras);
-            $imagenes = [];
-            
-            if (File::exists($carpetaProducto)) {
-                $archivos = File::files($carpetaProducto);
-                foreach ($archivos as $archivo) {
-                    $extension = strtolower($archivo->getExtension());
-                    if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                        $imagenes[] = $archivo->getFilename();
-                    }
-                }
-                // Ordenar imágenes por nombre numéricamente
-                natsort($imagenes);
-                $imagenes = array_values($imagenes);
-            }
-            
-            // Agregar imágenes al producto
-            $producto->imagenes = $imagenes;
+        // Verificar si ya está autenticado
+        if (Auth::check()) {
+            return redirect()->route('inicio.real');
         }
-    
-        return view('inicio', compact('productos'));
+        
+        return view('auth.login'); // Busca en resources/views/auth/login.blade.php
     }
 
-    public function showLogin()
-    {
-        return view('auth.login');
-    }
-
+    // Procesar login - SIN encriptación
     public function login(Request $request)
     {
-        $credentials = $request->validate([
+        // Validación
+        $request->validate([
             'vEmail' => 'required|email',
-            'vPassword' => 'required|min:6',
+            'vPassword' => 'required|string'
         ]);
 
-        $credentials = [
-            'vEmail' => $request->vEmail,
-            'password' => $request->vPassword,
-        ];
+        // Buscar usuario por email
+        $usuario = Usuario::where('vEmail', $request->vEmail)->first();
 
-        $remember = $request->boolean('remember'); // checkbox remember
-
-        if (Auth::attempt($credentials, $remember)) {
-            $request->session()->regenerate();
-            return redirect()->intended('/');
+        // Verificar contraseña SIN encriptación
+        if ($usuario && $usuario->vPassword === $request->vPassword) {
+            // Iniciar sesión
+            Auth::login($usuario, $request->filled('remember'));
+            
+            // Redirigir según la URL de destino o a inicio
+            return redirect()->intended(route('inicio.real'));
         }
 
+        // Si falla la autenticación
         return back()->withErrors([
-            'vEmail' => 'Credenciales incorrectas.',
+            'vEmail' => 'Las credenciales no coinciden con nuestros registros.',
         ])->onlyInput('vEmail');
     }
 
-    public function showRegister()
+    // Cerrar sesión
+    public function logout(Request $request)
     {
-        return view('registroUsuarios');
+        Auth::logout();
+        
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        
+        return redirect()->route('inicio.real');
     }
 
-    /**
-     * Guardar nuevo usuario
-     */
+    // Mostrar formulario de registro
+    public function showRegister()
+    {
+        return view('auth.registroUsuarios');
+    }
+
+    // Procesar registro - SIN encriptación
     public function register(Request $request)
     {
         // Validación
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'vNombre' => 'required|string|max:60',
             'vApaterno' => 'required|string|max:50',
             'vAmaterno' => 'required|string|max:50',
@@ -92,33 +79,27 @@ class AuthController extends Controller
             'eRol' => 'in:cliente,admin'
         ]);
 
-        // Generar tokens
-        $rememberToken = \Illuminate\Support\Str::random(60);
-        $apiToken = \Illuminate\Support\Str::random(60);
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
 
-        $usuario = \App\Models\Usuario::create([
-            'vNombre' => $data['vNombre'],
-            'vApaterno' => $data['vApaterno'],
-            'vAmaterno' => $data['vAmaterno'] ?? null,
-            'vEmail' => $data['vEmail'],
-            'vPassword' => Hash::make($data['vPassword']),
-            'dFecha_nacimiento' => $data['dFecha_nacimiento'],
-            'eRol' => $data['eRol'] ?? 'cliente',
-            'remember_token' => $rememberToken, // Token para "recordar sesión"
-            'api_token' => $apiToken, // Token para API
+        // Crear usuario - SIN encriptación
+        $usuario = Usuario::create([
+            'vNombre' => $request->vNombre,
+            'vApaterno' => $request->vApaterno,
+            'vAmaterno' => $request->vAmaterno,
+            'vEmail' => $request->vEmail,
+            'vPassword' => $request->vPassword, // ✅ SIN encriptación
+            'dFecha_nacimiento' => $request->dFecha_nacimiento,
+            'eRol' => $request->eRol ?? 'cliente',
         ]);
 
-        Auth::login($usuario); // inicia sesión automático después de registro
-        $request->session()->regenerate();
-
-        return redirect('/');
-    }
-
-    public function logout(Request $request)
-    {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-        return redirect('/');
+        // Iniciar sesión automáticamente
+        Auth::login($usuario);
+        
+        // Redirigir al inicio
+        return redirect()->route('inicio.real')->with('success', '¡Cuenta creada exitosamente!');
     }
 }

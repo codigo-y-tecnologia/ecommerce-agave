@@ -89,13 +89,20 @@ class ProductoAtributoController extends Controller
         }
     }
 
-    public function destroy($productoId, $atributoId)
+   public function destroy($productoId, $atributoId)
     {
         try {
             DB::beginTransaction();
 
-            $productoAtributo = $this->findProductoAtributo($productoId, $atributoId);
-            $productoAtributo->delete();
+            // Método más directo para eliminar
+            $deleted = DB::table('tbl_producto_atributos')
+                        ->where('id_producto', $productoId)
+                        ->where('id_atributo', $atributoId)
+                        ->delete();
+
+            if ($deleted === 0) {
+                throw new \Exception('No se encontró el atributo para eliminar');
+            }
 
             DB::commit();
 
@@ -105,11 +112,12 @@ class ProductoAtributoController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             
+            \Log::error('Error eliminando atributo: ' . $e->getMessage());
+            
             return redirect()->back()
                 ->with('error', 'Error al eliminar el atributo: ' . $e->getMessage());
         }
     }
-
     public function getOpciones($atributoId)
     {
         $atributo = Atributo::with('opciones')->findOrFail($atributoId);

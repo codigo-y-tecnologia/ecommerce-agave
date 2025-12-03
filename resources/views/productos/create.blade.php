@@ -10,7 +10,7 @@
         <div class="form-group mb-3">
             <label for="vCodigo_barras">Código de barras</label>
             <input type="text" name="vCodigo_barras" id="vCodigo_barras" class="form-control @error('vCodigo_barras') is-invalid @enderror"
-                   value="{{ old('vCodigo_barras') }}" maxlength="20" required oninput="soloNumeros(this)">
+                   value="{{ old('vCodigo_barras') }}" maxlength="20" required oninput="soloNumeros(this)" placeholder="Ingrese solo números">
             @error('vCodigo_barras')
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
@@ -19,7 +19,7 @@
         <div class="form-group mb-3">
             <label for="vNombre">Nombre del producto</label>
             <input type="text" name="vNombre" id="vNombre" class="form-control @error('vNombre') is-invalid @enderror" 
-                value="{{ old('vNombre') }}" maxlength="100" required oninput="removerError(this)">
+                value="{{ old('vNombre') }}" maxlength="100" required oninput="removerError(this)" placeholder="Ej: Tequila Reposado 750ml">
             @error('vNombre')
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
@@ -28,7 +28,7 @@
         <div class="form-group mb-3">
             <label for="tDescripcion_corta">Descripción corta</label>
             <textarea name="tDescripcion_corta" id="tDescripcion_corta" class="form-control @error('tDescripcion_corta') is-invalid @enderror" 
-                      maxlength="255" rows="3">{{ old('tDescripcion_corta') }}</textarea>
+                      maxlength="255" rows="3" placeholder="Escribe una descripción breve del producto">{{ old('tDescripcion_corta') }}</textarea>
             @error('tDescripcion_corta')
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
@@ -38,7 +38,7 @@
         <div class="form-group mb-3">
             <label for="tDescripcion_larga">Descripción larga</label>
             <textarea name="tDescripcion_larga" id="tDescripcion_larga" class="form-control @error('tDescripcion_larga') is-invalid @enderror" 
-                      rows="5">{{ old('tDescripcion_larga') }}</textarea>
+                      rows="5" placeholder="Describe detalladamente las características del producto">{{ old('tDescripcion_larga') }}</textarea>
             @error('tDescripcion_larga')
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
@@ -47,7 +47,7 @@
         <div class="form-group mb-3">
             <label for="dPrecio_compra">Precio de compra</label>
             <input type="text" name="dPrecio_compra" id="dPrecio_compra" class="form-control @error('dPrecio_compra') is-invalid @enderror"
-                   value="{{ old('dPrecio_compra') }}" oninput="soloNumerosYDecimal(this)">
+                   value="{{ old('dPrecio_compra') }}" oninput="soloNumerosYDecimal(this)" placeholder="Ej: 150.50">
             @error('dPrecio_compra')
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
@@ -56,7 +56,7 @@
         <div class="form-group mb-3">
             <label for="dPrecio_venta">Precio de venta</label>
             <input type="text" name="dPrecio_venta" id="dPrecio_venta" class="form-control @error('dPrecio_venta') is-invalid @enderror"
-                   value="{{ old('dPrecio_venta') }}" required oninput="soloNumerosYDecimal(this)">
+                   value="{{ old('dPrecio_venta') }}" required oninput="soloNumerosYDecimal(this)" placeholder="Ej: 200.75">
             @error('dPrecio_venta')
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
@@ -65,18 +65,20 @@
         <div class="form-group mb-3">
             <label for="iStock">Stock</label>
             <input type="text" name="iStock" id="iStock" class="form-control @error('iStock') is-invalid @enderror"
-                   value="{{ old('iStock') }}" required oninput="soloNumeros(this)">
+                   value="{{ old('iStock') }}" required oninput="soloNumeros(this)" placeholder="Ingrese solo números">
             @error('iStock')
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
         </div>
 
+        <!-- SELECT DE CATEGORÍAS SIMPLE -->
         <div class="form-group mb-3">
-            <label for="id_categoria">Categoría</label>
+            <label for="id_categoria">Categoría *</label>
             <select name="id_categoria" id="id_categoria" class="form-control @error('id_categoria') is-invalid @enderror" required>
-                <option value="">Seleccionar</option>
+                <option value="">Seleccionar categoría</option>
                 @foreach ($categorias as $categoria)
-                    <option value="{{ $categoria->id_categoria }}" {{ old('id_categoria') == $categoria->id_categoria ? 'selected' : '' }}>
+                    <option value="{{ $categoria->id_categoria }}" 
+                        {{ old('id_categoria') == $categoria->id_categoria ? 'selected' : '' }}>
                         {{ $categoria->vNombre }}
                     </option>
                 @endforeach
@@ -84,12 +86,15 @@
             @error('id_categoria')
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
+            <small class="form-text text-muted">
+                Seleccione la categoría donde pertenece el producto
+            </small>
         </div>
 
         <div class="form-group mb-3">
             <label for="id_marca">Marca</label>
             <select name="id_marca" id="id_marca" class="form-control @error('id_marca') is-invalid @enderror" required>
-                <option value="">Seleccionar</option>
+                <option value="">Seleccionar marca</option>
                 @foreach ($marcas as $marca)
                     <option value="{{ $marca->id_marca }}" {{ old('id_marca') == $marca->id_marca ? 'selected' : '' }}>
                         {{ $marca->vNombre }}
@@ -101,7 +106,7 @@
             @enderror
         </div>
 
-        <!-- NUEVO CAMPO PARA IMÁGENES -->
+        <!-- CAMPO PARA IMÁGENES -->
         <div class="form-group mb-3">
             <label for="imagenes">Imágenes del producto (Máximo 6 imágenes)</label>
             <input type="file" name="imagenes[]" id="imagenes" class="form-control @error('imagenes') is-invalid @enderror" 
@@ -142,7 +147,7 @@
             <small class="form-text text-muted">Si está desactivado, el producto no se mostrará en la tienda</small>
         </div>
 
-        <button type="submit" class="btn btn-success">Guardar</button>
+        <button type="submit" class="btn btn-success">Guardar Producto</button>
         <a href="{{ route('productos.index') }}" class="btn btn-secondary">Cancelar</a>
     </form>
 </div>

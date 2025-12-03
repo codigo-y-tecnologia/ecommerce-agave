@@ -4,15 +4,16 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Usuario extends Authenticatable
 {
-
-    use Notifiable;
+    use HasFactory, Notifiable;
 
     protected $table = 'tbl_usuarios';
     protected $primaryKey = 'id_usuario';
-    public $timestamps = false;
+    
+    public $timestamps = true;
 
     protected $fillable = [
         'vNombre',
@@ -20,32 +21,49 @@ class Usuario extends Authenticatable
         'vAmaterno',
         'vEmail',
         'vPassword',
-        'remember_token',
-        'api_token',
         'dFecha_nacimiento',
-        'eRol'
-    ];
-
-    protected $hidden = [
-        'vPassword',
+        'eRol',
         'remember_token',
         'api_token'
     ];
 
-    // Esto le dice a Laravel qué columna usar como "email" y "password"
+    protected $hidden = [
+        'remember_token',
+        'api_token'
+    ];
+
     public function getAuthPassword()
     {
         return $this->vPassword;
     }
 
-    // public function getAuthIdentifierName()
-    // {
-    //     return 'vEmail';
-    // }
+    public function getEmailForPasswordReset()
+    {
+        return $this->vEmail;
+    }
 
-    // // Relación: un usuario tiene muchos carritos
-    // public function carritos()
-    // {
-    //     return $this->hasMany(Carrito::class, 'id_usuario', 'id_usuario');
-    // }
+    protected $casts = [
+        'dFecha_nacimiento' => 'date',
+        'email_verified_at' => 'datetime',
+    ];
+
+    public function favoritos()
+    {
+        return $this->hasMany(Favorito::class, 'id_usuario');
+    }
+
+    public function getNombreCompletoAttribute()
+    {
+        return $this->vNombre . ' ' . $this->vApaterno . ($this->vAmaterno ? ' ' . $this->vAmaterno : '');
+    }
+
+    public function esAdmin()
+    {
+        return $this->eRol === 'admin';
+    }
+
+    public function esCliente()
+    {
+        return $this->eRol === 'cliente';
+    }
 }

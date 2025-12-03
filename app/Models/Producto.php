@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class Producto extends Model
 {
@@ -13,7 +15,7 @@ class Producto extends Model
     protected $table = 'tbl_productos';
     protected $primaryKey = 'id_producto';
     
-    public $timestamps = false;
+    public $timestamps = true;
     
     protected $fillable = [
         'vCodigo_barras',
@@ -32,10 +34,12 @@ class Producto extends Model
         'bActivo' => 'boolean',
         'dPrecio_compra' => 'decimal:2',
         'dPrecio_venta' => 'decimal:2',
-        'iStock' => 'integer'
+        'iStock' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime'
     ];
 
-    // Accesor para obtener las imágenes del producto
+    // Accesor para imágenes
     public function getImagenesAttribute()
     {
         $carpetaImagenes = 'products/' . $this->id_producto;
@@ -57,7 +61,7 @@ class Producto extends Model
         return [];
     }
 
-    // Método para guardar imágenes
+    // Guardar imágenes
     public function guardarImagenes($imagenes)
     {
         if (!$this->id_producto) {
@@ -89,7 +93,7 @@ class Producto extends Model
         return $imagenesGuardadas;
     }
 
-    // Método para eliminar imágenes al borrar el producto
+    // Eliminar imágenes
     public function eliminarImagenes()
     {
         $carpetaImagenes = 'products/' . $this->id_producto;
@@ -98,7 +102,7 @@ class Producto extends Model
         }
     }
 
-    // Método para obtener el número de imágenes actuales
+    // Número de imágenes
     public function getNumeroImagenes()
     {
         $carpetaImagenes = 'products/' . $this->id_producto;
@@ -129,7 +133,7 @@ class Producto extends Model
         return $this->belongsToMany(Etiqueta::class, 'tbl_producto_etiquetas', 'id_producto', 'id_etiqueta');
     }
     
-    // MÉTODOS PARA ATRIBUTOS
+    // Relaciones para atributos
     public function productoAtributos()
     {
         return $this->hasMany(ProductoAtributo::class, 'id_producto');
@@ -140,5 +144,63 @@ class Producto extends Model
         return $this->belongsToMany(Atributo::class, 'tbl_producto_atributos', 'id_producto', 'id_atributo')
                     ->withPivot('vValor', 'id_opcion')
                     ->using(ProductoAtributo::class);
+    }
+
+    
+    // MÉTODOS PARA FAVORITOS
+
+    public function favoritos()
+    {
+        return $this->hasMany(Favorito::class, 'id_producto');
+    }
+
+    public function esFavorito()
+    {
+        try {
+            if (!Auth::check()) {
+                return false;
+            }
+
+            return $this->favoritos()
+                ->where('id_usuario', Auth::id())
+                ->exists();
+                 
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    public function estaBajoEnStock()
+    {
+        return $this->iStock > 0 && $this->iStock <= 5;
+    }
+
+    public function tieneDescuento()
+    {
+        if (!$this->dPrecio_compra || $this->dPrecio_compra <= 0) {
+            return false;
+        }
+        
+        return $this->dPrecio_venta < $this->dPrecio_compra;
+    }
+
+    public function porcentajeDescuento()
+    {
+        if (!$this->tieneDescuento()) {
+            return 0;
+        }
+
+        $descuento = (($this->dPrecio_compra - $this->dPrecio_venta) / $this->dPrecio_compra) * 100;
+        return max(0, min(100, round($descuento)));
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($producto) {
+            $producto->favoritos()->delete();
+            $producto->eliminarImagenes();
+        });
     }
 }
