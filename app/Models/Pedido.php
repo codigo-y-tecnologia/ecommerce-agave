@@ -3,9 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Pedido extends Model
 {
+
+    use HasFactory;
+
     protected $table = 'tbl_pedidos';
     protected $primaryKey = 'id_pedido';
     public $timestamps = false; 
@@ -15,8 +19,12 @@ class Pedido extends Model
         'id_direccion',
         'eEstado',
         'dTotal',
-        'tFecha_pedido ',
+        'tFecha_pedido',
     ];
+
+    protected $casts = [
+    'tFecha_pedido' => 'datetime',
+];
 
     // Relación con Usuario
     public function usuario()
@@ -28,5 +36,22 @@ class Pedido extends Model
     public function detalles()
     {
         return $this->hasMany(PedidoDetalle::class, 'id_pedido', 'id_pedido');
+    }
+
+    public function venta()
+{
+    return $this->hasOne(Venta::class, 'id_pedido', 'id_pedido');
+}
+
+// Relación con Dirección
+    public function direccion()
+    {
+        return $this->belongsTo(Direccion::class, 'id_direccion', 'id_direccion');
+    }
+
+    // Relación con Pago
+    public function pago()
+    {
+        return $this->hasOne(Pago::class, 'id_pedido', 'id_pedido');
     }
 }

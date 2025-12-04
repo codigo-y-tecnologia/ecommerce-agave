@@ -137,17 +137,9 @@ class PaymentController extends Controller
     'metadata' => $metadata,
 
     // 'success_url' => route('checkout.index') . '?paid=1&payment=stripe&session_id={CHECKOUT_SESSION_ID}',
-    // 'success_url' => route('checkout.success') . '?paid=1&payment=stripe&session_id={CHECKOUT_SESSION_ID}',
     'success_url' => route('checkout.success') . '?session_id={CHECKOUT_SESSION_ID}',
     'cancel_url' => route('checkout.index') . '?paid=0',
 ]);
-
-// \Stripe\Checkout\Session::update(
-//     $session->id,
-//     ['metadata' => array_merge($metadata, [
-//         'session_id' => $session->id
-//     ])]
-// );
 
         return response()->json([
             'success' => true,

@@ -29,7 +29,7 @@
 
                         <li class="list-group-item d-flex justify-content-between">
                             <strong>Fecha:</strong>
-                            <span>{{ $pedido->created_at->format('d/m/Y H:i') }}</span>
+                            <span>{{ $pedido->tFecha_pedido->format('d/m/Y H:i') }}</span>
                         </li>
 
                         <li class="list-group-item d-flex justify-content-between">
