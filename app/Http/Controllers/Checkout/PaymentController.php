@@ -570,7 +570,7 @@ foreach ($carrito->detalles as $detalle) {
 // ENVIAR EMAIL CLIENTE
 // ==================
 Mail::to($pedido->usuario->vEmail)
-    ->send(new \App\Mail\PedidoRealizadoCliente($pedido));
+    ->send(new \App\Mail\PedidoRealizadoCliente($pedido, $subtotal, $envio, $descuento, $totalFinal));
 
     // ==================
 // ENVIAR EMAIL ADMIN
@@ -580,7 +580,7 @@ $adminEmail = \App\Models\Usuario::whereIn('eRol', ['admin','superadmin'])
 
 if ($adminEmail) {
     Mail::to($adminEmail)
-        ->send(new \App\Mail\PedidoNuevoAdmin($pedido));
+        ->send(new \App\Mail\PedidoNuevoAdmin($pedido, $subtotal, $envio, $descuento, $totalFinal));
 }
 
         return true;

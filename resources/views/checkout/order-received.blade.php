@@ -33,11 +33,6 @@
                         </li>
 
                         <li class="list-group-item d-flex justify-content-between">
-                            <strong>Total:</strong>
-                            <span class="fw-bold">${{ number_format($pedido->dTotal, 2) }}</span>
-                        </li>
-
-                        <li class="list-group-item d-flex justify-content-between">
                             <strong>Método de Pago:</strong>
                             <span class="text-capitalize">{{ $payment_method }}</span>
                         </li>
@@ -74,24 +69,86 @@
                         <tr>
                             <th>Producto</th>
                             <th class="text-center">Cant.</th>
-                            <th class="text-end">Precio</th>
+                            <th class="text-end">Precio (c/ impuestos)</th>
                             <th class="text-end">Subtotal</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($pedido->detalles as $det)
+                        @php
+                            $producto = $det->producto;
+                            $cantidad = $det->iCantidad;
+                            // precio unitario SIN impuestos (guardado en pedido_detalles)
+                            $precioUnitarioSinImp = $det->dPrecio_unitario;
+                            // porcentaje total de impuestos aplicables
+                            $porcentajeTotal = $producto->impuestos->where('bActivo',1)->sum('dPorcentaje');
+                            // precio unitario CON impuestos
+                            $precioUnitarioConImp = $precioUnitarioSinImp * (1 + ($porcentajeTotal / 100));
+                            $lineSubtotal = $precioUnitarioConImp * $cantidad;
+                        @endphp
                         <tr>
-                            <td>{{ $det->producto->vNombre }}</td>
-                            <td class="text-center">{{ $det->iCantidad }}</td>
-                            <td class="text-end">${{ number_format($det->dPrecio_unitario, 2) }}</td>
-                            <td class="text-end">
-                                ${{ number_format($det->iCantidad * $det->dPrecio_unitario, 2) }}
-                            </td>
+                            <td>{{ $producto->vNombre }}</td>
+                            <td class="text-center">{{ $cantidad }}</td>
+                            <td class="text-end">${{ number_format($precioUnitarioConImp, 2) }}</td>
+                            <td class="text-end">${{ number_format($lineSubtotal, 2) }}</td>
                         </tr>
                         @endforeach
                     </tbody>
                 </table>
             </div>
+
+            {{-- DESGLOSE DE TOTALES --}}
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="mb-3">Resumen de Totales</h5>
+
+                    <ul class="list-group">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <strong>Subtotal (con impuestos):</strong>
+                            <span>${{ number_format($subtotal, 2) }}</span>
+                        </li>
+
+                        {{-- Impuestos por tipo --}}
+                        @if(!empty($impuestosPorTipo))
+                            @foreach($impuestosPorTipo as $nombre => $monto)
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <strong>{{ $nombre }}:</strong>
+                                    <span>${{ number_format($monto, 2) }}</span>
+                                </li>
+                            @endforeach
+
+                            <li class="list-group-item d-flex justify-content-between">
+                                <strong>Total Impuestos:</strong>
+                                <span>${{ number_format($totalImpuestos, 2) }}</span>
+                            </li>
+                        @endif
+
+                        <li class="list-group-item d-flex justify-content-between">
+                            <strong>Envío:</strong>
+                            <span>
+                                @if ($envio == 0)
+                                    <span class="text-success">Gratis 🚚</span>
+                                @else
+                                    ${{ number_format($envio, 2) }}
+                                @endif
+                            </span>
+                        </li>
+
+                        @if($descuento > 0)
+                        <li class="list-group-item d-flex justify-content-between">
+                            <strong>Descuento{{ $cupon ? ' (' . $cupon->vCodigo_cupon . ')' : '' }}:</strong>
+                            <span class="text-danger">- ${{ number_format($descuento, 2) }}</span>
+                        </li>
+                        @endif
+
+                        <li class="list-group-item d-flex justify-content-between bg-light">
+                            <strong>Total Final:</strong>
+                            <span class="fw-bold">${{ number_format($totalFinal, 2) }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
         </div>
     </div>
 

@@ -24,11 +24,22 @@ class CheckoutSuccessController extends Controller
                 ->with('warning', 'No se pudo validar la sesión de pago.');
         }
 
-        // Esperar un momento para asegurar que el webhook ya procesó
-        sleep(2);
+        // Intentos de esperar al webhook (máx 10 segundos)
+        $pago = null;
 
-        // Buscar pago por session_id
+        for ($i = 0; $i < 10; $i++) {
+
         $pago = Pago::where('vSessionID', $session_id)->first();
+
+        if ($pago) {
+            Log::info("✅ Pago encontrado después de $i segundo(s)", [
+                    'pago_id' => $pago->id_pago,
+                    'pedido_id' => $pago->id_pedido
+                ]);
+            break;
+        }
+        sleep(1);
+        }
 
         if (!$pago) {
             Log::warning('⚠️ No se encontró pago con session_id: ' . $session_id);

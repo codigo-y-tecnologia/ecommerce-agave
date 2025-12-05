@@ -20,25 +20,84 @@
     <p><strong>Total:</strong> ${{ number_format($pedido->dTotal, 2) }}</p>
 
     <h3>Productos:</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Producto</th>
+            <th>Cant.</th>
+            <th>Precio (c/ impuestos)</th>
+            <th>Subtotal</th>
+        </tr>
+    </thead>
+    <tbody>
+        @php
+            $emailSubtotal = 0;
+            $emailImpuestos = [];
+            $emailTotalImpuestos = 0;
+        @endphp
 
-    <table>
-        <thead>
+        @foreach($pedido->detalles as $detalle)
+            @php
+                $producto = $detalle->producto;
+                $cantidad = $detalle->iCantidad;
+                $precioSinImp = $detalle->dPrecio_unitario;
+                $porcentajeTotal = $producto->impuestos->where('bActivo',1)->sum('dPorcentaje');
+                $precioConImp = $precioSinImp * (1 + ($porcentajeTotal / 100));
+                $lineSubtotal = $precioConImp * $cantidad;
+
+                // acumular impuestos por tipo para el email
+                foreach($producto->impuestos->where('bActivo',1) as $imp) {
+                    $nombre = $imp->vNombre ?? ('Impuesto ' . $imp->id_impuesto);
+                    $montoImp = $precioSinImp * ($imp->dPorcentaje / 100) * $cantidad;
+                    $emailImpuestos[$nombre] = ($emailImpuestos[$nombre] ?? 0) + $montoImp;
+                    $emailTotalImpuestos += $montoImp;
+                }
+
+                $emailSubtotal += $lineSubtotal;
+            @endphp
             <tr>
-                <th>Producto</th>
-                <th>Cant.</th>
-                <th>Precio</th>
+                <td>{{ $producto->vNombre }}</td>
+                <td>{{ $cantidad }}</td>
+                <td>${{ number_format($precioConImp, 2) }}</td>
+                <td>${{ number_format($lineSubtotal, 2) }}</td>
             </tr>
-        </thead>
-        <tbody>
-            @foreach($pedido->detalles as $d)
-            <tr>
-                <td>{{ $d->producto->vNombre }}</td>
-                <td>{{ $d->iCantidad }}</td>
-                <td>${{ number_format($d->dPrecio_unitario, 2) }}</td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
+        @endforeach
+    </tbody>
+</table>
+
+<!-- Resumen financiero (email) -->
+<table style="margin-top:20px; width:100%; border-collapse:collapse;">
+    <tr>
+        <td style="padding:6px;">Subtotal (con impuestos):</td>
+        <td style="padding:6px; text-align:right;">${{ number_format($emailSubtotal, 2) }}</td>
+    </tr>
+
+    @foreach($emailImpuestos as $nombre => $monto)
+    <tr>
+        <td style="padding:6px;">{{ $nombre }}:</td>
+        <td style="padding:6px; text-align:right;">${{ number_format($monto, 2) }}</td>
+    </tr>
+    @endforeach
+
+    <tr>
+        <td style="padding:6px;">Envío:</td>
+        <td style="padding:6px; text-align:right;">
+            @if($envio == 0) Gratis @else ${{ number_format($envio, 2) }} @endif
+        </td>
+    </tr>
+
+    @if($descuento > 0)
+    <tr>
+        <td style="padding:6px;">Descuento{{ $cupon ? ' (' . $cupon->vCodigo_cupon . ')' : '' }}:</td>
+        <td style="padding:6px; text-align:right; color:#d9534f;">- ${{ number_format($descuento, 2) }}</td>
+    </tr>
+    @endif
+
+    <tr>
+        <td style="padding:6px; font-weight:bold;">Total Final:</td>
+        <td style="padding:6px; text-align:right; font-weight:bold;">${{ number_format($totalFinal, 2) }}</td>
+    </tr>
+</table>
 
 </div>
 

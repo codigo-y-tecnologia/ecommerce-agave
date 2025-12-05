@@ -15,34 +15,42 @@ class PedidoNuevoAdmin extends Mailable
     use Queueable, SerializesModels;
 
     public $pedido;
+    public $subtotal;
+    public $envio;
+    public $descuento;
+    public $totalFinal;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(Pedido $pedido)
+    public function __construct(Pedido $pedido, $subtotal, $envio, $descuento, $totalFinal)
     {
         $this->pedido = $pedido;
+        $this->subtotal = $subtotal;
+        $this->envio = $envio;
+        $this->descuento = $descuento;
+        $this->totalFinal = $totalFinal;
     }
 
     /**
      * Get the message envelope.
      */
-    public function envelope(): Envelope
-    {
-        return new Envelope(
-            subject: 'Pedido Nuevo Admin',
-        );
-    }
+    // public function envelope(): Envelope
+    // {
+    //     return new Envelope(
+    //         subject: 'Pedido Nuevo Admin',
+    //     );
+    // }
 
     /**
      * Get the message content definition.
      */
-    public function content(): Content
-    {
-        return new Content(
-            view: 'emails.pedido_admin',
-        );
-    }
+    // public function content(): Content
+    // {
+    //     return new Content(
+    //         view: 'emails.pedido_admin',
+    //     );
+    // }
 
     /**
      * Get the attachments for the message.
