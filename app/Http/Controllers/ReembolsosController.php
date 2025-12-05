@@ -95,8 +95,8 @@ class ReembolsosController extends Controller
         
         $reembolso->update($request->all());
         
-        return redirect()->route('reembolsos.show', $reembolso->id_reembolso)
-                         ->with('success', 'Reembolso actualizado correctamente');
+          return redirect()->route('reembolsos.index')
+                     ->with('success', 'Reembolso actualizado correctamente');
     }
 
     /**

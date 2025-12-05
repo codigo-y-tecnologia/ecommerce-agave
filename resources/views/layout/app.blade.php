@@ -8,29 +8,46 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <!-- Logo izquierda -->
-            <a class="navbar-brand" href="/">AgaveShop</a>
+            <a class="navbar-brand fw-bold" href="/">AgaveShop</a>
             
-            <!-- Buscador centro-derecha -->
-            <form action="{{ route('reembolsos.index') }}" method="GET" class="d-flex">
-                <div class="input-group">
-                    <input type="text" 
-                           name="id_search" 
-                           class="form-control" 
-                           value="{{ request('id_search') }}" 
-                           placeholder="Buscar por ID Reembolso">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </div>
-            </form>
+            <!-- Botón para móviles -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
             
-            <!-- Enlaces derecha -->
-            <div class="d-flex">
-                <a href="#" class="text-white me-3">Iniciar Sesión</a>
-                <a href="#" class="text-white">Registrarse</a>
+            <!-- Contenido del navbar -->
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <!-- Menú de navegación -->
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ route('reembolsos.index') }}">
+                           Reembolsos
+                        </a>
+                    </li>
+                </ul>
+                
+                <!-- Buscador integrado -->
+                <form action="{{ route('reembolsos.index') }}" method="GET" class="d-flex mx-2" style="min-width: 300px; max-width: 400px;">
+                    <div class="input-group shadow-sm">
+                        <input type="text" 
+                               name="search" 
+                               class="form-control" 
+                               value="{{ request('search') }}" 
+                               placeholder="Buscar"
+                               aria-label="Buscar reembolsos">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i>
+                        </button>
+                        @if(request('search'))
+                            <a href="{{ route('reembolsos.index') }}" class="btn btn-outline-light">
+                                <i class="fas fa-times"></i>
+                            </a>
+                        @endif
+                    </div>
+                </form>
             </div>
         </div>
     </nav>

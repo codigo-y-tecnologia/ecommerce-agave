@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layout.app')
 
 @section('content')
 <div class="container">
@@ -51,12 +51,10 @@
                             <span class="badge bg-info text-capitalize">{{ $reembolso->eMetodo_pago }}</span>
                         </td>
                         <td>
-                            @if($reembolso->eEstado == 'completado')
+                            @if($reembolso->eEstado == 'procesado')
                                 <span class="badge bg-success text-capitalize">{{ $reembolso->eEstado }}</span>
-                            @elseif($reembolso->eEstado == 'procesando')
-                                <span class="badge bg-warning text-capitalize">{{ $reembolso->eEstado }}</span>
                             @elseif($reembolso->eEstado == 'pendiente')
-                                <span class="badge bg-info text-capitalize">{{ $reembolso->eEstado }}</span>
+                                <span class="badge bg-warning text-capitalize">{{ $reembolso->eEstado }}</span>
                             @else
                                 <span class="badge bg-danger text-capitalize">{{ $reembolso->eEstado }}</span>
                             @endif
