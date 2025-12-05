@@ -160,38 +160,74 @@
                         </thead>
                         <tbody>
                             @foreach ($carrito->detalles as $detalle)
-                                @php
-                                    $producto = $detalle->producto;
-                                    $subtotalProducto = $detalle->cantidad * $detalle->precio_unitario;
-                                    $desglose = [];
-                                    $totalPorcentaje = 0;
+                        @php
+                            $producto = $detalle->producto;
+                            $cantidad = $detalle->cantidad;
 
-                                    foreach ($producto->impuestos as $imp) {
-                                        if ($imp->bActivo) {
-                                            $totalPorcentaje += $imp->dPorcentaje;
-                                            $desglose[] = "{$imp->eTipo} ({$imp->dPorcentaje}%)";
-                                        }
-                                    }
+                            // Precio base del producto sin impuestos
+                            $precio_base = $producto->dPrecio_venta;
 
-                                    $precioSinImpuestos = $detalle->precio_unitario / (1 + ($totalPorcentaje / 100));
-                                    $impuestosUnitarios = $detalle->precio_unitario - $precioSinImpuestos;
-                                    $impuestosTotales = $impuestosUnitarios * $detalle->cantidad;
-                                @endphp
-                                <tr>
-                                    <td>{{ $producto->vNombre }}</td>
-                                    <td class="text-center">{{ $detalle->cantidad }}</td>
-                                    <td class="text-end">${{ number_format($precioSinImpuestos, 2) }}</td>
-                                    <td class="text-end">
-                                        @if(count($desglose) > 0)
-                                            <small class="text-muted d-block">{{ implode(', ', $desglose) }}</small>
-                                            ${{ number_format($impuestosTotales, 2) }}
-                                        @else
-                                            <span class="text-muted">—</span>
-                                        @endif
-                                    </td>
-                                    <td class="text-end fw-bold">${{ number_format($detalle->cantidad * $detalle->precio_unitario, 2) }}</td>
-                                </tr>
-                            @endforeach
+                            // Obtener impuestos activos
+                            $impuestos = $producto->impuestos->where('bActivo', 1);
+
+                            $ieps = 0;
+                            $iva = 0;
+
+                            $desglose = [];
+
+                            // Calcular IEPS primero
+                            foreach ($impuestos as $imp) {
+                                if ($imp->eTipo === 'IEPS') {
+                                    $ieps = $precio_base * ($imp->dPorcentaje / 100);
+                                }
+                            }
+
+                            // Calcular IVA después (sobre base + IEPS)
+                            foreach ($impuestos as $imp) {
+                                if ($imp->eTipo === 'IVA') {
+                                    $iva = ($precio_base + $ieps) * ($imp->dPorcentaje / 100);
+                                }
+                            }
+
+                            // Crear desglose visual
+                            foreach ($impuestos as $imp) {
+                                $desglose[] = "{$imp->eTipo} ({$imp->dPorcentaje}%)";
+                            }
+
+                            // Impuestos unitarios
+                            $impuestos_unitarios = $ieps + $iva;
+
+                            // Precio final unitario
+                            $precio_final_unitario = $precio_base + $ieps + $iva;
+
+                            // Totales multiplicados por cantidad
+                            $impuestosTotales = $impuestos_unitarios * $cantidad;
+                            $subtotalProducto = $precio_final_unitario * $cantidad;
+
+                        @endphp
+                        <tr>
+                            <td>{{ $producto->vNombre }}</td>
+
+                            <td class="text-center">{{ $cantidad }}</td>
+
+                            {{-- Precio unitario sin impuestos --}}
+                            <td class="text-end">
+                                ${{ number_format($precio_base, 2) }}
+                            </td>
+
+                            {{-- Impuestos (IEPS + IVA) --}}
+                            <td class="text-end">
+                                <small class="text-muted d-block">{{ implode(', ', $desglose) }}</small>
+                                ${{ number_format($impuestosTotales, 2) }}
+                            </td>
+
+                            {{-- Subtotal final (precio base + ieps + iva) * cantidad --}}
+                            <td class="text-end fw-bold">
+                                ${{ number_format($subtotalProducto, 2) }}
+                            </td>
+                        </tr>
+                    @endforeach
+
                         </tbody>
                     </table>
                 </div>
