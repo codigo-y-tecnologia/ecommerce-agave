@@ -33,7 +33,9 @@ class CarritoController extends Controller
         }
 
         // Calcular total
-        $total = $carrito->detalles->sum('dSubtotal');
+        $total = $carrito->detalles->sum(function ($d) {
+    return $d->producto->precio_con_impuestos * $d->iCantidad;
+});
 
         return view('carrito.index', [
             'detalles' => $carrito->detalles,

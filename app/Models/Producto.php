@@ -30,8 +30,28 @@ class Producto extends Model
  */
 public function getPrecioConImpuestosAttribute()
 {
-    $porcentajeTotal = $this->impuestos->sum('dPorcentaje');
-    return round($this->dPrecio_venta * (1 + ($porcentajeTotal / 100)), 2);
+    $precio_base = $this->dPrecio_venta;
+
+    $ieps = 0;
+    $iva = 0;
+
+    $impuestos = $this->impuestos->where('bActivo', 1);
+
+    // IEPS primero
+    foreach ($impuestos as $imp) {
+        if ($imp->eTipo === 'IEPS') {
+            $ieps = $precio_base * ($imp->dPorcentaje / 100);
+        }
+    }
+
+    // IVA después (sobre precio base + IEPS)
+    foreach ($impuestos as $imp) {
+        if ($imp->eTipo === 'IVA') {
+            $iva = ($precio_base + $ieps) * ($imp->dPorcentaje / 100);
+        }
+    }
+
+    return $precio_base + $ieps + $iva;
 }
 
 
