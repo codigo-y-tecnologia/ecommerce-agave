@@ -38,6 +38,7 @@ class PaymentController extends Controller
     /**
      * Crea una Stripe Checkout Session y devuelve la URL (cliente redirige).
      */
+
     public function createStripeSession(Request $request)
 {
     try {
@@ -158,7 +159,7 @@ class PaymentController extends Controller
     }
 }
 
-    public function stripeWebhook(Request $request)
+public function stripeWebhook(Request $request)
 {
     Log::info('🔔 Webhook de Stripe recibido', [
         'type' => $request->getContent() ? 'has content' : 'empty',
@@ -169,48 +170,53 @@ class PaymentController extends Controller
     $sigHeader = $request->header('Stripe-Signature');
     $webhookSecret = env('STRIPE_WEBHOOK_SECRET');
 
-    Log::info('Webhook details', [
-        'payload_length' => strlen($payload),
-        'sig_header' => $sigHeader ? 'present' : 'missing',
-        'webhook_secret' => $webhookSecret ? 'set' : 'not set'
-    ]);
-
     try {
         $event = \Stripe\Webhook::constructEvent(
             $payload, $sigHeader, $webhookSecret
         );
-        
+
         Log::info('✅ Evento de Stripe verificado', ['type' => $event->type]);
 
         if ($event->type === 'checkout.session.completed') {
             $session = $event->data->object;
             $metadata = $session->metadata ?? null;
-            
+
             Log::info('✅ checkout.session.completed', [
                 'session_id' => $session->id,
+                'payment_intent' => $session->payment_intent ?? 'null',
+                'payment_status' => $session->payment_status,
                 'metadata' => $metadata
             ]);
 
-        if ($session->payment_status === 'paid') {
-            DB::transaction(function () use ($session, $metadata) {
-                $userId = $metadata->user_id ?? null;
-                $carritoId = $metadata->carrito_id ?? null;
-                $codigoCupon = $metadata->codigo_cupon ?? null;
-                $idDireccion = $metadata->id_direccion ?? null;
-                $notaPedido = $metadata->nota_pedido ?? null;
+            if ($session->payment_status === 'paid') {
+                DB::transaction(function () use ($session, $metadata) {
+                    $userId = $metadata->user_id ?? null;
+                    $carritoId = $metadata->carrito_id ?? null;
+                    $codigoCupon = $metadata->codigo_cupon ?? null;
+                    $idDireccion = $metadata->id_direccion ?? null;
+                    $notaPedido = $metadata->nota_pedido ?? null;
 
-                
-                //$reference = $session->id;
-                $reference = $session->payment_intent; 
-                Log::info('🔔 Referencia a guardar: ' . $reference);
-                
-                $this->finalizeOrderFromCart($userId, $carritoId, 'stripe', $reference, $codigoCupon, $idDireccion, $notaPedido, $session->id);
-                
-                Log::info('✅ Pedido finalizado exitosamente');
-            });
-        } else {
+                    // 🔧 FIX: Usar session_id si payment_intent está vacío
+                    $reference = $session->payment_intent ?: $session->id;
+
+                    Log::info('🔔 Referencia a guardar: ' . $reference);
+
+                    $this->finalizeOrderFromCart(
+                        $userId, 
+                        $carritoId, 
+                        'stripe', 
+                        $reference, 
+                        $codigoCupon,
+                        $idDireccion, 
+                        $notaPedido, 
+                        $session->id
+                    );
+
+                    Log::info('✅ Pedido finalizado exitosamente');
+                });
+            } else {
                 Log::warning('La sesión no está pagada', [
-                    'session_id' => $session->id, 
+                    'session_id' => $session->id,
                     'payment_status' => $session->payment_status
                 ]);
             }
@@ -225,10 +231,85 @@ class PaymentController extends Controller
         Log::error('❌ Invalid signature en webhook', ['error' => $e->getMessage()]);
         return response('Invalid signature', 400);
     } catch (\Exception $e) {
-        Log::error('❌ Error general en webhook', ['error' => $e->getMessage()]);
+        Log::error('❌ Error general en webhook', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
         return response('Error', 500);
     }
 }
+
+//     public function stripeWebhook(Request $request)
+// {
+//     Log::info('🔔 Webhook de Stripe recibido', [
+//         'type' => $request->getContent() ? 'has content' : 'empty',
+//         'headers' => $request->headers->all()
+//     ]);
+
+//     $payload = $request->getContent();
+//     $sigHeader = $request->header('Stripe-Signature');
+//     $webhookSecret = env('STRIPE_WEBHOOK_SECRET');
+
+//     Log::info('Webhook details', [
+//         'payload_length' => strlen($payload),
+//         'sig_header' => $sigHeader ? 'present' : 'missing',
+//         'webhook_secret' => $webhookSecret ? 'set' : 'not set'
+//     ]);
+
+//     try {
+//         $event = \Stripe\Webhook::constructEvent(
+//             $payload, $sigHeader, $webhookSecret
+//         );
+        
+//         Log::info('✅ Evento de Stripe verificado', ['type' => $event->type]);
+
+//         if ($event->type === 'checkout.session.completed') {
+//             $session = $event->data->object;
+//             $metadata = $session->metadata ?? null;
+            
+//             Log::info('✅ checkout.session.completed', [
+//                 'session_id' => $session->id,
+//                 'metadata' => $metadata
+//             ]);
+
+//         if ($session->payment_status === 'paid') {
+//             DB::transaction(function () use ($session, $metadata) {
+//                 $userId = $metadata->user_id ?? null;
+//                 $carritoId = $metadata->carrito_id ?? null;
+//                 $codigoCupon = $metadata->codigo_cupon ?? null;
+//                 $idDireccion = $metadata->id_direccion ?? null;
+//                 $notaPedido = $metadata->nota_pedido ?? null;
+
+                
+//                 //$reference = $session->id;
+//                 $reference = $session->payment_intent; 
+//                 Log::info('🔔 Referencia a guardar: ' . $reference);
+                
+//                 $this->finalizeOrderFromCart($userId, $carritoId, 'stripe', $reference, $codigoCupon, $idDireccion, $notaPedido, $session->id);
+                
+//                 Log::info('✅ Pedido finalizado exitosamente');
+//             });
+//         } else {
+//                 Log::warning('La sesión no está pagada', [
+//                     'session_id' => $session->id, 
+//                     'payment_status' => $session->payment_status
+//                 ]);
+//             }
+//         }
+
+//         return response()->json(['received' => true]);
+
+//     } catch (\UnexpectedValueException $e) {
+//         Log::error('❌ Invalid payload en webhook', ['error' => $e->getMessage()]);
+//         return response('Invalid payload', 400);
+//     } catch (\Stripe\Exception\SignatureVerificationException $e) {
+//         Log::error('❌ Invalid signature en webhook', ['error' => $e->getMessage()]);
+//         return response('Invalid signature', 400);
+//     } catch (\Exception $e) {
+//         Log::error('❌ Error general en webhook', ['error' => $e->getMessage()]);
+//         return response('Error', 500);
+//     }
+// }
 
     /**
      * Crea una orden PayPal (server side) y devuelve id (cliente usa approve).
@@ -430,7 +511,9 @@ private function finalizeOrderFromCart($userId, $carritoId, $method, $reference,
         $cupon = null;
 
         if ($codigoCupon) {
-            $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])->where('bActivo',1)->first();
+            $cupon = Cupon::whereRaw('UPPER(vCodigo_cupon) = ?', [strtoupper($codigoCupon)])
+        ->where('bActivo', 1)
+        ->first();
 
             if ($cupon) {
 
