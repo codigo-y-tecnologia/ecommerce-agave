@@ -25,59 +25,83 @@
         <tr>
             <th>Producto</th>
             <th>Cant.</th>
-            <th>Precio (c/ impuestos)</th>
+            <th>Precio</th>
             <th>Subtotal</th>
         </tr>
     </thead>
     <tbody>
         @php
-            $emailSubtotal = 0;
-            $emailImpuestos = [];
-            $emailTotalImpuestos = 0;
-        @endphp
+    $emailSubtotal = 0;
+    $emailImpuestos = [];
+    $emailTotalImpuestos = 0;
+@endphp
 
-        @foreach($pedido->detalles as $detalle)
-            @php
-                $producto = $detalle->producto;
-                $cantidad = $detalle->iCantidad;
-                $precioSinImp = $detalle->dPrecio_unitario;
-                $porcentajeTotal = $producto->impuestos->where('bActivo',1)->sum('dPorcentaje');
-                $precioConImp = $precioSinImp * (1 + ($porcentajeTotal / 100));
-                $lineSubtotal = $precioConImp * $cantidad;
+@foreach($pedido->detalles as $detalle)
+    @php
+        $producto = $detalle->producto;
+        $cantidad = $detalle->iCantidad;
 
-                // acumular impuestos por tipo para el email
-                foreach($producto->impuestos->where('bActivo',1) as $imp) {
-                    $nombre = $imp->vNombre ?? ('Impuesto ' . $imp->id_impuesto);
-                    $montoImp = $precioSinImp * ($imp->dPorcentaje / 100) * $cantidad;
-                    $emailImpuestos[$nombre] = ($emailImpuestos[$nombre] ?? 0) + $montoImp;
-                    $emailTotalImpuestos += $montoImp;
-                }
+        // Precio base
+        $precio_base = $producto->dPrecio_venta;
 
-                $emailSubtotal += $lineSubtotal;
-            @endphp
-            <tr>
-                <td>{{ $producto->vNombre }}</td>
-                <td>{{ $cantidad }}</td>
-                <td>${{ number_format($precioConImp, 2) }}</td>
-                <td>${{ number_format($lineSubtotal, 2) }}</td>
-            </tr>
-        @endforeach
+        // IEPS
+        $ieps = 0;
+        foreach($producto->impuestos->where('bActivo',1) as $imp) {
+            if ($imp->eTipo === 'IEPS') {
+                $ieps = $precio_base * ($imp->dPorcentaje / 100);
+            }
+        }
+
+        // IVA (sobre precio base + IEPS)
+        $iva = 0;
+        foreach($producto->impuestos->where('bActivo',1) as $imp) {
+            if ($imp->eTipo === 'IVA') {
+                $iva = ($precio_base + $ieps) * ($imp->dPorcentaje / 100);
+            }
+        }
+
+        // Precio unitario final real
+        $precioConImp = $precio_base + $ieps + $iva;
+
+        // Subtotal de este producto
+        $lineSubtotal = $precioConImp * $cantidad;
+
+        // Acumular impuestos por tipo
+        if ($ieps > 0) {
+            $emailImpuestos['IEPS'] = ($emailImpuestos['IEPS'] ?? 0) + ($ieps * $cantidad);
+        }
+        if ($iva > 0) {
+            $emailImpuestos['IVA'] = ($emailImpuestos['IVA'] ?? 0) + ($iva * $cantidad);
+        }
+
+        // Sumar subtotal general
+        $emailSubtotal += $lineSubtotal;
+    @endphp
+
+    <tr>
+        <td>{{ $producto->vNombre }}</td>
+        <td>{{ $cantidad }}</td>
+        <td>${{ number_format($precioConImp, 2) }}</td>
+        <td>${{ number_format($lineSubtotal, 2) }}</td>
+    </tr>
+@endforeach
+
     </tbody>
 </table>
 
 <!-- Resumen financiero (email) -->
 <table style="margin-top:20px; width:100%; border-collapse:collapse;">
     <tr>
-        <td style="padding:6px;">Subtotal (con impuestos):</td>
+        <td style="padding:6px;">Subtotal:</td>
         <td style="padding:6px; text-align:right;">${{ number_format($emailSubtotal, 2) }}</td>
     </tr>
 
-    @foreach($emailImpuestos as $nombre => $monto)
+    {{-- @foreach($emailImpuestos as $nombre => $monto)
     <tr>
         <td style="padding:6px;">{{ $nombre }}:</td>
         <td style="padding:6px; text-align:right;">${{ number_format($monto, 2) }}</td>
     </tr>
-    @endforeach
+    @endforeach --}}
 
     <tr>
         <td style="padding:6px;">Envío:</td>

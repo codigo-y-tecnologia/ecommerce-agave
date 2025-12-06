@@ -64,6 +64,43 @@ public function getMontoImpuestosAttribute()
     return round($this->dPrecio_venta * ($porcentajeTotal / 100), 2);
 }
 
+public function calcularIEPS()
+{
+    $precio_base = $this->dPrecio_venta;
+    $ieps = 0;
+
+    foreach ($this->impuestos->where('bActivo', 1) as $imp) {
+        if ($imp->eTipo === 'IEPS') {
+            $ieps = $precio_base * ($imp->dPorcentaje / 100);
+        }
+    }
+
+    return $ieps;
+}
+
+public function calcularIVA($ieps)
+{
+    $precio_base = $this->dPrecio_venta;
+    $iva = 0;
+
+    foreach ($this->impuestos->where('bActivo', 1) as $imp) {
+        if ($imp->eTipo === 'IVA') {
+            $iva = ($precio_base + $ieps) * ($imp->dPorcentaje / 100);
+        }
+    }
+
+    return $iva;
+}
+
+public function getPrecioConImpuestosCorrectoAttribute()
+{
+    $precio_base = $this->dPrecio_venta;
+
+    $ieps = $this->calcularIEPS();
+    $iva = $this->calcularIVA($ieps);
+
+    return $precio_base + $ieps + $iva;
+}
 
     //Relación con CarritoDetalle: Un producto puede estar en muchos carritos
     public function detalles()
