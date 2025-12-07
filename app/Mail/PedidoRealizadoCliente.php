@@ -19,17 +19,19 @@ class PedidoRealizadoCliente extends Mailable
     public $envio;
     public $descuento;
     public $totalFinal;
+    public $cupon;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(Pedido $pedido, $subtotal, $envio, $descuento, $totalFinal)
+    public function __construct(Pedido $pedido, $subtotal, $envio, $descuento, $totalFinal, $cupon = null)
     {
         $this->pedido = $pedido;
         $this->subtotal = $subtotal;
         $this->envio = $envio;
         $this->descuento = $descuento;
         $this->totalFinal = $totalFinal;
+        $this->cupon = $cupon;
     }
 
     /**

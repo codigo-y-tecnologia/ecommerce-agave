@@ -60,6 +60,7 @@ class CheckoutSuccessController extends Controller
 
         session()->forget('carrito');
         session()->forget('carrito_detalles');
+        session()->forget('codigo_cupon');
 
         return redirect()->route('order.received', $pago->id_pedido);
     }
