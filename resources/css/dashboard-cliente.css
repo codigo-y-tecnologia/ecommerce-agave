@@ -41,7 +41,7 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
-    overflow: visible;
+    overflow: hidden;
 }
 
 .producto-card:hover {
@@ -55,11 +55,15 @@ body {
     text-align: center;
     background: #f8f9fa;
     border-radius: 8px 8px 0 0;
+    min-height: 250px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .producto-imagen {
     width: 100%;
-    height: 200px;
+    height: 220px;
     object-fit: contain;
     border-radius: 8px;
     transition: transform 0.3s ease;
@@ -71,13 +75,14 @@ body {
 
 .no-imagen {
     width: 100%;
-    height: 200px;
+    height: 220px;
     background-color: #f8f9fa;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 8px;
     color: #6c757d;
+    font-size: 14px;
 }
 
 .producto-info {
@@ -107,6 +112,9 @@ body {
 .stock-info {
     font-size: 14px;
     margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
 .stock-bueno {
@@ -210,75 +218,65 @@ body {
     border-color: #0056b3;
 }
 
-/* Corazón de favoritos en productos - Estilo Mercado Libre */
+/* Corazón de favoritos */
 .corazon-favorito {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 15px;
+    right: 15px;
     z-index: 100;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.95);
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    border: none;
-    font-size: 20px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    font-size: 22px;
     transition: all 0.3s ease;
-    backdrop-filter: blur(5px);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .corazon-favorito:hover {
     background: rgba(255, 255, 255, 1);
-    transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.corazon-favorito.inactivo {
-    color: rgba(0, 0, 0, 0.3);
+    transform: scale(1.15);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
 }
 
 .corazon-favorito.activo {
     color: #3483fa;
-    animation: latido 0.3s ease;
+    background: rgba(52, 131, 250, 0.1);
+    border-color: #3483fa;
 }
 
-.corazon-favorito.activo::before {
-    content: "❤️";
+.corazon-favorito.inactivo {
+    color: rgba(0, 0, 0, 0.25);
 }
 
-.corazon-favorito.inactivo::before {
-    content: "🤍";
-}
-
-@keyframes latido {
-    0% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.2);
-    }
-    100% {
-        transform: scale(1);
-    }
-}
-
-/* Notificación toast */
-.toast {
+/* NOTIFICACIÓN ÚNICA */
+.toast-single {
     position: fixed;
-    top: 20px;
-    right: 20px;
-    background: #333;
+    top: 30px;
+    right: 30px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    padding: 15px 20px;
-    border-radius: 5px;
+    padding: 18px 25px;
+    border-radius: 10px;
     z-index: 10000;
-    font-size: 14px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
+    font-size: 15px;
+    font-weight: 600;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    transition: all 0.4s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 350px;
+    transform: translateX(120%);
+}
+
+.toast-single.show {
+    transform: translateX(0);
 }
 
 /* Banner de bienvenida */
@@ -331,9 +329,10 @@ body {
 
 .alert {
     padding: 15px;
-    margin: 20px;
+    margin: 20px auto;
     border-radius: 5px;
     text-align: center;
+    max-width: 800px;
 }
 
 .alert-success {

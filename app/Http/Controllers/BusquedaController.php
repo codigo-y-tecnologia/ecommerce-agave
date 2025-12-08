@@ -11,6 +11,18 @@ use Illuminate\Support\Facades\DB;
 
 class BusquedaController extends Controller
 {
+    // Método para la página de inicio
+    public function inicio()
+    {
+        $productos = Producto::with(['categoria', 'marca', 'etiquetas'])
+            ->where('bActivo', true)
+            ->orderBy('id_producto', 'desc') // ✅ CORREGIDO: id_producto en lugar de created_at
+            ->take(12)
+            ->get();
+        
+        return view('dashboards.cliente', compact('productos'));
+    }
+
     public function buscar(Request $request)
     {
         $query = Producto::with(['categoria', 'marca', 'etiquetas'])
@@ -36,21 +48,21 @@ class BusquedaController extends Controller
             });
         }
 
-        // Filtro de Categorías (MÚLTIPLE SELECCIÓN)
+        // Filtro de Categorías
         if ($request->has('categorias') && !empty($request->categorias)) {
             $query->whereHas('categoria', function($q) use ($request) {
                 $q->whereIn('tbl_categorias.id_categoria', $request->categorias);
             });
         }
 
-        // Filtro de Marcas (MÚLTIPLE SELECCIÓN)
+        // Filtro de Marcas
         if ($request->has('marcas') && !empty($request->marcas)) {
             $query->whereHas('marca', function($q) use ($request) {
                 $q->whereIn('tbl_marcas.id_marca', $request->marcas);
             });
         }
 
-        // Filtro por etiquetas (MÚLTIPLE SELECCIÓN)
+        // Filtro por etiquetas
         if ($request->has('etiquetas') && !empty($request->etiquetas)) {
             $query->whereHas('etiquetas', function($q) use ($request) {
                 $q->whereIn('tbl_etiquetas.id_etiqueta', $request->etiquetas);
@@ -71,7 +83,7 @@ class BusquedaController extends Controller
             $query->where('iStock', '>', 0);
         }
 
-        // Ordenamiento
+        // Ordenamiento - ✅ CORREGIDO
         $orden = $request->get('orden', 'nombre');
         switch ($orden) {
             case 'precio_asc':
@@ -81,7 +93,7 @@ class BusquedaController extends Controller
                 $query->orderBy('dPrecio_venta', 'desc');
                 break;
             case 'recientes':
-                $query->orderBy('tFecha_registro', 'desc');
+                $query->orderBy('id_producto', 'desc'); // ✅ CORREGIDO: id_producto
                 break;
             case 'nombre':
             default:

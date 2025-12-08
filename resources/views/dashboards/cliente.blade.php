@@ -18,17 +18,21 @@ use Illuminate\Support\Str;
         <p class="text-muted">
             Desde aquí puedes gestionar tus pedidos, direcciones y métodos de pago.
         </p>
+        <a href="{{ route('busqueda.resultados') }}" class="btn-banner">Explorar Productos</a>
     @endauth
 
     @guest
+    <!-- Banner de bienvenida -->
+    <div class="banner-inicio">
         <h1 class="mb-3">Bienvenido a la tienda en línea 🛍️</h1>
         <p class="text-muted">
             Explora nuestros productos y realiza tus compras de manera fácil y segura.
         </p>
+        <a href="{{ route('busqueda.resultados') }}" class="btn-banner">Explorar Productos</a>
+    </div>
     @endguest
 
     <main>
-
         <!-- Mostrar mensajes de éxito -->
     @if(session('success'))
         <div class="alert alert-success">
@@ -42,25 +46,8 @@ use Illuminate\Support\Str;
         </div>
     @endif
 
-    <hr class="my-4">
-    <!-- Banner de bienvenida -->
-    <div class="banner-inicio">
-        <h2>Bienvenido a Ecommerce Agave</h2>
-        <p>Descubre nuestra exclusiva selección de productos de agave y mezcal</p>
-        <a href="{{ route('busqueda.resultados') }}" class="btn-banner">Explorar Productos</a>
-    </div>
-
-    <!-- Barra de búsqueda -->
-        <div class="barra-busqueda-principal">
-            <form action="{{ route('busqueda.resultados') }}" method="GET">
-                <input type="text" name="q" placeholder="Buscar productos (agave, mezcal, espadín...)" 
-                       value="{{ request('q') }}" autocomplete="off">
-                <button type="submit">Buscar</button>
-            </form>
-        </div>
-
-        {{-- 🛒 Sección de productos --}}
-        <!-- Sección de productos destacados -->
+    {{-- 🛒 Sección de productos --}}
+    <!-- Sección de productos destacados -->
     <div class="seccion-destacados">
         <h2 class="titulo-seccion">Productos Destacados</h2>
         
@@ -78,14 +65,14 @@ use Illuminate\Support\Str;
                             <!-- BOTÓN DEL CORAZÓN - DENTRO DEL CONTENEDOR DE IMAGEN -->
                             <button class="corazon-favorito {{ $esFavorito ? 'activo' : 'inactivo' }}" 
                                     data-producto="{{ $producto->id_producto }}"
-                                    data-es-favorito="{{ $esFavorito ? 'true' : 'false' }}"
-                                    onclick="event.stopPropagation(); toggleFavorito(this, {{ $producto->id_producto }})">
-                                <!-- El contenido se maneja con CSS -->
+                                    onclick="event.stopPropagation(); toggleFavorito(this, {{ $producto->id_producto }})"
+                                    title="{{ $esFavorito ? 'Quitar de favoritos' : 'Agregar a favoritos' }}">
+                                {{ $esFavorito ? '❤️' : '🤍' }}
                             </button>
 
                             <!-- Solo badge de stock bajo si aplica -->
                             @if($estaBajoStock)
-                                <div style="position: absolute; top: 10px; left: 10px; z-index: 99;">
+                                <div style="position: absolute; top: 15px; left: 15px; z-index: 99;">
                                     <span class="badge badge-stock">¡Últimas!</span>
                                 </div>
                             @endif
@@ -108,7 +95,7 @@ use Illuminate\Support\Str;
                             </div>
 
                             <!-- Envío - INFORMACIÓN REAL -->
-                            <div style="color: #666; font-size: 14px;">
+                            <div style="color: #666; font-size: 14px; margin-bottom: 5px;">
                                 📦 Envío gratis
                             </div>
 
@@ -144,79 +131,158 @@ use Illuminate\Support\Str;
 </main>
 
 <script>
+        // VARIABLE GLOBAL para controlar UNA sola notificación
+        let singleToast = null;
+        let singleToastTimeout = null;
+
         // Función para toggle favoritos en productos
         function toggleFavorito(button, productoId) {
-            // Verificar primero si el usuario está autenticado
+            if (button.disabled) return;
+            button.disabled = true;
+
+            // Verificar si el usuario está autenticado
             @if(!Auth::check())
-                // Si no está autenticado, redirigir directamente al login
-                window.location.href = '{{ route("login") }}';
+                window.location.href = '{{ route("login") }}?from_favoritos=true&redirect=' + encodeURIComponent(window.location.href);
                 return;
             @endif
 
-            const esFavorito = button.getAttribute('data-es-favorito') === 'true';
+            const esFavorito = button.classList.contains('activo');
+            
+            // Animación simple
+            button.style.transform = 'scale(0.9)';
+            
+            // 1. ELIMINAR NOTIFICACIÓN ANTERIOR
+            removeSingleToast();
             
             fetch(`/favoritos/toggle/${productoId}`, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 }
             })
             .then(response => {
                 if (response.status === 401) {
-                    // No autenticado - redirigir al login
-                    window.location.href = '{{ route("login") }}';
+                    window.location.href = '{{ route("login") }}?from_favoritos=true&redirect=' + encodeURIComponent(window.location.href);
                     return null;
                 }
                 return response.json();
             })
             .then(data => {
-                if (!data) return; // Si es null (401), ya redirigimos
+                if (!data) return;
                 
                 if (data.success) {
                     if (data.action === 'added') {
+                        // Cambiar a estado activo
                         button.classList.remove('inactivo');
                         button.classList.add('activo');
-                        button.setAttribute('data-es-favorito', 'true');
-                        showNotification('✅ Producto agregado a favoritos');
+                        button.innerHTML = '❤️';
+                        
+                        // 2. MOSTRAR SOLO UNA NOTIFICACIÓN - 3 SEGUNDOS
+                        showSingleNotification('Producto agregado a favoritos ✅', 3000);
+                        
                     } else {
+                        // Cambiar a estado inactivo
                         button.classList.remove('activo');
                         button.classList.add('inactivo');
-                        button.setAttribute('data-es-favorito', 'false');
-                        showNotification('❌ Producto eliminado de favoritos');
+                        button.innerHTML = '🤍';
+                        
+                        // 3. MOSTRAR SOLO UNA NOTIFICACIÓN - 3 SEGUNDOS
+                        showSingleNotification('Producto eliminado de favoritos ❌', 3000);
                     }
-                } else {
-                    showNotification('❌ ' + data.message);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                showNotification('❌ Error al gestionar favoritos');
+                showSingleNotification('Error de conexión ❌', 3000);
+            })
+            .finally(() => {
+                setTimeout(() => {
+                    button.disabled = false;
+                    button.style.transform = '';
+                }, 300);
             });
         }
 
-        // Función para mostrar notificaciones
-        function showNotification(message) {
-            // Crear elemento de notificación
-            const notification = document.createElement('div');
-            notification.className = 'toast';
-            notification.textContent = message;
-            
-            document.body.appendChild(notification);
-            
-            // Remover después de 3 segundos
-            setTimeout(() => {
-                notification.style.opacity = '0';
+        // FUNCIÓN PARA ELIMINAR NOTIFICACIÓN ANTERIOR
+        function removeSingleToast() {
+            if (singleToast) {
+                singleToast.classList.remove('show');
                 setTimeout(() => {
-                    if (document.body.contains(notification)) {
-                        document.body.removeChild(notification);
+                    if (singleToast && singleToast.parentNode) {
+                        singleToast.parentNode.removeChild(singleToast);
+                    }
+                    singleToast = null;
+                }, 300);
+            }
+            
+            if (singleToastTimeout) {
+                clearTimeout(singleToastTimeout);
+                singleToastTimeout = null;
+            }
+            
+            // Eliminar cualquier otro toast
+            const allToasts = document.querySelectorAll('.toast-single');
+            allToasts.forEach(toast => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
                     }
                 }, 300);
-            }, 3000);
+            });
         }
 
-        // Auto-focus en la barra de búsqueda al cargar la página
+        // FUNCIÓN PARA MOSTRAR UNA SOLA NOTIFICACIÓN
+        function showSingleNotification(message, duration = 3000) {
+            // 1. Eliminar notificación anterior
+            removeSingleToast();
+            
+            // 2. Crear nueva notificación
+            const toast = document.createElement('div');
+            toast.className = 'toast-single';
+            
+            // Determinar emoji basado en el mensaje
+            const emoji = message.includes('✅') ? '✅' : '❌';
+            const cleanMessage = message.replace('✅', '').replace('❌', '').trim();
+            
+            toast.innerHTML = `
+                <span style="font-size: 20px;">${emoji}</span>
+                <span>${cleanMessage}</span>
+            `;
+            
+            document.body.appendChild(toast);
+            singleToast = toast;
+            
+            // 3. Mostrar con animación
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 10);
+            
+            // 4. Configurar para eliminar después del tiempo especificado (3 SEGUNDOS PARA AMBOS)
+            singleToastTimeout = setTimeout(() => {
+                if (toast.classList.contains('show')) {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.parentNode.removeChild(toast);
+                        }
+                        singleToast = null;
+                        singleToastTimeout = null;
+                    }, 400);
+                }
+            }, duration);
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
+            // Limpiar localStorage
+            localStorage.removeItem('favorito_removed');
+            localStorage.removeItem('favorito_removed_time');
+            localStorage.removeItem('favorito_added');
+            localStorage.removeItem('favorito_added_time');
+            
+            // Auto-focus en la barra de búsqueda
             const searchInput = document.querySelector('.barra-busqueda-principal input[type="text"]');
             if (searchInput) {
                 searchInput.focus();

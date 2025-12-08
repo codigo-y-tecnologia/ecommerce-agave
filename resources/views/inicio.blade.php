@@ -37,12 +37,19 @@
             color: #1976d2;
         }
 
-        nav.navbar {
+        /* Navbar */
+        .navbar {
             background-color: #e9ecef;
             padding: 10px 0;
         }
 
-        nav.navbar ul {
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .nav-links {
             list-style: none;
             display: flex;
             justify-content: center;
@@ -51,17 +58,17 @@
             margin: 0;
         }
 
-        nav.navbar ul li {
+        .nav-links li {
             display: inline;
         }
 
-        nav.navbar ul li a {
+        .nav-links li a {
             color: #495057;
             text-decoration: none;
             font-weight: bold;
         }
 
-        nav.navbar ul li a:hover {
+        .nav-links li a:hover {
             text-decoration: underline;
         }
 
@@ -96,7 +103,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
-            overflow: visible;
+            overflow: hidden;
         }
 
         .producto-card:hover {
@@ -110,11 +117,15 @@
             text-align: center;
             background: #f8f9fa;
             border-radius: 8px 8px 0 0;
+            min-height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .producto-imagen {
             width: 100%;
-            height: 200px;
+            height: 220px;
             object-fit: contain;
             border-radius: 8px;
             transition: transform 0.3s ease;
@@ -126,13 +137,14 @@
 
         .no-imagen {
             width: 100%;
-            height: 200px;
+            height: 220px;
             background-color: #f8f9fa;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 8px;
             color: #6c757d;
+            font-size: 14px;
         }
 
         .producto-info {
@@ -162,6 +174,9 @@
         .stock-info {
             font-size: 14px;
             margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
 
         .stock-bueno {
@@ -265,69 +280,65 @@
             border-color: #0056b3;
         }
 
-        /* Corazón de favoritos en productos - Estilo Mercado Libre */
+        /* Corazón de favoritos */
         .corazon-favorito {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 15px;
+            right: 15px;
             z-index: 100;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            border: none;
-            font-size: 20px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            font-size: 22px;
             transition: all 0.3s ease;
-            backdrop-filter: blur(5px);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
 
         .corazon-favorito:hover {
             background: rgba(255, 255, 255, 1);
-            transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
-
-        .corazon-favorito.inactivo {
-            color: rgba(0,0,0,0.3);
+            transform: scale(1.15);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
         }
 
         .corazon-favorito.activo {
             color: #3483fa;
-            animation: latido 0.3s ease;
+            background: rgba(52, 131, 250, 0.1);
+            border-color: #3483fa;
         }
 
-        .corazon-favorito.activo::before {
-            content: '❤️';
+        .corazon-favorito.inactivo {
+            color: rgba(0, 0, 0, 0.25);
         }
 
-        .corazon-favorito.inactivo::before {
-            content: '🤍';
-        }
-
-        @keyframes latido {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-        }
-
-        /* Notificación toast */
-        .toast {
+        /* NOTIFICACIÓN ÚNICA */
+        .toast-single {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #333;
+            top: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 15px 20px;
-            border-radius: 5px;
+            padding: 18px 25px;
+            border-radius: 10px;
             z-index: 10000;
-            font-size: 14px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
+            font-size: 15px;
+            font-weight: 600;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            transition: all 0.4s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            max-width: 350px;
+            transform: translateX(120%);
+        }
+
+        .toast-single.show {
+            transform: translateX(0);
         }
 
         /* Banner de bienvenida */
@@ -380,9 +391,10 @@
 
         .alert {
             padding: 15px;
-            margin: 20px;
+            margin: 20px auto;
             border-radius: 5px;
             text-align: center;
+            max-width: 800px;
         }
 
         .alert-success {
@@ -405,6 +417,11 @@
 
             .barra-busqueda-principal input[type="text"] {
                 width: 60%;
+            }
+
+            .nav-links {
+                flex-wrap: wrap;
+                gap: 15px;
             }
         }
 
@@ -430,6 +447,12 @@
                 grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
                 gap: 15px;
             }
+            
+            .nav-links {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
         }
     </style>
 </head>
@@ -446,30 +469,33 @@
     </div>
     @endauth
 
+    <!-- Navbar corregido -->
     <nav class="navbar">
-        <ul>
-            <li><a href="{{ route('home') }}">Inicio</a></li>
-            <li><a href="{{ route('busqueda.resultados') }}">Todos los Productos</a></li>
-            <li>
-                @auth
-                    <a href="{{ route('favoritos.index') }}" style="color: #dc3545;">❤️ Mis Favoritos</a>
-                @else
-                    <a href="{{ route('login') }}" style="color: #dc3545;">❤️ Mis Favoritos</a>
-                @endauth
-            </li>
-            @auth
-                <li><a href="#">Mi Carrito</a></li>
+        <div class="nav-container">
+            <ul class="nav-links">
+                <li><a href="{{ route('home') }}">Inicio</a></li>
+                <li><a href="{{ route('busqueda.resultados') }}">Todos los Productos</a></li>
                 <li>
-                    <form method="POST" action="{{ route('logout') }}" style="display:inline;">
-                        @csrf
-                        <button type="submit" style="background: none; border: none; color: #495057; cursor: pointer; font-weight: bold;">Cerrar Sesión</button>
-                    </form>
+                    @auth
+                        <a href="{{ route('favoritos.index') }}" style="color: #dc3545; font-weight: bold;">❤️ Mis Favoritos</a>
+                    @else
+                        <a href="{{ route('login') }}" style="color: #dc3545; font-weight: bold;">❤️ Mis Favoritos</a>
+                    @endauth
                 </li>
-            @else
-                <li><a href="{{ route('login') }}">Ingresar</a></li>
-                <li><a href="{{ route('usuarios.create') }}">Crear Cuenta</a></li>
-            @endauth
-        </ul>
+                @auth
+                    <li><a href="#">Mi Carrito</a></li>
+                    <li>
+                        <form method="POST" action="{{ route('logout') }}" style="display:inline;">
+                            @csrf
+                            <button type="submit" style="background: none; border: none; color: #495057; cursor: pointer; font-weight: bold; font-size: 16px;">Cerrar Sesión</button>
+                        </form>
+                    </li>
+                @else
+                    <li><a href="{{ route('login') }}">Ingresar</a></li>
+                    <li><a href="{{ route('usuarios.create') }}">Crear Cuenta</a></li>
+                @endauth
+            </ul>
+        </div>
 
         <!-- SOLO UNA BARRA DE BÚSQUEDA -->
         <div class="barra-busqueda-principal">
@@ -519,14 +545,14 @@
                             <!-- BOTÓN DEL CORAZÓN - DENTRO DEL CONTENEDOR DE IMAGEN -->
                             <button class="corazon-favorito {{ $esFavorito ? 'activo' : 'inactivo' }}" 
                                     data-producto="{{ $producto->id_producto }}"
-                                    data-es-favorito="{{ $esFavorito ? 'true' : 'false' }}"
-                                    onclick="event.stopPropagation(); toggleFavorito(this, {{ $producto->id_producto }})">
-                                <!-- El contenido se maneja con CSS -->
+                                    onclick="event.stopPropagation(); toggleFavorito(this, {{ $producto->id_producto }})"
+                                    title="{{ $esFavorito ? 'Quitar de favoritos' : 'Agregar a favoritos' }}">
+                                {{ $esFavorito ? '❤️' : '🤍' }}
                             </button>
 
                             <!-- Solo badge de stock bajo si aplica -->
                             @if($estaBajoStock)
-                                <div style="position: absolute; top: 10px; left: 10px; z-index: 99;">
+                                <div style="position: absolute; top: 15px; left: 15px; z-index: 99;">
                                     <span class="badge badge-stock">¡Últimas!</span>
                                 </div>
                             @endif
@@ -549,7 +575,7 @@
                             </div>
 
                             <!-- Envío - INFORMACIÓN REAL -->
-                            <div style="color: #666; font-size: 14px;">
+                            <div style="color: #666; font-size: 14px; margin-bottom: 5px;">
                                 📦 Envío gratis
                             </div>
 
@@ -584,79 +610,158 @@
     </div>
 
     <script>
+        // VARIABLE GLOBAL para controlar UNA sola notificación
+        let singleToast = null;
+        let singleToastTimeout = null;
+
         // Función para toggle favoritos en productos
         function toggleFavorito(button, productoId) {
-            // Verificar primero si el usuario está autenticado
+            if (button.disabled) return;
+            button.disabled = true;
+
+            // Verificar si el usuario está autenticado
             @if(!Auth::check())
-                // Si no está autenticado, redirigir directamente al login
-                window.location.href = '{{ route("login") }}';
+                window.location.href = '{{ route("login") }}?from_favoritos=true&redirect=' + encodeURIComponent(window.location.href);
                 return;
             @endif
 
-            const esFavorito = button.getAttribute('data-es-favorito') === 'true';
+            const esFavorito = button.classList.contains('activo');
+            
+            // Animación simple
+            button.style.transform = 'scale(0.9)';
+            
+            // 1. ELIMINAR NOTIFICACIÓN ANTERIOR
+            removeSingleToast();
             
             fetch(`/favoritos/toggle/${productoId}`, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 }
             })
             .then(response => {
                 if (response.status === 401) {
-                    // No autenticado - redirigir al login
-                    window.location.href = '{{ route("login") }}';
+                    window.location.href = '{{ route("login") }}?from_favoritos=true&redirect=' + encodeURIComponent(window.location.href);
                     return null;
                 }
                 return response.json();
             })
             .then(data => {
-                if (!data) return; // Si es null (401), ya redirigimos
+                if (!data) return;
                 
                 if (data.success) {
                     if (data.action === 'added') {
+                        // Cambiar a estado activo
                         button.classList.remove('inactivo');
                         button.classList.add('activo');
-                        button.setAttribute('data-es-favorito', 'true');
-                        showNotification('✅ Producto agregado a favoritos');
+                        button.innerHTML = '❤️';
+                        
+                        // 2. MOSTRAR SOLO UNA NOTIFICACIÓN - 3 SEGUNDOS
+                        showSingleNotification('Producto agregado a favoritos ✅', 3000);
+                        
                     } else {
+                        // Cambiar a estado inactivo
                         button.classList.remove('activo');
                         button.classList.add('inactivo');
-                        button.setAttribute('data-es-favorito', 'false');
-                        showNotification('❌ Producto eliminado de favoritos');
+                        button.innerHTML = '🤍';
+                        
+                        // 3. MOSTRAR SOLO UNA NOTIFICACIÓN - 3 SEGUNDOS
+                        showSingleNotification('Producto eliminado de favoritos ❌', 3000);
                     }
-                } else {
-                    showNotification('❌ ' + data.message);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                showNotification('❌ Error al gestionar favoritos');
+                showSingleNotification('Error de conexión ❌', 3000);
+            })
+            .finally(() => {
+                setTimeout(() => {
+                    button.disabled = false;
+                    button.style.transform = '';
+                }, 300);
             });
         }
 
-        // Función para mostrar notificaciones
-        function showNotification(message) {
-            // Crear elemento de notificación
-            const notification = document.createElement('div');
-            notification.className = 'toast';
-            notification.textContent = message;
-            
-            document.body.appendChild(notification);
-            
-            // Remover después de 3 segundos
-            setTimeout(() => {
-                notification.style.opacity = '0';
+        // FUNCIÓN PARA ELIMINAR NOTIFICACIÓN ANTERIOR
+        function removeSingleToast() {
+            if (singleToast) {
+                singleToast.classList.remove('show');
                 setTimeout(() => {
-                    if (document.body.contains(notification)) {
-                        document.body.removeChild(notification);
+                    if (singleToast && singleToast.parentNode) {
+                        singleToast.parentNode.removeChild(singleToast);
+                    }
+                    singleToast = null;
+                }, 300);
+            }
+            
+            if (singleToastTimeout) {
+                clearTimeout(singleToastTimeout);
+                singleToastTimeout = null;
+            }
+            
+            // Eliminar cualquier otro toast
+            const allToasts = document.querySelectorAll('.toast-single');
+            allToasts.forEach(toast => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
                     }
                 }, 300);
-            }, 3000);
+            });
         }
 
-        // Auto-focus en la barra de búsqueda al cargar la página
+        // FUNCIÓN PARA MOSTRAR UNA SOLA NOTIFICACIÓN
+        function showSingleNotification(message, duration = 3000) {
+            // 1. Eliminar notificación anterior
+            removeSingleToast();
+            
+            // 2. Crear nueva notificación
+            const toast = document.createElement('div');
+            toast.className = 'toast-single';
+            
+            // Determinar emoji basado en el mensaje
+            const emoji = message.includes('✅') ? '✅' : '❌';
+            const cleanMessage = message.replace('✅', '').replace('❌', '').trim();
+            
+            toast.innerHTML = `
+                <span style="font-size: 20px;">${emoji}</span>
+                <span>${cleanMessage}</span>
+            `;
+            
+            document.body.appendChild(toast);
+            singleToast = toast;
+            
+            // 3. Mostrar con animación
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 10);
+            
+            // 4. Configurar para eliminar después del tiempo especificado (3 SEGUNDOS PARA AMBOS)
+            singleToastTimeout = setTimeout(() => {
+                if (toast.classList.contains('show')) {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.parentNode.removeChild(toast);
+                        }
+                        singleToast = null;
+                        singleToastTimeout = null;
+                    }, 400);
+                }
+            }, duration);
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
+            // Limpiar localStorage
+            localStorage.removeItem('favorito_removed');
+            localStorage.removeItem('favorito_removed_time');
+            localStorage.removeItem('favorito_added');
+            localStorage.removeItem('favorito_added_time');
+            
+            // Auto-focus en la barra de búsqueda
             const searchInput = document.querySelector('.barra-busqueda-principal input[type="text"]');
             if (searchInput) {
                 searchInput.focus();

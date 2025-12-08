@@ -7,24 +7,16 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use App\Models\Marca;
-use App\Models\Categoria;
-use App\Models\Etiqueta;
-use App\Models\Atributo;
-use App\Models\ProductoAtributo;
-use App\Models\Impuesto;
-use App\Models\CarritoDetalle;
-use App\Models\Favorito;
-use Illuminate\Support\Facades\Log;
 
 class Producto extends Model
 {
     use HasFactory;
-
-    protected $table = 'tbl_productos';     
-    protected $primaryKey = 'id_producto';  
-    public $timestamps = false;       
-          
+    
+    protected $table = 'tbl_productos';
+    protected $primaryKey = 'id_producto';
+    
+    public $timestamps = true;
+    
     protected $fillable = [
         'vCodigo_barras','vNombre','tDescripcion_corta','tDescripcion_larga',
         'dPrecio_compra','dPrecio_venta','iStock',
@@ -35,10 +27,12 @@ class Producto extends Model
         'bActivo' => 'boolean',
         'dPrecio_compra' => 'decimal:2',
         'dPrecio_venta' => 'decimal:2',
-        'iStock' => 'integer'
+        'iStock' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime'
     ];
 
-    // Accesor para obtener las imágenes del producto
+    // Accesor para imágenes
     public function getImagenesAttribute()
     {
         $carpetaImagenes = 'products/' . $this->id_producto;
@@ -60,7 +54,7 @@ class Producto extends Model
         return [];
     }
 
-    // Método para guardar imágenes
+    // Guardar imágenes
     public function guardarImagenes($imagenes)
     {
         if (!$this->id_producto) {
@@ -92,7 +86,7 @@ class Producto extends Model
         return $imagenesGuardadas;
     }
 
-    // Método para eliminar imágenes al borrar el producto
+    // Eliminar imágenes
     public function eliminarImagenes()
     {
         $carpetaImagenes = 'products/' . $this->id_producto;
@@ -101,7 +95,7 @@ class Producto extends Model
         }
     }
 
-    // Método para obtener el número de imágenes actuales
+    // Número de imágenes
     public function getNumeroImagenes()
     {
         $carpetaImagenes = 'products/' . $this->id_producto;
@@ -132,7 +126,7 @@ class Producto extends Model
         return $this->belongsToMany(Etiqueta::class, 'tbl_producto_etiquetas', 'id_producto', 'id_etiqueta');
     }
     
-    // MÉTODOS PARA ATRIBUTOS
+    // Relaciones para atributos
     public function productoAtributos()
     {
         return $this->hasMany(ProductoAtributo::class, 'id_producto');
@@ -143,6 +137,64 @@ class Producto extends Model
         return $this->belongsToMany(Atributo::class, 'tbl_producto_atributos', 'id_producto', 'id_atributo')
                     ->withPivot('vValor', 'id_opcion')
                     ->using(ProductoAtributo::class);
+    }
+
+    
+    // MÉTODOS PARA FAVORITOS
+
+    public function favoritos()
+    {
+        return $this->hasMany(Favorito::class, 'id_producto');
+    }
+
+    public function esFavorito()
+    {
+        try {
+            if (!Auth::check()) {
+                return false;
+            }
+
+            return $this->favoritos()
+                ->where('id_usuario', Auth::id())
+                ->exists();
+                 
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    public function estaBajoEnStock()
+    {
+        return $this->iStock > 0 && $this->iStock <= 5;
+    }
+
+    public function tieneDescuento()
+    {
+        if (!$this->dPrecio_compra || $this->dPrecio_compra <= 0) {
+            return false;
+        }
+        
+        return $this->dPrecio_venta < $this->dPrecio_compra;
+    }
+
+    public function porcentajeDescuento()
+    {
+        if (!$this->tieneDescuento()) {
+            return 0;
+        }
+
+        $descuento = (($this->dPrecio_compra - $this->dPrecio_venta) / $this->dPrecio_compra) * 100;
+        return max(0, min(100, round($descuento)));
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($producto) {
+            $producto->favoritos()->delete();
+            $producto->eliminarImagenes();
+        });
     }
 
     public function impuestos()
@@ -168,84 +220,5 @@ public function getPrecioConImpuestosAttribute()
     public function detalles()
     {
         return $this->hasMany(CarritoDetalle::class, 'id_producto', 'id_producto');
-    }
-
-    // =========================================================================
-    // MÉTODOS PARA FAVORITOS - CORREGIDOS
-    // =========================================================================
-
-    /**
-     * Relación con la tabla de favoritos
-     */
-    public function favoritos()
-    {
-        return $this->hasMany(Favorito::class, 'id_producto');
-    }
-
-    /**
-     * Verifica si el producto está en favoritos del usuario actual
-     */
-    public function esFavorito()
-    {
-        try {
-        if (!Auth::check()) {
-            return false;
-        }
-
-        // Verificar si la tabla existe antes de hacer la consulta
-        $tableExists = DB::select("SHOW TABLES LIKE 'tbl_favoritos'");
-        if (empty($tableExists)) {
-            return false;
-        }
-
-        return Favorito::where('id_usuario', Auth::id())
-            ->where('id_producto', $this->id_producto)
-            ->exists();
-         
-        } catch (\Exception $e) {
-            Log::error('Error en esFavorito: ' . $e->getMessage());
-            return false;
-    }
-    }
-
-    /**
-     * Verifica si el producto está bajo en stock (5 unidades o menos)
-     */
-    public function estaBajoEnStock()
-    {
-        return $this->iStock > 0 && $this->iStock <= 5;
-    }
-
-    /**
-     * VERDADERO descuento - Solo si hay un precio de oferta específico
-     * Por ahora, siempre retorna false hasta que implementes descuentos reales
-     */
-    public function tieneDescuento()
-    {
-        return false; // No hay sistema de descuentos aún
-    }
-
-    /**
-     * Porcentaje de descuento - Cero por ahora
-     */
-    public function porcentajeDescuento()
-    {
-        return 0; // No hay descuentos
-    }
-
-    /**
-     * Boot method para eliminar relaciones al borrar el producto
-     */
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::deleting(function ($producto) {
-            // Eliminar favoritos relacionados
-            $producto->favoritos()->delete();
-            
-            // Eliminar imágenes
-            $producto->eliminarImagenes();
-        });
     }
 }

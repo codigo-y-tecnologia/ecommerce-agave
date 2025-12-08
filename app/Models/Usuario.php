@@ -16,6 +16,7 @@ class Usuario extends Authenticatable implements CanResetPassword
 
     protected $table = 'tbl_usuarios';
     protected $primaryKey = 'id_usuario';
+    
     public $timestamps = false;
 
     protected $fillable = [
@@ -44,7 +45,6 @@ class Usuario extends Authenticatable implements CanResetPassword
         return $this->vEmail;
     }
 
-    // Esto le dice a Laravel qué columna usar como "email" y "password"
     public function getAuthPassword()
     {
         return $this->vPassword;
@@ -89,5 +89,25 @@ class Usuario extends Authenticatable implements CanResetPassword
     public function carritos()
     {
         return $this->hasMany(Carrito::class, 'id_usuario', 'id_usuario');
+    }
+
+    public function favoritos()
+    {
+        return $this->hasMany(Favorito::class, 'id_usuario');
+    }
+
+    public function getNombreCompletoAttribute()
+    {
+        return $this->vNombre . ' ' . $this->vApaterno . ($this->vAmaterno ? ' ' . $this->vAmaterno : '');
+    }
+
+    public function esAdmin()
+    {
+        return $this->eRol === 'admin';
+    }
+
+    public function esCliente()
+    {
+        return $this->eRol === 'cliente';
     }
 }

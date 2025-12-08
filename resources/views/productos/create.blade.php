@@ -71,12 +71,14 @@
             @enderror
         </div>
 
+        <!-- SELECT DE CATEGORÍAS SIMPLE -->
         <div class="form-group mb-3">
-            <label for="id_categoria">Categoría</label>
+            <label for="id_categoria">Categoría *</label>
             <select name="id_categoria" id="id_categoria" class="form-control @error('id_categoria') is-invalid @enderror" required>
                 <option value="">Seleccionar categoría</option>
                 @foreach ($categorias as $categoria)
-                    <option value="{{ $categoria->id_categoria }}" {{ old('id_categoria') == $categoria->id_categoria ? 'selected' : '' }}>
+                    <option value="{{ $categoria->id_categoria }}" 
+                        {{ old('id_categoria') == $categoria->id_categoria ? 'selected' : '' }}>
                         {{ $categoria->vNombre }}
                     </option>
                 @endforeach
@@ -84,6 +86,9 @@
             @error('id_categoria')
                 <div class="invalid-feedback">{{ $message }}</div>
             @enderror
+            <small class="form-text text-muted">
+                Seleccione la categoría donde pertenece el producto
+            </small>
         </div>
 
         <div class="form-group mb-3">
