@@ -19,6 +19,7 @@ class Pedido extends Model
         'id_direccion',
         'eEstado',
         'dTotal',
+        'tNota',
         'tFecha_pedido',
     ];
 

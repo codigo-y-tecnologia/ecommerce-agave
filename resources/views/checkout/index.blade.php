@@ -695,7 +695,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const idDireccion = document.getElementById('id_direccion').value;
         const mismaDireccion = document.getElementById('misma_direccion_facturacion').checked;
         const idDireccionFacturacion = mismaDireccion ? idDireccion : document.getElementById('id_direccion_facturacion').value;
-        const nota = document.getElementById('nota_pedido').value;
+        const nota = document.getElementById('agregar_nota').checked 
+    ? document.getElementById('nota_pedido').value 
+    : null;
+
 
         try {
             const res = await fetch("{{ route('payment.stripe.session') }}", {
@@ -743,7 +746,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const idDireccion = document.getElementById('id_direccion').value;
                 const mismaDireccion = document.getElementById('misma_direccion_facturacion').checked;
                 const idDireccionFacturacion = mismaDireccion ? idDireccion : document.getElementById('id_direccion_facturacion').value;
-                const nota = document.getElementById('nota_pedido').value;
+                const nota = document.getElementById('agregar_nota').checked 
+                ? document.getElementById('nota_pedido').value 
+                : null;
+
 
                 return fetch("{{ route('payment.paypal.create') }}", {
                     method: 'POST',
