@@ -46,16 +46,29 @@ public function createStripeSession(Request $request)
 
         // VALIDAR DIRECCION
         if (!$request->id_direccion) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Debes seleccionar una dirección.'
-            ]);
-        }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Debes seleccionar una dirección de envío.'
+                ], 400);
+            }
+
+            // VALIDAR DIRECCIÓN DE FACTURACIÓN según checkbox
+            $usarMisma = $request->has('misma_direccion_facturacion') && $request->misma_direccion_facturacion == 'on';
+            if (!$usarMisma) {
+                if (!$request->id_direccion_facturacion) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Debes seleccionar una dirección de facturación.'
+                    ], 400);
+                }
+            }
 
         // Guardar en sesión
         session([
             'id_direccion' => $request->id_direccion,
-            'id_direccion_facturacion' => $request->id_direccion_facturacion ?? $request->id_direccion,
+            'id_direccion_facturacion' => $usarMisma
+                    ? $request->id_direccion
+                    : $request->id_direccion_facturacion,
             'nota_pedido' => $request->nota ?? null
         ]);
 
@@ -69,7 +82,7 @@ public function createStripeSession(Request $request)
             return response()->json([
                 'success' => false,
                 'message' => 'Carrito vacío.'
-            ]);
+            ], 400);
         }
 
         // Calcular totales
@@ -121,7 +134,7 @@ public function createStripeSession(Request $request)
             'user_id' => $user->id_usuario,
             'carrito_id' => $carrito->id_carrito,
             'id_direccion' => $request->id_direccion,
-            'id_direccion_facturacion' => $request->id_direccion_facturacion ?? $request->id_direccion,
+            'id_direccion_facturacion' => session('id_direccion_facturacion'),
             'nota_pedido' => session('nota_pedido') ?? '',
             'codigo_cupon' => $codigoCupon ?? ''
         ];
@@ -136,6 +149,7 @@ public function createStripeSession(Request $request)
                         'name' => 'Compra en ' . config('app.name', 'Tienda'),
                     ],
                     'unit_amount' => $amountCents,
+                    'tax_behavior' => 'inclusive',
                 ],
                 'quantity' => 1,
             ]],
@@ -156,7 +170,7 @@ public function createStripeSession(Request $request)
         return response()->json([
             'success' => false,
             'message' => 'Error al crear la sesión de pago.'
-        ]);
+        ], 500);
     }
 }
     /**
@@ -205,6 +219,7 @@ public function stripeWebhook(Request $request)
                     $carritoId = $metadata->carrito_id ?? null;
                     $codigoCupon = $metadata->codigo_cupon ?? null;
                     $idDireccion = $metadata->id_direccion ?? null;
+                    $idDireccionFact = $metadata->id_direccion_facturacion ?? $idDireccion;
                     $notaPedido = $metadata->nota_pedido ?? null;
 
                     // $reference = $session->id;
@@ -219,6 +234,7 @@ public function stripeWebhook(Request $request)
                         $reference,
                         $codigoCupon,
                         $idDireccion,
+                        $idDireccionFact,
                         $notaPedido,
                         $session->id
                     );
@@ -262,7 +278,15 @@ public function stripeWebhook(Request $request)
             return response()->json([
                 'success' => false,
                 'message' => 'Debes seleccionar una dirección.'
-            ]);
+            ], 400);
+        }
+
+        // VALIDAR DIRECCIÓN DE FACTURACIÓN
+        $usarMisma = $request->has('misma_direccion_facturacion') && $request->misma_direccion_facturacion == 'on';
+        if (!$usarMisma) {
+            if (!$request->id_direccion_facturacion) {
+                return response()->json(['success' => false, 'message' => 'Debes seleccionar una dirección de facturación.'], 400);
+            }
         }
 
         $carrito = Carrito::where('id_usuario', $user->id_usuario)
@@ -278,7 +302,9 @@ public function stripeWebhook(Request $request)
         // Guardar en sesión
         session([
             'id_direccion' => $request->id_direccion,
-            'id_direccion_facturacion' => $request->id_direccion_facturacion ?? $request->id_direccion,
+            'id_direccion_facturacion' => $usarMisma
+                ? $request->id_direccion
+                : $request->id_direccion_facturacion,
             'nota_pedido' => $request->nota ?? null
         ]);
 
@@ -369,9 +395,6 @@ public function stripeWebhook(Request $request)
             return response()->json(['success' => false, 'message' => 'orderID requerido'], 400);
         }
 
-        // Obtener id_direccion de la sesión
-        $idDireccion = session('id_direccion_paypal');
-
         $client = new Client();
         $base = env('PAYPAL_MODE', 'sandbox') === 'live'
             ? 'https://api-m.paypal.com'
@@ -402,18 +425,27 @@ public function stripeWebhook(Request $request)
             $amount = $capData['purchase_units'][0]['payments']['captures'][0]['amount']['value'] ?? null;
 
             // Finalizar pedido localmente (crear Pedido, Venta, Pago, etc.)
-            DB::transaction(function () use ($user, $orderId, $captureId, $idDireccion) {
+            DB::transaction(function () use ($user, $orderId, $captureId) {
+               
                 // buscamos carrito id por user
                 $carrito = Carrito::where('id_usuario', $user->id_usuario)
                     ->where('eEstado', 'activo')
                     ->with(['detalles.producto.impuestos'])
                     ->firstOrFail();
 
-                $this->finalizeOrderFromCart($user->id_usuario, $carrito->id_carrito, 'paypal', $captureId, session('codigo_cupon') ?? null, $idDireccion);
+                // Obtener id_direccion de la sesión
+                $idDireccion = session('id_direccion');
+                $idDireccionFact = session('id_direccion_facturacion');
+                $notaPedido = session('nota_pedido') ?? null;
+
+                $this->finalizeOrderFromCart($user->id_usuario, $carrito->id_carrito, 'paypal', $captureId, session('codigo_cupon') ?? null, $idDireccion, $idDireccionFact, $notaPedido, null);
             });
 
              // Limpiar sesión
-            session()->forget('id_direccion_paypal');
+            session()->forget('id_direccion');
+            session()->forget('id_direccion_facturacion');
+            session()->forget('nota_pedido');
+            session()->forget('codigo_cupon');
 
             return response()->json(['success' => true, 'capture' => $captureId, 'status' => $status]);
         } catch (\Throwable $e) {
@@ -422,7 +454,7 @@ public function stripeWebhook(Request $request)
         }
     }
 
-    private function finalizeOrderFromCart($userId, $carritoId, $method, $reference, $codigoCupon = null, $idDireccion = null, $notaPedido = null, $sessionId = null)
+    private function finalizeOrderFromCart($userId, $carritoId, $method, $reference, $codigoCupon = null, $idDireccion = null, $idDireccionFact = null, $notaPedido = null, $sessionId = null)
 {
     Log::info('Iniciando finalizeOrderFromCart', [
         'userId' => $userId,
@@ -484,6 +516,7 @@ public function stripeWebhook(Request $request)
     $pedido = Pedido::create([
         'id_usuario' => $userId,
         'id_direccion' => $idDireccion,
+        'id_direccion_facturacion' => $idDireccionFact,  
         'eEstado' => 'pagado',
         'dTotal' => $totalFinal,
         'tNota' => $notaPedido,
@@ -586,6 +619,8 @@ public function stripeWebhook(Request $request)
     $carrito->save();
 
     session()->forget('codigo_cupon');
+    session()->forget('id_direccion_facturacion');
+    session()->forget('nota_pedido');
 
     // Email cliente
     Mail::to($pedido->usuario->vEmail)->send(

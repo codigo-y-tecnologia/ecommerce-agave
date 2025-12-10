@@ -17,6 +17,7 @@ class Pedido extends Model
     protected $fillable = [
         'id_usuario',
         'id_direccion',
+        'id_direccion_facturacion',
         'eEstado',
         'dTotal',
         'tNota',
@@ -48,6 +49,12 @@ class Pedido extends Model
     public function direccion()
     {
         return $this->belongsTo(Direccion::class, 'id_direccion', 'id_direccion');
+    }
+
+// Relación con Dirección de Facturación
+    public function direccionFacturacion()
+    {
+        return $this->belongsTo(Direccion::class, 'id_direccion_facturacion', 'id_direccion');
     }
 
     // Relación con Pago
