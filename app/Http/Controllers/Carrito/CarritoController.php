@@ -61,12 +61,16 @@ class CarritoController extends Controller
         // Validar que el producto exista
         $producto = Producto::findOrFail($idProducto);
 
+        // Validación: producto sin stock
+    if ($producto->iStock <= 0) {
+        return redirect()->back()->with('warning', 'Este producto está agotado y no puede agregarse al carrito.');
+    }
+
+    // Cantidad solicitada 
+    $cantidadSolicitada = (int) $request->input('cantidad', 1);
+
         // Buscar o crear carrito activo del usuario
         $carrito = Carrito::firstOrCreate(
-            [
-                'id_usuario' => $usuario->id_usuario,
-                'eEstado' => 'activo'
-            ],
             [
                 'id_usuario' => $usuario->id_usuario,
                 'eEstado' => 'activo'
@@ -79,16 +83,35 @@ class CarritoController extends Controller
             ->first();
 
         if ($detalle) {
+
+            // Validar que no exceda stock disponible
+        $nuevaCantidad = $detalle->iCantidad + $cantidadSolicitada;
+
+        if ($nuevaCantidad > $producto->iStock) {
+            return redirect()->back()->with(
+                'warning',
+                "Solo hay {$producto->iStock} unidades disponibles."
+            );
+        }
+
             // Si ya existe, actualizar cantidad
-            $detalle->iCantidad += $request->input('cantidad', 1);
-            //$detalle->subtotal = $detalle->cantidad * $detalle->precio_unitario;
+            //$detalle->iCantidad += $request->input('cantidad', 1);
+            $detalle->iCantidad = $nuevaCantidad;
             $detalle->save();
         } else {
+
+            if ($cantidadSolicitada > $producto->iStock) {
+            return redirect()->back()->with(
+                'warning',
+                "Solo hay {$producto->iStock} unidades disponibles."
+            );
+        }
+
             // Si no existe, crear nuevo detalle
             CarritoDetalle::create([
                 'id_carrito' => $carrito->id_carrito,
                 'id_producto' => $producto->id_producto,
-                'iCantidad' => $request->input('cantidad', 1),
+                'iCantidad' => $cantidadSolicitada,
                 'dPrecio_unitario' => $producto->precio_con_impuestos,
             ]);
         }
@@ -122,8 +145,21 @@ class CarritoController extends Controller
         ]);
 
         $detalle = CarritoDetalle::findOrFail($idDetalle);
-        $detalle->iCantidad = $request->input('cantidad');
-        $detalle->save();
+        $producto = $detalle->producto;
+        $cantidadSolicitada = (int) $request->input('cantidad');
+        // $detalle->iCantidad = $request->input('cantidad');
+        // $detalle->save();
+
+        // Validar stock disponible
+    if ($cantidadSolicitada > $producto->iStock) {
+        return redirect()->back()->with(
+            'warning',
+            "No puedes agregar {$cantidadSolicitada} unidades. Solo hay {$producto->iStock} disponibles."
+        );
+    }
+
+    $detalle->iCantidad = $cantidadSolicitada;
+    $detalle->save();
 
         return redirect()->route('carrito.index')->with('success', 'Cantidad actualizada correctamente.');
     }
