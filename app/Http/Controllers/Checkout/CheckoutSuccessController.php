@@ -20,8 +20,7 @@ class CheckoutSuccessController extends Controller
 
         if (!$session_id) {
             Log::warning('⚠️ No se recibió session_id');
-            return redirect()->route('carrito.index')
-                ->with('warning', 'No se pudo validar la sesión de pago.');
+            return redirect()->route('session.error');
         }
 
         // Intentos de esperar al webhook (máx 10 segundos)
@@ -49,8 +48,9 @@ class CheckoutSuccessController extends Controller
             $pago = Pago::where('vSessionID', $session_id)->first();
 
             if (!$pago) {
-                return redirect()->route('carrito.index')
-                    ->with('warning', 'No se encontró ningún pedido relacionado. Si realizaste un pago, contacta a soporte.');
+                return redirect()->route('checkout.error', [
+                    'msg' => 'Tu pago fue procesado, pero no pudimos generar tu pedido. Si realizaste un cargo, contacta a soporte.'
+                ]);
             }
         }
 

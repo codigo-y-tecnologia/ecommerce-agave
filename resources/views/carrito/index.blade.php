@@ -13,6 +13,12 @@
         </div>
     @endif
 
+    @if(session('warning'))
+    <div class="alert alert-warning">
+        {{ session('warning') }}
+    </div>
+@endif
+
     <!-- Tabla de productos en el carrito -->
     <table class="table table-bordered">
     <thead class="table-light">

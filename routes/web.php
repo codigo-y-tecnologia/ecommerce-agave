@@ -15,7 +15,8 @@ use App\Models\Producto;
 use App\Http\Controllers\Checkout\PaymentController;
 use App\Http\Controllers\Checkout\OrderReceivedController;
 use App\Http\Controllers\Checkout\CheckoutSuccessController;
-
+use App\Http\Controllers\Checkout\CheckoutErrorController;
+use App\Http\Controllers\SoporteController;
 
 // Route::get('/', function () {
 //     return view('inicio');
@@ -28,17 +29,8 @@ Route::get('/', function () {
     return view('inicio', compact('productos'));
 })->name('home');
 
-    // Stripe
-    Route::post('/payment/stripe-session', [PaymentController::class, 'createStripeSession'])->name('payment.stripe.session');
-
-    Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook'])->name('webhook.stripe'); 
-
-    // Order Received
-    Route::get('/order-received/{id}', [OrderReceivedController::class, 'show'])
-    ->name('order.received');
-
-    Route::get('/checkout/success', [CheckoutSuccessController::class, 'index'])
-    ->name('checkout.success');
+// Ruta púlica para el Webhook de Stripe 
+Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook'])->name('webhook.stripe'); 
 
 // Login y registro solo para invitados
 Route::middleware('guest')->group(function () {
@@ -114,9 +106,36 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
 
     Route::post('/cupon/aplicar', [CheckoutController::class, 'aplicarCupon'])->name('cupon.aplicar');
 
+
+    // Rutas de Soporte
+    Route::get('/soporte', [SoporteController::class, 'form'])
+    ->name('soporte.form');
+
+    Route::post('/soporte/enviar', [SoporteController::class, 'send'])
+    ->name('soporte.send');
+
+    // Rutas de pago
+
+    // Stripe
+    Route::post('/payment/stripe-session', [PaymentController::class, 'createStripeSession'])->name('payment.stripe.session');
+
+    // Order Received
+    Route::get('/order-received/{id}', [OrderReceivedController::class, 'show'])
+    ->name('order.received');
+
+    Route::get('/checkout/success', [CheckoutSuccessController::class, 'index'])
+    ->name('checkout.success');
+
+    Route::get('/checkout/error', [CheckoutErrorController::class, 'index'])->name('checkout.error');
+
     // PayPal
     Route::post('/payment/paypal-create', [PaymentController::class, 'createPaypalOrder'])->name('payment.paypal.create');
     Route::post('/payment/paypal-capture', [PaymentController::class, 'capturePaypalOrder'])->name('payment.paypal.capture');
+
+    Route::get('/pago-error', function () {
+    return view('checkout.session-error');
+})->name('session.error');
+
 });
 
 // --------------------

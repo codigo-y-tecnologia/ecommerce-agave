@@ -115,4 +115,7 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    // Email oficial de soporte de la tienda
+    'support_email' => env('SOPORTE_EMAIL', 'ecommerceagave@gmail.com'),
+
 ];
