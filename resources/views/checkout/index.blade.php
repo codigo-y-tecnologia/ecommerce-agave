@@ -7,6 +7,18 @@
     <h2 class="mb-4 text-center fw-bold">🧾 Finalizar Compra</h2>
 
     {{-- ✅ Mensajes --}}
+    @if(request('paid') === '0')
+    <script>
+        Swal.fire({
+            icon: 'error',
+            title: 'Pago no completado',
+            text: 'Tu pago no pudo realizarse. Puedes intentar nuevamente con otro método o tarjeta.',
+        });
+    </script>
+@endif
+    @if(session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
     @if(session('warning'))
         <div class="alert alert-warning">{{ session('warning') }}</div>
     @endif
@@ -26,7 +38,7 @@
             </div>
             <div class="card-body">
                 <div class="mb-3">
-                    <label for="id_direccion" class="form-label fw-bold">Selecciona una dirección guardada:</label>
+                    <label for="id_direccion" class="form-label fw-bold">Selecciona una dirección de envío:</label>
                     <div class="input-group">
                         <select name="id_direccion" id="id_direccion" class="form-select" required>
                             <option value="">-- Selecciona una dirección --</option>
@@ -1144,7 +1156,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const textoDireccion = `${data.direccion.vCalle} ${data.direccion.vNumero_exterior}, ${data.direccion.vColonia}, ${data.direccion.vCiudad}`;
             
             idInput.appendChild(nuevaOpcion(data.direccion.id_direccion, textoDireccion));
-            idInput.value = data.direccion.id_direccion;
+            idInput.value = "";
+            idInput.classList.remove("is-valid");
+            idInput.classList.remove("is-invalid");
             
             idFacturacion.appendChild(nuevaOpcion(data.direccion.id_direccion, textoDireccion));
 
