@@ -20,8 +20,8 @@
         </ul>
 
         <div class="text-center mt-4">
-            <a href="{{ route('home') }}" class="btn btn-primary px-4">
-                Volver al inicio
+            <a href="{{ route('checkout.index') }}" class="btn btn-primary px-4">
+                Volver al checkout
             </a>
 
             <a href="{{ route('soporte.form') }}" class="btn btn-outline-primary btn-lg px-5">

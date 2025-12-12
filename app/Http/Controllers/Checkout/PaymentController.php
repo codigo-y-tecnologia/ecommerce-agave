@@ -85,6 +85,16 @@ public function createStripeSession(Request $request)
             ], 400);
         }
 
+        // VALIDAR STOCK ANTES DE CREAR SESIÓN STRIPE
+        try {
+            $this->validateCartStock($carrito);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
+        }
+
         // Calcular totales
         [$subtotal, $totalImpuestos, $total] =
             (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
@@ -227,6 +237,23 @@ public function stripeWebhook(Request $request)
 
                     Log::info('Referencia a guardar: ' . $reference);
 
+                    // Re-validate stock using carrito id from metadata BEFORE finalizing
+                        if ($carritoId) {
+                            $carrito = Carrito::where('id_carrito', $carritoId)
+                                ->where('eEstado', 'activo')
+                                ->with(['detalles.producto.impuestos'])
+                                ->first();
+
+                            if (!$carrito) {
+                                throw new Exception("Carrito no encontrado para finalizar pedido (Stripe webhook).");
+                            }
+
+                            // Validate stock and abort transaction if not valid
+                            $this->validateCartStock($carrito);
+                        } else {
+                            Log::warning('No se encontró carrito_id en metadata de Stripe.');
+                        }
+
                     $this->finalizeOrderFromCart(
                         $userId,
                         $carritoId,
@@ -297,6 +324,16 @@ public function stripeWebhook(Request $request)
 
         if (!$carrito || $carrito->detalles->isEmpty()) {
             return response()->json(['success' => false, 'message' => 'Carrito vacío.'], 400);
+        }
+
+        // VALIDAR STOCK ANTES DE CREAR ORDEN PAYPAL
+        try {
+            $this->validateCartStock($carrito);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
         }
 
         // Guardar en sesión
@@ -433,6 +470,9 @@ public function stripeWebhook(Request $request)
                     ->with(['detalles.producto.impuestos'])
                     ->firstOrFail();
 
+                // VALIDAR STOCK ANTES DE FINALIZAR ORDEN
+                $this->validateCartStock($carrito);
+
                 // Obtener id_direccion de la sesión
                 $idDireccion = session('id_direccion');
                 $idDireccionFact = session('id_direccion_facturacion');
@@ -473,6 +513,9 @@ public function stripeWebhook(Request $request)
         ->firstOrFail();
 
     $userId = $userId ?? $carrito->id_usuario;
+
+    // REVALIDAR STOCK ANTES DE CREAR PEDIDO (defensa en profundidad)
+        $this->validateCartStock($carrito);
 
     // Recalcular totales
     [$subtotal, $totalImpuestos, $total] =
@@ -640,4 +683,38 @@ public function stripeWebhook(Request $request)
     return true;
 }
 
+/**
+     * Valida stock del carrito antes de permitir cualquier pago.
+     * Lanza excepción si algún producto está agotado o la cantidad solicitada supera stock.
+     */
+    private function validateCartStock($carrito)
+    {
+        if (!$carrito) {
+            throw new Exception("Carrito no encontrado.");
+        }
+
+        foreach ($carrito->detalles as $detalle) {
+
+            $producto = $detalle->producto;
+
+            if (!$producto) {
+                throw new Exception("Uno de los productos del carrito ya no existe.");
+            }
+
+            // Manejar inconsistencia en modelo: iCantidad o cantidad
+            $cantidad = $detalle->iCantidad ?? $detalle->cantidad ?? 1;
+
+            if ($producto->iStock <= 0) {
+                throw new Exception("El producto '{$producto->vNombre}' está agotado. Debes retirarlo del carrito.");
+            }
+
+            if ($cantidad > $producto->iStock) {
+                throw new Exception(
+                    "La cantidad seleccionada de '{$producto->vNombre}' ({$cantidad}) supera el stock disponible ({$producto->iStock})."
+                );
+            }
+        }
+
+        return true;
+    }
 }

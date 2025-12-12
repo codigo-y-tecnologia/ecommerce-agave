@@ -18,7 +18,6 @@ class CheckoutController extends Controller
 
     public function index()
 {
-
     // Si el usuario viene de Stripe o PayPal y el pago fue exitoso
     if (request()->paid == 1) {
         session()->forget('codigo_cupon');
@@ -36,7 +35,26 @@ class CheckoutController extends Controller
         return redirect()->route('carrito.index')->with('warning', 'Tu carrito está vacío.');
     }
 
+    // VALIDACIÓN DE STOCK EN CHECKOUT 
+foreach ($carrito->detalles as $detalle) {
+    $producto = $detalle->producto;
+
+    if ($producto->iStock <= 0) {
+        return redirect()
+            ->route('carrito.index')
+            ->with('warning', "El producto {$producto->vNombre} está agotado. Debes retirarlo del carrito.");
+    }
+
+    if ($detalle->iCantidad > $producto->iStock) {
+        return redirect()
+            ->route('carrito.index')
+            ->with('warning', "La cantidad de {$producto->vNombre} excede las unidades disponibles. Solo quedan {$producto->iStock}.");
+    }
+}
+
     [$subtotal, $totalImpuestos, $total] = $this->calcularTotales($carrito);
+
+
 
     $direcciones = Direccion::where('id_usuario', $usuario->id_usuario)->get();
 
@@ -165,6 +183,19 @@ $totalFinal = max(0, $total - $descuento + $envio);
             throw new Exception('El total del pedido no puede ser cero o negativo.');
         }
 
+        // VALIDACIÓN DE STOCK FINAL ANTES DE CREAR EL PEDIDO
+foreach ($carrito->detalles as $detalle) {
+    $producto = $detalle->producto;
+
+    if ($producto->iStock <= 0) {
+        throw new Exception("El producto {$producto->vNombre} se agotó. Actualiza tu carrito.");
+    }
+
+    if ($detalle->iCantidad > $producto->iStock) {
+        throw new Exception("Stock insuficiente para {$producto->vNombre}. Solo quedan {$producto->iStock}.");
+    }
+}
+
         // Crear el pedido
         $pedido = Pedido::create([
             'id_usuario' => $usuario->id_usuario,
@@ -182,16 +213,6 @@ $totalFinal = max(0, $total - $descuento + $envio);
                 'dPrecio_unitario' => $detalle->precio_unitario,
             ]);
         }
-
-        // if ($cupon) {
-        //     CuponUso::create([
-        //         'id_cupon' => $cupon->id_cupon,
-        //         'id_venta' => $pedido->id_pedido,
-        //         'tFecha_uso' => now(),
-        //     ]);
-        // }
-
-        // $carrito->detalles()->delete();
     });
 
     session()->forget('codigo_cupon');
@@ -414,23 +435,8 @@ if ($usosActuales >= $cupon->iUso_maximo) {
      // 🧮 Recalcular total
     $totalFinal = max(0, $total - $descuento + $envio);
 
-    // if ($cupon->eTipo === 'porcentaje') {
-    //     $descuento = $total * ($cupon->dDescuento / 100);
-    // } elseif ($cupon->eTipo === 'monto' && $cupon->dDescuento > 0) {
-    //     $descuento = $cupon->dDescuento;
-    // }
-
     // 🔹 Guardar el cupón en la sesión
     session(['codigo_cupon' => $codigo]);
-
-    // // 🔹 Mensaje personalizado según el tipo de cupón
-    // $mensaje = "Cupón aplicado correctamente: {$cupon->vCodigo_cupon}";
-
-    // if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
-    //     $mensaje .= " — Envío gratis activado 🚚";
-    // } elseif ($descuento > 0) {
-    //     $mensaje .= " — Descuento: $" . number_format($descuento, 2);
-    // }
 
     return response()->json([
         'success' => true,

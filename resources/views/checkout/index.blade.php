@@ -778,8 +778,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 .then(res => res.json())
                 .then(json => {
                     if (!json.success) {
-                        Swal.fire("Error", json.message || "Error creando orden PayPal", "error");
-                        throw new Error('Error creando orden PayPal');
+                        Swal.fire({
+                        icon: "error",
+                        title: "No se puede continuar con el pago",
+                        text: json.message || "No fue posible crear la orden de PayPal.",
+                        confirmButtonText: "Entendido"
+                    });
+                        throw new Error(json.message || "No fue posible crear la orden de PayPal.");
                     }
                     return json.orderID;
                 });
@@ -799,7 +804,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (json.success) {
                         window.location.href = "{{ route('home') }}?paid=1&method=paypal";
                     } else {
-                        Swal.fire("Error", "Error capturando pago en PayPal", "error");
+                        Swal.fire({
+                        icon: "error",
+                        title: "No se pudo completar el pago",
+                        text: json.message || "Ocurrió un error al capturar el pago en PayPal.",
+                        confirmButtonText: "Entendido"
+                    });
+                    throw new Error(json.message || "Error capturando pago en PayPal");
                     }
                 });
             },
@@ -810,7 +821,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             onError: function (err) {
                 console.error('PayPal error:', err);
-                Swal.fire("Error", "Error en PayPal", "error");
+                Swal.fire({
+                icon: "error",
+                title: "No se pudo procesar el pago",
+                text: err.message || "Ocurrió un problema inesperado con PayPal.",
+                confirmButtonText: "Entendido"
+            });
             }
         }).render('#paypal-button-container');
     }
