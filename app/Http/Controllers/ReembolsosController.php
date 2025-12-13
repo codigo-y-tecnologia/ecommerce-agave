@@ -49,7 +49,7 @@ class ReembolsosController extends Controller
             'tFecha_reembolso' => 'required|date',
             'dMonto' => 'required|numeric|min:0',
             'vMotivo' => 'nullable|string|max:255',
-            'eMetodo_pago' => 'required|in:paypal,stripe,tarjeta,transferencia',
+            'eMetodo_pago' => 'required|in:paypal,stripe',
             'eEstado' => 'required|in:pendiente,procesado,completado,fallido'
         ]);
         
@@ -89,7 +89,7 @@ class ReembolsosController extends Controller
             'tFecha_reembolso' => 'required|date',
             'dMonto' => 'required|numeric|min:0',
             'vMotivo' => 'nullable|string|max:255',
-            'eMetodo_pago' => 'required|in:paypal,stripe,tarjeta,transferencia',
+            'eMetodo_pago' => 'required|in:paypal,stripe',
             'eEstado' => 'required|in:pendiente,procesado,completado,fallido'
         ]);
         

@@ -50,8 +50,6 @@
                     <select name="eMetodo_pago" class="form-select" required>
                         <option value="paypal" @selected(old('eMetodo_pago', $reembolso->eMetodo_pago)=='paypal')>PayPal</option>
                         <option value="stripe" @selected(old('eMetodo_pago', $reembolso->eMetodo_pago)=='stripe')>Stripe</option>
-                        <option value="tarjeta" @selected(old('eMetodo_pago', $reembolso->eMetodo_pago)=='tarjeta')>Tarjeta</option>
-                        <option value="transferencia" @selected(old('eMetodo_pago', $reembolso->eMetodo_pago)=='transferencia')>Transferencia</option>
                     </select>
                 </div>
             </div>
