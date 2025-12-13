@@ -224,16 +224,27 @@ public function stripeWebhook(Request $request)
 
             if ($session->payment_status === 'paid') {
 
-                DB::transaction(function () use ($session, $metadata) {
+                // $reference = $session->id;
+                $reference = $session->payment_intent;
+
+                // 🔒 PROTECCIÓN IDEMPOTENTE (EVENTOS DUPLICADOS)
+                if (Pago::where('vReferencia', $reference)->exists()) {
+                    Log::warning('⚠️ Pago Stripe ya procesado. Evento duplicado ignorado.', [
+                        'payment_intent' => $reference,
+                        'session_id' => $session->id,
+                    ]);
+
+                    // Stripe espera 200 OK
+                    return response()->json(['status' => 'already_processed'], 200);
+                }
+
+                DB::transaction(function () use ($session, $metadata, $reference) {
                     $userId = $metadata->user_id ?? null;
                     $carritoId = $metadata->carrito_id ?? null;
                     $codigoCupon = $metadata->codigo_cupon ?? null;
                     $idDireccion = $metadata->id_direccion ?? null;
                     $idDireccionFact = $metadata->id_direccion_facturacion ?? $idDireccion;
                     $notaPedido = $metadata->nota_pedido ?? null;
-
-                    // $reference = $session->id;
-                    $reference = $session->payment_intent;
 
                     Log::info('Referencia a guardar: ' . $reference);
 
@@ -404,7 +415,7 @@ public function stripeWebhook(Request $request)
                         ]
                     ],
                     'application_context' => [
-                        'return_url' => route('checkout.index') . '?paid=1&payment=paypal',
+                        'return_url' => route('paypal.success') . '?paid=1&payment=paypal',
                         'cancel_url' => route('checkout.index') . '?paid=0'
                     ]
                 ]
@@ -461,6 +472,43 @@ public function stripeWebhook(Request $request)
             $captureId = $capData['purchase_units'][0]['payments']['captures'][0]['id'] ?? null;
             $amount = $capData['purchase_units'][0]['payments']['captures'][0]['amount']['value'] ?? null;
 
+            /**
+         * ============================
+         * VALIDAR ESTADO COMPLETED
+         * ============================
+         */
+        if ($status !== 'COMPLETED') {
+
+            Log::warning('❌ Pago PayPal NO completado', [
+                'order_id' => $orderId,
+                'status' => $status,
+                'response' => $capData
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'El pago con PayPal no se completó correctamente.'
+            ], 402);
+        }
+
+        /**
+         * ============================
+         * IDEMPOTENCIA (NO DUPLICAR)
+         * ============================
+         */
+        if (Pago::where('vReferencia', $captureId)->exists()) {
+
+            Log::warning('⚠️ Pago PayPal duplicado ignorado', [
+                'capture_id' => $captureId,
+                'order_id' => $orderId
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'status' => 'already_processed'
+            ], 200);
+        }
+
             // Finalizar pedido localmente (crear Pedido, Venta, Pago, etc.)
             DB::transaction(function () use ($user, $orderId, $captureId) {
                
@@ -481,15 +529,20 @@ public function stripeWebhook(Request $request)
                 $this->finalizeOrderFromCart($user->id_usuario, $carrito->id_carrito, 'paypal', $captureId, session('codigo_cupon') ?? null, $idDireccion, $idDireccionFact, $notaPedido, null);
             });
 
-             // Limpiar sesión
-            session()->forget('id_direccion');
-            session()->forget('id_direccion_facturacion');
-            session()->forget('nota_pedido');
-            session()->forget('codigo_cupon');
+            return response()->json([
+            'success' => true,
+            'capture' => $captureId,
+            'status' => $status,
+            'amount' => $amount
+        ]);
 
-            return response()->json(['success' => true, 'capture' => $captureId, 'status' => $status]);
         } catch (\Throwable $e) {
-            Log::error('PayPal capture error: ' . $e->getMessage());
+
+            Log::error('🔥 PayPal capture error', [
+            'order_id' => $orderId,
+            'error' => $e->getMessage()
+        ]);
+
             return response()->json(['success' => false, 'message' => 'Error capturando orden PayPal.'], 500);
         }
     }
@@ -656,13 +709,14 @@ public function stripeWebhook(Request $request)
         }
     }
 
+    session(['ultimo_pedido_id' => $pedido->id_pedido]);
+
     // Limpiar carrito
     $carrito->detalles()->delete();
     $carrito->eEstado = 'convertido';
     $carrito->save();
 
     session()->forget('codigo_cupon');
-    session()->forget('id_direccion_facturacion');
     session()->forget('nota_pedido');
 
     // Email cliente

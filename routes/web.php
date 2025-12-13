@@ -17,6 +17,7 @@ use App\Http\Controllers\Checkout\OrderReceivedController;
 use App\Http\Controllers\Checkout\CheckoutSuccessController;
 use App\Http\Controllers\Checkout\CheckoutErrorController;
 use App\Http\Controllers\SoporteController;
+use App\Http\Controllers\Checkout\PaypalSuccesController;
 
 // Route::get('/', function () {
 //     return view('inicio');
@@ -131,6 +132,9 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
     // PayPal
     Route::post('/payment/paypal-create', [PaymentController::class, 'createPaypalOrder'])->name('payment.paypal.create');
     Route::post('/payment/paypal-capture', [PaymentController::class, 'capturePaypalOrder'])->name('payment.paypal.capture');
+
+    Route::get('/paypal/success', [PaypalSuccesController::class, 'index'])
+    ->name('paypal.success');
 
     Route::get('/pago-error', function () {
     return view('checkout.session-error');
