@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.admins')
 
 @section('title', 'Panel de Administración')
 
@@ -60,9 +60,20 @@
             <div class="card-body text-center">
                 <h5>📊 Reportes</h5>
                 <p>Genera reportes de ventas, usuarios y más.</p>
-                <a href="{{ route('ventas.index') }}" class="btn btn-danger w-100">Ver reportes</a>
+                <a href="{{ route('reportes.index') }}" class="btn btn-danger w-100">Ver reportes</a>
             </div>
         </div>
     </div>
+    <div class="col-md-4">
+    <div class="card border-dark shadow-sm">
+        <div class="card-body text-center">
+            <h5>🔄 Reembolsos</h5>
+            <p>Gestiona solicitudes y estados de reembolsos.</p>
+            <a href="#" class="btn btn-dark w-100">
+                Administrar reembolsos
+            </a>
+        </div>
+    </div>
+</div>
 </div>
 @endsection

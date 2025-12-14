@@ -188,6 +188,11 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':admin'])->g
 
     Route::resource('impuestos', ImpuestosController::class);
 
+    // Reportes
+    Route::get('/reportes', function () {
+        return view('reportes.index');
+    })->name('reportes.index');
+
     Route::resource('ventas', VentaController::class)->except(['create', 'store', 'destroy']);
 
     Route::resource('reembolsos', ReembolsosController::class);
