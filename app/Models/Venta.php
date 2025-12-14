@@ -9,7 +9,7 @@ class Venta extends Model
     protected $table = 'tbl_ventas';
     protected $primaryKey = 'id_venta';
     
-    public $timestamps = false;
+    public $timestamps = false; 
     
     protected $fillable = [
         'id_pedido',
