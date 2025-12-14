@@ -2,7 +2,34 @@
 
 @section('content')
 <div class="container">
-    <h1 class="mb-3">Lista de Reembolsos</h1>
+
+    <!-- Título + Buscador -->
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h1 class="mb-0">Lista de Reembolsos</h1>
+
+        <!-- Buscador -->
+        <form action="{{ route('reembolsos.index') }}" method="GET" class="d-flex" style="min-width: 280px; max-width: 380px;">
+            <div class="input-group shadow-sm">
+                <input
+                    type="text"
+                    name="search"
+                    class="form-control"
+                    value="{{ request('search') }}"
+                    placeholder="Buscar reembolso..."
+                    aria-label="Buscar reembolsos"
+                >
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i>
+                </button>
+
+                @if(request('search'))
+                    <a href="{{ route('reembolsos.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i>
+                    </a>
+                @endif
+            </div>
+        </form>
+    </div>
 
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert" id="successAlert">

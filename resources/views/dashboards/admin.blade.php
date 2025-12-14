@@ -69,7 +69,7 @@
         <div class="card-body text-center">
             <h5>🔄 Reembolsos</h5>
             <p>Gestiona solicitudes y estados de reembolsos.</p>
-            <a href="#" class="btn btn-dark w-100">
+            <a href="{{ route('reembolsos.index') }}" class="btn btn-dark w-100">
                 Administrar reembolsos
             </a>
         </div>

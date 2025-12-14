@@ -6,7 +6,7 @@
     <title>@yield('title', 'Ecommerce Agave')</title>
     @vite(['resources/css/styles.css'])
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
 <body class="bg-light">
@@ -42,7 +42,7 @@
                                         <li><a class="dropdown-item" href="{{ route('productos.index') }}">Productos</a></li>
                                         <li><a class="dropdown-item" href="#">Pedidos</a></li>
                                         <li><a class="dropdown-item" href="{{ route('reportes.index') }}">Reportes</a></li>
-                                        <li><a class="dropdown-item" href="#">Reembolsos</a></li>
+                                        <li><a class="dropdown-item" href="{{ route('reembolsos.index') }}">Reembolsos</a></li>
                                     </ul>
                                 </li>
 
