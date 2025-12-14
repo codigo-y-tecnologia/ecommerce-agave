@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.admins')
 
 @section('title', 'Panel de Administración')
 
@@ -64,5 +64,16 @@
             </div>
         </div>
     </div>
+    <div class="col-md-4">
+    <div class="card border-dark shadow-sm">
+        <div class="card-body text-center">
+            <h5>🔄 Reembolsos</h5>
+            <p>Gestiona solicitudes y estados de reembolsos.</p>
+            <a href="#" class="btn btn-dark w-100">
+                Administrar reembolsos
+            </a>
+        </div>
+    </div>
+</div>
 </div>
 @endsection
