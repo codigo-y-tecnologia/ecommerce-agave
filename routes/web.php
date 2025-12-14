@@ -27,6 +27,7 @@ use App\Http\Controllers\AtributoController;
 use App\Http\Controllers\ProductoAtributoController;
 use App\Http\Controllers\BusquedaController;
 use App\Http\Controllers\FavoritoController;
+use App\Http\Controllers\ReembolsosController;
 
 Route::get('/', [DashboardController::class, 'index'])->name('home');
 
@@ -188,6 +189,8 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':admin'])->g
     Route::resource('impuestos', ImpuestosController::class);
 
     Route::resource('ventas', VentaController::class)->except(['create', 'store', 'destroy']);
+
+    Route::resource('reembolsos', ReembolsosController::class);
 });
 
 
@@ -207,3 +210,5 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':superadmin'
     Route::get('/superadmin/admins/create', [SuperadminController::class, 'create'])->name('superadmin.admins.create');
     Route::post('/superadmin/admins', [SuperadminController::class, 'store'])->name('superadmin.admins.store');
 });
+
+      

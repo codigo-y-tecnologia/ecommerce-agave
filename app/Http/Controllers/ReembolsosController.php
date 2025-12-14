@@ -49,8 +49,8 @@ class ReembolsosController extends Controller
             'tFecha_reembolso' => 'required|date',
             'dMonto' => 'required|numeric|min:0',
             'vMotivo' => 'nullable|string|max:255',
-            'eMetodo_pago' => 'required|in:paypal,stripe,tarjeta,transferencia',
-            'eEstado' => 'required|in:pendiente,procesando,completado,fallido'
+            'eMetodo_pago' => 'required|in:paypal,stripe',
+            'eEstado' => 'required|in:pendiente,procesado,completado,fallido'
         ]);
         
         reembolsos::create($request->all());
@@ -89,14 +89,14 @@ class ReembolsosController extends Controller
             'tFecha_reembolso' => 'required|date',
             'dMonto' => 'required|numeric|min:0',
             'vMotivo' => 'nullable|string|max:255',
-            'eMetodo_pago' => 'required|in:paypal,stripe,tarjeta,transferencia,efectivo',
-            'eEstado' => 'required|in:pendiente,procesando,completado,fallido'
+            'eMetodo_pago' => 'required|in:paypal,stripe',
+            'eEstado' => 'required|in:pendiente,procesado,completado,fallido'
         ]);
         
         $reembolso->update($request->all());
         
-        return redirect()->route('reembolsos.show', $reembolso->id_reembolso)
-                         ->with('success', 'Reembolso actualizado correctamente');
+          return redirect()->route('reembolsos.index')
+                     ->with('success', 'Reembolso actualizado correctamente');
     }
 
     /**
