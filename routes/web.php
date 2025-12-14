@@ -133,6 +133,11 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':admin'])->g
     Route::get('/admin/usuarios/{id}/edit', [UsuarioController::class, 'edit'])->name('admin.usuarios.edit');
     Route::put('/admin/usuarios/{id}', [UsuarioController::class, 'update'])->name('admin.usuarios.update');
     Route::delete('/admin/usuarios/{id}', [UsuarioController::class, 'destroy'])->name('admin.usuarios.destroy');
+
+     // Reportes
+    Route::get('/reportes', function () {
+        return view('reportes.index');
+    })->name('reportes.index');
 });
 
 // --------------------
