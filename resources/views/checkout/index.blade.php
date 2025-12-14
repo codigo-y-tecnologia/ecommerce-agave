@@ -480,6 +480,10 @@
     const direccionesGuardadas = {{ $direcciones->count() }};
 </script>
 
+<script>
+    window.checkoutErrorUrl = "{{ route('checkout.error') }}";
+</script>
+
 {{-- 💻 Script AJAX --}}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -762,7 +766,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? document.getElementById('nota_pedido').value 
                 : null;
 
-
                 return fetch("{{ route('payment.paypal.create') }}", {
                     method: 'POST',
                     headers: {
@@ -802,15 +805,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 .then(res => res.json())
                 .then(json => {
                     if (json.success) {
-                        window.location.href = "{{ route('home') }}?paid=1&method=paypal";
+                        window.location.href = json.redirect_url;
                     } else {
-                        Swal.fire({
-                        icon: "error",
-                        title: "No se pudo completar el pago",
-                        text: json.message || "Ocurrió un error al capturar el pago en PayPal.",
-                        confirmButtonText: "Entendido"
-                    });
-                    throw new Error(json.message || "Error capturando pago en PayPal");
+                        window.location.href = window.checkoutErrorUrl + 
+        '?msg=' + encodeURIComponent(res.message ?? 'No se pudo completar el pago con PayPal.');
                     }
                 });
             },
@@ -821,12 +819,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             onError: function (err) {
                 console.error('PayPal error:', err);
-                Swal.fire({
-                icon: "error",
-                title: "No se pudo procesar el pago",
-                text: err.message || "Ocurrió un problema inesperado con PayPal.",
-                confirmButtonText: "Entendido"
-            });
+                window.location.href = window.checkoutErrorUrl + 
+        '?msg=' + encodeURIComponent('Ocurrió un error al procesar el pago con PayPal.');
             }
         }).render('#paypal-button-container');
     }

@@ -529,12 +529,22 @@ public function stripeWebhook(Request $request)
                 $this->finalizeOrderFromCart($user->id_usuario, $carrito->id_carrito, 'paypal', $captureId, session('codigo_cupon') ?? null, $idDireccion, $idDireccionFact, $notaPedido, null);
             });
 
-            return response()->json([
-            'success' => true,
-            'capture' => $captureId,
-            'status' => $status,
-            'amount' => $amount
-        ]);
+            // OBTENER EL ID DEL PEDIDO RECIÉN CREADO
+    $pedido = Pedido::where('id_usuario', $user->id_usuario)
+        ->latest('id_pedido')
+        ->first();
+
+        // Generar la URL de redirección
+    $redirectUrl = route('order.received', $pedido->id_pedido);
+
+        return response()->json([
+        'success' => true,
+        'capture' => $captureId,
+        'status' => $status,
+        'amount' => $amount,
+        'pedido_id' => $pedido->id_pedido,
+        'redirect_url' => $redirectUrl
+    ]);
 
         } catch (\Throwable $e) {
 
@@ -708,8 +718,6 @@ public function stripeWebhook(Request $request)
             Log::warning("Cupón {$cupon->vCodigo_cupon} ya no tiene usos disponibles al momento de guardar");
         }
     }
-
-    session(['ultimo_pedido_id' => $pedido->id_pedido]);
 
     // Limpiar carrito
     $carrito->detalles()->delete();
