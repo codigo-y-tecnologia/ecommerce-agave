@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Cupones;  
+use App\Models\Cupon;  
 use Illuminate\Http\Request;
 
 class CuponesController extends Controller
 {
     public function index()
     {
-        $cupones = Cupones::orderBy('id_cupon', 'desc')->get();  
+        $cupones = Cupon::orderBy('id_cupon', 'desc')->get();  
         return view('cupones.index', compact('cupones'));
     }
 
@@ -35,7 +35,7 @@ class CuponesController extends Controller
             'bActivo'       => 'boolean',
         ]);
 
-        Cupones::create($data);  // Cambiado a Cupones
+        Cupon::create($data);  // Cambiado a Cupones
 
         return redirect()
             ->route('cupones.index')
@@ -47,7 +47,7 @@ class CuponesController extends Controller
      */
     public function show($id)
     {
-        $cupon = Cupones::findOrFail($id);  // Cambiado a Cupones
+        $cupon = Cupon::findOrFail($id);  // Cambiado a Cupones
         return view('cupones.show', compact('cupon'));
     }
 
@@ -56,7 +56,7 @@ class CuponesController extends Controller
      */
     public function edit($id)
     {
-        $cupon = Cupones::findOrFail($id);  // Cambiado a Cupones
+        $cupon = Cupon::findOrFail($id);  // Cambiado a Cupones
         return view('cupones.edit', compact('cupon'));
     }
 
@@ -65,7 +65,7 @@ class CuponesController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $cupon = Cupones::findOrFail($id);  // Cambiado a Cupones
+        $cupon = Cupon::findOrFail($id);  // Cambiado a Cupones
         
         $request->merge([
             'bActivo' => $request->has('bActivo')
@@ -93,7 +93,7 @@ class CuponesController extends Controller
      */
     public function destroy($id)
     {
-        $cupon = Cupones::findOrFail($id);  // Cambiado a Cupones
+        $cupon = Cupon::findOrFail($id);  // Cambiado a Cupones
         $cupon->delete();
 
         return redirect()

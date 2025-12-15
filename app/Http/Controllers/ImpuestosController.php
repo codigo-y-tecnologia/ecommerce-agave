@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Impuestos;
+use App\Models\Impuesto;
 use Illuminate\Http\Request;
 
 class ImpuestosController extends Controller
 {
     public function index()
     {
-        $impuestos = Impuestos::all();
+        $impuestos = Impuesto::all();
         return view('impuestos.index', compact('impuestos'));
     }
 
@@ -32,7 +32,7 @@ class ImpuestosController extends Controller
         $data['dFecha_creacion'] = now();
         $data['bActivo'] = $request->has('bActivo') ? 1 : 0; // Convertir a 1 o 0
 
-        Impuestos::create($data);
+        Impuesto::create($data);
 
         return redirect()->route('impuestos.index')
             ->with('success', 'Impuesto creado correctamente.');
@@ -45,7 +45,7 @@ class ImpuestosController extends Controller
 
     public function edit($id)
     {
-        $impuesto = Impuestos::findOrFail($id);
+        $impuesto = Impuesto::findOrFail($id);
         return view('impuestos.edit', compact('impuesto'));
     }
 
@@ -58,7 +58,7 @@ class ImpuestosController extends Controller
             // REMOVER la validación boolean de bActivo
         ]);
 
-        $impuesto = Impuestos::findOrFail($id);
+        $impuesto = Impuesto::findOrFail($id);
         
         // Preparar datos manualmente
         $data = $request->all();
@@ -72,7 +72,7 @@ class ImpuestosController extends Controller
 
     public function destroy($id)
     {
-        $impuesto = Impuestos::findOrFail($id);
+        $impuesto = Impuesto::findOrFail($id);
         $impuesto->delete();
 
         return redirect()->route('impuestos.index')

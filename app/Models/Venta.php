@@ -3,9 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Venta extends Model
 {
+
+    use HasFactory;
+
     protected $table = 'tbl_ventas';
     protected $primaryKey = 'id_venta';
     
@@ -19,9 +23,14 @@ class Venta extends Model
         'eMetodo_pago',
         'eEstado'
     ];
-    
-    protected $casts = [
-        'tFecha_venta' => 'datetime',
-        'dTotal' => 'decimal:2'
-    ];
+
+    public function detalles()
+    {
+        return $this->hasMany(DetalleVenta::class, 'id_venta', 'id_venta');
+    }
+
+    public function usuario()
+    {
+        return $this->belongsTo(Usuario::class, 'id_usuario', 'id_usuario');
+    }
 }

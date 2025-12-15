@@ -27,4 +27,15 @@ class CarritoDetalle extends Model
     {
         return $this->belongsTo(Producto::class, 'id_producto', 'id_producto');
     }
+
+    // Accessors para simplificar en vistas y controladores
+    public function getCantidadAttribute()
+    {
+        return $this->iCantidad;
+    }
+
+    public function getPrecioUnitarioAttribute()
+    {
+        return $this->dPrecio_unitario;
+    }
 }

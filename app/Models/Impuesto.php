@@ -21,6 +21,12 @@ class Impuesto extends Model
         'dFecha_creacion',
     ];
 
+    protected $casts = [
+        'dPorcentaje'     => 'decimal:2',
+        'bActivo'         => 'boolean',
+        'dFecha_creacion' => 'datetime',
+    ];
+
     public function productos()
     {
         return $this->belongsToMany(Producto::class, 'tbl_producto_impuestos', 'id_impuesto', 'id_producto');

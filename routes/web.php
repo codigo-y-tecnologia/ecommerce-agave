@@ -4,9 +4,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\UsuarioController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Carrito\CarritoController;
-use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\Checkout\CheckoutController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use App\Models\Direccion;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\VerificationController;
@@ -16,7 +17,6 @@ use App\Http\Controllers\ImpuestosController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Superadmin\SuperadminController;
 use App\Http\Controllers\Perfil\DireccionController;
-use App\Models\Direccion;
 use App\Http\Controllers\VentaController;
 use App\Http\Controllers\Perfil\PerfilController;
 use App\Http\Controllers\CategoriaController;
@@ -28,6 +28,12 @@ use App\Http\Controllers\ProductoAtributoController;
 use App\Http\Controllers\BusquedaController;
 use App\Http\Controllers\FavoritoController;
 use App\Http\Controllers\ReembolsosController;
+use App\Http\Controllers\Checkout\PaymentController;
+use App\Http\Controllers\Checkout\OrderReceivedController;
+use App\Http\Controllers\Checkout\CheckoutSuccessController;
+use App\Http\Controllers\Checkout\CheckoutErrorController;
+use App\Http\Controllers\Checkout\PaypalSuccesController;
+use App\Http\Controllers\SoporteController;
 
 Route::get('/', [DashboardController::class, 'index'])->name('home');
 
@@ -52,6 +58,9 @@ Route::get('/buscar-productos', [BusquedaController::class, 'buscarProductos'])-
 // RUTAS PÚBLICAS PARA FAVORITOS
 Route::get('/favoritos', [FavoritoController::class, 'index'])
      ->name('favoritos.index');
+
+// Ruta púlica para el Webhook de Stripe 
+Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook'])->name('webhook.stripe'); 
 
 // Login y registro solo para invitados
 Route::middleware('guest')->group(function () {
@@ -149,7 +158,60 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
 // Rutas de Checkout
 // --------------------
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
- 
+    Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+
+    Route::post('/checkout/crear-direccion', [CheckoutController::class, 'crearDireccion'])
+        ->name('checkout.crearDireccion');
+    
+    Route::put('/checkout/actualizar-direccion/{id}', [CheckoutController::class, 'actualizarDireccion'])
+        ->name('checkout.actualizarDireccion');
+
+
+    Route::get('/api/direccion/{id}', function ($id) {
+    $direccion = Direccion::where('id_direccion', $id)
+        ->where('id_usuario', Auth::user()->id_usuario)
+        ->first();
+
+    return response()->json([
+        'success' => (bool) $direccion,
+        'direccion' => $direccion
+    ]);
+});
+
+    Route::post('/cupon/aplicar', [CheckoutController::class, 'aplicarCupon'])->name('cupon.aplicar');
+
+    // Rutas de Soporte
+    Route::get('/soporte', [SoporteController::class, 'form'])
+    ->name('soporte.form');
+
+    Route::post('/soporte/enviar', [SoporteController::class, 'send'])
+    ->name('soporte.send');
+
+    // Rutas de pago
+
+    // Stripe
+    Route::post('/payment/stripe-session', [PaymentController::class, 'createStripeSession'])->name('payment.stripe.session');
+
+    // Order Received
+    Route::get('/order-received/{id}', [OrderReceivedController::class, 'show'])
+    ->name('order.received');
+
+    Route::get('/checkout/success', [CheckoutSuccessController::class, 'index'])
+    ->name('checkout.success');
+
+    Route::get('/checkout/error', [CheckoutErrorController::class, 'index'])->name('checkout.error');
+
+    // PayPal
+    Route::post('/payment/paypal-create', [PaymentController::class, 'createPaypalOrder'])->name('payment.paypal.create');
+    Route::post('/payment/paypal-capture', [PaymentController::class, 'capturePaypalOrder'])->name('payment.paypal.capture');
+
+    Route::get('/paypal/success', [PaypalSuccesController::class, 'index'])
+    ->name('paypal.success');
+
+    Route::get('/pago-error', function () {
+    return view('checkout.session-error');
+})->name('session.error');
+
 });
 
 // --------------------
