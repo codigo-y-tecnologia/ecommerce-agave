@@ -108,6 +108,7 @@
           type="checkbox" 
           name="remember" 
           id="remember"
+          checked
         >
         <label class="form-check-label small text-muted" for="remember">
           Recordarme
