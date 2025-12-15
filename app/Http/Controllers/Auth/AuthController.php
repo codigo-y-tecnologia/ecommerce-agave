@@ -19,6 +19,11 @@ class AuthController extends Controller
 
     public function showLogin()
     {
+
+        if (Auth::check()) {
+        return $this->redirectToDashboard(Auth::user());
+    }
+
         return view('auth.login');
     }
 
