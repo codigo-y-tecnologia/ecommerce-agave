@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Venta extends Model
 {
-
+    
     use HasFactory;
 
     protected $table = 'tbl_ventas';
@@ -23,7 +23,7 @@ class Venta extends Model
         'eMetodo_pago',
         'eEstado'
     ];
-
+    
     public function detalles()
     {
         return $this->hasMany(DetalleVenta::class, 'id_venta', 'id_venta');
