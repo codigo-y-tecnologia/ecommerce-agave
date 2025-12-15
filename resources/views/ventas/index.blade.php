@@ -2,7 +2,26 @@
 
 @section('content')
 <div class="container">
-    <h1 class="mb-3">Lista de Ventas</h1>
+
+    <!-- Título + Buscador -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0">Lista de Ventas</h1>
+
+        <form action="{{ route('ventas.index') }}" method="GET" class="d-flex">
+            <div class="input-group" style="width: 280px;">
+                <input
+                    type="text"
+                    name="search"
+                    class="form-control"
+                    placeholder="Buscar venta..."
+                    value="{{ request('search') }}"
+                >
+                <button class="btn btn-primary" type="submit">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </form>
+    </div>
 
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert" id="successAlert">
@@ -83,12 +102,10 @@
 document.addEventListener('DOMContentLoaded', function() {
     const successAlert = document.getElementById('successAlert');
     if (successAlert) {
-        // Desaparece después de 4 segundos (4000 milisegundos)
         setTimeout(function() {
-            // Usa el método de Bootstrap para cerrar el alert
             const bsAlert = new bootstrap.Alert(successAlert);
             bsAlert.close();
-        }, 2000); // 4 segundos
+        }, 2000);
     }
 });
 </script>
