@@ -84,7 +84,7 @@
                             <li><a class="dropdown-item" href="{{ route('perfil.index') }}">Mi Perfil</a></li>
                             <li><a class="dropdown-item" href="{{ route('favoritos.index') }}">Mis Favoritos</a></li>
                             <li><a class="dropdown-item" href="{{ route('carrito.index') }}">Mi Carrito</a></li>
-                            <li><a class="dropdown-item" href="#">Mis Pedidos</a></li>
+                            <li><a class="dropdown-item" href="{{ route('pedidos.index') }}">Mis Pedidos</a></li>
                         @endif
 
                         {{-- ⚙️ Admin --}}
@@ -141,7 +141,7 @@
                     <a class="nav-link text-dark" href="{{ route('carrito.index') }}">
                         🛒 Carrito
                     </a>
-                    <a class="nav-link text-dark" href="#">
+                    <a class="nav-link text-dark" href="{{ route('pedidos.index') }}">
                         📦 Mis Pedidos
                     </a>
                     <a class="nav-link text-dark" href="{{ route('perfil.index') }}">

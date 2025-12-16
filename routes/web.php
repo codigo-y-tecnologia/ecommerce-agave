@@ -34,6 +34,7 @@ use App\Http\Controllers\Checkout\CheckoutSuccessController;
 use App\Http\Controllers\Checkout\CheckoutErrorController;
 use App\Http\Controllers\Checkout\PaypalSuccesController;
 use App\Http\Controllers\SoporteController;
+use App\Http\Controllers\Pedidos\MisPedidosController;
 
 Route::get('/', [DashboardController::class, 'index'])->name('home');
 
@@ -211,6 +212,13 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
     Route::get('/pago-error', function () {
     return view('checkout.session-error');
 })->name('session.error');
+
+    // Rutas de Mis Pedidos
+    Route::get('/mi-cuenta/pedidos', [MisPedidosController::class, 'index'])
+        ->name('pedidos.index');
+
+    Route::get('/mi-cuenta/pedidos/{id}', [MisPedidosController::class, 'show'])
+        ->name('pedidos.show');
 
 });
 
