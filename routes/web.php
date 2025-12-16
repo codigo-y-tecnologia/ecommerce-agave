@@ -48,6 +48,7 @@ Route::resource('marcas', MarcaController::class);
 Route::resource('etiquetas', EtiquetaController::class);
 Route::resource('atributos', AtributoController::class);
 
+// Rutas de productos
 Route::get('/producto/{id}', [ProductoController::class, 'showPublic'])->name('productos.show.public');
 Route::get('/catalogo', [ProductoController::class, 'catalogo'])->name('productos.catalogo');
 
