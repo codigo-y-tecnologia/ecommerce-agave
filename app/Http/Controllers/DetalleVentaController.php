@@ -1,0 +1,99 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\detalle_venta;
+use App\Models\Venta;
+use App\Models\Producto;
+use Illuminate\Http\Request;
+
+class DetalleVentaController extends Controller
+{
+    public function index()
+    {
+        $detallesVenta = detalle_venta::with(['venta', 'producto'])
+            ->orderBy('id_detalle_venta', 'desc')
+            ->get();
+        
+        return view('detalle_venta.index', compact('detallesVenta'));
+    }
+
+    public function create()
+    {
+        $ventas = Venta::orderBy('id_venta', 'desc')->get();
+        $productos = Producto::orderBy('id_producto', 'desc')->get();
+        
+        return view('detalle_venta.create', compact('ventas', 'productos'));
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'id_venta' => 'required|exists:ventas,id_venta',
+            'id_producto' => 'required|exists:productos,id_producto',
+            'iCantidad' => 'required|integer|min:1',
+            'dPrecio_unitario' => 'required|numeric|min:0',
+        ]);
+
+        $subtotal = $request->iCantidad * $request->dPrecio_unitario;
+
+        detalle_venta::create([
+            'id_venta' => $request->id_venta,
+            'id_producto' => $request->id_producto,
+            'iCantidad' => $request->iCantidad,
+            'dPrecio_unitario' => $request->dPrecio_unitario,
+            'dSubtotal' => $subtotal,
+        ]);
+
+        return redirect()->route('detalle-venta.index')
+            ->with('success', 'Detalle de venta creado correctamente.');
+    }
+
+    public function show($id)
+    {
+        $detalleVenta = detalle_venta::with(['venta', 'producto'])->findOrFail($id);
+        return view('detalle_venta.show', compact('detalleVenta'));
+    }
+
+    public function edit($id)
+    {
+        $detalleVenta = detalle_venta::findOrFail($id);
+        $ventas = Venta::orderBy('id_venta', 'desc')->get();
+        $productos = Producto::orderBy('id_producto', 'desc')->get();
+        return view('detalle_venta.edit', compact('detalleVenta', 'ventas', 'productos'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'id_venta' => 'required|exists:ventas,id_venta',
+            'id_producto' => 'required|exists:productos,id_producto',
+            'iCantidad' => 'required|integer|min:1',
+            'dPrecio_unitario' => 'required|numeric|min:0',
+        ]);
+
+        $detalleVenta = detalle_venta::findOrFail($id);
+        
+        $subtotal = $request->iCantidad * $request->dPrecio_unitario;
+
+        $detalleVenta->update([
+            'id_venta' => $request->id_venta,
+            'id_producto' => $request->id_producto,
+            'iCantidad' => $request->iCantidad,
+            'dPrecio_unitario' => $request->dPrecio_unitario,
+            'dSubtotal' => $subtotal,
+        ]);
+
+        return redirect()->route('detalle-venta.index')
+            ->with('success', 'Detalle de venta actualizado correctamente.');
+    }
+
+    public function destroy($id)
+    {
+        $detalleVenta = detalle_venta::findOrFail($id);
+        $detalleVenta->delete();
+
+        return redirect()->route('detalle-venta.index')
+            ->with('success', 'Detalle de venta eliminado correctamente.');
+    }
+}
