@@ -16,7 +16,7 @@
                 </p>
 
                 <p class="mb-0 text-muted">
-                    {{ $pedido->created_at->format('d/m/Y') }}
+                    {{ $pedido->tFecha_pedido->format('d/m/Y H:i') }}
                 </p>
 
                 <p class="mb-0">

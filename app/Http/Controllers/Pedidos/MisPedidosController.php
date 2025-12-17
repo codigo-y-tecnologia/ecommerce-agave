@@ -32,22 +32,21 @@ class MisPedidosController extends Controller
             ->findOrFail($id);
 
         /**
-         * ===============================
-         * CALCULAR TOTALES (HISTÓRICOS)
-         * ===============================
+         * =====================================
+         * TOTALES HISTÓRICOS (SEGUROS)
+         * =====================================
          */
 
-        $subtotal = 0;
+        // Subtotal real del pedido
+        $subtotal = $pedido->detalles->sum(function ($detalle) {
+            return $detalle->iCantidad * $detalle->dPrecio_unitario;
+        });
 
-        foreach ($pedido->detalles as $detalle) {
-            $subtotal += $detalle->iCantidad * $detalle->dPrecio_unitario;
-        }
+        // Descuento aplicado (si existe)
+        $descuento = $pedido->venta->dDescuento ?? 0;
 
-        // Envío: total - subtotal - descuento
-        // Si no manejas descuento explícito en DB, asumimos 0
-        $descuento = 0;
-
-        $envio = max(0, $pedido->dTotal - $subtotal + $descuento);
+        // Costo de envío real (si existe)
+        $envio = $pedido->venta->dCosto_envio ?? 0;
 
         return view('pedidos.show', [
             'pedido'    => $pedido,
