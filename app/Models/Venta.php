@@ -20,6 +20,8 @@ class Venta extends Model
         'id_usuario',
         'tFecha_venta',
         'dTotal',
+        'dDescuento',
+        'dCosto_envio',
         'eMetodo_pago',
         'eEstado'
     ];
