@@ -656,6 +656,8 @@ public function stripeWebhook(Request $request)
         'id_pedido' => $pedido->id_pedido,
         'id_usuario' => $userId,
         'dTotal' => $totalFinal,
+        'dDescuento' => $descuento,
+        'dCosto_envio' => $envio,
         'eMetodo_pago' => $method,
     ]);
 
