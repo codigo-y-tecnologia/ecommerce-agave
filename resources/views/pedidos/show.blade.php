@@ -31,31 +31,67 @@
         @if($pedido->detalles && $pedido->detalles->count())
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
-                    <tr>
-                        <th>Producto</th>
-                        <th class="text-center">Cantidad</th>
-                        <th class="text-end">Precio unitario</th>
-                        <th class="text-end">Total</th>
-                    </tr>
+                <tr>
+                    <th></th>
+                    <th>Producto</th>
+                    <th class="text-center">Cantidad</th>
+                    <th class="text-end">Precio unitario</th>
+                    <th class="text-end">Total</th>
+                </tr>
                 </thead>
                 <tbody>
-                    @foreach ($pedido->detalles as $det)
-                        <tr>
-                            <td>
-                                {{ optional($det->producto)->vNombre ?? 'Producto no disponible' }}
-                            </td>
-                            <td class="text-center">
-                                {{ $det->iCantidad }}
-                            </td>
-                            <td class="text-end">
-                                ${{ number_format($det->dPrecio_unitario, 2) }}
-                            </td>
-                            <td class="text-end">
-                                ${{ number_format($det->iCantidad * $det->dPrecio_unitario, 2) }}
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
+@foreach ($pedido->detalles as $det)
+
+    @php
+        $producto = optional($det->producto);
+        $imagenes = $producto->imagenes ?? [];
+    @endphp
+
+    <tr>
+        {{-- IMAGEN --}}
+        <td style="width:90px">
+            @if(!empty($imagenes) && count($imagenes) > 0)
+                <img src="{{ $imagenes[0] }}"
+                     alt="{{ $producto->vNombre }}"
+                     class="rounded"
+                     style="width:70px; height:70px; object-fit:cover;">
+            @else
+                <div class="bg-light d-flex align-items-center justify-content-center rounded"
+                     style="width:70px; height:70px;">
+                    <span class="text-muted small">Sin imagen</span>
+                </div>
+            @endif
+        </td>
+
+        {{-- NOMBRE --}}
+        <td>
+            @if($producto->id_producto)
+                <a href="{{ route('productos.show.public', $producto->id_producto) }}"
+                   class="fw-semibold text-decoration-none">
+                    {{ $producto->vNombre }}
+                </a>
+            @else
+                <span class="text-muted">Producto no disponible</span>
+            @endif
+        </td>
+
+        {{-- CANTIDAD --}}
+        <td class="text-center">
+            {{ $det->iCantidad }}
+        </td>
+
+        {{-- PRECIO UNITARIO --}}
+        <td class="text-end">
+            ${{ number_format($det->dPrecio_unitario, 2) }}
+        </td>
+
+        {{-- TOTAL --}}
+        <td class="text-end fw-semibold">
+            ${{ number_format($det->iCantidad * $det->dPrecio_unitario, 2) }}
+        </td>
+    </tr>
+@endforeach
+</tbody>
             </table>
         @else
             <p class="text-muted p-3 mb-0">
@@ -148,15 +184,29 @@
                     <span>${{ number_format($subtotal ?? 0, 2) }}</span>
                 </div>
 
+                {{-- ENVÍO --}}
                 <div class="d-flex justify-content-between mb-2">
-                    <span>Envío</span>
-                    <span>${{ number_format($envio ?? 0, 2) }}</span>
-                </div>
+                <span>Envío</span>
+                <span>
+                    @php
+                        $envio = optional($pedido->venta)->dCosto_envio ?? 0;
+                    @endphp
 
-                @if(($descuento ?? 0) > 0)
+                    @if($envio == 0)
+                        <span class="text-success fw-semibold">Gratis</span>
+                    @else
+                        ${{ number_format($envio, 2) }}
+                    @endif
+                </span>
+            </div>
+
+                {{-- DESCUENTO --}}
+                @if(optional($pedido->venta)->dDescuento > 0)
                     <div class="d-flex justify-content-between mb-2 text-success">
                         <span>Descuento</span>
-                        <span>- ${{ number_format($descuento, 2) }}</span>
+                        <span>
+                            - ${{ number_format($pedido->venta->dDescuento, 2) }}
+                        </span>
                     </div>
                 @endif
 
