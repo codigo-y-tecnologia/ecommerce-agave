@@ -12,12 +12,21 @@
     Pedido #{{ $pedido->id_pedido }}
 </h2>
 
-<p class="mb-4">
-    Estado:
-    <span class="badge bg-{{ estadoPedidoColor($pedido->eEstado) }}">
-        {{ estadoPedidoTexto($pedido->eEstado) }}
-    </span>
-</p>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <p class="mb-0">
+        Estado:
+        <span class="badge bg-{{ estadoPedidoColor($pedido->eEstado) }}">
+            {{ estadoPedidoTexto($pedido->eEstado) }}
+        </span>
+    </p>
+
+    @if($pedido->venta && $pedido->venta->eEstado === 'completada')
+    <a href="{{ route('pedidos.factura', $pedido->id_pedido) }}"
+       class="btn btn-outline-secondary btn-sm">
+        Descargar factura PDF
+    </a>
+@endif
+</div>
 
 {{-- ===============================
      PRODUCTOS

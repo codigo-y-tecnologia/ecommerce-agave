@@ -35,6 +35,7 @@ use App\Http\Controllers\Checkout\CheckoutErrorController;
 use App\Http\Controllers\Checkout\PaypalSuccesController;
 use App\Http\Controllers\SoporteController;
 use App\Http\Controllers\Pedidos\MisPedidosController;
+use App\Http\Controllers\Pedidos\FacturaController;
 
 Route::get('/', [DashboardController::class, 'index'])->name('home');
 
@@ -221,6 +222,10 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
     Route::get('/mi-cuenta/pedidos/{id}', [MisPedidosController::class, 'show'])
         ->name('pedidos.show');
 
+    // Ruta para descargar la factura en PDF    
+    Route::get('/mi-cuenta/pedidos/{pedido}/factura', 
+        [FacturaController::class, 'download']
+    )->name('pedidos.factura');
 });
 
 // --------------------

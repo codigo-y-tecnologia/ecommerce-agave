@@ -25,6 +25,10 @@ class Venta extends Model
         'eMetodo_pago',
         'eEstado'
     ];
+
+    protected $casts = [
+    'tFecha_venta' => 'datetime',
+];
     
     public function detalles()
     {

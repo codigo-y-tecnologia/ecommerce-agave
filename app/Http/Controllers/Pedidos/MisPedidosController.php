@@ -9,15 +9,44 @@ use Illuminate\Support\Facades\Auth;
 
 class MisPedidosController extends Controller
 {
-    public function index()
-    {
-        $pedidos = Pedido::where('id_usuario', Auth::id())
-            ->with(['pago'])
-            ->orderByDesc('id_pedido')
-            ->paginate(10);
+    public function index(Request $request)
+{
+    $fechaFiltro = $request->get('fecha', '30d');
 
-        return view('pedidos.index', compact('pedidos'));
+    $query = Pedido::where('id_usuario', Auth::id());
+
+    switch ($fechaFiltro) {
+
+        case '3m':
+            $query->where('tFecha_pedido', '>=', now()->subMonths(3));
+            break;
+
+        case '30d':
+            $query->where('tFecha_pedido', '>=', now()->subDays(30));
+            break;
+
+        default:
+            // Año (ej: 2025, 2024, etc.)
+            if (is_numeric($fechaFiltro)) {
+                $query->whereYear('tFecha_pedido', $fechaFiltro);
+            }
+            break;
     }
+
+    $pedidos = $query
+        ->orderByDesc('tFecha_pedido')
+        ->paginate(10)
+        ->withQueryString();
+
+    // Años disponibles (como Amazon)
+    $years = Pedido::where('id_usuario', Auth::id())
+        ->selectRaw('YEAR(tFecha_pedido) as year')
+        ->distinct()
+        ->orderByDesc('year')
+        ->pluck('year');
+
+    return view('pedidos.index', compact('pedidos', 'fechaFiltro', 'years'));
+}
 
     public function show($id)
     {

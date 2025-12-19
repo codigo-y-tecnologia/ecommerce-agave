@@ -6,6 +6,30 @@
 
 <h2 class="fw-bold mb-4">Mis compras</h2>
 
+<form method="GET" class="d-flex align-items-center mb-4 gap-2">
+    <span class="fw-semibold">Pedidos realizados en</span>
+
+    <select name="fecha"
+            class="form-select w-auto"
+            onchange="this.form.submit()">
+
+        <option value="30d" {{ $fechaFiltro === '30d' ? 'selected' : '' }}>
+            últimos 30 días
+        </option>
+
+        <option value="3m" {{ $fechaFiltro === '3m' ? 'selected' : '' }}>
+            últimos 3 meses
+        </option>
+
+        @foreach ($years as $year)
+            <option value="{{ $year }}" {{ $fechaFiltro == $year ? 'selected' : '' }}>
+                {{ $year }}
+            </option>
+        @endforeach
+
+    </select>
+</form>
+
 @forelse ($pedidos as $pedido)
 
     @php
