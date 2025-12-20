@@ -16,6 +16,11 @@
         .ml-header { background: #0c0c0962; }
         .ml-links { background: #22221917; font-size: 0.95rem; }
 
+        /* Espaciado entre enlaces de la barra inferior */
+        .ml-links .container {
+            gap: 18px; /* Ajusta a tu gusto: 12px, 16px, 20px */
+        }
+
         .search-box input {
             border-radius: 8px 0 0 8px;
         }
