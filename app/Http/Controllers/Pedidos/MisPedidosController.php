@@ -55,7 +55,8 @@ class MisPedidosController extends Controller
                 'direccion',
                 'direccionFacturacion',
                 'pago',
-                'venta'
+                'venta',
+                'envio',
             ])
             ->where('id_usuario', Auth::id())
             ->findOrFail($id);

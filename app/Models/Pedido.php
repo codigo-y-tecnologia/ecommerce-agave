@@ -4,6 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\Usuario;
+use App\Models\PedidoDetalle;
+use App\Models\Venta;
+use App\Models\Direccion;
+use App\Models\Pago;
+use App\Models\Envio;
 
 class Pedido extends Model
 {
@@ -62,4 +68,9 @@ class Pedido extends Model
     {
         return $this->hasOne(Pago::class, 'id_pedido', 'id_pedido');
     }
+
+    public function envio()
+{
+    return $this->hasOne(Envio::class, 'id_pedido', 'id_pedido');
+}
 }

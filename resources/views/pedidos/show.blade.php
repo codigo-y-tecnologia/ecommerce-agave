@@ -20,6 +20,27 @@
         </span>
     </p>
 
+    <div class="d-flex gap-2">
+    @php
+        $estadoEnvio = optional($pedido->envio)->eEstado;
+    @endphp
+
+    {{-- CANCELAR: solo si aún NO ha sido enviado --}}
+    @if($estadoEnvio === \App\Models\Envio::ESTADO_PENDIENTE)
+        <button class="btn btn-outline-danger btn-sm">
+            Cancelar compra
+        </button>
+    @endif
+
+    {{-- DEVOLVER: solo si ya fue entregado --}}
+    @if($estadoEnvio === \App\Models\Envio::ESTADO_ENTREGADO)
+        <button class="btn btn-outline-warning btn-sm">
+            Devolver productos
+        </button>
+    @endif
+</div>
+
+
     @if($pedido->venta && $pedido->venta->eEstado === 'completada')
     <a href="{{ route('pedidos.factura', $pedido->id_pedido) }}"
        class="btn btn-outline-secondary btn-sm">
