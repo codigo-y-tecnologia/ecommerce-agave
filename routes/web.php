@@ -36,6 +36,7 @@ use App\Http\Controllers\Checkout\PaypalSuccesController;
 use App\Http\Controllers\SoporteController;
 use App\Http\Controllers\Pedidos\MisPedidosController;
 use App\Http\Controllers\Pedidos\FacturaController;
+use App\Http\Controllers\Admin\PedidoController;
 
 Route::get('/', [DashboardController::class, 'index'])->name('home');
 
@@ -272,6 +273,13 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':admin'])->g
     Route::resource('ventas', VentaController::class)->except(['create', 'store', 'destroy']);
 
     Route::resource('reembolsos', ReembolsosController::class);
+
+    // Rutas para la gestión de pedidos
+    Route::get('/admin/pedidos', [PedidoController::class, 'index'])
+        ->name('admin.pedidos.index');
+
+    Route::get('/admin/pedidos/{id}', [PedidoController::class, 'show'])
+        ->name('admin.pedidos.show');
 });
 
 

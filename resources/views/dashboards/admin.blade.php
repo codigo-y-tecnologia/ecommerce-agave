@@ -51,7 +51,7 @@
             <div class="card-body text-center">
                 <h5>📦 Pedidos</h5>
                 <p>Consulta y actualiza el estado de los pedidos.</p>
-                <a href="#" class="btn btn-primary w-100">Ver pedidos</a>
+                <a href="{{ route('admin.pedidos.index') }}" class="btn btn-primary w-100">Ver pedidos</a>
             </div>
         </div>
     </div>
