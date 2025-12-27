@@ -4,10 +4,13 @@
 
 @section('content')
 
-<h2 class="fw-bold mb-3 d-flex justify-content-between align-items-center">
+<h2 class="fw-bold mb-3">
     Pedidos
 </h2>
 
+{{-- ============================
+    FILTROS RÁPIDOS POR FECHA
+============================ --}}
 <div class="mb-3 d-flex gap-2">
     <a href="{{ route('admin.pedidos.index', ['quick' => 'today']) }}"
        class="btn btn-outline-secondary btn-sm {{ request('quick')=='today' ? 'active' : '' }}">
@@ -25,11 +28,13 @@
     </a>
 </div>
 
-<form method="GET" action="{{ route('admin.pedidos.index') }}" class="card mb-4 shadow-sm">
+{{-- ============================
+    BUSQUEDA RÁPIDA (USO DIARIO)
+============================ --}}
+<form method="GET" action="{{ route('admin.pedidos.index') }}" class="card mb-3 shadow-sm">
     <div class="card-body">
-        <div class="row g-3">
+        <div class="row g-3 align-items-end">
 
-            {{-- ID Pedido --}}
             <div class="col-md-2">
                 <input type="text"
                        name="pedido_id"
@@ -38,8 +43,7 @@
                        placeholder="# Pedido">
             </div>
 
-            {{-- Cliente --}}
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <input type="text"
                        name="cliente"
                        value="{{ request('cliente') }}"
@@ -47,76 +51,18 @@
                        placeholder="Cliente">
             </div>
 
-            {{-- Fecha desde --}}
-            <div class="col-md-2">
-                <input type="date"
-                       name="fecha_desde"
-                       value="{{ request('fecha_desde') }}"
-                       class="form-control">
-            </div>
-
-            {{-- Fecha hasta --}}
-            <div class="col-md-2">
-                <input type="date"
-                       name="fecha_hasta"
-                       value="{{ request('fecha_hasta') }}"
-                       class="form-control">
-            </div>
-
-            {{-- Método de pago --}}
-            <div class="col-md-2">
-                <select name="metodo_pago" class="form-select">
-    <option value="">Pago</option>
-    <option value="paypal" {{ request('metodo_pago')=='paypal' ? 'selected' : '' }}>PayPal</option>
-    <option value="stripe" {{ request('metodo_pago')=='stripe' ? 'selected' : '' }}>Stripe</option>
-</select>
-            </div>
-
-            {{-- Estado pedido --}}
-            <div class="col-md-2">
+            <div class="col-md-3">
                 <select name="estado_pedido" class="form-select">
-    <option value="">Estado pedido</option>
-    <option value="pendiente" {{ request('estado_pedido')=='pendiente' ? 'selected' : '' }}>Pendiente</option>
-    <option value="pagado" {{ request('estado_pedido')=='pagado' ? 'selected' : '' }}>Pagado</option>
-    <option value="enviado" {{ request('estado_pedido')=='enviado' ? 'selected' : '' }}>Enviado</option>
-    <option value="entregado" {{ request('estado_pedido')=='entregado' ? 'selected' : '' }}>Entregado</option>
-    <option value="cancelado" {{ request('estado_pedido')=='cancelado' ? 'selected' : '' }}>Cancelado</option>
-</select>
+                    <option value="">Estado del pedido</option>
+                    <option value="pendiente" {{ request('estado_pedido')=='pendiente' ? 'selected' : '' }}>Pendiente</option>
+                    <option value="pagado" {{ request('estado_pedido')=='pagado' ? 'selected' : '' }}>Pagado</option>
+                    <option value="enviado" {{ request('estado_pedido')=='enviado' ? 'selected' : '' }}>Enviado</option>
+                    <option value="entregado" {{ request('estado_pedido')=='entregado' ? 'selected' : '' }}>Entregado</option>
+                    <option value="cancelado" {{ request('estado_pedido')=='cancelado' ? 'selected' : '' }}>Cancelado</option>
+                </select>
             </div>
 
-            {{-- Estado envío --}}
-            <div class="col-md-2">
-                <select name="estado_envio" class="form-select">
-    <option value="">Estado envío</option>
-    <option value="pendiente" {{ request('estado_envio')=='pendiente' ? 'selected' : '' }}>Pendiente</option>
-    <option value="enviado" {{ request('estado_envio')=='enviado' ? 'selected' : '' }}>Enviado</option>
-    <option value="entregado" {{ request('estado_envio')=='entregado' ? 'selected' : '' }}>Entregado</option>
-    <option value="devuelto" {{ request('estado_envio')=='devuelto' ? 'selected' : '' }}>Devuelto</option>
-</select>
-            </div>
-
-            {{-- Total mínimo --}}
-            <div class="col-md-2">
-                <input type="number"
-                       step="0.01"
-                       name="total_min"
-                       value="{{ request('total_min') }}"
-                       class="form-control"
-                       placeholder="Total min">
-            </div>
-
-            {{-- Total máximo --}}
-            <div class="col-md-2">
-                <input type="number"
-                       step="0.01"
-                       name="total_max"
-                       value="{{ request('total_max') }}"
-                       class="form-control"
-                       placeholder="Total max">
-            </div>
-
-            {{-- Botones --}}
-            <div class="col-md-3 d-flex align-items-end gap-2">
+            <div class="col-md-3 d-flex gap-2">
                 <button class="btn btn-primary w-100">
                     Buscar
                 </button>
@@ -131,7 +77,117 @@
     </div>
 </form>
 
-{{-- TABLA PEDIDOS --}}
+{{-- ============================
+    FILTROS AVANZADOS (OCULTOS)
+============================ --}}
+<div class="accordion mb-4" id="filtrosAvanzados">
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#collapseFiltros">
+                Filtros avanzados
+            </button>
+        </h2>
+
+        <div id="collapseFiltros" class="accordion-collapse collapse">
+            <div class="accordion-body">
+
+                <form method="GET" action="{{ route('admin.pedidos.index') }}">
+                    <div class="row g-3">
+
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha desde</label>
+                            <input type="date"
+                                   name="fecha_desde"
+                                   value="{{ request('fecha_desde') }}"
+                                   class="form-control">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha hasta</label>
+                            <input type="date"
+                                   name="fecha_hasta"
+                                   value="{{ request('fecha_hasta') }}"
+                                   class="form-control">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Método de pago</label>
+                            <select name="metodo_pago" class="form-select">
+                                <option value="">Todos</option>
+                                <option value="paypal" {{ request('metodo_pago')=='paypal' ? 'selected' : '' }}>PayPal</option>
+                                <option value="stripe" {{ request('metodo_pago')=='stripe' ? 'selected' : '' }}>Stripe</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Estado envío</label>
+                            <select name="estado_envio" class="form-select">
+                                <option value="">Todos</option>
+                                <option value="pendiente" {{ request('estado_envio')=='pendiente' ? 'selected' : '' }}>Pendiente</option>
+                                <option value="enviado" {{ request('estado_envio')=='enviado' ? 'selected' : '' }}>Enviado</option>
+                                <option value="entregado" {{ request('estado_envio')=='entregado' ? 'selected' : '' }}>Entregado</option>
+                                <option value="devuelto" {{ request('estado_envio')=='devuelto' ? 'selected' : '' }}>Devuelto</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Total mínimo</label>
+                            <input type="number"
+                                   step="0.01"
+                                   name="total_min"
+                                   value="{{ request('total_min') }}"
+                                   class="form-control">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Total máximo</label>
+                            <input type="number"
+                                   step="0.01"
+                                   name="total_max"
+                                   value="{{ request('total_max') }}"
+                                   class="form-control">
+                        </div>
+
+                        <div class="col-md-3 d-flex align-items-end gap-2">
+                            <button class="btn btn-primary w-100">
+                                Aplicar filtros
+                            </button>
+
+                            <a href="{{ route('admin.pedidos.index') }}"
+                               class="btn btn-outline-secondary w-100">
+                                Limpiar
+                            </a>
+                        </div>
+
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ============================
+    INDICADOR DE FILTROS ACTIVOS
+============================ --}}
+@if(request()->except('page'))
+    <div class="mb-3">
+        <small class="text-muted">Filtros activos:</small>
+
+        @foreach(request()->except('page') as $key => $value)
+            <span class="badge bg-secondary me-1">
+                {{ ucfirst(str_replace('_',' ', $key)) }}: {{ $value }}
+            </span>
+        @endforeach
+    </div>
+@endif
+
+{{-- ============================
+    TABLA DE PEDIDOS
+============================ --}}
 <div class="card shadow-sm">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
@@ -147,17 +203,18 @@
                     <th class="text-end">Acciones</th>
                 </tr>
             </thead>
+
             <tbody>
                 @forelse($pedidos as $pedido)
                     <tr>
                         <td>{{ $pedido->id_pedido }}</td>
 
                         <td>
-    {{ data_get($pedido->usuario, 'vNombre')
-        ? data_get($pedido->usuario, 'vNombre') . ' ' . data_get($pedido->usuario, 'vApaterno')
-        : 'Cliente eliminado'
-    }}
-</td>
+                            {{ data_get($pedido->usuario, 'vNombre')
+                                ? data_get($pedido->usuario, 'vNombre').' '.data_get($pedido->usuario, 'vApaterno')
+                                : 'Cliente eliminado'
+                            }}
+                        </td>
 
                         <td>
                             {{ optional($pedido->tFecha_pedido)->format('d/m/Y H:i') }}
@@ -178,9 +235,7 @@
                         </td>
 
                         <td>
-                            @php
-                                $estadoEnvio = optional($pedido->envio)->eEstado;
-                            @endphp
+                            @php $estadoEnvio = optional($pedido->envio)->eEstado; @endphp
 
                             @if($estadoEnvio)
                                 <span class="badge bg-info">

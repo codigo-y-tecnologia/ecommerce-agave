@@ -185,15 +185,11 @@
 
         {{-- CANCELAR PEDIDO --}}
         @if($pedido->eEstado === 'pagado' && !$pedido->envio)
-            <form method="POST"
-      action="{{ route('admin.pedidos.cancelar', $pedido) }}"
-      class="d-inline"
-      onsubmit="return confirm('¿Cancelar pedido y reembolsar?')">
-    @csrf
-    <button class="btn btn-outline-danger btn-sm">
-        Cancelar y reembolsar
-    </button>
-</form>
+    <button
+    class="btn btn-outline-danger btn-sm"
+    onclick="cancelarPedido({{ $pedido->id_pedido }})">
+    Cancelar y reembolsar
+</button>
         @endif
 
     </div>
@@ -229,5 +225,68 @@
         </form>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+function cancelarPedido(pedidoId) {
+    Swal.fire({
+        title: 'Cancelar pedido',
+        html: `
+            <p class="text-start mb-2">Indica el motivo del reembolso:</p>
+            <textarea id="motivo" class="swal2-textarea" placeholder="Ej. Producto sin stock, error de pago..."></textarea>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, cancelar y reembolsar',
+        cancelButtonText: 'No',
+        preConfirm: () => {
+            const motivo = document.getElementById('motivo').value.trim();
+            if (!motivo) {
+                Swal.showValidationMessage('El motivo es obligatorio');
+            }
+            return motivo;
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+
+            Swal.fire({
+                title: 'Procesando reembolso...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch(`/admin/pedidos/${pedidoId}/cancelar`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    motivo: result.value
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Reembolso exitoso',
+                    text: data.message,
+                }).then(() => location.reload());
+            })
+            .catch(() => {
+                Swal.fire(
+                    'Error',
+                    'Ocurrió un error al procesar el reembolso',
+                    'error'
+                );
+            });
+        }
+    });
+}
+</script>
 
 @endsection

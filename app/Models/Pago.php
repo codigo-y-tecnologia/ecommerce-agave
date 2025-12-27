@@ -25,6 +25,7 @@ class Pago extends Model
 
     protected $casts = [
     'tFecha_pago' => 'datetime',
+    'eEstado' => 'string',
 ];
 
     public function pedido()

@@ -35,55 +35,66 @@ public function marcarEntregado(Pedido $pedido)
     return back()->with('success', 'Pedido marcado como entregado');
 }
 
-public function cancelar(Pedido $pedido)
+public function cancelar(Request $request, Pedido $pedido)
 {
-    $pedido->load(['venta', 'envio']);
+
+    $request->validate([
+        'motivo' => 'required|string|min:5|max:255',
+    ]);
+
+    $pedido->load(['venta', 'envio', 'pago']);
 
         // ❌ Validaciones de seguridad
-        abort_if(!$pedido->venta, 403, 'Pedido no pagado');
+        abort_if(!$pedido->pago, 403, 'El pedido no tiene pago registrado');
         abort_if(
             optional($pedido->envio)->eEstado === 'entregado',
             403,
             'Pedido ya entregado'
         );
 
+        $pago = $pedido->pago;
         $venta = $pedido->venta;
 
         // 1️⃣ Ejecutar reembolso según método de pago
-        if ($venta->eMetodo_pago === 'stripe') {
-            $this->reembolsarStripe($venta);
+        if ($pago->eMetodo_pago === 'stripe') {
+            $this->reembolsarStripe($pago);
         }
 
-        if ($venta->eMetodo_pago === 'paypal') {
-            $this->reembolsarPaypal($venta);
+        if ($pago->eMetodo_pago === 'paypal') {
+            $this->reembolsarPaypal($pago);
         }
 
         // 2️⃣ Guardar reembolso
         Reembolsos::create([
             'id_venta'     => $venta->id_venta,
-            'dMonto'       => $venta->dTotal,
-            'eMetodo_pago' => $venta->eMetodo_pago,
+            'dMonto'       => $pago->dMonto,
+            'vMotivo'      => $request->motivo,
+            'eMetodo_pago' => $pago->eMetodo_pago,
             'eEstado'      => 'procesado',
         ]);
 
         // 3️⃣ Actualizar estados
         $venta->update(['eEstado' => 'reembolsada']);
         $pedido->update(['eEstado' => 'cancelado']);
+        $pago->update(['eEstado' => 'reembolsado']);
 
-        return back()->with('success', 'Pedido cancelado y reembolsado correctamente');
+        return response()->json([
+        'success' => true,
+        'message' => 'Pedido cancelado y reembolsado correctamente'
+    ]);
 }
 
 // Métodos privados para reembolsos
-    private function reembolsarStripe($venta)
+    private function reembolsarStripe($pago)
     {
         Stripe::setApiKey(config('services.stripe.secret'));
 
         StripeRefund::create([
-            'payment_intent' => $venta->vReferencia,
+            'payment_intent' => $pago->vReferencia,
         ]);
     }
 
-        private function reembolsarPaypal($venta)
+        private function reembolsarPaypal($pago)
     {
         $environment = new SandboxEnvironment(
             config('services.paypal.client_id'),
@@ -92,10 +103,10 @@ public function cancelar(Pedido $pedido)
 
         $client = new PayPalHttpClient($environment);
 
-        $request = new CapturesRefundRequest($venta->vReferencia);
+        $request = new CapturesRefundRequest($pago->vReferencia);
         $request->body = [
             'amount' => [
-                'value' => number_format($venta->dTotal, 2, '.', ''),
+                'value' => number_format($pago->dMonto, 2, '.', ''),
                 'currency_code' => 'MXN'
             ]
         ];
