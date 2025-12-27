@@ -37,6 +37,8 @@ use App\Http\Controllers\SoporteController;
 use App\Http\Controllers\Pedidos\MisPedidosController;
 use App\Http\Controllers\Pedidos\FacturaController;
 use App\Http\Controllers\Admin\PedidoController;
+use App\Http\Controllers\Admin\AdminPedidoController;
+use App\Http\Controllers\Admin\AdminEnvioController;
 
 Route::get('/', [DashboardController::class, 'index'])->name('home');
 
@@ -280,6 +282,23 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':admin'])->g
 
     Route::get('/admin/pedidos/{id}', [PedidoController::class, 'show'])
         ->name('admin.pedidos.show');
+
+    Route::post('/pedidos/{pedido}/enviado',
+        [AdminPedidoController::class, 'marcarEnviado']
+    )->name('admin.pedidos.marcarEnviado');
+
+    Route::post('/pedidos/{pedido}/entregado',
+        [AdminPedidoController::class, 'marcarEntregado']
+    )->name('admin.pedidos.marcarEntregado');
+
+    Route::post(
+    '/admin/pedidos/{pedido}/cancelar',
+    [AdminPedidoController::class, 'cancelar']
+    )->name('admin.pedidos.cancelar');
+
+    Route::post('/envios/{pedido}',
+        [AdminEnvioController::class, 'store']
+    )->name('admin.envios.store');
 });
 
 

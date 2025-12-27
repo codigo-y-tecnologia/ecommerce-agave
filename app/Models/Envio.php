@@ -11,6 +11,7 @@ class Envio extends Model
     
     protected $table = 'tbl_envios';
     protected $primaryKey = 'id_envio';
+    public $timestamps = false;
 
     protected $fillable = [
         'id_pedido',

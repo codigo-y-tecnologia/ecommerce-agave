@@ -147,4 +147,87 @@
     </div>
 </div>
 
+<div class="card shadow-sm mt-4">
+    <div class="card-header fw-bold">
+        Acciones administrativas
+    </div>
+
+    <div class="card-body d-flex flex-wrap gap-2">
+
+        {{-- CREAR ENVÍO --}}
+        @if(!$pedido->envio && $pedido->eEstado === 'pagado')
+            <button class="btn btn-outline-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalEnvio">
+                Crear envío
+            </button>
+        @endif
+
+        {{-- MARCAR ENVIADO --}}
+        @if($pedido->envio && $pedido->envio->eEstado === 'pendiente')
+            <form method="POST" action="{{ route('admin.pedidos.marcarEnviado', $pedido->id_pedido) }}">
+                @csrf
+                <button class="btn btn-outline-info">
+                    Marcar como enviado
+                </button>
+            </form>
+        @endif
+
+        {{-- MARCAR ENTREGADO --}}
+        @if($pedido->envio && $pedido->envio->eEstado === 'enviado')
+            <form method="POST" action="{{ route('admin.pedidos.marcarEntregado', $pedido->id_pedido) }}">
+                @csrf
+                <button class="btn btn-outline-success">
+                    Marcar como entregado
+                </button>
+            </form>
+        @endif
+
+        {{-- CANCELAR PEDIDO --}}
+        @if($pedido->eEstado === 'pagado' && !$pedido->envio)
+            <form method="POST"
+      action="{{ route('admin.pedidos.cancelar', $pedido) }}"
+      class="d-inline"
+      onsubmit="return confirm('¿Cancelar pedido y reembolsar?')">
+    @csrf
+    <button class="btn btn-outline-danger btn-sm">
+        Cancelar y reembolsar
+    </button>
+</form>
+        @endif
+
+    </div>
+</div>
+
+<div class="modal fade" id="modalEnvio" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ route('admin.envios.store', $pedido->id_pedido) }}">
+            @csrf
+
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Crear envío</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>Transportista</label>
+                        <input type="text" name="vTransportista" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Número de guía</label>
+                        <input type="text" name="vNumero_guia" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-primary">Guardar envío</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 @endsection
