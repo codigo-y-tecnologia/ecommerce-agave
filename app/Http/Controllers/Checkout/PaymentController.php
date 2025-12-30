@@ -20,7 +20,8 @@ use App\Models\{
     CuponUso,
     Pago,
     Venta,
-    DetalleVenta
+    DetalleVenta,
+    Envio
 };
 
 use Stripe\Stripe;
@@ -692,6 +693,12 @@ public function stripeWebhook(Request $request)
     Log::info('Pago creado exitosamente', [
         'id_pago' => $pago->id_pago,
         'referencia' => $pago->vReferencia
+    ]);
+
+    //Registrar envío
+    Envio::create([
+        'id_pedido' => $pedido->id_pedido,
+        'eEstado' => Envio::ESTADO_PENDIENTE,
     ]);
 
     // Cupón uso

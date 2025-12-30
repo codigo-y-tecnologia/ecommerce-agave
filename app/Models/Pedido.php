@@ -34,6 +34,8 @@ class Pedido extends Model
     'tFecha_pedido' => 'datetime',
 ];
 
+const ESTADO_PAGADO  = 'pagado';
+
     // Relación con Usuario
     public function usuario()
     {

@@ -23,6 +23,7 @@
     <div class="d-flex gap-2">
     @php
         $estadoEnvio = optional($pedido->envio)->eEstado;
+        $estadoPedido = $pedido->eEstado;
     @endphp
 
     {{-- CANCELAR: solo si aún NO ha sido enviado --}}
