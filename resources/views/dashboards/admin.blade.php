@@ -55,6 +55,20 @@
             </div>
         </div>
     </div>
+
+    <div class="col-md-4">
+    <div class="card border-secondary shadow-sm">
+        <div class="card-body text-center">
+            <h5>🔄 Postventa</h5>
+            <p>Cancelaciones, devoluciones y reembolsos.</p>
+            <a href="{{ route('admin.postventa.index') }}"
+               class="btn btn-secondary w-100">
+                Administrar postventa
+            </a>
+        </div>
+    </div>
+</div>
+
     <div class="col-md-4">
         <div class="card border-danger shadow-sm">
             <div class="card-body text-center">

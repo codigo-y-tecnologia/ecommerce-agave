@@ -23,24 +23,32 @@
     <div class="d-flex gap-2">
     @php
         $estadoEnvio = optional($pedido->envio)->eEstado;
-        $estadoPedido = $pedido->eEstado;
     @endphp
 
     {{-- CANCELAR: solo si aún NO ha sido enviado --}}
-    @if($estadoEnvio === \App\Models\Envio::ESTADO_PENDIENTE)
-        <button class="btn btn-outline-danger btn-sm">
-            Cancelar compra
-        </button>
-    @endif
+    @if($pedido->eEstado === 'pagado' && $estadoEnvio === \App\Models\Envio::ESTADO_PENDIENTE)
+<form method="POST" action="{{ route('postventa.cancelar', $pedido) }}">
+    @csrf
+    <input type="hidden" name="motivo" value="Cancelación solicitada por el cliente">
+    <button class="btn btn-outline-danger btn-sm"
+            onclick="return confirm('¿Seguro que deseas cancelar esta compra?')">
+        Cancelar compra
+    </button>
+</form>
+@endif
 
     {{-- DEVOLVER: solo si ya fue entregado --}}
     @if($estadoEnvio === \App\Models\Envio::ESTADO_ENTREGADO)
-        <button class="btn btn-outline-warning btn-sm">
-            Devolver productos
-        </button>
-    @endif
+<form method="POST" action="{{ route('postventa.devolver', $pedido) }}">
+    @csrf
+    <input type="hidden" name="motivo" value="Solicitud de devolución">
+    <button class="btn btn-outline-warning btn-sm"
+            onclick="return confirm('¿Deseas solicitar la devolución de este pedido?')">
+        Devolver productos
+    </button>
+</form>
+@endif
 </div>
-
 
     @if($pedido->venta && $pedido->venta->eEstado === 'completada')
     <a href="{{ route('pedidos.factura', $pedido->id_pedido) }}"

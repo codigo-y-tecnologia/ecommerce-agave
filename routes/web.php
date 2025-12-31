@@ -39,6 +39,8 @@ use App\Http\Controllers\Pedidos\FacturaController;
 use App\Http\Controllers\Admin\PedidoController;
 use App\Http\Controllers\Admin\AdminPedidoController;
 use App\Http\Controllers\Admin\AdminEnvioController;
+use App\Http\Controllers\Pedidos\PostventaController;
+use App\Http\Controllers\Admin\AdminPostventaController;
 
 Route::get('/', [DashboardController::class, 'index'])->name('home');
 
@@ -225,6 +227,16 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
     Route::get('/mi-cuenta/pedidos/{id}', [MisPedidosController::class, 'show'])
         ->name('pedidos.show');
 
+    Route::post(
+        '/mi-cuenta/pedidos/{pedido}/cancelar',
+        [PostventaController::class, 'cancelar']
+    )->name('postventa.cancelar');
+
+    Route::post(
+        '/mi-cuenta/pedidos/{pedido}/devolver',
+        [PostventaController::class, 'devolver']
+    )->name('postventa.devolver');
+
     // Ruta para descargar la factura en PDF    
     Route::get('/mi-cuenta/pedidos/{pedido}/factura', 
         [FacturaController::class, 'download']
@@ -299,6 +311,18 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':admin'])->g
     Route::post('/envios/{pedido}',
         [AdminEnvioController::class, 'store']
     )->name('admin.envios.store');
+
+    Route::get('/postventa', [AdminPostventaController::class, 'index'])
+        ->name('admin.postventa.index');
+
+    Route::get('/{solicitud}', [AdminPostventaController::class, 'show'])
+            ->name('admin.postventa.show');
+
+    Route::post('/postventa/{solicitud}/aprobar', [AdminPostventaController::class, 'aprobar'])
+        ->name('admin.postventa.aprobar');
+
+    Route::post('/postventa/{solicitud}/rechazar', [AdminPostventaController::class, 'rechazar'])
+        ->name('admin.postventa.rechazar');
 });
 
 
