@@ -27,26 +27,26 @@
 
     {{-- CANCELAR: solo si aún NO ha sido enviado --}}
     @if($pedido->eEstado === 'pagado' && $estadoEnvio === \App\Models\Envio::ESTADO_PENDIENTE)
-<form method="POST" action="{{ route('postventa.cancelar', $pedido) }}">
-    @csrf
-    <input type="hidden" name="motivo" value="Cancelación solicitada por el cliente">
-    <button class="btn btn-outline-danger btn-sm"
-            onclick="return confirm('¿Seguro que deseas cancelar esta compra?')">
-        Cancelar compra
-    </button>
-</form>
+<button class="btn btn-outline-danger btn-sm"
+    onclick="solicitarPostventa(
+        '{{ route('postventa.cancelar', $pedido) }}',
+        'Cancelar compra',
+        'Describe el motivo de la cancelación'
+    )">
+    Cancelar compra
+</button>
 @endif
 
     {{-- DEVOLVER: solo si ya fue entregado --}}
-    @if($estadoEnvio === \App\Models\Envio::ESTADO_ENTREGADO)
-<form method="POST" action="{{ route('postventa.devolver', $pedido) }}">
-    @csrf
-    <input type="hidden" name="motivo" value="Solicitud de devolución">
-    <button class="btn btn-outline-warning btn-sm"
-            onclick="return confirm('¿Deseas solicitar la devolución de este pedido?')">
-        Devolver productos
-    </button>
-</form>
+    @if($estadoEnvio === \App\Models\Envio::ESTADO_ENTREGADO && $pedido->eEstado !== 'devuelto')
+<button class="btn btn-outline-warning btn-sm"
+    onclick="solicitarPostventa(
+        '{{ route('postventa.devolver', $pedido) }}',
+        'Solicitar devolución',
+        'Describe el motivo de la devolución'
+    )">
+    Devolver productos
+</button>
 @endif
 </div>
 
@@ -260,5 +260,72 @@
     </div>
 
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+function solicitarPostventa(url, titulo, placeholder) {
+    Swal.fire({
+        title: titulo,
+        input: 'textarea',
+        inputPlaceholder: placeholder,
+        inputAttributes: {
+            maxlength: 255,
+            rows: 4
+        },
+        showCancelButton: true,
+        confirmButtonText: 'Enviar solicitud',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#6f42c1',
+
+        /* 🔒 UX PRO */
+        showLoaderOnConfirm: true,
+        allowOutsideClick: () => !Swal.isLoading(),
+
+        preConfirm: (motivo) => {
+            if (!motivo || motivo.length < 5) {
+                Swal.showValidationMessage(
+                    'El motivo debe tener al menos 5 caracteres'
+                );
+                return false;
+            }
+
+            return fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ motivo })
+            })
+            .then(async response => {
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw data;
+                }
+
+                return data;
+            })
+            .catch(error => {
+                Swal.showValidationMessage(
+                    error.message ?? 'Ya existe una solicitud para este pedido'
+                );
+            });
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Solicitud enviada',
+                text: result.value.message,
+                confirmButtonColor: '#198754'
+            }).then(() => {
+                location.reload();
+            });
+        }
+    });
+}
+</script>
 
 @endsection

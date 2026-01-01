@@ -34,6 +34,7 @@ class MisPedidosController extends Controller
     }
 
     $pedidos = $query
+        ->with('ultimaSolicitudPostventa')
         ->orderByDesc('tFecha_pedido')
         ->paginate(10)
         ->withQueryString();
@@ -57,6 +58,7 @@ class MisPedidosController extends Controller
                 'pago',
                 'venta',
                 'envio',
+                'ultimaSolicitudPostventa',
             ])
             ->where('id_usuario', Auth::id())
             ->findOrFail($id);

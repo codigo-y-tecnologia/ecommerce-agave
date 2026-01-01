@@ -42,7 +42,7 @@
                                         <li><a class="dropdown-item" href="{{ route('productos.index') }}">Productos</a></li>
                                         <li><a class="dropdown-item" href="{{ route('admin.pedidos.index') }}">Pedidos</a></li>
                                         <li><a class="dropdown-item" href="{{ route('reportes.index') }}">Reportes</a></li>
-                                        <li><a class="dropdown-item" href="{{ route('admin.postventa.index') }}">Devoluciones y Cancelaciones</a></li>
+                                        <li><a class="dropdown-item" href="{{ route('admin.postventa.index') }}">Postventa</a></li>
                                         <li><a class="dropdown-item" href="{{ route('reembolsos.index') }}">Reembolsos</a></li>
                                     </ul>
                                 </li>

@@ -75,4 +75,16 @@ const ESTADO_PAGADO  = 'pagado';
 {
     return $this->hasOne(Envio::class, 'id_pedido', 'id_pedido');
 }
+
+public function solicitudesPostventa()
+{
+    return $this->hasMany(SolicitudPostventa::class, 'id_pedido', 'id_pedido');
+}
+
+public function ultimaSolicitudPostventa()
+{
+    return $this->hasOne(SolicitudPostventa::class, 'id_pedido', 'id_pedido')
+        ->latestOfMany();
+}
+
 }

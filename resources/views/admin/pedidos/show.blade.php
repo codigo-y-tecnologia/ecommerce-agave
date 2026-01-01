@@ -164,7 +164,7 @@
         @endif
 
         {{-- MARCAR ENVIADO --}}
-        @if($pedido->envio && $pedido->envio->eEstado === 'pendiente')
+        @if($pedido->envio && $pedido->envio->eEstado === 'pendiente' && $pedido->eEstado !== 'cancelado')
             <form method="POST" action="{{ route('admin.pedidos.marcarEnviado', $pedido->id_pedido) }}">
                 @csrf
                 <button class="btn btn-outline-info">
