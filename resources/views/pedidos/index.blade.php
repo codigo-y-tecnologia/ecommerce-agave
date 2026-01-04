@@ -102,6 +102,27 @@
                     {{ estadoPedidoTexto($pedido->eEstado) }}
                 </span>
 
+                @if(
+    $pedido->ultimaSolicitudPostventa &&
+    !(
+        $pedido->ultimaSolicitudPostventa->eTipo === 'cancelacion' &&
+        $pedido->ultimaSolicitudPostventa->eEstado === 'rechazada' &&
+        optional($pedido->envio)->eEstado === \App\Models\Envio::ESTADO_ENTREGADO
+    )
+)
+
+@php $s = $pedido->ultimaSolicitudPostventa; @endphp
+
+<div class="mt-1 small
+    @if($s->eEstado === 'pendiente') text-warning
+    @elseif($s->eEstado === 'rechazada') text-danger
+    @elseif($s->eEstado === 'reembolsada') text-success
+    @endif
+">
+Postventa: {{ ucfirst($s->eEstado) }}
+</div>
+@endif
+
                 <div class="mt-2 d-flex flex-column gap-2">
 
                     <a href="{{ route('pedidos.show', $pedido->id_pedido) }}"

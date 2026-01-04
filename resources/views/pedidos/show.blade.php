@@ -21,12 +21,20 @@
     </p>
 
     <div class="d-flex gap-2">
+
     @php
-        $estadoEnvio = optional($pedido->envio)->eEstado;
-    @endphp
+$estadoEnvio = optional($pedido->envio)->eEstado;
+$solicitud = $pedido->ultimaSolicitudPostventa;
+$bloquearPostventa = $solicitud
+    && in_array($solicitud->eEstado, ['pendiente', 'rechazada'])
+    && (
+        ($solicitud->eTipo === 'cancelacion' && $estadoEnvio === \App\Models\Envio::ESTADO_PENDIENTE)
+        || ($solicitud->eTipo === 'devolucion' && $estadoEnvio === \App\Models\Envio::ESTADO_ENTREGADO)
+    );
+@endphp
 
     {{-- CANCELAR: solo si aún NO ha sido enviado --}}
-    @if($pedido->eEstado === 'pagado' && $estadoEnvio === \App\Models\Envio::ESTADO_PENDIENTE)
+    @if(!$bloquearPostventa && $pedido->eEstado === 'pagado' && $estadoEnvio === \App\Models\Envio::ESTADO_PENDIENTE)
 <button class="btn btn-outline-danger btn-sm"
     onclick="solicitarPostventa(
         '{{ route('postventa.cancelar', $pedido) }}',
@@ -38,7 +46,7 @@
 @endif
 
     {{-- DEVOLVER: solo si ya fue entregado --}}
-    @if($estadoEnvio === \App\Models\Envio::ESTADO_ENTREGADO && $pedido->eEstado !== 'devuelto')
+    @if(!$bloquearPostventa && $estadoEnvio === \App\Models\Envio::ESTADO_ENTREGADO && $pedido->eEstado !== 'devuelto')
 <button class="btn btn-outline-warning btn-sm"
     onclick="solicitarPostventa(
         '{{ route('postventa.devolver', $pedido) }}',
@@ -57,6 +65,41 @@
     </a>
 @endif
 </div>
+
+@php
+$solicitud = $pedido->ultimaSolicitudPostventa;
+@endphp
+
+@if($solicitud)
+<div class="alert 
+    @if($solicitud->eEstado === 'pendiente') alert-warning
+    @elseif($solicitud->eEstado === 'rechazada' &&
+    !(
+        $solicitud->eTipo === 'cancelacion' &&
+        optional($pedido->envio)->eEstado === \App\Models\Envio::ESTADO_ENTREGADO
+    )) alert-danger 
+    @elseif($solicitud->eEstado === 'reembolsada') alert-success
+    @endif
+">
+
+@if($solicitud->eEstado === 'pendiente')
+Tu solicitud de {{ $solicitud->eTipo }} está en revisión.
+@endif
+
+@if($solicitud->eEstado === 'rechazada' &&
+    !(
+        $solicitud->eTipo === 'cancelacion' &&
+        optional($pedido->envio)->eEstado === \App\Models\Envio::ESTADO_ENTREGADO
+    ))
+Tu solicitud de {{ $solicitud->eTipo }} fue rechazada.<br>
+<strong>Motivo:</strong> {{ $solicitud->tRespuesta_admin }}
+@endif
+
+@if($solicitud->eEstado === 'reembolsada')
+Tu solicitud fue aprobada y el reembolso fue procesado.
+@endif
+</div>
+@endif
 
 {{-- ===============================
      PRODUCTOS

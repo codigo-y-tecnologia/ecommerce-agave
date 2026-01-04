@@ -84,7 +84,7 @@ public function solicitudesPostventa()
 public function ultimaSolicitudPostventa()
 {
     return $this->hasOne(SolicitudPostventa::class, 'id_pedido', 'id_pedido')
-        ->latestOfMany();
+        ->latestOfMany('id_solicitud');
 }
 
 }
