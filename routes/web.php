@@ -34,6 +34,7 @@ use App\Http\Controllers\Checkout\CheckoutSuccessController;
 use App\Http\Controllers\Checkout\CheckoutErrorController;
 use App\Http\Controllers\Checkout\PaypalSuccesController;
 use App\Http\Controllers\SoporteController;
+use App\Http\Controllers\DetalleVentaController;
 
 Route::get('/', [DashboardController::class, 'index'])->name('home');
 
@@ -79,34 +80,39 @@ Route::middleware('guest')->group(function () {
     Route::post('/resend-verification', [AuthController::class, 'resendVerificationEmail'])->name('verification.resend');
 
     // Rutas para restablecimiento de contraseña
-Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])
-    ->name('password.request');
+    Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])
+        ->name('password.request');
 
-Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])
-    ->name('password.email');
+    Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])
+        ->name('password.email');
 
-Route::get('/reset-password/{token}', [ResetPasswordController::class, 'showResetForm'])
-    ->name('password.reset');
+    Route::get('/reset-password/{token}', [ResetPasswordController::class, 'showResetForm'])
+        ->name('password.reset');
 
-Route::post('/reset-password', [ResetPasswordController::class, 'reset'])
-    ->name('password.update');
+    Route::post('/reset-password', [ResetPasswordController::class, 'reset'])
+        ->name('password.update');
 });
 
 Route::middleware('auth')->group(function () {
-
     Route::get('/dashboard/cliente', [DashboardController::class, 'cliente'])->name('dashboard.cliente');
     Route::get('/dashboard/admin', [DashboardController::class, 'admin'])->name('dashboard.admin');
     Route::get('/dashboard/superadmin', [DashboardController::class, 'superadmin'])->name('dashboard.superadmin');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     
+    // RUTAS PARA FAVORITOS - dentro de auth
+    Route::post('/favoritos/toggle/{producto}', [FavoritoController::class, 'toggle'])
+         ->name('favoritos.toggle');
+    Route::delete('/favoritos/{producto}', [FavoritoController::class, 'destroy'])
+         ->name('favoritos.destroy');
+    Route::get('/favoritos/sync', [FavoritoController::class, 'sync'])
+         ->name('favoritos.sync');
 });
 
 // --------------------
 // Rutas para clientes
 // --------------------
 Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])->group(function () {
-
-// Perfil
+    // Perfil
     Route::get('/perfil', function () {
         return view('perfil.index');
     })->name('perfil.index');
@@ -119,44 +125,35 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
 
     // Obtener una dirección por ID (para editar)
     Route::get('/api/direccion/{id}', function ($id) {
-    $direccion = Direccion::where('id_direccion', $id)
-        ->where('id_usuario', Auth::user()->id_usuario)
-        ->first();
+        $direccion = Direccion::where('id_direccion', $id)
+            ->where('id_usuario', Auth::user()->id_usuario)
+            ->first();
 
-    if (!$direccion) {
-        return response()->json(['success' => false, 'message' => 'Dirección no encontrada']);
-    }
+        if (!$direccion) {
+            return response()->json(['success' => false, 'message' => 'Dirección no encontrada']);
+        }
 
-    return response()->json(['success' => true, 'direccion' => $direccion]);
-});
+        return response()->json(['success' => true, 'direccion' => $direccion]);
+    });
 
-// RUTAS PÚBLICAS PARA FAVORITOS - Redirigen a login si no está autenticado
-
-    Route::post('/favoritos/toggle/{producto}', [FavoritoController::class, 'toggle'])
-         ->name('favoritos.toggle');
-    Route::delete('/favoritos/{producto}', [FavoritoController::class, 'destroy'])
-         ->name('favoritos.destroy');
-    Route::get('/favoritos/sync', [FavoritoController::class, 'sync'])
-         ->name('favoritos.sync');
-
-// Configuración de perfil
+    // Configuración de perfil
     Route::get('/perfil/configuracion', [PerfilController::class, 'configuracion'])->name('perfil.configuracion');
 
     Route::put('/perfil/actualizar', [PerfilController::class, 'actualizar'])->name('perfil.actualizar');
     Route::put('/perfil/cambiar-password', [PerfilController::class, 'cambiarPassword'])->name('perfil.cambiarPassword');
     Route::delete('/perfil/eliminar', [PerfilController::class, 'eliminar'])->name('perfil.eliminar');
 
-// --------------------
-// Rutas de Carrito
-// --------------------
+    // --------------------
+    // Rutas de Carrito
+    // --------------------
     Route::get('/carrito', [CarritoController::class, 'index'])->name('carrito.index');
     Route::post('/carrito/{producto}', [CarritoController::class, 'store'])->name('carrito.store');
     Route::put('/carrito/{detalle}', [CarritoController::class, 'update'])->name('carrito.update');
     Route::delete('/carrito/{detalle}', [CarritoController::class, 'destroy'])->name('carrito.destroy');
 
-// --------------------
-// Rutas de Checkout
-// --------------------
+    // --------------------
+    // Rutas de Checkout
+    // --------------------
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
 
@@ -258,6 +255,10 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':admin'])->g
     Route::resource('ventas', VentaController::class)->except(['create', 'store', 'destroy']);
 
     Route::resource('reembolsos', ReembolsosController::class);
+
+    // Rutas para detalle de venta y generación de PDF
+    Route::resource('detalle_venta', DetalleVentaController::class);
+    Route::get('/detalle_venta/{id}/pdf', [DetalleVentaController::class, 'generarPDF'])->name('detalle_venta.pdf');
 });
 
 

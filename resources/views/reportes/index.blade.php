@@ -10,7 +10,7 @@
         <a href="{{ route('ventas.index') }}" class="list-group-item list-group-item-action">
             📈 Ventas
         </a>
-        <a href="#" class="list-group-item list-group-item-action">
+        <a href="{{ route('detalle_venta.index') }}" class="list-group-item list-group-item-action">
             🔍 Detalle de Ventas
         </a>
     </div>
