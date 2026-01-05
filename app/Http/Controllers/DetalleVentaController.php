@@ -6,14 +6,41 @@ use App\Models\detalle_venta;
 use App\Models\Venta;
 use App\Models\Producto;
 use Illuminate\Http\Request;
+use PDF;
 
 class DetalleVentaController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $detallesVenta = detalle_venta::with(['venta', 'producto'])
-            ->orderBy('id_detalle_venta', 'desc')
-            ->get();
+        $query = detalle_venta::with(['venta', 'producto'])
+            ->orderBy('id_detalle_venta', 'desc');
+
+        // Agregar búsqueda por ID
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            
+            // Búsqueda SEGURA - solo en campos numéricos
+            $query->where(function($q) use ($search) {
+                // Buscar solo por IDs y números
+                if (is_numeric($search)) {
+                    $q->where('id_detalle_venta', $search)
+                      ->orWhere('id_venta', $search)
+                      ->orWhere('id_producto', $search)
+                      ->orWhere('iCantidad', $search)
+                      ->orWhere('dprecio_unitario', $search)
+                      ->orWhere('dSubtotal', $search);
+                      
+                      ;
+                } else {
+                    // Si no es numérico, solo buscar en campos de texto si existen
+                    $q->where('id_detalle_venta', 'like', "%{$search}%")
+                      ->orWhere('id_venta', 'like', "%{$search}%")
+                      ->orWhere('id_producto', 'like', "%{$search}%");
+                }
+            });
+        }
+
+        $detallesVenta = $query->paginate(10);
         
         return view('detalle_venta.index', compact('detallesVenta'));
     }
@@ -45,7 +72,7 @@ class DetalleVentaController extends Controller
             'dSubtotal' => $subtotal,
         ]);
 
-        return redirect()->route('detalle-venta.index')
+        return redirect()->route('detalle_venta.index')
             ->with('success', 'Detalle de venta creado correctamente.');
     }
 
@@ -84,7 +111,7 @@ class DetalleVentaController extends Controller
             'dSubtotal' => $subtotal,
         ]);
 
-        return redirect()->route('detalle-venta.index')
+        return redirect()->route('detalle_venta.index')
             ->with('success', 'Detalle de venta actualizado correctamente.');
     }
 
@@ -93,7 +120,13 @@ class DetalleVentaController extends Controller
         $detalleVenta = detalle_venta::findOrFail($id);
         $detalleVenta->delete();
 
-        return redirect()->route('detalle-venta.index')
+        return redirect()->route('detalle_venta.index')
             ->with('success', 'Detalle de venta eliminado correctamente.');
     }
+    public function generarPDF($id)
+{
+    $detalle = detalle_venta::findOrFail($id); // ← Cambia aquí
+    $pdf = PDF::loadView('detalles.pdf', compact('detalle'));
+    return $pdf->download("detalle-{$id}.pdf");
+}
 }

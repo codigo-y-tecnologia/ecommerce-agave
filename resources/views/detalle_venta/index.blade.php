@@ -1,123 +1,112 @@
 @extends('layout.app')
 
-@section('title', 'Lista de Detalles de Venta')
-
 @section('content')
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">
-                        <i class="fas fa-list"></i> Detalles de Venta
-                    </h4>
-                    <a href="{{ route('detalle_venta.create') }}" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Nuevo Detalle
-                    </a>
-                </div>
-                
-                <div class="card-body">
-                    @if($detallesVenta->isEmpty())
-                        <div class="text-center py-5">
-                            <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
-                            <h5 class="text-muted">No hay detalles de venta registrados</h5>
-                            <p class="text-muted">Comienza agregando un nuevo detalle de venta.</p>
-                            <a href="{{ route('detalle_venta.create') }}" class="btn btn-primary mt-2">
-                                <i class="fas fa-plus"></i> Crear Primer Detalle
-                            </a>
-                        </div>
-                    @else
-                        <div class="table-responsive">
-                            <table class="table table-hover table-striped">
-                                <thead class="thead-dark">
-                                    <tr>
-                                        <th width="80">ID</th>
-                                        <th>Venta ID</th>
-                                        <th>Producto ID</th>
-                                        <th>Cantidad</th>
-                                        <th>Precio Unitario</th>
-                                        <th>Subtotal</th>
-                                        <th width="150" class="text-center">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($detallesVenta as $detalle)
-                                    <tr>
-                                        <td><strong>{{ $detalle->id_detalle_venta }}</strong></td>
-                                        <td>
-                                            <span class="badge bg-secondary">
-                                                #{{ $detalle->id_venta }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-info">
-                                                #{{ $detalle->id_producto }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-primary rounded-pill">
-                                                {{ $detalle->iCantidad }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span class="text-success fw-bold">
-                                                ${{ number_format($detalle->dPrecio_unitario, 2) }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span class="text-success fw-bold">
-                                                ${{ number_format($detalle->dSubtotal, 2) }}
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <div class="btn-group btn-group-sm" role="group">
-                                                <a href="{{ route('detalle_venta.show', $detalle->id_detalle_venta) }}" 
-                                                   class="btn btn-info" title="Ver">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                                <a href="{{ route('detalle_venta.edit', $detalle->id_detalle_venta) }}" 
-                                                   class="btn btn-warning" title="Editar">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                <form action="{{ route('detalle_venta.destroy', $detalle->id_detalle_venta) }}" 
-                                                      method="POST" class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-danger" 
-                                                            title="Eliminar">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                                <tfoot>
-                                    <tr class="table-light">
-                                        <td colspan="5" class="text-end fw-bold">TOTAL:</td>
-                                        <td class="fw-bold text-success">
-                                            ${{ number_format($detallesVenta->sum('dSubtotal'), 2) }}
-                                        </td>
-                                        <td></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                        
-                        <div class="mt-3">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p class="text-muted">
-                                        Mostrando <strong>{{ $detallesVenta->count() }}</strong> registros
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    @endif
-                </div>
-            </div>
+<div class="container">
+    <h1 class="mb-3">Lista de Detalles de Venta</h1>
+
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert" id="successAlert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
+    @endif
+
+    @if(request('search'))
+        <div class="alert alert-info mb-3 d-flex justify-content-between align-items-center" id="searchAlert">
+            <div>
+                <i class="fas fa-search me-2"></i>
+                Resultados de búsqueda para: <strong>"{{ request('search') }}"</strong>
+            </div>
+            <a href="{{ route('detalle_venta.index') }}" class="btn btn-sm btn-outline-light">
+                <i class="fas fa-times"></i> Limpiar
+            </a>
+        </div>
+    @endif
+
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID Detalle venta</th>
+                    <th>ID Venta</th>
+                    <th>ID Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio Unitario</th>
+                    <th>Subtotal</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($detallesVenta as $detalle)
+                    <tr>
+                        <td>{{ $detalle->id_detalle_venta }}</td>
+                        <td>{{ $detalle->id_venta }}</td>
+                        <td>{{ $detalle->id_producto }}</td>
+                        <td>{{ $detalle->iCantidad }}</td>
+                        <td>${{ number_format($detalle->dPrecio_unitario, 2) }}</td>
+                        <td>${{ number_format($detalle->dSubtotal, 2) }}</td>
+                        <td class="text-end">
+                            <a href="{{ route('detalle_venta.show', $detalle->id_detalle_venta) }}" class="btn btn-sm btn-info">Ver</a>
+                            <!-- Botón para descargar PDF añadido aquí -->
+                            <a href="{{ route('detalle_venta.pdf', $detalle->id_detalle_venta) }}" class="btn btn-sm btn-secondary">📥 PDF</a>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            @if(request('search'))
+                                <h5>No se encontraron resultados</h5>
+                                <p>No hay detalles de venta que coincidan con "{{ request('search') }}"</p>
+                                <a href="{{ route('detalle_venta.index') }}" class="btn btn-outline-primary">
+                                    Ver todos los detalles
+                                </a>
+                            @else
+                                <h5>No hay detalles de venta registrados</h5>
+                                <p>No hay detalles de venta en el sistema</p>
+                            @endif
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
+
+    <!-- Paginación -->
+    @if($detallesVenta->count() > 0)
+        <div class="d-flex justify-content-center mt-4">
+            {{ $detallesVenta->links() }}
+        </div>
+    @endif
+
+    <!-- Solo Total en subtotales alineado a la DERECHA -->
+    @if($detallesVenta->count() > 0)
+        <div class="mt-3 text-end">
+            <span class="text-muted">Total en subtotales: </span>
+            <strong>${{ number_format($detallesVenta->sum('dSubtotal'), 2) }}</strong>
+        </div>
+    @endif
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const successAlert = document.getElementById('successAlert');
+    if (successAlert) {
+        setTimeout(function() {
+            const bsAlert = new bootstrap.Alert(successAlert);
+            bsAlert.close();
+        }, 2000);
+    }
+
+    const searchAlert = document.getElementById('searchAlert');
+    if (searchAlert) {
+        setTimeout(function() {
+            searchAlert.style.transition = 'opacity 0.5s';
+            searchAlert.style.opacity = '0';
+            setTimeout(function() {
+                searchAlert.style.display = 'none';
+            }, 500);
+        }, 3000);
+    }
+});
+</script>
 @endsection

@@ -206,3 +206,4 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':superadmin'
     Route::post('/superadmin/admins', [SuperadminController::class, 'store'])->name('superadmin.admins.store');
 });
  Route::resource('detalle_venta', DetalleVentaController::class);
+Route::get('/detalle_venta/{id}/pdf', [DetalleVentaController::class, 'generarPDF'])->name('detalle_venta.pdf');
