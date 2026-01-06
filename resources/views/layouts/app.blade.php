@@ -29,15 +29,17 @@
                         @endguest
 
                         {{-- 👤 Cliente --}}
-                        @auth
-                            @if(Auth::user()->eRol === 'cliente')
+                        @role('cliente')
                                 <li class="nav-item"><a class="nav-link" href="#">🛒 Mi Carrito</a></li>
                                 <li class="nav-item"><a class="nav-link" href="#">🧾 Checkout</a></li>
                                 <li class="nav-item"><a class="nav-link" href="#">📦 Mis Pedidos</a></li>
-                                <li class="nav-item"><a class="nav-link" href="{{ route('perfil.index') }}">👤 Mi Perfil</a></li>
+                                @can('ver_perfil')
+                                    <li class="nav-item"><a class="nav-link" href="{{ route('perfil.index') }}">👤 Mi Perfil</a></li>
+                                @endcan
+                        @endrole
 
                             {{-- ⚙️ Admin --}}
-                            @elseif(Auth::user()->eRol === 'admin')
+                            @role('admin')
                                 <li class="nav-item dropdown">
                                     <a class="nav-link dropdown-toggle" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown">
                                         👨‍💼 Administración
@@ -51,29 +53,31 @@
                                         <li><a class="dropdown-item" href="#">Reportes</a></li>
                                     </ul>
                                 </li>
+                            @endrole
 
                             {{-- 👑 Superadmin --}}
-                            @elseif(Auth::user()->eRol === 'superadmin')
+                            @role('superadmin')
                                 <li class="nav-item dropdown">
                                     <a class="nav-link dropdown-toggle" href="#" id="superadminMenu" role="button" data-bs-toggle="dropdown">
                                         👑 Panel Superadmin
                                     </a>
                                     <ul class="dropdown-menu">
+                                        @can('gestionar_administradores')
                                         <li><a class="dropdown-item" href="{{ route('superadmin.admins.index') }}">Gestión de administradores</a></li>
+                                        @endcan
                                         <li><a class="dropdown-item" href="#">Monitoreo del sistema</a></li>
                                         <li><a class="dropdown-item" href="#">Logs de seguridad</a></li>
                                         <li><a class="dropdown-item" href="#">Configuración global</a></li>
                                         <li><a class="dropdown-item" href="#">Gestión de permisos</a></li>
                                     </ul>
                                 </li>
-                            @endif
-                        @endauth
+                            @endrole
                     </ul>
 
                     {{-- 🟢 Usuario autenticado (lado derecho) --}}
                     @auth
                         <div class="d-flex align-items-center">
-                            <span class="text-white me-3">Hola, {{ Auth::user()->vNombre }} <small>({{ Auth::user()->eRol }})</small></span>
+                            <span class="text-white me-3">Hola, {{ Auth::user()->vNombre }} <small>({{ Auth::user()->getRoleNames()->first() }})</small></span>
                             <form action="{{ route('logout') }}" method="POST">
                                 @csrf
                                 <button class="btn btn-outline-light btn-sm">Cerrar sesión</button>

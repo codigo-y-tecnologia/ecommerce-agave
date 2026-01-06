@@ -39,7 +39,7 @@ Route::get('/', function () {
 
 // Login y registro solo para invitados
 Route::middleware('guest')->group(function () {
-    
+
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
 
@@ -54,17 +54,17 @@ Route::middleware('guest')->group(function () {
     Route::post('/resend-verification', [AuthController::class, 'resendVerificationEmail'])->name('verification.resend');
 
     // Rutas para restablecimiento de contraseña
-Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])
-    ->name('password.request');
+    Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])
+        ->name('password.request');
 
-Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])
-    ->name('password.email');
+    Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])
+        ->name('password.email');
 
-Route::get('/reset-password/{token}', [ResetPasswordController::class, 'showResetForm'])
-    ->name('password.reset');
+    Route::get('/reset-password/{token}', [ResetPasswordController::class, 'showResetForm'])
+        ->name('password.reset');
 
-Route::post('/reset-password', [ResetPasswordController::class, 'reset'])
-    ->name('password.update');
+    Route::post('/reset-password', [ResetPasswordController::class, 'reset'])
+        ->name('password.update');
 });
 
 Route::middleware('auth')->group(function () {
@@ -73,7 +73,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/admin', [DashboardController::class, 'admin'])->name('dashboard.admin');
     Route::get('/dashboard/superadmin', [DashboardController::class, 'superadmin'])->name('dashboard.superadmin');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-    
 });
 
 // Rutas para clientes
@@ -93,17 +92,17 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
     Route::delete('/perfil/direcciones/{id}', [DireccionController::class, 'destroy'])->name('direcciones.destroy');
 
     // Obtener una dirección por ID (para editar)
-Route::get('/api/direccion/{id}', function ($id) {
-    $direccion = Direccion::where('id_direccion', $id)
-        ->where('id_usuario', Auth::user()->id_usuario)
-        ->first();
+    Route::get('/api/direccion/{id}', function ($id) {
+        $direccion = Direccion::where('id_direccion', $id)
+            ->where('id_usuario', Auth::user()->id_usuario)
+            ->first();
 
-    if (!$direccion) {
-        return response()->json(['success' => false, 'message' => 'Dirección no encontrada']);
-    }
+        if (!$direccion) {
+            return response()->json(['success' => false, 'message' => 'Dirección no encontrada']);
+        }
 
-    return response()->json(['success' => true, 'direccion' => $direccion]);
-});
+        return response()->json(['success' => true, 'direccion' => $direccion]);
+    });
 
     // Configuración de perfil
     Route::get('/perfil/configuracion', [PerfilController::class, 'configuracion'])->name('perfil.configuracion');
@@ -134,7 +133,7 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':admin'])->g
     Route::put('/admin/usuarios/{id}', [UsuarioController::class, 'update'])->name('admin.usuarios.update');
     Route::delete('/admin/usuarios/{id}', [UsuarioController::class, 'destroy'])->name('admin.usuarios.destroy');
 
-     // Reportes
+    // Reportes
     Route::get('/reportes', function () {
         return view('reportes.index');
     })->name('reportes.index');
@@ -143,21 +142,17 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':admin'])->g
 // --------------------
 // Rutas para superadmin
 // --------------------
-Route::get('/admins', [SuperadminController::class, 'index'])
-    ->middleware(['auth', 'permission:gestionar_administradores'])
-    ->name('superadmin.admins.index');
+Route::get('/superadmin/panel', function () {
+    return "Bienvenido al panel del superadmin 👑";
+})
+    ->middleware(['auth', 'permission:configurar_sistema'])
+    ->name('superadmin.panel');
 
-Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':superadmin'])->group(function () {
-    Route::get('/superadmin/panel', function () {
-        return "Bienvenido al panel del superadmin 👑";
-    })->name('superadmin.panel');
-
-    // Route::get('/admins', [SuperadminController::class, 'index'])->name('superadmin.admins.index');
-
+Route::middleware(['auth', 'permission:gestionar_administradores'])->group(function () {
+    Route::get('/admins', [SuperadminController::class, 'index'])->name('superadmin.admins.index');
+    Route::get('/superadmin/admins/create', [SuperadminController::class, 'create'])->name('superadmin.admins.create');
+    Route::post('/superadmin/admins', [SuperadminController::class, 'store'])->name('superadmin.admins.store');
     Route::post('/admins/promote/{id}', [SuperadminController::class, 'promoteToAdmin'])->name('superadmin.admins.promote');
     Route::post('/admins/demote/{id}', [SuperadminController::class, 'demoteToClient'])->name('superadmin.admins.demote');
     Route::delete('/admins/{id}', [SuperadminController::class, 'destroy'])->name('superadmin.admins.destroy');
-
-    Route::get('/superadmin/admins/create', [SuperadminController::class, 'create'])->name('superadmin.admins.create');
-    Route::post('/superadmin/admins', [SuperadminController::class, 'store'])->name('superadmin.admins.store');
 });

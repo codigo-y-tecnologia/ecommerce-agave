@@ -21,8 +21,8 @@ class AuthController extends Controller
     {
 
         if (Auth::check()) {
-        return $this->redirectToDashboard(Auth::user());
-    }
+            return $this->redirectToDashboard(Auth::user());
+        }
 
         return view('auth.login');
     }
@@ -72,18 +72,17 @@ class AuthController extends Controller
     }
 
     private function redirectToDashboard($user)
-{
-    switch ($user->eRol) {
-        case 'cliente':
-            return redirect()->route('dashboard.cliente');
-        case 'admin':
-            return redirect()->route('dashboard.admin');
-        case 'superadmin':
+    {
+        if ($user->hasRole('superadmin')) {
             return redirect()->route('dashboard.superadmin');
-        default:
-            return redirect()->route('home');
+        }
+
+        if ($user->hasRole('admin')) {
+            return redirect()->route('dashboard.admin');
+        }
+
+        return redirect()->route('dashboard.cliente');
     }
-}
 
     public function showRegister()
     {
@@ -116,17 +115,17 @@ class AuthController extends Controller
         ]);
 
         // Validación: mayor de edad
-    $fechaNac = new \DateTime($data['dFecha_nacimiento']);
-    $hoy = new \DateTime();
-    $edad = $hoy->diff($fechaNac)->y;
+        $fechaNac = new \DateTime($data['dFecha_nacimiento']);
+        $hoy = new \DateTime();
+        $edad = $hoy->diff($fechaNac)->y;
 
-    if ($edad < 18) {
-        return back()->withErrors(['dFecha_nacimiento' => 'Debes ser mayor de edad para registrarte.'])->withInput();
-    }
+        if ($edad < 18) {
+            return back()->withErrors(['dFecha_nacimiento' => 'Debes ser mayor de edad para registrarte.'])->withInput();
+        }
 
         /**
-            * Limpia y valida si los campos contienen contenido potencialmente peligroso
-             * (anti inyección SQL básica sin falsos positivos)
+         * Limpia y valida si los campos contienen contenido potencialmente peligroso
+         * (anti inyección SQL básica sin falsos positivos)
          */
         // Funciones de limpieza y detección
         $this->verificarYLimpiar($data, config('security.sql_keywords'));
@@ -150,11 +149,13 @@ class AuthController extends Controller
             'api_token' => $apiToken, // Token para API
         ]);
 
+        $usuario->assignRole('cliente');
+
         // Enviar email de verificación
         try {
             $usuario->notify(new VerifyEmailNotification($usuario, $verificationToken));
         } catch (\Exception $e) {
-            dd($e->getMessage()); 
+            dd($e->getMessage());
             // Si falla el envío del email, eliminar el usuario creado
             $usuario->delete();
             return back()->withErrors([
@@ -166,9 +167,9 @@ class AuthController extends Controller
         // $request->session()->regenerate();
 
         return redirect('/login')->with([
-        'success' => '¡Registro exitoso!',
-        'verification_message' => 'Te hemos enviado un enlace de verificación a tu correo electrónico. Por favor, revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta.'
-    ]);
+            'success' => '¡Registro exitoso!',
+            'verification_message' => 'Te hemos enviado un enlace de verificación a tu correo electrónico. Por favor, revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta.'
+        ]);
     }
 
     // Método para verificar el email
@@ -187,9 +188,9 @@ class AuthController extends Controller
         $user->markEmailAsVerified();
 
         return redirect('/login')->with([
-        'success' => '¡Cuenta activada!',
-        'verification_success' => 'Tu dirección de correo electrónico ha sido verificada exitosamente. Ahora puedes iniciar sesión con tus credenciales.'
-    ]);
+            'success' => '¡Cuenta activada!',
+            'verification_success' => 'Tu dirección de correo electrónico ha sido verificada exitosamente. Ahora puedes iniciar sesión con tus credenciales.'
+        ]);
     }
 
     // Método para reenviar email de verificación
@@ -223,7 +224,7 @@ class AuthController extends Controller
             $user->notify(new VerifyEmailNotification($user, $user->verification_token));
             return back()->with('success', 'Se ha enviado un nuevo enlace de verificación a tu correo electrónico.');
         } catch (\Exception $e) {
-             dd($e->getMessage()); 
+            dd($e->getMessage());
             return back()->withErrors([
                 'vEmail' => 'Error al enviar el email de verificación. Por favor, intenta nuevamente.'
             ]);

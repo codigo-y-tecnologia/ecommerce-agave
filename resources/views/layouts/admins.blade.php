@@ -29,7 +29,7 @@
                         @endguest
 
                         {{-- ⚙️ Admin --}}
-                        @can('ver_pedidos')
+                        @role('admin')
                                 <li class="nav-item dropdown">
                                     <a class="nav-link dropdown-toggle" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown">
                                         👨‍💼 Administración
@@ -48,10 +48,10 @@
                                         <li><a class="dropdown-item" href="#">Reembolsos</a></li>
                                     </ul>
                                 </li>
-                        @endcan
+                        @endrole
 
                             {{-- 👑 Superadmin --}}
-                            @can('gestionar_administradores')
+                            @role('superadmin')
                                 <li class="nav-item dropdown">
                                     <a class="nav-link dropdown-toggle" href="#" id="superadminMenu" role="button" data-bs-toggle="dropdown">
                                         👑 Panel Superadmin
@@ -74,13 +74,13 @@
                                     @endcan
                                     </ul>
                                 </li>
-                            @endcan
+                            @endrole
                     </ul>
 
                     {{-- 🟢 Usuario autenticado (lado derecho) --}}
                     @auth
                         <div class="d-flex align-items-center">
-                            <span class="text-white me-3">Hola, {{ Auth::user()->vNombre }} <small>({{ Auth::user()->eRol }})</small></span>
+                            <span class="text-white me-3">Hola, {{ Auth::user()->vNombre }} <small>({{ Auth::user()->getRoleNames()->first() }})</small></span>
                             <form action="{{ route('logout') }}" method="POST">
                                 @csrf
                                 <button class="btn btn-outline-light btn-sm">Cerrar sesión</button>
