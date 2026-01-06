@@ -8,11 +8,12 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Auth\Passwords\CanResetPassword as CanResetPasswordTrait;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Support\Str;
+use Spatie\Permission\Traits\HasRoles;
 
 class Usuario extends Authenticatable implements CanResetPassword
 {
 
-    use Notifiable, CanResetPasswordTrait;
+    use Notifiable, CanResetPasswordTrait, HasRoles;
 
     protected $table = 'tbl_usuarios';
     protected $primaryKey = 'id_usuario';
