@@ -28,40 +28,53 @@
                             <li class="nav-item"><a class="nav-link" href="{{ route('usuarios.create') }}">Registrarse</a></li>
                         @endguest
 
-                        @auth
-                            {{-- ⚙️ Admin --}}
-                            @if(Auth::user()->eRol === 'admin')
+                        {{-- ⚙️ Admin --}}
+                        @can('ver_pedidos')
                                 <li class="nav-item dropdown">
                                     <a class="nav-link dropdown-toggle" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown">
                                         👨‍💼 Administración
                                     </a>
                                     <ul class="dropdown-menu">
+                                    @can('ver_clientes')
                                         <li><a class="dropdown-item" href="{{ route('admin.usuarios') }}">Clientes registrados</a></li>
+                                    @endcan
                                         <li><a class="dropdown-item" href="#">Cupones</a></li>
                                         <li><a class="dropdown-item" href="#">Impuestos</a></li>
+                                    @can('gestionar_productos')
                                         <li><a class="dropdown-item" href="#">Productos</a></li>
+                                    @endcan    
                                         <li><a class="dropdown-item" href="#">Pedidos</a></li>
                                         <li><a class="dropdown-item" href="{{ route('reportes.index') }}">Reportes</a></li>
                                         <li><a class="dropdown-item" href="#">Reembolsos</a></li>
                                     </ul>
                                 </li>
+                        @endcan
 
                             {{-- 👑 Superadmin --}}
-                            @elseif(Auth::user()->eRol === 'superadmin')
+                            @can('gestionar_administradores')
                                 <li class="nav-item dropdown">
                                     <a class="nav-link dropdown-toggle" href="#" id="superadminMenu" role="button" data-bs-toggle="dropdown">
                                         👑 Panel Superadmin
                                     </a>
                                     <ul class="dropdown-menu">
+                                    @can('gestionar_administradores')
                                         <li><a class="dropdown-item" href="{{ route('superadmin.admins.index') }}">Gestión de administradores</a></li>
+                                    @endcan
+                                    @can('ver_monitoreo')
                                         <li><a class="dropdown-item" href="#">Monitoreo del sistema</a></li>
+                                    @endcan
+                                    @can('ver_logs_seguridad')
                                         <li><a class="dropdown-item" href="#">Logs de seguridad</a></li>
+                                    @endcan
+                                    @can('configurar_sistema')
                                         <li><a class="dropdown-item" href="#">Configuración global</a></li>
+                                    @endcan
+                                    @can('gestionar_permisos')
                                         <li><a class="dropdown-item" href="#">Gestión de permisos</a></li>
+                                    @endcan
                                     </ul>
                                 </li>
-                            @endif
-                        @endauth
+                            @endcan
                     </ul>
 
                     {{-- 🟢 Usuario autenticado (lado derecho) --}}

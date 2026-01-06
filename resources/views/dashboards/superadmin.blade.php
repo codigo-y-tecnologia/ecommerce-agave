@@ -24,7 +24,11 @@
             <div class="card-body text-center">
                 <h5>🧑‍💼 Administradores</h5>
                 <p>Agrega o elimina administradores y asigna permisos.</p>
-                <a href="{{ route('superadmin.admins.index') }}" class="btn btn-primary w-100">Gestionar administradores</a>
+                @can('gestionar_administradores')
+    <a href="{{ route('superadmin.admins.index') }}" class="btn btn-primary w-100">
+        Gestionar administradores
+    </a>
+@endcan
             </div>
         </div>
     </div>

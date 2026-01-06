@@ -143,12 +143,17 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':admin'])->g
 // --------------------
 // Rutas para superadmin
 // --------------------
+Route::get('/admins', [SuperadminController::class, 'index'])
+    ->middleware(['auth', 'permission:gestionar_administradores'])
+    ->name('superadmin.admins.index');
+
 Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':superadmin'])->group(function () {
     Route::get('/superadmin/panel', function () {
         return "Bienvenido al panel del superadmin 👑";
     })->name('superadmin.panel');
 
-    Route::get('/admins', [SuperadminController::class, 'index'])->name('superadmin.admins.index');
+    // Route::get('/admins', [SuperadminController::class, 'index'])->name('superadmin.admins.index');
+
     Route::post('/admins/promote/{id}', [SuperadminController::class, 'promoteToAdmin'])->name('superadmin.admins.promote');
     Route::post('/admins/demote/{id}', [SuperadminController::class, 'demoteToClient'])->name('superadmin.admins.demote');
     Route::delete('/admins/{id}', [SuperadminController::class, 'destroy'])->name('superadmin.admins.destroy');
