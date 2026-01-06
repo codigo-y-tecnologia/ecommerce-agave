@@ -133,20 +133,61 @@ class Producto extends Model
         return $this->belongsToMany(Etiqueta::class, 'tbl_producto_etiquetas', 'id_producto', 'id_etiqueta');
     }
     
-    // Relaciones para atributos
-    public function productoAtributos()
-    {
-        return $this->hasMany(ProductoAtributo::class, 'id_producto');
-    }
-
     public function atributos()
-    {
-        return $this->belongsToMany(Atributo::class, 'tbl_producto_atributos', 'id_producto', 'id_atributo')
-                    ->withPivot('vValor', 'id_opcion')
-                    ->using(ProductoAtributo::class);
-    }
+{
+    return $this->belongsToMany(Atributo::class, 'tbl_producto_atributos', 'id_producto', 'id_atributo')
+                ->withPivot(['id_atributo_valor', 'dPrecio_extra'])
+                ->withTimestamps();
+}
 
+public function valoresAtributos()
+{
+    return $this->belongsToMany(AtributoValor::class, 'tbl_producto_atributos', 'id_producto', 'id_atributo_valor')
+                ->withPivot('dPrecio_extra')
+                ->withTimestamps();
+}
+
+// Método para obtener atributos agrupados
+public function getAtributosAgrupadosAttribute()
+{
+    $atributos = [];
     
+    foreach ($this->valoresAtributos as $valor) {
+        $atributo = $valor->atributo;
+        if (!isset($atributos[$atributo->id_atributo])) {
+            $atributos[$atributo->id_atributo] = [
+                'id_atributo' => $atributo->id_atributo,
+                'nombre' => $atributo->vNombre,
+                'valores' => []
+            ];
+        }
+        
+        $atributos[$atributo->id_atributo]['valores'][] = [
+            'id_valor' => $valor->id_atributo_valor,
+            'valor' => $valor->vValor,
+            'precio_extra' => $valor->pivot->dPrecio_extra,
+            'stock' => $valor->iStock
+        ];
+    }
+    
+    return $atributos;
+}
+
+// Método para calcular el precio con atributos
+public function calcularPrecioConAtributos($valoresSeleccionados = [])
+{
+    $precioBase = $this->dPrecio_venta;
+    $precioExtra = 0;
+    
+    foreach ($valoresSeleccionados as $idValor) {
+        $valor = $this->valoresAtributos()->where('id_atributo_valor', $idValor)->first();
+        if ($valor) {
+            $precioExtra += $valor->pivot->dPrecio_extra;
+        }
+    }
+    
+    return $precioBase + $precioExtra;
+} 
     // MÉTODOS PARA FAVORITOS
 
     public function favoritos()
@@ -203,4 +244,64 @@ class Producto extends Model
             $producto->eliminarImagenes();
         });
     }
+    public function variaciones()
+{
+    return $this->hasMany(ProductoVariacion::class, 'id_producto');
+}
+
+public function variacionesActivas()
+{
+    return $this->hasMany(ProductoVariacion::class, 'id_producto')->where('bActivo', true);
+}
+
+public function tieneVariaciones()
+{
+    return $this->variaciones()->count() > 0;
+}
+
+// Sobrescribe el accesor de precio
+public function getDPrecioVentaAttribute()
+{
+    if ($this->tieneVariaciones()) {
+        $precioMin = $this->variacionesActivas()->min('dPrecio');
+        $precioMax = $this->variacionesActivas()->max('dPrecio');
+        
+        if ($precioMin == $precioMax) {
+            return $precioMin;
+        }
+        return $precioMin . ' - ' . $precioMax;
+    }
+    
+    return $this->attributes['dPrecio_venta'];
+}
+
+// Sobrescribe el accesor de stock
+public function getIStockAttribute()
+{
+    if ($this->tieneVariaciones()) {
+        return $this->variacionesActivas()->sum('iStock');
+    }
+    
+    return $this->attributes['iStock'];
+}
+
+// Método para obtener el precio mínimo
+public function getPrecioMinimoAttribute()
+{
+    if ($this->tieneVariaciones()) {
+        return $this->variacionesActivas()->min('dPrecio');
+    }
+    
+    return $this->attributes['dPrecio_venta'];
+}
+
+// Método para obtener el precio máximo
+public function getPrecioMaximoAttribute()
+{
+    if ($this->tieneVariaciones()) {
+        return $this->variacionesActivas()->max('dPrecio');
+    }
+    
+    return $this->attributes['dPrecio_venta'];
+}
 }

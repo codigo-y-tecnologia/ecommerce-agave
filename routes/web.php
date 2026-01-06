@@ -7,10 +7,10 @@ use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\EtiquetaController; 
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\MarcaController; 
-use App\Http\Controllers\AtributoController;
-use App\Http\Controllers\ProductoAtributoController;
 use App\Http\Controllers\BusquedaController;
 use App\Http\Controllers\FavoritoController;
+use App\Http\Controllers\AtributoController;
+
 
 // RUTA PRINCIPAL - redirige a la página de inicio real
 Route::get('/', function() {
@@ -39,23 +39,6 @@ Route::resource('atributos', AtributoController::class);
 Route::get('/producto/{id}', [ProductoController::class, 'showPublic'])->name('productos.show.public');
 Route::get('/catalogo', [ProductoController::class, 'catalogo'])->name('productos.catalogo');
 
-// RUTAS PARA ATRIBUTOS DE PRODUCTOS
-Route::get('/productos/{producto}/atributos', [ProductoController::class, 'atributos'])
-     ->name('productos.atributos');
-
-Route::post('/productos/{producto}/atributos', [ProductoAtributoController::class, 'store'])
-     ->name('productos.atributos.store');
-
-Route::put('/productos/{producto}/atributos/{atributo}', [ProductoAtributoController::class, 'update'])
-     ->name('productos.atributos.update');
-
-Route::delete('/productos/{producto}/atributos/{atributo}', [ProductoAtributoController::class, 'destroy'])
-     ->name('productos.atributos.destroy');
-
-// API para obtener opciones de atributos
-Route::get('/atributos/{atributo}/opciones', [ProductoAtributoController::class, 'getOpciones'])
-     ->name('atributos.opciones');
-
 // Rutas de búsqueda
 Route::get('/buscar', [BusquedaController::class, 'buscar'])->name('busqueda.resultados');
 Route::get('/busqueda-rapida', [BusquedaController::class, 'busquedaRapida'])->name('busqueda.rapida');
@@ -74,3 +57,22 @@ Route::middleware('auth')->group(function () {
     Route::get('/favoritos/sync', [FavoritoController::class, 'sync'])
          ->name('favoritos.sync');
 });
+Route::get('/productos/{id}/atributos', [ProductoController::class, 'atributos'])->name('productos.atributos');
+Route::post('/productos/{id}/guardar-variaciones', [ProductoController::class, 'guardarVariaciones'])->name('productos.guardar-variaciones');
+Route::post('/productos/{id}/generar-combinaciones', [ProductoController::class, 'generarCombinaciones'])->name('productos.generar-combinaciones');
+// Rutas para atributos
+Route::resource('atributos', AtributoController::class);
+
+// Rutas para valores de atributos
+Route::prefix('atributos/{atributo}')->name('atributos.')->group(function () {
+    Route::get('/valores', [AtributoController::class, 'valores'])->name('valores');
+    Route::get('/valores/create', [AtributoController::class, 'createValor'])->name('valores.create');
+    Route::post('/valores', [AtributoController::class, 'storeValor'])->name('valores.store');
+    Route::get('/valores/{valor}/edit', [AtributoController::class, 'editValor'])->name('valores.edit');
+    Route::put('/valores/{valor}', [AtributoController::class, 'updateValor'])->name('valores.update');
+    Route::delete('/valores/{valor}', [AtributoController::class, 'destroyValor'])->name('valores.destroy');
+});
+
+// Rutas para asignar atributos a productos (más simple)
+Route::get('/productos/{id}/asignar-atributos', [ProductoController::class, 'asignarAtributos'])->name('productos.asignar-atributos');
+Route::post('/productos/{id}/guardar-atributos', [ProductoController::class, 'guardarAtributos'])->name('productos.guardar-atributos');

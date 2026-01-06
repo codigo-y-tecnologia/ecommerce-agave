@@ -1,145 +1,100 @@
 @extends('layouts.app')
 
-@section('title', 'Detalles del Atributo')
-
 @section('content')
-<div class="container-fluid">
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Atributo: {{ $atributo->vNombre }}</h1>
+        <div>
+            <a href="{{ route('atributos.edit', $atributo) }}" class="btn btn-warning">
+                <i class="fas fa-edit me-1"></i> Editar
+            </a>
+            <a href="{{ route('atributos.index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Volver
+            </a>
+        </div>
+    </div>
+
     <div class="row">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title mb-0">
-                        <i class="fas fa-eye me-2"></i>Detalles del Atributo
-                    </h3>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Información General</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h5>Información Básica</h5>
-                            <table class="table table-bordered">
-                                <tr>
-                                    <th width="40%">ID:</th>
-                                    <td>{{ $atributo->id_atributo }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Nombre:</th>
-                                    <td><strong>{{ $atributo->vNombre }}</strong></td>
-                                </tr>
-                                <tr>
-                                    <th>Tipo:</th>
-                                    <td>{{ $atributo->eTipo }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Label:</th>
-                                    <td>{{ $atributo->vLabel ?: 'N/A' }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Placeholder:</th>
-                                    <td>{{ $atributo->vPlaceholder ?: 'N/A' }}</td>
-                                </tr>
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <h5>Configuración</h5>
-                            <table class="table table-bordered">
-                                <tr>
-                                    <th width="40%">Requerido:</th>
-                                    <td>
-                                        @if($atributo->bRequerido)
-                                            Sí
-                                        @else
-                                            No
-                                        @endif
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Estado:</th>
-                                    <td>
-                                        @if($atributo->bActivo)
-                                            Activo
-                                        @else
-                                            Inactivo
-                                        @endif
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Orden:</th>
-                                    <td>{{ $atributo->iOrden }}</td>
-                                </tr>
-                            </table>
-                        </div>
-                    </div>
+                    <table class="table table-borderless">
+                        <tr>
+                            <th width="30%">Nombre:</th>
+                            <td>{{ $atributo->vNombre }}</td>
+                        </tr>
+                        <tr>
+                            <th>Descripción:</th>
+                            <td>{{ $atributo->tDescripcion ?: 'Sin descripción' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Estado:</th>
+                            <td>
+                                <span class="badge {{ $atributo->bActivo ? 'bg-success' : 'bg-secondary' }}">
+                                    {{ $atributo->bActivo ? 'Activo' : 'Inactivo' }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Creado:</th>
+                            <td>{{ $atributo->created_at->format('d/m/Y H:i') }}</td>
+                        </tr>
+                        <tr>
+                            <th>Actualizado:</th>
+                            <td>{{ $atributo->updated_at->format('d/m/Y H:i') }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
 
-                    @if($atributo->tDescripcion)
-                    <div class="row mt-3">
-                        <div class="col-md-12">
-                            <h5>Descripción</h5>
-                            <div class="card">
-                                <div class="card-body">
-                                    {{ $atributo->tDescripcion }}
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Valores ({{ $atributo->valores->count() }})</h5>
+                </div>
+                <div class="card-body">
+                    @if($atributo->valores->count() > 0)
+                    <div class="row">
+                        @foreach($atributo->valores as $valor)
+                        <div class="col-md-6 mb-3">
+                            <div class="border rounded p-3">
+                                <div class="d-flex align-items-center mb-2">
+                                    @if($valor->vHexColor)
+                                    <div class="me-2" style="width: 20px; height: 20px; background-color: {{ $valor->vHexColor }}; border-radius: 3px; border: 1px solid #dee2e6;"></div>
+                                    @endif
+                                    <strong>{{ $valor->vValor }}</strong>
+                                </div>
+                                
+                                @if($valor->vImagenUrl)
+                                <div class="mb-2">
+                                    <img src="{{ $valor->vImagenUrl }}" 
+                                         alt="{{ $valor->vValor }}" 
+                                         style="width: 100%; height: 100px; object-fit: cover; border-radius: 4px;">
+                                </div>
+                                @endif
+                                
+                                <div class="small text-muted">
+                                    <div>Orden: {{ $valor->iOrden }}</div>
+                                    <div>Estado: 
+                                        <span class="badge {{ $valor->bActivo ? 'bg-success' : 'bg-secondary' }}">
+                                            {{ $valor->bActivo ? 'Activo' : 'Inactivo' }}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        @endforeach
+                    </div>
+                    @else
+                    <div class="text-center py-4">
+                        <i class="fas fa-tags fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No hay valores registrados</p>
                     </div>
                     @endif
-
-                    @if(in_array($atributo->eTipo, ['select', 'radio', 'checkbox']) && $atributo->opciones->count() > 0)
-                    <div class="row mt-4">
-                        <div class="col-md-12">
-                            <h5>Opciones Configuradas</h5>
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th width="50">#</th>
-                                            <th>Valor</th>
-                                            <th>Etiqueta</th>
-                                            <th width="120">Predeterminado</th>
-                                            <th width="80">Orden</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($atributo->opciones as $opcion)
-                                            <tr>
-                                                <td>{{ $opcion->id_opcion }}</td>
-                                                <td><code>{{ $opcion->vValor }}</code></td>
-                                                <td>{{ $opcion->vEtiqueta }}</td>
-                                                <td class="text-center">
-                                                    @if($opcion->bPredeterminado)
-                                                        Sí
-                                                    @else
-                                                        No
-                                                    @endif
-                                                </td>
-                                                <td class="text-center">{{ $opcion->iOrden }}</td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    @endif
-                </div>
-                <div class="card-footer">
-                    <div class="d-flex justify-content-between">
-                        <a href="{{ route('atributos.index') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left me-1"></i> Volver a la lista
-                        </a>
-                        <div>
-                            <a href="{{ route('atributos.edit', $atributo) }}" class="btn btn-warning">
-                                <i class="fas fa-edit me-1"></i> Editar
-                            </a>
-                            <form action="{{ route('atributos.destroy', $atributo) }}" method="POST" class="d-inline" 
-                                  onsubmit="return confirm('¿Estás seguro de eliminar este atributo?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger">
-                                    <i class="fas fa-trash me-1"></i> Eliminar
-                                </button>
-                            </form>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

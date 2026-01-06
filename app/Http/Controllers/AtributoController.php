@@ -3,135 +3,83 @@
 namespace App\Http\Controllers;
 
 use App\Models\Atributo;
-use App\Models\AtributoOpcion;
-use Illuminate\Http\Request; // ¡FALTABA ESTA IMPORTACIÓN!
+use App\Models\AtributoValor;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class AtributoController extends Controller
 {
     public function index()
     {
-        $atributos = Atributo::with('opciones')->orderBy('iOrden')->get();
+        $atributos = Atributo::withCount('valores')->orderBy('vNombre')->get();
         return view('atributos.index', compact('atributos'));
     }
 
     public function create()
     {
-        $tipos = [
-            'texto' => 'Campo de Texto',
-            'textarea' => 'Área de Texto',
-            'select' => 'Lista Desplegable',
-            'radio' => 'Botones de Radio',
-            'checkbox' => 'Casilla de Verificación',
-            'archivo' => 'Archivo'
-        ];
-        
-        return view('atributos.create', compact('tipos'));
+        return view('atributos.create');
     }
 
     public function store(Request $request)
     {
-        $request->validate([
-            'vNombre' => 'required|max:100|unique:tbl_atributos,vNombre',
-            'tDescripcion' => 'nullable',
-            'eTipo' => 'required|in:texto,textarea,select,radio,checkbox,archivo',
-            'vLabel' => 'nullable|max:100',
-            'vPlaceholder' => 'nullable|max:100',
-            'bRequerido' => 'boolean',
-            'iOrden' => 'integer|min:0',
-            'bActivo' => 'boolean',
-            'opciones' => 'required_if:eTipo,select,radio,checkbox|array|min:1',
-            'opciones.*.vValor' => 'required_if:eTipo,select,radio,checkbox|max:100',
-            'opciones.*.vEtiqueta' => 'required_if:eTipo,select,radio,checkbox|max:100',
-        ], [
-            'vNombre.required' => 'El nombre del atributo es obligatorio',
-            'vNombre.unique' => 'Ya existe un atributo con este nombre',
-            'eTipo.required' => 'Debe seleccionar un tipo de campo',
-            'opciones.required_if' => 'Debe agregar al menos una opción para este tipo de campo',
-            'opciones.min' => 'Debe agregar al menos una opción',
-            'opciones.*.vValor.required_if' => 'El valor de la opción es obligatorio',
-            'opciones.*.vEtiqueta.required_if' => 'La etiqueta de la opción es obligatoria',
+         $request->validate([
+        'vNombre' => 'required|max:100|unique:tbl_atributos,vNombre',
+        'vSlug' => 'nullable|max:100|unique:tbl_atributos,vSlug',
+        'tDescripcion' => 'nullable'
+    ], [
+        'vNombre.required' => 'El nombre del atributo es obligatorio',
+        'vNombre.unique' => 'Ya existe un atributo con este nombre',
+        'vSlug.unique' => 'El slug ya está en uso. Intenta con otro.'
+    ]);
+
+    try {
+        DB::beginTransaction();
+
+        $atributo = Atributo::create([
+            'vNombre' => $request->vNombre,
+            'vSlug' => $request->vSlug ?: Str::slug($request->vNombre),
+            'tDescripcion' => $request->tDescripcion,
+            'bActivo' => true
+            // Si $timestamps = true en el modelo, Laravel agregará automáticamente created_at y updated_at
         ]);
 
-        try {
-            DB::beginTransaction();
+        DB::commit();
 
-            $atributo = Atributo::create([
-                'vNombre' => $request->vNombre,
-                'tDescripcion' => $request->tDescripcion,
-                'eTipo' => $request->eTipo,
-                'vLabel' => $request->vLabel,
-                'vPlaceholder' => $request->vPlaceholder,
-                'bRequerido' => $request->boolean('bRequerido'),
-                'iOrden' => $request->iOrden ?? 0,
-                'bActivo' => $request->boolean('bActivo')
-            ]);
+        return redirect()->route('atributos.index')
+            ->with('success', 'Atributo creado exitosamente');
 
-            // Crear opciones si el tipo lo requiere
-            if (in_array($request->eTipo, ['select', 'radio', 'checkbox']) && $request->has('opciones')) {
-                foreach ($request->opciones as $index => $opcionData) {
-                    // Validar que ambos campos estén llenos
-                    if (!empty($opcionData['vValor']) && !empty($opcionData['vEtiqueta'])) {
-                        AtributoOpcion::create([
-                            'id_atributo' => $atributo->id_atributo,
-                            'vValor' => $opcionData['vValor'],
-                            'vEtiqueta' => $opcionData['vEtiqueta'],
-                            'bPredeterminado' => $opcionData['bPredeterminado'] ?? false,
-                            'iOrden' => $index
-                        ]);
-                    }
-                }
-            }
-
-            DB::commit();
-
-            return redirect()->route('atributos.index')
-                ->with('success', 'Atributo creado exitosamente');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            
-            return redirect()->back()
-                ->withInput()
-                ->withErrors(['error' => 'Error al crear el atributo: ' . $e->getMessage()]);
-        }
+    } catch (\Exception $e) {
+        DB::rollBack();
+        
+        return redirect()->back()
+            ->withInput()
+            ->withErrors(['error' => 'Error al crear el atributo: ' . $e->getMessage()]);
+    }
     }
 
     public function show(Atributo $atributo)
     {
-        $atributo->load('opciones');
+        $atributo->load('valores');
         return view('atributos.show', compact('atributo'));
     }
 
     public function edit(Atributo $atributo)
     {
-        $tipos = [
-            'texto' => 'Campo de Texto',
-            'textarea' => 'Área de Texto',
-            'select' => 'Lista Desplegable',
-            'radio' => 'Botones de Radio',
-            'checkbox' => 'Casilla de Verificación',
-            'archivo' => 'Archivo'
-        ];
-        
-        $atributo->load('opciones');
-        return view('atributos.edit', compact('atributo', 'tipos'));
+        $atributo->load('valores');
+        return view('atributos.edit', compact('atributo'));
     }
 
     public function update(Request $request, Atributo $atributo)
     {
         $request->validate([
             'vNombre' => 'required|max:100|unique:tbl_atributos,vNombre,' . $atributo->id_atributo . ',id_atributo',
-            'tDescripcion' => 'nullable',
-            'eTipo' => 'required|in:texto,textarea,select,radio,checkbox,archivo',
-            'vLabel' => 'nullable|max:100',
-            'vPlaceholder' => 'nullable|max:100',
-            'bRequerido' => 'boolean',
-            'iOrden' => 'integer|min:0',
-            'bActivo' => 'boolean',
-            'opciones' => 'required_if:eTipo,select,radio,checkbox|array',
-            'opciones.*.vValor' => 'required_if:eTipo,select,radio,checkbox|max:100',
-            'opciones.*.vEtiqueta' => 'required_if:eTipo,select,radio,checkbox|max:100',
+            'vSlug' => 'nullable|max:100|unique:tbl_atributos,vSlug,' . $atributo->id_atributo . ',id_atributo',
+            'tDescripcion' => 'nullable'
+        ], [
+            'vNombre.required' => 'El nombre del atributo es obligatorio',
+            'vNombre.unique' => 'Ya existe un atributo con este nombre',
+            'vSlug.unique' => 'El slug ya está en uso. Intenta con otro.'
         ]);
 
         try {
@@ -139,36 +87,9 @@ class AtributoController extends Controller
 
             $atributo->update([
                 'vNombre' => $request->vNombre,
-                'tDescripcion' => $request->tDescripcion,
-                'eTipo' => $request->eTipo,
-                'vLabel' => $request->vLabel,
-                'vPlaceholder' => $request->vPlaceholder,
-                'bRequerido' => $request->boolean('bRequerido'),
-                'iOrden' => $request->iOrden ?? 0,
-                'bActivo' => $request->boolean('bActivo')
+                'vSlug' => $request->vSlug ?: Str::slug($request->vNombre),
+                'tDescripcion' => $request->tDescripcion
             ]);
-
-            // Actualizar opciones si el tipo lo requiere
-            if (in_array($request->eTipo, ['select', 'radio', 'checkbox'])) {
-                // Eliminar opciones existentes
-                $atributo->opciones()->delete();
-                
-                // Crear nuevas opciones
-                if ($request->has('opciones')) {
-                    foreach ($request->opciones as $index => $opcionData) {
-                        AtributoOpcion::create([
-                            'id_atributo' => $atributo->id_atributo,
-                            'vValor' => $opcionData['vValor'],
-                            'vEtiqueta' => $opcionData['vEtiqueta'],
-                            'bPredeterminado' => $opcionData['bPredeterminado'] ?? false,
-                            'iOrden' => $index
-                        ]);
-                    }
-                }
-            } else {
-                // Si cambió de tipo a uno que no requiere opciones, eliminarlas
-                $atributo->opciones()->delete();
-            }
 
             DB::commit();
 
@@ -189,9 +110,7 @@ class AtributoController extends Controller
         try {
             DB::beginTransaction();
 
-            // Eliminar relaciones con productos primero
-            DB::table('tbl_producto_atributos')->where('id_atributo', $atributo->id_atributo)->delete();
-            $atributo->opciones()->delete();
+            // Eliminar el atributo y sus valores (en cascada)
             $atributo->delete();
 
             DB::commit();
@@ -204,6 +123,126 @@ class AtributoController extends Controller
             
             return redirect()->route('atributos.index')
                 ->with('error', 'Error al eliminar el atributo: ' . $e->getMessage());
+        }
+    }
+
+    // Métodos para gestionar valores del atributo
+    public function valores(Atributo $atributo)
+    {
+        $valores = $atributo->valores()->orderBy('iOrden')->get();
+        return view('atributos.valores.index', compact('atributo', 'valores'));
+    }
+
+    public function createValor(Atributo $atributo)
+    {
+        return view('atributos.valores.create', compact('atributo'));
+    }
+
+    public function storeValor(Request $request, Atributo $atributo)
+    {
+        $request->validate([
+            'vValor' => 'required|max:100',
+            'vSlug' => 'nullable|max:100|unique:tbl_atributo_valores,vSlug',
+            'dPrecio_extra' => 'nullable|numeric|min:0',
+            'iStock' => 'nullable|integer|min:0',
+            'iOrden' => 'nullable|integer|min:0'
+        ], [
+            'vValor.required' => 'El valor es obligatorio',
+            'vSlug.unique' => 'El slug ya está en uso. Intenta con otro.'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Obtener el orden máximo actual
+            $ordenMax = $atributo->valores()->max('iOrden') ?? 0;
+
+            AtributoValor::create([
+                'id_atributo' => $atributo->id_atributo,
+                'vValor' => $request->vValor,
+                'vSlug' => $request->vSlug ?: Str::slug($request->vValor),
+                'dPrecio_extra' => $request->dPrecio_extra ?? 0,
+                'iStock' => $request->iStock ?? 0,
+                'iOrden' => $request->iOrden ?? ($ordenMax + 1),
+                'bActivo' => true
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('atributos.valores', $atributo)
+                ->with('success', 'Valor agregado exitosamente');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['error' => 'Error al agregar el valor: ' . $e->getMessage()]);
+        }
+    }
+
+    public function editValor(Atributo $atributo, AtributoValor $valor)
+    {
+        return view('atributos.valores.edit', compact('atributo', 'valor'));
+    }
+
+    public function updateValor(Request $request, Atributo $atributo, AtributoValor $valor)
+    {
+        $request->validate([
+            'vValor' => 'required|max:100',
+            'vSlug' => 'nullable|max:100|unique:tbl_atributo_valores,vSlug,' . $valor->id_atributo_valor . ',id_atributo_valor',
+            'dPrecio_extra' => 'nullable|numeric|min:0',
+            'iStock' => 'nullable|integer|min:0',
+            'iOrden' => 'nullable|integer|min:0',
+            'bActivo' => 'boolean'
+        ], [
+            'vValor.required' => 'El valor es obligatorio',
+            'vSlug.unique' => 'El slug ya está en uso. Intenta con otro.'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $valor->update([
+                'vValor' => $request->vValor,
+                'vSlug' => $request->vSlug ?: Str::slug($request->vValor),
+                'dPrecio_extra' => $request->dPrecio_extra ?? 0,
+                'iStock' => $request->iStock ?? 0,
+                'iOrden' => $request->iOrden ?? $valor->iOrden,
+                'bActivo' => $request->has('bActivo')
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('atributos.valores', $atributo)
+                ->with('success', 'Valor actualizado exitosamente');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['error' => 'Error al actualizar el valor: ' . $e->getMessage()]);
+        }
+    }
+
+    public function destroyValor(Atributo $atributo, AtributoValor $valor)
+    {
+        try {
+            DB::beginTransaction();
+
+            $valor->delete();
+
+            DB::commit();
+
+            return redirect()->route('atributos.valores', $atributo)
+                ->with('success', 'Valor eliminado exitosamente');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return redirect()->route('atributos.valores', $atributo)
+                ->with('error', 'Error al eliminar el valor: ' . $e->getMessage());
         }
     }
 }

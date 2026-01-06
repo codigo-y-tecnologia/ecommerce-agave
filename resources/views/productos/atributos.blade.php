@@ -1,298 +1,591 @@
 @extends('layouts.app')
 
-@section('title', 'Atributos del Producto - ' . $producto->vNombre)
-
+@section('title', 'Atributos y Variaciones - ' . $producto->vNombre)
 @section('content')
 <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1><i class="fas fa-wine-bottle me-2"></i>{{ $producto->vNombre }}</h1>
+            <p class="text-muted">Gestionar atributos y variaciones del producto</p>
+        </div>
+        <div>
+            <a href="{{ route('productos.edit', $producto) }}" class="btn btn-outline-primary">
+                <i class="fas fa-edit me-1"></i> Editar Producto
+            </a>
+            <a href="{{ route('productos.index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Volver
+            </a>
+        </div>
+    </div>
+
     <div class="row">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="card-title">
-                        <i class="fas fa-tags me-2"></i>Atributos del Producto: {{ $producto->vNombre }}
-                    </h3>
-                    <div>
-                        <a href="{{ route('productos.edit', $producto) }}" class="btn btn-secondary me-2">
-                            <i class="fas fa-edit me-1"></i> Editar Producto
-                        </a>
-                        <a href="{{ route('productos.index') }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-arrow-left me-1"></i> Volver
-                        </a>
-                    </div>
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Atributos Disponibles</h5>
                 </div>
                 <div class="card-body">
-                    <!-- Formulario para agregar nuevo atributo -->
-                    <div class="row mb-4">
-                        <div class="col-md-12">
-                            <div class="card">
-                                <div class="card-header bg-light">
-                                    <h5 class="card-title mb-0">
-                                        <i class="fas fa-plus me-2"></i>Agregar Nuevo Atributo
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <form action="{{ route('productos.atributos.store', $producto) }}" method="POST" id="atributoForm">
-                                        @csrf
-                                        <div class="row">
-                                            <div class="col-md-4">
-                                                <div class="form-group">
-                                                    <label for="id_atributo">Atributo *</label>
-                                                    <select class="form-control @error('id_atributo') is-invalid @enderror" 
-                                                            id="id_atributo" name="id_atributo" required>
-                                                        <option value="">Seleccione un atributo</option>
-                                                        @foreach($atributosDisponibles as $atributo)
-                                                            <option value="{{ $atributo->id_atributo }}">
-                                                                {{ $atributo->vNombre }} ({{ $atributo->eTipo }})
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
-                                                    @error('id_atributo')
-                                                        <div class="invalid-feedback">{{ $message }}</div>
-                                                    @enderror
+                    <div id="atributos-container">
+                        @foreach($atributos as $atributo)
+                        <div class="atributo-card mb-3 p-3 border rounded">
+                            <div class="form-check">
+                                <input type="checkbox" 
+                                       class="form-check-input atributo-checkbox" 
+                                       id="atributo-{{ $atributo->id_atributo }}"
+                                       data-id="{{ $atributo->id_atributo }}"
+                                       data-nombre="{{ $atributo->vNombre }}">
+                                <label class="form-check-label fw-bold" for="atributo-{{ $atributo->id_atributo }}">
+                                    {{ $atributo->vNombre }}
+                                </label>
+                            </div>
+                            
+                            <div class="valores-container mt-2" 
+                                 id="valores-{{ $atributo->id_atributo }}"
+                                 style="display: none;">
+                                <small class="text-muted d-block mb-2">Selecciona los valores:</small>
+                                <div class="row">
+                                    @foreach($atributo->valoresActivos as $valor)
+                                    <div class="col-6 mb-2">
+                                        <div class="form-check">
+                                            <input type="checkbox" 
+                                                   class="form-check-input valor-checkbox" 
+                                                   id="valor-{{ $valor->id_atributo_valor }}"
+                                                   data-atributo-id="{{ $atributo->id_atributo }}"
+                                                   data-valor-id="{{ $valor->id_atributo_valor }}"
+                                                   data-valor-nombre="{{ $valor->vValor }}">
+                                            <label class="form-check-label" for="valor-{{ $valor->id_atributo_valor }}">
+                                                <div class="d-flex align-items-center">
+                                                    @if($valor->vHexColor)
+                                                    <div class="me-2" style="width: 15px; height: 15px; background-color: {{ $valor->vHexColor }}; border-radius: 2px; border: 1px solid #dee2e6;"></div>
+                                                    @endif
+                                                    <span>{{ $valor->vValor }}</span>
                                                 </div>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <div class="form-group">
-                                                    <label for="id_opcion">Opción</label>
-                                                    <select class="form-control @error('id_opcion') is-invalid @enderror" 
-                                                            id="id_opcion" name="id_opcion">
-                                                        <option value="">Seleccione una opción</option>
-                                                    </select>
-                                                    @error('id_opcion')
-                                                        <div class="invalid-feedback">{{ $message }}</div>
-                                                    @enderror
-                                                </div>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <div class="form-group">
-                                                    <label for="vValor">Valor Personalizado</label>
-                                                    <input type="text" class="form-control @error('vValor') is-invalid @enderror" 
-                                                           id="vValor" name="vValor" placeholder="Ingrese un valor personalizado">
-                                                    @error('vValor')
-                                                        <div class="invalid-feedback">{{ $message }}</div>
-                                                    @enderror
-                                                </div>
-                                            </div>
+                                            </label>
                                         </div>
-                                        <div class="row mt-3">
-                                            <div class="col-md-12">
-                                                <button type="submit" class="btn btn-primary">
-                                                    <i class="fas fa-save me-1"></i> Agregar Atributo
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </form>
+                                    </div>
+                                    @endforeach
                                 </div>
                             </div>
                         </div>
+                        @endforeach
                     </div>
+                    
+                    <button class="btn btn-primary w-100 mt-3" onclick="generarCombinaciones()">
+                        <i class="fas fa-magic me-2"></i> Generar Combinaciones
+                    </button>
+                </div>
+            </div>
+        </div>
 
-                    <!-- Lista de atributos existentes -->
-                    <div class="row">
-                        <div class="col-md-12">
-                            <h5>Atributos Asignados</h5>
-                            
-                            @if($producto->productoAtributos->count() > 0)
-                                <div class="table-responsive">
-                                    <table class="table table-bordered table-striped">
-                                        <thead class="thead-dark">
-                                            <tr>
-                                                <th>Atributo</th>
-                                                <th>Tipo</th>
-                                                <th>Valor/Opción</th>
-                                                <th width="120">Acciones</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach($producto->productoAtributos as $productoAtributo)
-                                                <tr>
-                                                    <td>
-                                                        <strong>{{ $productoAtributo->atributo->vNombre }}</strong>
-                                                        @if($productoAtributo->atributo->vLabel)
-                                                            <br><small class="text-muted">{{ $productoAtributo->atributo->vLabel }}</small>
-                                                        @endif
-                                                    </td>
-                                                    <td>
-                                                        @php
-                                                            $badgeClass = [
-                                                                'texto' => 'primary',
-                                                                'textarea' => 'info',
-                                                                'select' => 'success',
-                                                                'radio' => 'warning',
-                                                                'checkbox' => 'secondary',
-                                                                'archivo' => 'dark'
-                                                            ][$productoAtributo->atributo->eTipo] ?? 'secondary';
-                                                        @endphp
-                                                        <span class="badge bg-{{ $badgeClass }}">
-                                                            {{ $productoAtributo->atributo->eTipo }}
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        @if($productoAtributo->opcion)
-                                                            <span class="badge bg-success">{{ $productoAtributo->opcion->vEtiqueta }}</span>
-                                                        @elseif($productoAtributo->vValor)
-                                                            <code>{{ $productoAtributo->vValor }}</code>
-                                                        @else
-                                                            <span class="text-muted">No asignado</span>
-                                                        @endif
-                                                    </td>
-                                                    <td>
-                                                        <div class="btn-group btn-group-sm">
-                                                            <button type="button" class="btn btn-warning" 
-                                                                    data-bs-toggle="modal" 
-                                                                    data-bs-target="#editModal{{ $loop->index }}">
-                                                                <i class="fas fa-edit"></i>
-                                                            </button>
-                                                            <!-- CORRECCIÓN: Usar los parámetros corregidos -->
-                                                            <form action="{{ route('productos.atributos.destroy', [
-                                                                'producto' => $producto->id_producto, 
-                                                                'atributo' => $productoAtributo->id_atributo
-                                                            ]) }}" 
-                                                                  method="POST" class="d-inline">
-                                                                @csrf
-                                                                @method('DELETE')
-                                                                <button type="submit" class="btn btn-danger" 
-                                                                        onclick="return confirm('¿Estás seguro de eliminar este atributo?')">
-                                                                    <i class="fas fa-trash"></i>
-                                                                </button>
-                                                            </form>
-                                                        </div>
-
-                                                        <!-- Modal para editar -->
-                                                        <div class="modal fade" id="editModal{{ $loop->index }}" tabindex="-1">
-                                                            <div class="modal-dialog">
-                                                                <div class="modal-content">
-                                                                    <div class="modal-header">
-                                                                        <h5 class="modal-title">Editar Atributo</h5>
-                                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                                    </div>
-                                                                    <!-- CORRECCIÓN: Usar los parámetros corregidos -->
-                                                                    <form action="{{ route('productos.atributos.update', [
-                                                                        'producto' => $producto->id_producto, 
-                                                                        'atributo' => $productoAtributo->id_atributo
-                                                                    ]) }}" method="POST">
-                                                                        @csrf
-                                                                        @method('PUT')
-                                                                        <div class="modal-body">
-                                                                            <div class="form-group">
-                                                                                <label>Atributo</label>
-                                                                                <input type="text" class="form-control" 
-                                                                                       value="{{ $productoAtributo->atributo->vNombre }}" disabled>
-                                                                            </div>
-                                                                            @if($productoAtributo->atributo->opciones->count() > 0)
-                                                                                <div class="form-group">
-                                                                                    <label for="edit_opcion_{{ $loop->index }}">Opción</label>
-                                                                                    <select class="form-control" 
-                                                                                            id="edit_opcion_{{ $loop->index }}" 
-                                                                                            name="id_opcion">
-                                                                                        <option value="">Seleccione una opción</option>
-                                                                                        @foreach($productoAtributo->atributo->opciones as $opcion)
-                                                                                            <option value="{{ $opcion->id_opcion }}" 
-                                                                                                {{ $productoAtributo->id_opcion == $opcion->id_opcion ? 'selected' : '' }}>
-                                                                                                {{ $opcion->vEtiqueta }}
-                                                                                            </option>
-                                                                                        @endforeach
-                                                                                    </select>
-                                                                                </div>
-                                                                            @endif
-                                                                            <div class="form-group">
-                                                                                <label for="edit_valor_{{ $loop->index }}">Valor Personalizado</label>
-                                                                                <input type="text" class="form-control" 
-                                                                                       id="edit_valor_{{ $loop->index }}" 
-                                                                                       name="vValor" 
-                                                                                       value="{{ $productoAtributo->vValor }}"
-                                                                                       placeholder="Ingrese un valor personalizado">
-                                                                            </div>
-                                                                        </div>
-                                                                        <div class="modal-footer">
-                                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                                            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-                                                                        </div>
-                                                                    </form>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
-                            @else
-                                <div class="text-center py-4">
-                                    <i class="fas fa-tags fa-3x text-muted mb-3"></i>
-                                    <h5 class="text-muted">No hay atributos asignados</h5>
-                                    <p class="text-muted">Agrega atributos usando el formulario superior</p>
-                                </div>
-                            @endif
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-list-alt me-2"></i>Variaciones Generadas</h5>
+                    <span id="total-variaciones" class="badge bg-light text-dark">0 variaciones</span>
+                </div>
+                <div class="card-body">
+                    <div id="combinaciones-container" style="display: none;">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="tabla-variaciones">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>SKU</th>
+                                        <th>Combinación</th>
+                                        <th>Precio</th>
+                                        <th>Stock</th>
+                                        <th>Código Barras</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="variaciones-body">
+                                    <!-- Las variaciones se insertarán aquí -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <button class="btn btn-success" onclick="guardarVariaciones()">
+                                <i class="fas fa-save me-2"></i> Guardar Variaciones
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="limpiarCombinaciones()">
+                                <i class="fas fa-trash me-2"></i> Limpiar Todo
+                            </button>
                         </div>
                     </div>
+                    
+                    <div id="sin-combinaciones" class="text-center py-5">
+                        <i class="fas fa-cubes fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">No hay variaciones generadas</h4>
+                        <p class="text-muted">Selecciona atributos y haz clic en "Generar Combinaciones"</p>
+                    </div>
                 </div>
+            </div>
+            
+            <!-- Sección para variaciones existentes -->
+            @if($producto->variaciones->count() > 0)
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-boxes me-2"></i>Variaciones Existentes</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>Combinación</th>
+                                    <th>Precio</th>
+                                    <th>Stock</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($producto->variaciones as $variacion)
+                                <tr>
+                                    <td><code>{{ $variacion->vSKU }}</code></td>
+                                    <td>
+                                        <small>{{ $variacion->nombre_combinacion }}</small>
+                                    </td>
+                                    <td>
+                                        ${{ number_format($variacion->dPrecio, 2) }}
+                                        @if($variacion->tieneOferta())
+                                        <br>
+                                        <small class="text-success">Oferta: ${{ number_format($variacion->dPrecio_oferta, 2) }}</small>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <span class="badge {{ $variacion->iStock > 10 ? 'bg-success' : ($variacion->iStock > 0 ? 'bg-warning' : 'bg-danger') }}">
+                                            {{ $variacion->iStock }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {{ $variacion->bActivo ? 'bg-success' : 'bg-secondary' }}">
+                                            {{ $variacion->bActivo ? 'Activo' : 'Inactivo' }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            @endif
+        </div>
+    </div>
+</div>
+
+<!-- Modal para editar variación -->
+<div class="modal fade" id="modalEditarVariacion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Editar Variación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formEditarVariacion">
+                    <input type="hidden" id="edit-variacion-index">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label>SKU *</label>
+                                <input type="text" id="edit-sku" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label>Código de Barras</label>
+                                <input type="text" id="edit-codigo-barras" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label>Precio *</label>
+                                <input type="number" id="edit-precio" class="form-control" min="0" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label>Precio de Oferta</label>
+                                <input type="number" id="edit-precio-oferta" class="form-control" min="0" step="0.01">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label>Stock *</label>
+                                <input type="number" id="edit-stock" class="form-control" min="0" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label>Peso (kg)</label>
+                                <input type="number" id="edit-peso" class="form-control" min="0" step="0.01">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label>Ancho (cm)</label>
+                                <input type="number" id="edit-ancho" class="form-control" min="0" step="0.01">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label>Alto (cm)</label>
+                                <input type="number" id="edit-alto" class="form-control" min="0" step="0.01">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label>Profundidad (cm)</label>
+                                <input type="number" id="edit-profundidad" class="form-control" min="0" step="0.01">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="guardarEdicionVariacion()">Guardar Cambios</button>
             </div>
         </div>
     </div>
 </div>
 @endsection
 
-@push('scripts')
+@section('styles')
+<style>
+.atributo-card {
+    transition: all 0.3s ease;
+}
+
+.atributo-card:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+}
+
+.valor-checkbox:checked + label {
+    font-weight: bold;
+    color: #0d6efd;
+}
+
+#variaciones-body tr {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+#variaciones-body tr:hover {
+    background-color: #f8f9fa;
+}
+</style>
+@endsection
+
+@section('scripts')
 <script>
+let combinaciones = [];
+let atributosSeleccionados = [];
+
 document.addEventListener('DOMContentLoaded', function() {
-    const atributoSelect = document.getElementById('id_atributo');
-    const opcionSelect = document.getElementById('id_opcion');
-    const valorInput = document.getElementById('vValor');
-
-    // Cargar opciones cuando se selecciona un atributo
-    atributoSelect.addEventListener('change', function() {
-        const atributoId = this.value;
-        
-        if (atributoId) {
-            fetch(`/atributos/${atributoId}/opciones`)
-                .then(response => response.json())
-                .then(data => {
-                    // Limpiar opciones anteriores
-                    opcionSelect.innerHTML = '<option value="">Seleccione una opción</option>';
-                    
-                    // Agregar nuevas opciones
-                    data.opciones.forEach(opcion => {
-                        const option = document.createElement('option');
-                        option.value = opcion.id_opcion;
-                        option.textContent = opcion.vEtiqueta;
-                        opcionSelect.appendChild(option);
-                    });
-
-                    // Mostrar/ocultar campos según el tipo
-                    if (data.tipo === 'texto' || data.tipo === 'textarea') {
-                        valorInput.style.display = 'block';
-                        valorInput.closest('.form-group').style.display = 'block';
-                        opcionSelect.style.display = 'none';
-                        opcionSelect.closest('.form-group').style.display = 'none';
-                    } else if (['select', 'radio', 'checkbox'].includes(data.tipo)) {
-                        valorInput.style.display = 'none';
-                        valorInput.closest('.form-group').style.display = 'none';
-                        opcionSelect.style.display = 'block';
-                        opcionSelect.closest('.form-group').style.display = 'block';
-                    } else {
-                        valorInput.style.display = 'block';
-                        valorInput.closest('.form-group').style.display = 'block';
-                        opcionSelect.style.display = 'block';
-                        opcionSelect.closest('.form-group').style.display = 'block';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    opcionSelect.innerHTML = '<option value="">Error al cargar opciones</option>';
+    // Mostrar/ocultar valores cuando se selecciona un atributo
+    document.querySelectorAll('.atributo-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const valoresContainer = document.getElementById(`valores-${this.dataset.id}`);
+            if (this.checked) {
+                valoresContainer.style.display = 'block';
+            } else {
+                valoresContainer.style.display = 'none';
+                // Desmarcar todos los valores de este atributo
+                valoresContainer.querySelectorAll('.valor-checkbox').forEach(vc => {
+                    vc.checked = false;
                 });
-        } else {
-            opcionSelect.innerHTML = '<option value="">Seleccione una opción</option>';
-            valorInput.style.display = 'block';
-            opcionSelect.style.display = 'block';
+            }
+        });
+    });
+});
+
+function obtenerAtributosSeleccionados() {
+    atributosSeleccionados = [];
+    
+    document.querySelectorAll('.atributo-checkbox:checked').forEach(atributoCheckbox => {
+        const atributoId = parseInt(atributoCheckbox.dataset.id);
+        const valoresSeleccionados = [];
+        
+        document.querySelectorAll(`.valor-checkbox[data-atributo-id="${atributoId}"]:checked`).forEach(valorCheckbox => {
+            valoresSeleccionados.push(parseInt(valorCheckbox.dataset.valorId));
+        });
+        
+        if (valoresSeleccionados.length > 0) {
+            atributosSeleccionados.push({
+                id_atributo: atributoId,
+                valores: valoresSeleccionados
+            });
         }
     });
+    
+    return atributosSeleccionados;
+}
 
-    // Inicializar estado
-    if (atributoSelect.value) {
-        atributoSelect.dispatchEvent(new Event('change'));
+function generarCombinaciones() {
+    const atributos = obtenerAtributosSeleccionados();
+    
+    if (atributos.length === 0) {
+        alert('Por favor, selecciona al menos un atributo con valores.');
+        return;
     }
-});
+    
+    // Verificar que cada atributo tenga al menos un valor seleccionado
+    for (const atributo of atributos) {
+        if (atributo.valores.length === 0) {
+            alert(`El atributo no tiene valores seleccionados.`);
+            return;
+        }
+    }
+    
+    // Calcular total de combinaciones
+    let totalCombinaciones = 1;
+    for (const atributo of atributos) {
+        totalCombinaciones *= atributo.valores.length;
+    }
+    
+    if (totalCombinaciones > 50) {
+        if (!confirm(`Se generarán ${totalCombinaciones} combinaciones. ¿Deseas continuar?`)) {
+            return;
+        }
+    }
+    
+    // Mostrar loading
+    const btnGenerar = event.target;
+    const originalText = btnGenerar.innerHTML;
+    btnGenerar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Generando...';
+    btnGenerar.disabled = true;
+    
+    // Enviar solicitud al servidor
+    fetch('{{ route("productos.generar-combinaciones", $producto->id_producto) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            atributos_seleccionados: atributos
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            combinaciones = data.combinaciones;
+            mostrarCombinaciones();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al generar combinaciones');
+    })
+    .finally(() => {
+        btnGenerar.innerHTML = originalText;
+        btnGenerar.disabled = false;
+    });
+}
+
+function mostrarCombinaciones() {
+    if (combinaciones.length === 0) {
+        document.getElementById('combinaciones-container').style.display = 'none';
+        document.getElementById('sin-combinaciones').style.display = 'block';
+        document.getElementById('total-variaciones').textContent = '0 variaciones';
+        return;
+    }
+    
+    const tbody = document.getElementById('variaciones-body');
+    tbody.innerHTML = '';
+    
+    combinaciones.forEach((combinacion, index) => {
+        const row = document.createElement('tr');
+        row.dataset.index = index;
+        
+        // Crear texto de combinación
+        let combinacionTexto = '';
+        combinacion.atributos.forEach(atributo => {
+            combinacionTexto += `<div><small>${atributo.nombre_atributo}: <strong>${atributo.valor}</strong></small></div>`;
+        });
+        
+        row.innerHTML = `
+            <td><code>${combinacion.sku}</code></td>
+            <td>${combinacionTexto}</td>
+            <td>
+                <input type="number" class="form-control form-control-sm precio-input" 
+                       value="${combinacion.precio}" min="0" step="0.01"
+                       data-index="${index}" style="width: 100px;">
+                ${combinacion.precio_oferta ? `<br><small class="text-success">Oferta: $${combinacion.precio_oferta}</small>` : ''}
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm stock-input" 
+                       value="${combinacion.stock}" min="0"
+                       data-index="${index}" style="width: 80px;">
+            </td>
+            <td><small>${combinacion.codigo_barras}</small></td>
+            <td>
+                <button class="btn btn-sm btn-warning" onclick="editarVariacion(${index})" title="Editar">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="eliminarVariacion(${index})" title="Eliminar">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    // Agregar event listeners para inputs
+    document.querySelectorAll('.precio-input').forEach(input => {
+        input.addEventListener('change', function() {
+            const index = parseInt(this.dataset.index);
+            combinaciones[index].precio = parseFloat(this.value);
+        });
+    });
+    
+    document.querySelectorAll('.stock-input').forEach(input => {
+        input.addEventListener('change', function() {
+            const index = parseInt(this.dataset.index);
+            combinaciones[index].stock = parseInt(this.value);
+        });
+    });
+    
+    document.getElementById('combinaciones-container').style.display = 'block';
+    document.getElementById('sin-combinaciones').style.display = 'none';
+    document.getElementById('total-variaciones').textContent = `${combinaciones.length} variaciones`;
+}
+
+function editarVariacion(index) {
+    const combinacion = combinaciones[index];
+    
+    document.getElementById('edit-variacion-index').value = index;
+    document.getElementById('edit-sku').value = combinacion.sku;
+    document.getElementById('edit-codigo-barras').value = combinacion.codigo_barras;
+    document.getElementById('edit-precio').value = combinacion.precio;
+    document.getElementById('edit-precio-oferta').value = combinacion.precio_oferta;
+    document.getElementById('edit-stock').value = combinacion.stock;
+    document.getElementById('edit-peso').value = combinacion.peso;
+    document.getElementById('edit-ancho').value = combinacion.ancho;
+    document.getElementById('edit-alto').value = combinacion.alto;
+    document.getElementById('edit-profundidad').value = combinacion.profundidad;
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalEditarVariacion'));
+    modal.show();
+}
+
+function guardarEdicionVariacion() {
+    const index = document.getElementById('edit-variacion-index').value;
+    
+    combinaciones[index].sku = document.getElementById('edit-sku').value;
+    combinaciones[index].codigo_barras = document.getElementById('edit-codigo-barras').value;
+    combinaciones[index].precio = parseFloat(document.getElementById('edit-precio').value) || 0;
+    combinaciones[index].precio_oferta = document.getElementById('edit-precio-oferta').value ? 
+        parseFloat(document.getElementById('edit-precio-oferta').value) : null;
+    combinaciones[index].stock = parseInt(document.getElementById('edit-stock').value) || 0;
+    combinaciones[index].peso = document.getElementById('edit-peso').value ? 
+        parseFloat(document.getElementById('edit-peso').value) : null;
+    combinaciones[index].ancho = document.getElementById('edit-ancho').value ? 
+        parseFloat(document.getElementById('edit-ancho').value) : null;
+    combinaciones[index].alto = document.getElementById('edit-alto').value ? 
+        parseFloat(document.getElementById('edit-alto').value) : null;
+    combinaciones[index].profundidad = document.getElementById('edit-profundidad').value ? 
+        parseFloat(document.getElementById('edit-profundidad').value) : null;
+    
+    // Actualizar la tabla
+    mostrarCombinaciones();
+    
+    // Cerrar modal
+    bootstrap.Modal.getInstance(document.getElementById('modalEditarVariacion')).hide();
+}
+
+function eliminarVariacion(index) {
+    if (confirm('¿Estás seguro de eliminar esta variación?')) {
+        combinaciones.splice(index, 1);
+        mostrarCombinaciones();
+    }
+}
+
+function limpiarCombinaciones() {
+    if (combinaciones.length > 0 && confirm('¿Estás seguro de limpiar todas las variaciones?')) {
+        combinaciones = [];
+        mostrarCombinaciones();
+    }
+}
+
+function guardarVariaciones() {
+    if (combinaciones.length === 0) {
+        alert('No hay variaciones para guardar.');
+        return;
+    }
+    
+    // Preparar datos para enviar
+    const variacionesData = combinaciones.map(combinacion => {
+        return {
+            vSKU: combinacion.sku,
+            vCodigo_barras: combinacion.codigo_barras,
+            dPrecio: combinacion.precio,
+            dPrecio_oferta: combinacion.precio_oferta,
+            iStock: combinacion.stock,
+            dPeso: combinacion.peso,
+            dAncho: combinacion.ancho,
+            dAlto: combinacion.alto,
+            dProfundidad: combinacion.profundidad,
+            atributos: combinacion.atributos.map(atributo => {
+                return {
+                    id_atributo: atributo.id_atributo,
+                    id_atributo_valor: atributo.id_atributo_valor
+                };
+            })
+        };
+    });
+    
+    // Mostrar loading
+    const btnGuardar = event.target;
+    const originalText = btnGuardar.innerHTML;
+    btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Guardando...';
+    btnGuardar.disabled = true;
+    
+    // Enviar al servidor
+    fetch('{{ route("productos.guardar-variaciones", $producto->id_producto) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            variaciones: variacionesData
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Variaciones guardadas exitosamente');
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al guardar variaciones');
+    })
+    .finally(() => {
+        btnGuardar.innerHTML = originalText;
+        btnGuardar.disabled = false;
+    });
+}
 </script>
-@endpush
+@endsection

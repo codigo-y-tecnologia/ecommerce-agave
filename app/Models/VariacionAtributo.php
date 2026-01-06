@@ -5,23 +5,22 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class ProductoAtributo extends Model
+class VariacionAtributo extends Model
 {
     use HasFactory;
 
-    protected $table = 'tbl_producto_atributos';
-    protected $primaryKey = 'id_producto_atributo';
+    protected $table = 'tbl_variacion_atributos';
+    protected $primaryKey = 'id_variacion_atributo';
 
     protected $fillable = [
-        'id_producto',
+        'id_variacion',
         'id_atributo',
-        'id_atributo_valor',
-        'dPrecio_extra'
+        'id_atributo_valor'
     ];
 
-    public function producto()
+    public function variacion()
     {
-        return $this->belongsTo(Producto::class, 'id_producto');
+        return $this->belongsTo(ProductoVariacion::class, 'id_variacion');
     }
 
     public function atributo()
