@@ -148,7 +148,7 @@ Route::get('/superadmin/panel', function () {
     ->middleware(['auth', 'permission:configurar_sistema'])
     ->name('superadmin.panel');
 
-Route::middleware(['auth', 'permission:gestionar_administradores'])->group(function () {
+Route::middleware(['auth', 'permission:gestionar_sistema'])->group(function () {
     Route::get('/admins', [SuperadminController::class, 'index'])->name('superadmin.admins.index');
     Route::get('/superadmin/admins/create', [SuperadminController::class, 'create'])->name('superadmin.admins.create');
     Route::post('/superadmin/admins', [SuperadminController::class, 'store'])->name('superadmin.admins.store');

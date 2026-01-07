@@ -73,15 +73,12 @@ class AuthController extends Controller
 
     private function redirectToDashboard($user)
     {
-        if ($user->hasRole('superadmin')) {
-            return redirect()->route('dashboard.superadmin');
-        }
-
-        if ($user->hasRole('admin')) {
-            return redirect()->route('dashboard.admin');
-        }
-
-        return redirect()->route('dashboard.cliente');
+        return match (true) {
+            $user->hasRole('superadmin') => redirect()->route('dashboard.superadmin'),
+            $user->hasRole('admin')      => redirect()->route('dashboard.admin'),
+            $user->hasRole('cliente')    => redirect()->route('dashboard.cliente'),
+            default                      => abort(403, 'Rol no autorizado'),
+        };
     }
 
     public function showRegister()
