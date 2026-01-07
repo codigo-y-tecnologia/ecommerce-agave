@@ -131,7 +131,7 @@ class SuperadminController extends Controller
             'vEmail' => $data['vEmail'],
             'dFecha_nacimiento' => $data['dFecha_nacimiento'],
             'vPassword' => Hash::make($passwordPlain),
-            'eRol' => 'admin',
+            // 'eRol' => 'admin',
             'is_verified' => true,
         ]);
 

@@ -78,12 +78,22 @@ Route::middleware('auth')->group(function () {
 // Rutas para clientes
 // --------------------
 // --------------------
-Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])->group(function () {
+Route::middleware(['auth', 'permission:gestionar_perfil'])->group(function () {
 
-    // Perfil
+    // Módulo de perfil
     Route::get('/perfil', function () {
         return view('perfil.index');
     })->name('perfil.index');
+
+    // Configuración de perfil
+    Route::get('/perfil/configuracion', [PerfilController::class, 'configuracion'])->name('perfil.configuracion');
+
+    Route::put('/perfil/actualizar', [PerfilController::class, 'actualizar'])->name('perfil.actualizar');
+    Route::put('/perfil/cambiar-password', [PerfilController::class, 'cambiarPassword'])->name('perfil.cambiarPassword');
+    Route::delete('/perfil/eliminar', [PerfilController::class, 'eliminar'])->name('perfil.eliminar');
+});
+
+Route::middleware(['auth', 'permission:gestionar_direcciones'])->group(function () {
 
     // Módulo de direcciones
     Route::get('/perfil/direcciones', [DireccionController::class, 'index'])->name('direcciones.index');
@@ -103,41 +113,32 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':cliente'])-
 
         return response()->json(['success' => true, 'direccion' => $direccion]);
     });
-
-    // Configuración de perfil
-    Route::get('/perfil/configuracion', [PerfilController::class, 'configuracion'])->name('perfil.configuracion');
-
-    Route::put('/perfil/actualizar', [PerfilController::class, 'actualizar'])->name('perfil.actualizar');
-    Route::put('/perfil/cambiar-password', [PerfilController::class, 'cambiarPassword'])->name('perfil.cambiarPassword');
-    Route::delete('/perfil/eliminar', [PerfilController::class, 'eliminar'])->name('perfil.eliminar');
-
-
-    // Route::get('/carrito', [CarritoController::class, 'index'])->name('carrito.index');
-    // Route::post('/carrito/{producto}', [CarritoController::class, 'store'])->name('carrito.store');
-    // Route::put('/carrito/{detalle}', [CarritoController::class, 'update'])->name('carrito.update');
-    // Route::delete('/carrito/{detalle}', [CarritoController::class, 'destroy'])->name('carrito.destroy');
-
-    // Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
 });
 
 // --------------------
 // Rutas para admin
 // --------------------
-Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':admin'])->group(function () {
-    Route::get('/admin/dashboard', function () {
-        return "Bienvenido al panel de administración 👨‍💻";
-    })->name('admin.dashboard');
+Route::get('/admin/dashboard', function () {
+    return "Bienvenido al panel de administración 👨‍💻";
+})
+    ->middleware(['auth', 'permission:gestionar_tienda'])
+    ->name('admin.dashboard');
 
+Route::middleware(['auth', 'permission:gestionar_clientes'])->group(function () {
+
+    // Gestión de clientes
     Route::get('/admin/usuarios', [UsuarioController::class, 'index'])->name('admin.usuarios');
     Route::get('/admin/usuarios/{id}/edit', [UsuarioController::class, 'edit'])->name('admin.usuarios.edit');
     Route::put('/admin/usuarios/{id}', [UsuarioController::class, 'update'])->name('admin.usuarios.update');
     Route::delete('/admin/usuarios/{id}', [UsuarioController::class, 'destroy'])->name('admin.usuarios.destroy');
-
-    // Reportes
-    Route::get('/reportes', function () {
-        return view('reportes.index');
-    })->name('reportes.index');
 });
+
+// Reportes
+Route::get('/reportes', function () {
+    return view('reportes.index');
+})
+    ->middleware('permission:ver_reportes')
+    ->name('reportes.index');
 
 // --------------------
 // Rutas para superadmin
@@ -148,7 +149,9 @@ Route::get('/superadmin/panel', function () {
     ->middleware(['auth', 'permission:configurar_sistema'])
     ->name('superadmin.panel');
 
-Route::middleware(['auth', 'permission:gestionar_sistema'])->group(function () {
+Route::middleware(['auth', 'permission:gestionar_administradores'])->group(function () {
+
+    // Gestión de administradores
     Route::get('/admins', [SuperadminController::class, 'index'])->name('superadmin.admins.index');
     Route::get('/superadmin/admins/create', [SuperadminController::class, 'create'])->name('superadmin.admins.create');
     Route::post('/superadmin/admins', [SuperadminController::class, 'store'])->name('superadmin.admins.store');

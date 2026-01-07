@@ -21,6 +21,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'comprar_productos',
             'ver_pedidos_propios',
             'ver_perfil',
+            'gestionar_direcciones',
+            'gestionar_perfil',
 
             // Admin - operación
             'ver_pedidos',
@@ -29,6 +31,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'procesar_reembolsos',
             'ver_reportes',
             'gestionar_tienda',
+            'gestionar_clientes',
 
             // Superadmin - sistema
             'configurar_sistema',
@@ -51,6 +54,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'comprar_productos',
             'ver_pedidos_propios',
             'ver_perfil',
+            'gestionar_direcciones',
+            'gestionar_perfil',
         ]);
 
         $admin->syncPermissions([
@@ -60,6 +65,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'procesar_reembolsos',
             'ver_reportes',
             'gestionar_tienda',
+            'gestionar_clientes',
         ]);
 
         $superadmin->syncPermissions(Permission::all());

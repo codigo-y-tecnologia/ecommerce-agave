@@ -141,7 +141,7 @@ class AuthController extends Controller
             'is_verified' => false,
             'vPassword' => Hash::make($data['vPassword']),
             'dFecha_nacimiento' => $data['dFecha_nacimiento'],
-            'eRol' => 'cliente',
+            // 'eRol' => 'cliente',
             'remember_token' => $rememberToken, // Token para "recordar sesión"
             'api_token' => $apiToken, // Token para API
         ]);
