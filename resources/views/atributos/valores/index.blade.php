@@ -28,9 +28,6 @@
                             <th>#</th>
                             <th>Valor</th>
                             <th>Slug</th>
-                            <th>Precio Extra</th>
-                            <th>Stock</th>
-                            <th>Orden</th>
                             <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
@@ -45,15 +42,6 @@
                             <td>
                                 <code>{{ $valor->vSlug }}</code>
                             </td>
-                            <td>
-                                ${{ number_format($valor->dPrecio_extra, 2) }}
-                            </td>
-                            <td>
-                                <span class="badge {{ $valor->iStock > 10 ? 'bg-success' : ($valor->iStock > 0 ? 'bg-warning' : 'bg-danger') }}">
-                                    {{ $valor->iStock }}
-                                </span>
-                            </td>
-                            <td>{{ $valor->iOrden }}</td>
                             <td>
                                 <span class="badge {{ $valor->bActivo ? 'bg-success' : 'bg-secondary' }}">
                                     {{ $valor->bActivo ? 'Activo' : 'Inactivo' }}

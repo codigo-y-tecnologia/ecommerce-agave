@@ -129,7 +129,7 @@ class AtributoController extends Controller
     // Métodos para gestionar valores del atributo
     public function valores(Atributo $atributo)
     {
-        $valores = $atributo->valores()->orderBy('iOrden')->get();
+        $valores = $atributo->valores()->orderBy('vValor')->get();
         return view('atributos.valores.index', compact('atributo', 'valores'));
     }
 
@@ -140,31 +140,27 @@ class AtributoController extends Controller
 
     public function storeValor(Request $request, Atributo $atributo)
     {
-        $request->validate([
+       $request->validate([
             'vValor' => 'required|max:100',
             'vSlug' => 'nullable|max:100|unique:tbl_atributo_valores,vSlug',
-            'dPrecio_extra' => 'nullable|numeric|min:0',
-            'iStock' => 'nullable|integer|min:0',
-            'iOrden' => 'nullable|integer|min:0'
+            'bActivo' => 'boolean'
         ], [
             'vValor.required' => 'El valor es obligatorio',
+            'vValor.max' => 'El valor no puede tener más de 100 caracteres',
             'vSlug.unique' => 'El slug ya está en uso. Intenta con otro.'
         ]);
 
         try {
             DB::beginTransaction();
 
-            // Obtener el orden máximo actual
-            $ordenMax = $atributo->valores()->max('iOrden') ?? 0;
-
             AtributoValor::create([
                 'id_atributo' => $atributo->id_atributo,
                 'vValor' => $request->vValor,
                 'vSlug' => $request->vSlug ?: Str::slug($request->vValor),
-                'dPrecio_extra' => $request->dPrecio_extra ?? 0,
-                'iStock' => $request->iStock ?? 0,
-                'iOrden' => $request->iOrden ?? ($ordenMax + 1),
-                'bActivo' => true
+                'dPrecio_extra' => 0,
+                'iStock' => 0,
+                'iOrden' => 0,
+                'bActivo' => $request->has('bActivo')
             ]);
 
             DB::commit();
@@ -183,20 +179,18 @@ class AtributoController extends Controller
 
     public function editValor(Atributo $atributo, AtributoValor $valor)
     {
-        return view('atributos.valores.edit', compact('atributo', 'valor'));
+          return view('atributos.valores.edit', compact('atributo', 'valor'));
     }
 
     public function updateValor(Request $request, Atributo $atributo, AtributoValor $valor)
     {
-        $request->validate([
+         $request->validate([
             'vValor' => 'required|max:100',
             'vSlug' => 'nullable|max:100|unique:tbl_atributo_valores,vSlug,' . $valor->id_atributo_valor . ',id_atributo_valor',
-            'dPrecio_extra' => 'nullable|numeric|min:0',
-            'iStock' => 'nullable|integer|min:0',
-            'iOrden' => 'nullable|integer|min:0',
             'bActivo' => 'boolean'
         ], [
             'vValor.required' => 'El valor es obligatorio',
+            'vValor.max' => 'El valor no puede tener más de 100 caracteres',
             'vSlug.unique' => 'El slug ya está en uso. Intenta con otro.'
         ]);
 
@@ -206,9 +200,6 @@ class AtributoController extends Controller
             $valor->update([
                 'vValor' => $request->vValor,
                 'vSlug' => $request->vSlug ?: Str::slug($request->vValor),
-                'dPrecio_extra' => $request->dPrecio_extra ?? 0,
-                'iStock' => $request->iStock ?? 0,
-                'iOrden' => $request->iOrden ?? $valor->iOrden,
                 'bActivo' => $request->has('bActivo')
             ]);
 
@@ -228,7 +219,7 @@ class AtributoController extends Controller
 
     public function destroyValor(Atributo $atributo, AtributoValor $valor)
     {
-        try {
+      try {
             DB::beginTransaction();
 
             $valor->delete();
