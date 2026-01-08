@@ -45,12 +45,17 @@
                                         👨‍💼 Administración
                                     </a>
                                     <ul class="dropdown-menu">
+                                        @can('ver_clientes')
                                         <li><a class="dropdown-item" href="{{ route('admin.usuarios') }}">Clientes registrados</a></li>
+                                        @endcan
                                         <li><a class="dropdown-item" href="#">Cupones</a></li>
                                         <li><a class="dropdown-item" href="#">Impuestos</a></li>
                                         <li><a class="dropdown-item" href="#">Productos</a></li>
                                         <li><a class="dropdown-item" href="#">Pedidos</a></li>
                                         <li><a class="dropdown-item" href="#">Reportes</a></li>
+                                        @can('mi_perfil_admin')
+                                            <li><a class="dropdown-item" href="{{ route('admin.perfil.index') }}">Mi Perfil</a></li>
+                                        @endcan
                                     </ul>
                                 </li>
                             @endrole

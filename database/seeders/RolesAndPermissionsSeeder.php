@@ -18,8 +18,8 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $permissions = [
             // Clientes
-            'comprar_productos',
-            'ver_pedidos_propios',
+            'comprar_productos', //pendiente
+            'ver_pedidos_propios', //pendiente
             'ver_perfil',
             'gestionar_direcciones',
             'gestionar_perfil',
@@ -32,6 +32,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'ver_reportes',
             'gestionar_tienda',
             'gestionar_clientes',
+            'mi_perfil_admin',
 
             // Superadmin - sistema
             'configurar_sistema',
@@ -66,6 +67,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'ver_reportes',
             'gestionar_tienda',
             'gestionar_clientes',
+            'mi_perfil_admin',
         ]);
 
         $superadmin->syncPermissions(Permission::all());

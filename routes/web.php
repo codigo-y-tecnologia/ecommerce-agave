@@ -15,6 +15,7 @@ use App\Http\Controllers\Superadmin\SuperadminController;
 use App\Http\Controllers\Perfil\DireccionController;
 use App\Models\Direccion;
 use App\Http\Controllers\Perfil\PerfilController;
+use App\Http\Controllers\Admin\AdminPerfilController;
 
 Route::get('/', function () {
     // Si el usuario está autenticado, lo redirigimos a su dashboard según su rol
@@ -131,6 +132,22 @@ Route::middleware(['auth', 'permission:gestionar_clientes'])->group(function () 
     Route::get('/admin/usuarios/{id}/edit', [UsuarioController::class, 'edit'])->name('admin.usuarios.edit');
     Route::put('/admin/usuarios/{id}', [UsuarioController::class, 'update'])->name('admin.usuarios.update');
     Route::delete('/admin/usuarios/{id}', [UsuarioController::class, 'destroy'])->name('admin.usuarios.destroy');
+});
+
+Route::middleware(['auth', 'permission:mi_perfil_admin'])->group(function () {
+
+    // Perfil del admin
+    Route::get('/perfil', [AdminPerfilController::class, 'index'])
+        ->name('admin.perfil.index');
+
+    Route::put('/datos', [AdminPerfilController::class, 'updateDatos'])
+        ->name('admin.perfil.datos');
+
+    Route::put('/password', [AdminPerfilController::class, 'updatePassword'])
+        ->name('admin.perfil.password');
+
+    Route::post('/cerrar-sesiones', [AdminPerfilController::class, 'logoutOtherDevices'])
+        ->name('admin.perfil.logout.others');
 });
 
 // Reportes

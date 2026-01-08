@@ -35,6 +35,9 @@
                                         👨‍💼 Administración
                                     </a>
                                     <ul class="dropdown-menu">
+                                        @can('mi_perfil_admin')
+                                            <li><a class="dropdown-item" href="{{ route('admin.perfil.index') }}">Mi Perfil</a></li>
+                                        @endcan
                                     @can('ver_clientes')
                                         <li><a class="dropdown-item" href="{{ route('admin.usuarios') }}">Clientes registrados</a></li>
                                     @endcan
@@ -44,7 +47,9 @@
                                         <li><a class="dropdown-item" href="#">Productos</a></li>
                                     @endcan    
                                         <li><a class="dropdown-item" href="#">Pedidos</a></li>
-                                        <li><a class="dropdown-item" href="{{ route('reportes.index') }}">Reportes</a></li>
+                                        @can('ver_reportes')
+                                            <li><a class="dropdown-item" href="{{ route('reportes.index') }}">Reportes</a></li>
+                                        @endcan
                                         <li><a class="dropdown-item" href="#">Reembolsos</a></li>
                                     </ul>
                                 </li>
