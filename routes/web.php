@@ -137,7 +137,7 @@ Route::middleware(['auth', 'permission:gestionar_clientes'])->group(function () 
 Route::middleware(['auth', 'permission:mi_perfil_admin'])->group(function () {
 
     // Perfil del admin
-    Route::get('/perfil', [AdminPerfilController::class, 'index'])
+    Route::get('/perfil/admin', [AdminPerfilController::class, 'index'])
         ->name('admin.perfil.index');
 
     Route::put('/datos', [AdminPerfilController::class, 'updateDatos'])
