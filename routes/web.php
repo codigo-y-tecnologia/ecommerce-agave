@@ -16,6 +16,7 @@ use App\Http\Controllers\Perfil\DireccionController;
 use App\Models\Direccion;
 use App\Http\Controllers\Perfil\PerfilController;
 use App\Http\Controllers\Admin\AdminPerfilController;
+use App\Http\Controllers\Auth\EmailChangeController;
 
 Route::get('/', function () {
     // Si el usuario está autenticado, lo redirigimos a su dashboard según su rol
@@ -66,6 +67,9 @@ Route::middleware('guest')->group(function () {
 
     Route::post('/reset-password', [ResetPasswordController::class, 'reset'])
         ->name('password.update');
+
+    Route::get('/email/change/verify/{token}', [EmailChangeController::class, 'verify'])
+        ->name('email.change.verify');
 });
 
 Route::middleware('auth')->group(function () {
@@ -148,6 +152,9 @@ Route::middleware(['auth', 'permission:mi_perfil_admin'])->group(function () {
 
     Route::post('/cerrar-sesiones', [AdminPerfilController::class, 'logoutOtherDevices'])
         ->name('admin.perfil.logout.others');
+
+    Route::get('/admin/verificar-email/{token}', [AdminPerfilController::class, 'verifyNewEmail'])
+        ->name('admin.email.verify');
 });
 
 // Reportes
