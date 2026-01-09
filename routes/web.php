@@ -10,7 +10,7 @@ use App\Http\Controllers\MarcaController;
 use App\Http\Controllers\BusquedaController;
 use App\Http\Controllers\FavoritoController;
 use App\Http\Controllers\AtributoController;
-
+use App\Http\Controllers\ValoracionController; // ¡Asegúrate de agregar esto!
 
 // RUTA PRINCIPAL - redirige a la página de inicio real
 Route::get('/', function() {
@@ -76,3 +76,20 @@ Route::prefix('atributos/{atributo}')->name('atributos.')->group(function () {
 // Rutas para asignar atributos a productos (más simple)
 Route::get('/productos/{id}/asignar-atributos', [ProductoController::class, 'asignarAtributos'])->name('productos.asignar-atributos');
 Route::post('/productos/{id}/guardar-atributos', [ProductoController::class, 'guardarAtributos'])->name('productos.guardar-atributos');
+
+// =====================================================================
+// RUTAS PARA VALORACIONES (VARIACIONES)
+// =====================================================================
+
+Route::prefix('valoraciones')->name('valoraciones.')->group(function () {
+    Route::get('/', [ValoracionController::class, 'index'])->name('index');
+    Route::get('/producto/{id}', [ValoracionController::class, 'show'])->name('show');
+    Route::get('/producto/{producto_id}/crear', [ValoracionController::class, 'create'])->name('create');
+    Route::post('/producto/{producto_id}', [ValoracionController::class, 'store'])->name('store');
+    Route::get('/producto/{producto_id}/editar/{variacion_id}', [ValoracionController::class, 'edit'])->name('edit');
+    Route::put('/producto/{producto_id}/{variacion_id}', [ValoracionController::class, 'update'])->name('update');
+    Route::delete('/producto/{producto_id}/{variacion_id}', [ValoracionController::class, 'destroy'])->name('destroy');
+});
+
+// Ruta alternativa para el sidebar
+Route::get('/productos/valoraciones', [ValoracionController::class, 'index'])->name('productos.valoraciones');

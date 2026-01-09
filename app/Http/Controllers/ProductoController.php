@@ -486,4 +486,13 @@ class ProductoController extends Controller
                 ->withErrors(['error' => 'Error al asignar atributos: ' . $e->getMessage()]);
         }
     }
+    public function valoraciones()
+{
+    $productos = Producto::with(['variaciones.atributos.valor', 'variaciones.atributos.atributo'])
+        ->whereHas('variaciones')
+        ->orderBy('vNombre')
+        ->get();
+        
+    return view('productos.valoraciones', compact('productos'));
+}
 }
