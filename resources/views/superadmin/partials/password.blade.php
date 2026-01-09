@@ -1,4 +1,4 @@
-<form method="POST" action="{{ route('admin.perfil.password') }}">
+<form method="POST" action="{{ route('superadmin.perfil.password') }}">
     @csrf
     @method('PUT')
 

@@ -24,6 +24,9 @@ class Usuario extends Authenticatable implements CanResetPassword
         'vApaterno',
         'vAmaterno',
         'vEmail',
+        'email_pending',
+        'email_verification_token',
+        'email_verified_at',
         'is_verified',
         'verification_token',
         'vPassword',
@@ -34,12 +37,13 @@ class Usuario extends Authenticatable implements CanResetPassword
     ];
 
     protected $hidden = [
+        'email_verification_token',
         'verification_token',
         'vPassword',
         'remember_token',
         'api_token'
     ];
-    
+
     public function getEmailForPasswordReset()
     {
         return $this->vEmail;
@@ -61,7 +65,7 @@ class Usuario extends Authenticatable implements CanResetPassword
     {
         $this->verification_token = Str::random(60);
         $this->save();
-        
+
         return $this->verification_token;
     }
 

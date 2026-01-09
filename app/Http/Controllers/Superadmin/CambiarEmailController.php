@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\Auth;
+namespace App\Http\Controllers\Superadmin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Usuario;
 
-class EmailChangeController extends Controller
+class CambiarEmailController extends Controller
 {
     public function verify(string $token)
     {
@@ -23,7 +23,7 @@ class EmailChangeController extends Controller
         $user->email_verification_token = null;
         $user->save();
 
-        return redirect()->route('admin.perfil.index')
+        return redirect()->route('superadmin.perfil.index')
             ->with('success', 'Tu correo electrónico fue actualizado correctamente.');
     }
 }

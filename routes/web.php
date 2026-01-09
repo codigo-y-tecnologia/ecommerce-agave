@@ -17,6 +17,8 @@ use App\Models\Direccion;
 use App\Http\Controllers\Perfil\PerfilController;
 use App\Http\Controllers\Admin\AdminPerfilController;
 use App\Http\Controllers\Auth\EmailChangeController;
+use App\Http\Controllers\Superadmin\SuperadminPerfilController;
+use App\Http\Controllers\Superadmin\CambiarEmailController;
 
 Route::get('/', function () {
     // Si el usuario está autenticado, lo redirigimos a su dashboard según su rol
@@ -67,9 +69,6 @@ Route::middleware('guest')->group(function () {
 
     Route::post('/reset-password', [ResetPasswordController::class, 'reset'])
         ->name('password.update');
-
-    Route::get('/email/change/verify/{token}', [EmailChangeController::class, 'verify'])
-        ->name('email.change.verify');
 });
 
 Route::middleware('auth')->group(function () {
@@ -155,6 +154,9 @@ Route::middleware(['auth', 'permission:mi_perfil_admin'])->group(function () {
 
     Route::get('/admin/verificar-email/{token}', [AdminPerfilController::class, 'verifyNewEmail'])
         ->name('admin.email.verify');
+
+    Route::get('/email/change/verify/{token}', [EmailChangeController::class, 'verify'])
+        ->name('email.change.verify');
 });
 
 // Reportes
@@ -183,3 +185,29 @@ Route::middleware(['auth', 'permission:gestionar_administradores'])->group(funct
     Route::post('/admins/demote/{id}', [SuperadminController::class, 'demoteToClient'])->name('superadmin.admins.demote');
     Route::delete('/admins/{id}', [SuperadminController::class, 'destroy'])->name('superadmin.admins.destroy');
 });
+
+Route::middleware([
+    'auth',
+    'spatie.role:superadmin'
+])->prefix('superadmin')
+    ->name('superadmin.')
+    ->group(function () {
+
+        Route::get('/perfil', [SuperadminPerfilController::class, 'index'])
+            ->name('perfil.index');
+
+        Route::put('/perfil/datos', [SuperadminPerfilController::class, 'updateDatos'])
+            ->name('perfil.datos');
+
+        Route::put('/perfil/password', [SuperadminPerfilController::class, 'updatePassword'])
+            ->name('perfil.password');
+
+        Route::post('/perfil/logout-others', [SuperadminPerfilController::class, 'logoutOtherDevices'])
+            ->name('perfil.logoutOthers');
+
+        Route::get('/perfil/verify-email/{token}', [SuperadminPerfilController::class, 'verifyNewEmail'])
+            ->name('perfil.verifyEmail');
+
+        Route::get('superadmin/email/change/verify/{token}', [CambiarEmailController::class, 'verify'])
+            ->name('superadmin.email.change.verify');
+    });

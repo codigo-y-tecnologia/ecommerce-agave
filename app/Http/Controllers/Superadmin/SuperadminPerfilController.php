@@ -1,52 +1,45 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Superadmin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Models\Usuario;
-use Illuminate\Support\Str;
+use App\Mail\VerifyNewEmailSuperAdmin;
 
-class AdminPerfilController extends Controller
+class SuperadminPerfilController extends Controller
 {
-    /**
-     * Vista principal del perfil
-     */
     public function index()
     {
-        return view('admin.perfil.index');
+        return view('superadmin.perfil.index');
     }
 
-    /**
-     * Actualizar datos personales
-     */
     public function updateDatos(Request $request)
     {
         $user = Auth::user();
 
         $data = $request->validate([
-            'vNombre'    => 'required|string|max:60',
-            'vApaterno'  => 'required|string|max:50',
-            'vAmaterno'  => 'required|string|max:50',
-            'vEmail'     => 'required|email|max:100',
+            'vNombre'   => 'required|string|max:60',
+            'vApaterno' => 'required|string|max:50',
+            'vAmaterno' => 'required|string|max:50',
+            'vEmail'    => 'required|email|max:100',
         ]);
 
-        // Actualizar nombre y apellidos
+        // Datos básicos
         $user->update([
             'vNombre'   => $data['vNombre'],
             'vApaterno' => $data['vApaterno'],
             'vAmaterno' => $data['vAmaterno'],
         ]);
 
-        // Si cambia el email
+        // Cambio de correo
         if ($data['vEmail'] !== $user->vEmail) {
 
-            if (
-                Usuario::where('vEmail', $data['vEmail'])->exists()
-            ) {
+            if (Usuario::where('vEmail', $data['vEmail'])->exists()) {
                 return back()->withErrors([
                     'vEmail' => 'El correo ya está en uso.'
                 ]);
@@ -60,21 +53,18 @@ class AdminPerfilController extends Controller
             ]);
 
             Mail::to($data['vEmail'])->send(
-                new \App\Mail\VerifyNewEmail($user, $token)
+                new VerifyNewEmailSuperAdmin($user, $token)
             );
 
             return back()->with(
                 'warning',
-                'Se envió un enlace de verificación al nuevo correo. El cambio se aplicará cuando lo confirmes.'
+                'Debes confirmar el nuevo correo. El cambio no se aplicará hasta verificarlo.'
             );
         }
 
-        return back()->with('success', 'Datos actualizados correctamente.');
+        return back()->with('success', 'Perfil actualizado correctamente.');
     }
 
-    /**
-     * Verificar nuevo correo electrónico
-     */
     public function verifyNewEmail($token)
     {
         $user = Usuario::where('email_verification_token', $token)->firstOrFail();
@@ -85,23 +75,18 @@ class AdminPerfilController extends Controller
             'email_verification_token' => null,
         ]);
 
-        return redirect()->route('admin.perfil.index')
+        return redirect()
+            ->route('superadmin.perfil.index')
             ->with('success', 'Correo electrónico actualizado correctamente.');
     }
 
-    /**
-     * Cambiar contraseña
-     */
     public function updatePassword(Request $request)
     {
         $request->validate([
-            'current_password' => ['required'],
-            'password' => ['required', 'confirmed', 'min:8'],
+            'current_password' => 'required',
+            'password' => 'required|confirmed|min:12',
         ], [
-            'current_password.required' => 'Debes ingresar tu contraseña actual.',
-            'password.required' => 'La nueva contraseña es obligatoria.',
-            'password.confirmed' => 'Las contraseñas no coinciden.',
-            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
+            'password.min' => 'La contraseña debe tener al menos 12 caracteres.',
         ]);
 
         $user = Auth::user();
@@ -117,40 +102,32 @@ class AdminPerfilController extends Controller
             'remember_token' => Str::random(60),
         ]);
 
-        Auth::logout(); // cierra sesión actual
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        Auth::logout();
 
-        return back()->with('success', 'Contraseña actualizada. Inicia sesión nuevamente.');
+        return redirect()->route('login')
+            ->with('success', 'Contraseña actualizada. Vuelve a iniciar sesión.');
     }
 
-    /**
-     * Cerrar sesiones activas
-     */
     public function logoutOtherDevices(Request $request)
     {
         $request->validate([
-            'password' => ['required'],
-        ], [
-            'password.required' => 'Debes ingresar tu contraseña actual.',
+            'password' => 'required',
         ]);
 
         $user = Auth::user();
 
         if (!Hash::check($request->password, $user->vPassword)) {
             return back()->withErrors([
-                'password' => 'La contraseña ingresada no es correcta.'
+                'password' => 'La contraseña no es correcta.'
             ]);
         }
 
-        // Invalidar todas las demás sesiones
         $user->update([
             'remember_token' => Str::random(60),
         ]);
 
-        // Mantiene la sesión actual
         $request->session()->regenerate();
 
-        return back()->with('success', 'Se cerraron todas las demás sesiones.');
+        return back()->with('success', 'Todas las demás sesiones han sido cerradas.');
     }
 }
