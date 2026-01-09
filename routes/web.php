@@ -208,6 +208,6 @@ Route::middleware([
         Route::get('/perfil/verify-email/{token}', [SuperadminPerfilController::class, 'verifyNewEmail'])
             ->name('perfil.verifyEmail');
 
-        Route::get('superadmin/email/change/verify/{token}', [CambiarEmailController::class, 'verify'])
-            ->name('superadmin.email.change.verify');
+        Route::get('/email/change/verify/{token}', [CambiarEmailController::class, 'verify'])
+            ->name('email.change.verify');
     });

@@ -35,7 +35,7 @@ class VerifyNewEmailSuperAdmin extends Mailable
             ->view('emails.verify-new-email')
             ->with([
                 'nombre' => $this->user->vNombre,
-                'verificationUrl' => route('superadmin.email.change.verify', $this->token),
+                'verificationUrl' => route('email.change.verify', $this->token),
             ]);
     }
 }
