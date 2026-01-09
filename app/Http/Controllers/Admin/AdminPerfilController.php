@@ -121,7 +121,8 @@ class AdminPerfilController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return back()->with('success', 'Contraseña actualizada. Inicia sesión nuevamente.');
+        return redirect()->route('login')
+            ->with('success', 'Contraseña actualizada. Vuelve a iniciar sesión.');
     }
 
     /**

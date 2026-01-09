@@ -62,6 +62,9 @@
                                         👑 Panel Superadmin
                                     </a>
                                     <ul class="dropdown-menu">
+                                    @can('mi_perfil_superadmin')
+                                        <li><a class="dropdown-item" href="{{ route('superadmin.perfil.index') }}">Mi Perfil</a></li>
+                                    @endcan
                                     @can('gestionar_administradores')
                                         <li><a class="dropdown-item" href="{{ route('superadmin.admins.index') }}">Gestión de administradores</a></li>
                                     @endcan

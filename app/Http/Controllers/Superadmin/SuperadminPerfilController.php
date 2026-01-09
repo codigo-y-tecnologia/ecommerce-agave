@@ -84,9 +84,12 @@ class SuperadminPerfilController extends Controller
     {
         $request->validate([
             'current_password' => 'required',
-            'password' => 'required|confirmed|min:12',
+            'password' => 'required|confirmed|min:8',
         ], [
-            'password.min' => 'La contraseña debe tener al menos 12 caracteres.',
+            'current_password.required' => 'Debes ingresar tu contraseña actual.',
+            'password.required' => 'La nueva contraseña es obligatoria.',
+            'password.confirmed' => 'Las contraseñas no coinciden.',
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
         ]);
 
         $user = Auth::user();
@@ -111,14 +114,16 @@ class SuperadminPerfilController extends Controller
     public function logoutOtherDevices(Request $request)
     {
         $request->validate([
-            'password' => 'required',
+            'password' => ['required'],
+        ], [
+            'password.required' => 'Debes ingresar tu contraseña actual.',
         ]);
 
         $user = Auth::user();
 
         if (!Hash::check($request->password, $user->vPassword)) {
             return back()->withErrors([
-                'password' => 'La contraseña no es correcta.'
+                'password' => 'La contraseña ingresada no es correcta.'
             ]);
         }
 

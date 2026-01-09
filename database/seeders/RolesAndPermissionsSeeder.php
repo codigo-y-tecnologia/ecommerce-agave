@@ -41,6 +41,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'gestionar_permisos',
             'ver_monitoreo',
             'gestionar_sistema',
+            'mi_perfil_superadmin',
         ];
 
         foreach ($permissions as $permission) {

@@ -9,6 +9,19 @@
 </div>
 
 <div class="row g-4">
+
+    <div class="col-md-4">
+        <div class="card border-secondary shadow-sm">
+            <div class="card-body text-center">
+                <h5>👤 Mi Perfil</h5>
+                <p>Gestiona tu perfil y preferencias.</p>
+                @can('mi_perfil_superadmin')
+                    <a href="{{ route('superadmin.perfil.index') }}" class="btn btn-secondary w-100">Mi Perfil</a>
+                @endcan
+            </div>
+        </div>
+    </div>
+
     <div class="col-md-4">
         <div class="card border-danger shadow-sm">
             <div class="card-body text-center">

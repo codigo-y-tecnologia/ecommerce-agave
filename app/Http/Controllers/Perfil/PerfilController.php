@@ -6,6 +6,10 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
+use App\Models\Usuario;
+use App\Mail\VerifyNewEmail;
 
 class PerfilController extends Controller
 {
@@ -26,13 +30,13 @@ class PerfilController extends Controller
             'vNombre'   => 'required|string|max:60',
             'vApaterno' => 'required|string|max:50',
             'vAmaterno' => 'nullable|string|max:50',
-            'vEmail'    => 'required|email|max:100|unique:tbl_usuarios,vEmail,' . $usuario->id_usuario . ',id_usuario',
+            'vEmail'    => 'required|email|max:100',
         ], [
             'vNombre.required'   => 'El nombre es obligatorio.',
             'vApaterno.required' => 'El apellido paterno es obligatorio.',
             'vEmail.required'    => 'El correo es obligatorio.',
             'vEmail.email'       => 'Debe ingresar un correo válido.',
-            'vEmail.unique'      => 'Este correo ya está registrado.',
+            'vEmail.max'         => 'El correo no debe exceder los 100 caracteres.',
         ]);
 
         // Actualizar los datos
@@ -40,10 +44,35 @@ class PerfilController extends Controller
             'vNombre'   => $request->vNombre,
             'vApaterno' => $request->vApaterno,
             'vAmaterno' => $request->vAmaterno,
-            'vEmail'    => $request->vEmail,
         ]);
 
-        return back()->with('success', '✅ Tus datos se han actualizado correctamente.');
+        // Cambio de correo
+        if ($data['vEmail'] !== $user->vEmail) {
+
+            if (Usuario::where('vEmail', $data['vEmail'])->exists()) {
+                return back()->withErrors([
+                    'vEmail' => 'Este correo ya está registrado.'
+                ]);
+            }
+
+            $token = Str::random(60);
+
+            $user->update([
+                'email_pending' => $data['vEmail'],
+                'email_verification_token' => $token,
+            ]);
+
+            Mail::to($data['vEmail'])->send(
+                new \App\Mail\VerifyNewEmail($user, $token)
+            );
+
+            return back()->with(
+                'warning',
+                'Te enviamos un correo para confirmar tu nuevo email.'
+            );
+        }
+
+        return back()->with('success', 'Datos actualizados correctamente.');
     }
 
     /**
@@ -88,5 +117,4 @@ class PerfilController extends Controller
 
         return redirect()->route('home')->with('success', '🗑️ Tu cuenta ha sido eliminada correctamente.');
     }
-    
 }

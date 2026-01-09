@@ -93,7 +93,15 @@ Route::middleware(['auth', 'permission:gestionar_perfil'])->group(function () {
     Route::get('/perfil/configuracion', [PerfilController::class, 'configuracion'])->name('perfil.configuracion');
 
     Route::put('/perfil/actualizar', [PerfilController::class, 'actualizar'])->name('perfil.actualizar');
+
     Route::put('/perfil/cambiar-password', [PerfilController::class, 'cambiarPassword'])->name('perfil.cambiarPassword');
+
+    Route::post('/perfil/logout-others', [PerfilController::class, 'logoutOtherDevices'])
+        ->name('perfil.logoutOthers');
+
+    Route::get('/perfil/verify-email/{token}', [PerfilController::class, 'verifyNewEmail'])
+        ->name('perfil.verifyEmail');
+
     Route::delete('/perfil/eliminar', [PerfilController::class, 'eliminar'])->name('perfil.eliminar');
 });
 
