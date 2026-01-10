@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Models\Usuario;
-use App\Mail\VerifyNewEmail;
+use App\Mail\VerifyNewEmailCliente;
 
 class PerfilController extends Controller
 {
@@ -26,28 +26,31 @@ class PerfilController extends Controller
     {
         $usuario = Auth::user();
 
-        $request->validate([
-            'vNombre'   => 'required|string|max:60',
-            'vApaterno' => 'required|string|max:50',
-            'vAmaterno' => 'nullable|string|max:50',
-            'vEmail'    => 'required|email|max:100',
+        $data = $request->validate([
+            'vNombre' => ['required', 'string', 'max:60', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/u'],
+            'vApaterno' => ['required', 'string', 'max:50', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/u'],
+            'vAmaterno' => ['required', 'string', 'max:50', 'regex:/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/u'],
+            'vEmail' => ['required', 'email', 'max:100'],
         ], [
+            // Mensajes personalizados claros
             'vNombre.required'   => 'El nombre es obligatorio.',
             'vApaterno.required' => 'El apellido paterno es obligatorio.',
+            'vAmaterno.required' => 'El apellido materno es obligatorio.',
             'vEmail.required'    => 'El correo es obligatorio.',
-            'vEmail.email'       => 'Debe ingresar un correo válido.',
+            'regex' => 'El campo :attribute solo puede contener letras y espacios.',
+            'vEmail.email' => 'El correo electrónico debe tener un formato válido.',
             'vEmail.max'         => 'El correo no debe exceder los 100 caracteres.',
         ]);
 
         // Actualizar los datos
         $usuario->update([
-            'vNombre'   => $request->vNombre,
-            'vApaterno' => $request->vApaterno,
-            'vAmaterno' => $request->vAmaterno,
+            'vNombre'   => $data['vNombre'],
+            'vApaterno' => $data['vApaterno'],
+            'vAmaterno' => $data['vAmaterno'],
         ]);
 
         // Cambio de correo
-        if ($data['vEmail'] !== $user->vEmail) {
+        if ($data['vEmail'] !== $usuario->vEmail) {
 
             if (Usuario::where('vEmail', $data['vEmail'])->exists()) {
                 return back()->withErrors([
@@ -57,13 +60,13 @@ class PerfilController extends Controller
 
             $token = Str::random(60);
 
-            $user->update([
+            $usuario->update([
                 'email_pending' => $data['vEmail'],
                 'email_verification_token' => $token,
             ]);
 
             Mail::to($data['vEmail'])->send(
-                new \App\Mail\VerifyNewEmail($user, $token)
+                new VerifyNewEmailCliente($usuario, $token)
             );
 
             return back()->with(
@@ -99,10 +102,63 @@ class PerfilController extends Controller
         }
 
         // Actualizar la contraseña
-        $usuario->vPassword = Hash::make($request->password_nueva);
-        $usuario->save();
+        $usuario->update([
+            'vPassword' => Hash::make($request->password_nueva),
+            'remember_token' => Str::random(60),
+        ]);
 
-        return back()->with('success', '🔒 Tu contraseña se ha actualizado correctamente.');
+        Auth::logout();
+
+        return redirect()->route('login')
+            ->with('success', 'Contraseña actualizada. Vuelve a iniciar sesión.');
+    }
+
+    /**
+     * Cerrar otras sesiones
+     */
+    public function logoutOtherDevices(Request $request)
+    {
+        $request->validate([
+            'password' => 'required',
+        ]);
+
+        $user = Auth::user();
+
+        if (!Hash::check($request->password, $user->vPassword)) {
+            return back()->withErrors([
+                'password' => 'La contraseña no es correcta.'
+            ]);
+        }
+
+        $user->update([
+            'remember_token' => Str::random(60),
+        ]);
+
+        $request->session()->regenerate();
+
+        return back()->with('success', 'Otras sesiones cerradas correctamente.');
+    }
+
+    /**
+     * Verificar nuevo correo electrónico
+     */
+    public function verifyNewEmail(string $token)
+    {
+        $user = Usuario::where('email_verification_token', $token)->first();
+
+        if (!$user || !$user->email_pending) {
+            return redirect('/login')
+                ->with('error', 'El enlace es inválido o ha expirado.');
+        }
+
+        // Confirmar cambio
+        $user->vEmail = $user->email_pending;
+        $user->email_pending = null;
+        $user->email_verification_token = null;
+        $user->save();
+
+        return redirect()->route('perfil.configuracion')
+            ->with('success', 'Tu correo electrónico fue actualizado correctamente.');
     }
 
     /**
@@ -110,7 +166,19 @@ class PerfilController extends Controller
      */
     public function eliminar(Request $request)
     {
+
+        $request->validate([
+            'password' => 'required',
+        ]);
+
         $usuario = Auth::user();
+
+        if (!Hash::check($request->password, $usuario->vPassword)) {
+            return back()->withErrors([
+                'password' => 'La contraseña ingresada no es correcta.'
+            ]);
+        }
+
         Auth::logout();
 
         $usuario->delete();
