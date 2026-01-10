@@ -79,7 +79,9 @@
                                         <li><a class="dropdown-item" href="#">Monitoreo del sistema</a></li>
                                         <li><a class="dropdown-item" href="#">Logs de seguridad</a></li>
                                         <li><a class="dropdown-item" href="#">Configuración global</a></li>
-                                        <li><a class="dropdown-item" href="#">Gestión de permisos</a></li>
+                                        @can('gestionar_permisos')
+                                        <li><a class="dropdown-item" href="{{ route('roles.permisos') }}">Gestión de permisos</a></li>
+                                        @endcan
                                     </ul>
                                 </li>
                             @endrole

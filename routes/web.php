@@ -19,6 +19,9 @@ use App\Http\Controllers\Admin\AdminPerfilController;
 use App\Http\Controllers\Auth\EmailChangeController;
 use App\Http\Controllers\Superadmin\SuperadminPerfilController;
 use App\Http\Controllers\Superadmin\CambiarEmailController;
+use App\Http\Controllers\Superadmin\SpatieRoleController;
+use App\Http\Controllers\Superadmin\SpatiePermissionController;
+use App\Http\Controllers\Superadmin\SpatieRolePermissionController;
 
 Route::get('/', function () {
     // Si el usuario está autenticado, lo redirigimos a su dashboard según su rol
@@ -219,3 +222,32 @@ Route::middleware([
         Route::get('/email/change/verify/{token}', [CambiarEmailController::class, 'verify'])
             ->name('email.change.verify');
     });
+
+Route::middleware(['auth', 'permission:gestionar_permisos'])->group(function () {
+
+    // Gestión de roles y permisos
+    Route::get('/superadmin/rolesypermisos', function () {
+        return view('superadmin.roles.rolesypermisos');
+    })->name('roles.permisos');
+
+    // Roles
+    Route::get('/superadmin/roles', [SpatieRoleController::class, 'index'])
+        ->name('roles.index');
+
+    // Permisos
+    Route::get('/superadmin/permissions', [SpatiePermissionController::class, 'index'])
+        ->name('permissions.index');
+
+    Route::get('/superadmin/permissions/create', [SpatiePermissionController::class, 'create'])
+        ->name('permissions.create');
+
+    Route::post('/superadmin/permissions', [SpatiePermissionController::class, 'store'])
+        ->name('permissions.store');
+
+    // Asignar permisos a roles
+    Route::get('/superadmin/roles/{role}/permissions', [SpatieRolePermissionController::class, 'edit'])
+        ->name('roles.permissions.edit');
+
+    Route::post('/superadmin/roles/{role}/permissions', [SpatieRolePermissionController::class, 'update'])
+        ->name('roles.permissions.update');
+});

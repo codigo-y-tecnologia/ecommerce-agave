@@ -61,7 +61,9 @@
             <div class="card-body text-center">
                 <h5>🧾 Permisos y Roles</h5>
                 <p>Gestiona permisos avanzados y asignaciones de roles.</p>
-                <a href="#" class="btn btn-info w-100">Gestionar permisos</a>
+                @can('gestionar_permisos')
+                    <a href="{{ route('roles.permisos') }}" class="btn btn-info w-100">Gestionar permisos</a>
+                @endcan
             </div>
         </div>
     </div>
