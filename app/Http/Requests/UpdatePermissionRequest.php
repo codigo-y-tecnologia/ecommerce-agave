@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Auth\Access\AuthorizationException;
 
-class StorePermissionRequest extends FormRequest
+class UpdatePermissionRequest extends FormRequest
 {
 
     protected function prepareForValidation()
@@ -20,8 +20,7 @@ class StorePermissionRequest extends FormRequest
      */
     public function authorize(): bool
     {
-
-        if (in_array($this->name, [
+        if (in_array($this->permission->name, [
             'configurar_sistema',
             'gestionar_permisos',
             'gestionar_sistema'
@@ -46,8 +45,9 @@ class StorePermissionRequest extends FormRequest
      */
     public function rules(): array
     {
+
         return [
-            'name' => 'required|string|min:3|max:50|unique:permissions,name',
+            'name' => 'required|string|min:3|max:50|unique:permissions,name,' . $this->permission->id
         ];
     }
 

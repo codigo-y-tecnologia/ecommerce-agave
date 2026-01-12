@@ -244,6 +244,9 @@ Route::middleware(['auth', 'permission:gestionar_permisos'])->group(function () 
     Route::post('/superadmin/permissions', [SpatiePermissionController::class, 'store'])
         ->name('permissions.store');
 
+    Route::resource('permissions', SpatiePermissionController::class)
+        ->except(['show']);
+
     // Asignar permisos a roles
     Route::get('/superadmin/roles/{role}/permissions', [SpatieRolePermissionController::class, 'edit'])
         ->name('roles.permissions.edit');
