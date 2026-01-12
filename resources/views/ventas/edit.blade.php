@@ -47,9 +47,6 @@
             <select name="eMetodo_pago" class="form-select" required>
                 <option value="stripe" @selected(old('eMetodo_pago', $venta->eMetodo_pago)=='stripe')>Stripe</option>
                 <option value="paypal" @selected(old('eMetodo_pago', $venta->eMetodo_pago)=='paypal')>PayPal</option>
-                <option value="tarjeta" @selected(old('eMetodo_pago', $venta->eMetodo_pago)=='tarjeta')>Tarjeta</option>
-                <option value="transferencia" @selected(old('eMetodo_pago', $venta->eMetodo_pago)=='transferencia')>Transferencia</option>
-                <option value="efectivo" @selected(old('eMetodo_pago', $venta->eMetodo_pago)=='efectivo')>Efectivo</option>
             </select>
         </div>
 

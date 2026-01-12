@@ -17,11 +17,22 @@ class VentaController extends Controller
             $query->where(function($q) use ($searchTerm) {
                 $q->where('id_venta', 'LIKE', "%{$searchTerm}%")
                   ->orWhere('id_pedido', 'LIKE', "%{$searchTerm}%")
-                  ->orWhere('id_usuario', 'LIKE', "%{$searchTerm}%");
+                  ->orWhere('id_usuario', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('dTotal', 'LIKE', "%{$searchTerm}%");
+            
+                // BÚSQUEDA POR FECHA 
+                if (preg_match('/^\d{1,2}\/\d{1,2}\/\d{4}$/', $searchTerm)) {
+                    try {
+                        $fecha = \Carbon\Carbon::createFromFormat('d/m/Y', $searchTerm);
+                        $q->orWhereDate('tFecha_venta', $fecha->format('Y-m-d'));
+                    } catch (\Exception $e) {
+                    
+                    }
+                }
             });
-        }
+        } 
         
-        // Filtros adicionales (si los necesitas)
+        // Filtros adicionales
         if ($request->filled('search_metodo_pago')) {
             $query->where('eMetodo_pago', $request->search_metodo_pago);
         }
@@ -51,7 +62,7 @@ class VentaController extends Controller
             'id_pedido' => 'required|integer',
             'id_usuario' => 'required|integer',
             'dTotal' => 'required|numeric|min:0',
-            'eMetodo_pago' => 'required|in:stripe,paypal,tarjeta,transferencia,efectivo',
+            'eMetodo_pago' => 'required|in:stripe,paypal',
             'eEstado' => 'required|in:completada,devuelta,reembolsada,cancelada'
         ]);
 
@@ -59,6 +70,4 @@ class VentaController extends Controller
         
         return redirect()->route('ventas.index')->with('success', 'Venta actualizada correctamente.');
     }
-
-
 }
