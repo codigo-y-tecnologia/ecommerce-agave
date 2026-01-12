@@ -12,6 +12,9 @@ class VariacionAtributo extends Model
     protected $table = 'tbl_variacion_atributos';
     protected $primaryKey = 'id_variacion_atributo';
 
+    // Desactivar timestamps
+    public $timestamps = false;
+
     protected $fillable = [
         'id_variacion',
         'id_atributo',

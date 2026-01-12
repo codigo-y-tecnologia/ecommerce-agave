@@ -15,7 +15,8 @@ class Producto extends Model
     protected $table = 'tbl_productos';
     protected $primaryKey = 'id_producto';
     
-    public $timestamps = true;
+    // DESACTIVAR TIMESTAMPS - IMPORTANTE
+    public $timestamps = false;
     
     protected $fillable = [
         'vCodigo_barras',
@@ -34,9 +35,7 @@ class Producto extends Model
         'bActivo' => 'boolean',
         'dPrecio_compra' => 'decimal:2',
         'dPrecio_venta' => 'decimal:2',
-        'iStock' => 'integer',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'iStock' => 'integer'
     ];
 
     // Accesor para imágenes
@@ -113,11 +112,6 @@ class Producto extends Model
         return 0;
     }
 
-    public function setVCodigoBarrasAttribute($value)
-    {
-        $this->attributes['vCodigo_barras'] = strtoupper($value);
-    }
-
     public function marca()
     {
         return $this->belongsTo(Marca::class, 'id_marca');
@@ -134,61 +128,48 @@ class Producto extends Model
     }
     
     public function atributos()
-{
-    return $this->belongsToMany(Atributo::class, 'tbl_producto_atributos', 'id_producto', 'id_atributo')
-                ->withPivot(['id_atributo_valor', 'dPrecio_extra'])
-                ->withTimestamps();
-}
+    {
+        return $this->belongsToMany(Atributo::class, 'tbl_producto_atributos', 'id_producto', 'id_atributo')
+                    ->withPivot(['id_atributo_valor', 'dPrecio_extra']);
+    }
 
-public function valoresAtributos()
-{
-    return $this->belongsToMany(AtributoValor::class, 'tbl_producto_atributos', 'id_producto', 'id_atributo_valor')
-                ->withPivot('dPrecio_extra')
-                ->withTimestamps();
-}
+    public function valoresAtributos()
+    {
+        return $this->belongsToMany(AtributoValor::class, 'tbl_producto_atributos', 'id_producto', 'id_atributo_valor')
+                    ->withPivot(['id_atributo', 'dPrecio_extra']);
+    }
 
-// Método para obtener atributos agrupados
-public function getAtributosAgrupadosAttribute()
-{
-    $atributos = [];
-    
-    foreach ($this->valoresAtributos as $valor) {
-        $atributo = $valor->atributo;
-        if (!isset($atributos[$atributo->id_atributo])) {
-            $atributos[$atributo->id_atributo] = [
-                'id_atributo' => $atributo->id_atributo,
-                'nombre' => $atributo->vNombre,
-                'valores' => []
+    // Método para obtener atributos agrupados
+    public function getAtributosAgrupadosAttribute()
+    {
+        $atributos = [];
+        
+        foreach ($this->valoresAtributos as $valor) {
+            $atributo = $valor->atributo;
+            if (!isset($atributos[$atributo->id_atributo])) {
+                $atributos[$atributo->id_atributo] = [
+                    'id_atributo' => $atributo->id_atributo,
+                    'nombre' => $atributo->vNombre,
+                    'valores' => []
+                ];
+            }
+            
+            $atributos[$atributo->id_atributo]['valores'][] = [
+                'id_valor' => $valor->id_atributo_valor,
+                'valor' => $valor->vValor,
+                'precio_extra' => $valor->pivot->dPrecio_extra,
+                'stock' => $valor->iStock
             ];
         }
         
-        $atributos[$atributo->id_atributo]['valores'][] = [
-            'id_valor' => $valor->id_atributo_valor,
-            'valor' => $valor->vValor,
-            'precio_extra' => $valor->pivot->dPrecio_extra,
-            'stock' => $valor->iStock
-        ];
+        return $atributos;
     }
-    
-    return $atributos;
-}
 
-// Método para calcular el precio con atributos
-public function calcularPrecioConAtributos($valoresSeleccionados = [])
-{
-    $precioBase = $this->dPrecio_venta;
-    $precioExtra = 0;
-    
-    foreach ($valoresSeleccionados as $idValor) {
-        $valor = $this->valoresAtributos()->where('id_atributo_valor', $idValor)->first();
-        if ($valor) {
-            $precioExtra += $valor->pivot->dPrecio_extra;
-        }
+    // Método para verificar si tiene atributos
+    public function tieneAtributos()
+    {
+        return $this->valoresAtributos()->count() > 0;
     }
-    
-    return $precioBase + $precioExtra;
-} 
-    // MÉTODOS PARA FAVORITOS
 
     public function favoritos()
     {
@@ -235,6 +216,67 @@ public function calcularPrecioConAtributos($valoresSeleccionados = [])
         return max(0, min(100, round($descuento)));
     }
 
+    public function variaciones()
+    {
+        return $this->hasMany(ProductoVariacion::class, 'id_producto');
+    }
+
+    public function variacionesActivas()
+    {
+        return $this->hasMany(ProductoVariacion::class, 'id_producto')->where('bActivo', true);
+    }
+
+    public function tieneVariaciones()
+    {
+        return $this->variaciones()->count() > 0;
+    }
+
+    // Sobrescribe el accesor de precio
+    public function getDPrecioVentaAttribute()
+    {
+        if ($this->tieneVariaciones()) {
+            $precioMin = $this->variacionesActivas()->min('dPrecio');
+            $precioMax = $this->variacionesActivas()->max('dPrecio');
+            
+            if ($precioMin == $precioMax) {
+                return $precioMin;
+            }
+            return $precioMin . ' - ' . $precioMax;
+        }
+        
+        return $this->attributes['dPrecio_venta'];
+    }
+
+    // Sobrescribe el accesor de stock
+    public function getIStockAttribute()
+    {
+        if ($this->tieneVariaciones()) {
+            return $this->variacionesActivas()->sum('iStock');
+        }
+        
+        return $this->attributes['iStock'];
+    }
+
+    // Método para obtener el precio mínimo
+    public function getPrecioMinimoAttribute()
+    {
+        if ($this->tieneVariaciones()) {
+            return $this->variacionesActivas()->min('dPrecio');
+        }
+        
+        return $this->attributes['dPrecio_venta'];
+    }
+
+    // Método para obtener el precio máximo
+    public function getPrecioMaximoAttribute()
+    {
+        if ($this->tieneVariaciones()) {
+            return $this->variacionesActivas()->max('dPrecio');
+        }
+        
+        return $this->attributes['dPrecio_venta'];
+    }
+
     protected static function boot()
     {
         parent::boot();
@@ -244,64 +286,4 @@ public function calcularPrecioConAtributos($valoresSeleccionados = [])
             $producto->eliminarImagenes();
         });
     }
-    public function variaciones()
-{
-    return $this->hasMany(ProductoVariacion::class, 'id_producto');
-}
-
-public function variacionesActivas()
-{
-    return $this->hasMany(ProductoVariacion::class, 'id_producto')->where('bActivo', true);
-}
-
-public function tieneVariaciones()
-{
-    return $this->variaciones()->count() > 0;
-}
-
-// Sobrescribe el accesor de precio
-public function getDPrecioVentaAttribute()
-{
-    if ($this->tieneVariaciones()) {
-        $precioMin = $this->variacionesActivas()->min('dPrecio');
-        $precioMax = $this->variacionesActivas()->max('dPrecio');
-        
-        if ($precioMin == $precioMax) {
-            return $precioMin;
-        }
-        return $precioMin . ' - ' . $precioMax;
-    }
-    
-    return $this->attributes['dPrecio_venta'];
-}
-
-// Sobrescribe el accesor de stock
-public function getIStockAttribute()
-{
-    if ($this->tieneVariaciones()) {
-        return $this->variacionesActivas()->sum('iStock');
-    }
-    
-    return $this->attributes['iStock'];
-}
-
-// Método para obtener el precio mínimo
-public function getPrecioMinimoAttribute()
-{
-    if ($this->tieneVariaciones()) {
-        return $this->variacionesActivas()->min('dPrecio');
-    }
-    
-    return $this->attributes['dPrecio_venta'];
-}
-
-// Método para obtener el precio máximo
-public function getPrecioMaximoAttribute()
-{
-    if ($this->tieneVariaciones()) {
-        return $this->variacionesActivas()->max('dPrecio');
-    }
-    
-    return $this->attributes['dPrecio_venta'];
-}
 }

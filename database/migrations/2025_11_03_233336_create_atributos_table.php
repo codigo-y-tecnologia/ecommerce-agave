@@ -6,30 +6,33 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
+    public function up()
     {
-        Schema::create('atributos', function (Blueprint $table) {
-           $table->id('id_atributo');
-            $table->string('vNombre', 100);
-            $table->text('tDescripcion')->nullable();
-            $table->enum('eTipo', ['texto', 'textarea', 'select', 'radio', 'checkbox', 'archivo'])->default('texto');
-            $table->string('vLabel', 100)->nullable();
-            $table->string('vPlaceholder', 100)->nullable();
-            $table->boolean('bRequerido')->default(false);
-            $table->integer('iOrden')->default(0);
-            $table->boolean('bActivo')->default(true);
+        // Eliminar la tabla existente si tiene problemas
+        Schema::dropIfExists('tbl_producto_atributos');
+        
+        // Crear la tabla con la estructura correcta
+        Schema::create('tbl_producto_atributos', function (Blueprint $table) {
+            $table->id('id_producto_atributo');
+            $table->foreignId('id_producto')
+                  ->constrained('tbl_productos', 'id_producto')
+                  ->onDelete('cascade');
+            $table->foreignId('id_atributo')
+                  ->constrained('tbl_atributos', 'id_atributo')
+                  ->onDelete('cascade');
+            $table->foreignId('id_atributo_valor')
+                  ->constrained('tbl_atributo_valores', 'id_atributo_valor')
+                  ->onDelete('cascade');
+            $table->decimal('dPrecio_extra', 10, 2)->default(0);
             $table->timestamps();
+            
+            // Índice único para evitar duplicados
+            $table->unique(['id_producto', 'id_atributo', 'id_atributo_valor'], 'unique_producto_atributo_valor');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
+    public function down()
     {
-        Schema::dropIfExists('tbl_atributos');
+        Schema::dropIfExists('tbl_producto_atributos');
     }
 };

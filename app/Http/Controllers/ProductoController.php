@@ -25,17 +25,19 @@ class ProductoController extends Controller
 
     public function create()
     {
-        // CATEGORÍAS SIMPLES - SIN JERARQUÍA
         $categorias = Categoria::orderBy('vNombre', 'asc')->get();
         $marcas = Marca::all();
         $etiquetas = Etiqueta::all();
+        $atributos = Atributo::with(['valoresActivos' => function($query) {
+            $query->where('bActivo', true)->orderBy('iOrden');
+        }])->where('bActivo', true)->get();
         
-        return view('productos.create', compact('categorias', 'marcas', 'etiquetas'));
+        return view('productos.create', compact('categorias', 'marcas', 'etiquetas', 'atributos'));
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'vCodigo_barras' => [
                 'required',
                 'max:20',
@@ -49,63 +51,83 @@ class ProductoController extends Controller
             ],
             'tDescripcion_corta' => 'nullable|max:255',
             'tDescripcion_larga' => 'nullable',
-            'dPrecio_compra' => ['nullable', 'regex:/^[0-9]+(\.[0-9]{1,2})?$/'],
-            'dPrecio_venta' => ['required', 'regex:/^[0-9]+(\.[0-9]{1,2})?$/'],
-            'iStock' => ['required', 'regex:/^[0-9]+$/'],
+            'dPrecio_compra' => 'nullable|numeric|min:0',
+            'dPrecio_venta' => 'required|numeric|min:0',
+            'iStock' => 'required|integer|min:0',
             'id_categoria' => 'required|exists:tbl_categorias,id_categoria',
             'id_marca' => 'required|exists:tbl_marcas,id_marca',
             'etiquetas' => 'nullable|array',
             'etiquetas.*' => 'exists:tbl_etiquetas,id_etiqueta',
             'imagenes' => 'nullable|array|max:6',
-            'imagenes.*' => 'image|mimes:jpg,jpeg,png,gif,webp|max:2048'
+            'imagenes.*' => 'image|mimes:jpg,jpeg,png,gif,webp|max:2048',
+            'atributos' => 'nullable|array',
         ], [
             'vCodigo_barras.required' => 'El código de barras es obligatorio',
             'vCodigo_barras.unique' => 'Ya existe un producto con este código de barras',
-            'vCodigo_barras.max' => 'El código de barras no puede tener más de 20 caracteres',
-            'vCodigo_barras.regex' => 'El código de barras solo puede contener números (0-9)',
-
+            'vCodigo_barras.regex' => 'El código de barras solo puede contener números',
             'vNombre.required' => 'El nombre del producto es obligatorio',
             'vNombre.unique' => 'Ya existe un producto con este nombre',
-
-            'dPrecio_compra.regex' => 'El precio de compra debe ser un número válido (ej: 150.50)',
             'dPrecio_venta.required' => 'El precio de venta es obligatorio',
-            'dPrecio_venta.regex' => 'El precio de venta debe ser un número válido (ej: 200.75)',
-
+            'dPrecio_venta.numeric' => 'El precio de venta debe ser un número válido',
+            'dPrecio_venta.min' => 'El precio de venta no puede ser negativo',
             'iStock.required' => 'El stock es obligatorio',
-            'iStock.regex' => 'El stock solo puede contener números enteros (0-9)',
-
+            'iStock.integer' => 'El stock debe ser un número entero',
+            'iStock.min' => 'El stock no puede ser negativo',
             'id_categoria.required' => 'La categoría es obligatoria',
             'id_marca.required' => 'La marca es obligatoria',
-
-            'imagenes.max' => 'No puedes subir más de 6 imágenes',
-            'imagenes.*.image' => 'Cada archivo debe ser una imagen válida',
-            'imagenes.*.mimes' => 'Las imágenes deben ser de tipo: jpg, jpeg, png, gif o webp',
-            'imagenes.*.max' => 'Cada imagen no debe pesar más de 2MB'
         ]);
 
         try {
             DB::beginTransaction();
 
-            $productoData = $request->all();
-            $productoData['bActivo'] = $request->has('bActivo');
+            $productoData = [
+                'vCodigo_barras' => $request->vCodigo_barras,
+                'vNombre' => $request->vNombre,
+                'tDescripcion_corta' => $request->tDescripcion_corta,
+                'tDescripcion_larga' => $request->tDescripcion_larga,
+                'dPrecio_compra' => $request->dPrecio_compra ?: null,
+                'dPrecio_venta' => $request->dPrecio_venta,
+                'iStock' => $request->iStock,
+                'id_categoria' => $request->id_categoria,
+                'id_marca' => $request->id_marca,
+                'bActivo' => $request->has('bActivo') ? true : false,
+            ];
 
-            // Crear el producto
             $producto = Producto::create($productoData);
 
-            // Guardar imágenes si se enviaron
             if ($request->hasFile('imagenes')) {
                 $producto->guardarImagenes($request->file('imagenes'));
             }
 
-            // Sincronizar etiquetas
             if ($request->has('etiquetas')) {
                 $producto->etiquetas()->sync($request->etiquetas);
+            }
+
+            if ($request->has('atributos')) {
+                foreach ($request->atributos as $atributoId => $valores) {
+                    if (!empty($valores) && is_array($valores)) {
+                        foreach ($valores as $valorId) {
+                            $valor = AtributoValor::where('id_atributo_valor', $valorId)
+                                ->where('id_atributo', $atributoId)
+                                ->first();
+                            
+                            if ($valor) {
+                                DB::table('tbl_producto_atributos')->insert([
+                                    'id_producto' => $producto->id_producto,
+                                    'id_atributo' => $atributoId,
+                                    'id_atributo_valor' => $valorId,
+                                    'dPrecio_extra' => 0
+                                ]);
+                            }
+                        }
+                    }
+                }
             }
 
             DB::commit();
 
             return redirect()->route('productos.index')
-                ->with('success', 'Producto creado exitosamente');
+                ->with('success', 'Producto creado exitosamente.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -137,24 +159,26 @@ class ProductoController extends Controller
 
     public function show(Producto $producto)
     {
-        $producto->load(['marca', 'categoria', 'etiquetas']);
+        $producto->load(['marca', 'categoria', 'etiquetas', 'variaciones.atributos.valor', 'variaciones.atributos.atributo']);
         return view('productos.show', compact('producto'));
     }
 
     public function edit(Producto $producto)
     {
-        // CATEGORÍAS SIMPLES - SIN JERARQUÍA
         $categorias = Categoria::orderBy('vNombre', 'asc')->get();
         $marcas = Marca::all();
         $etiquetas = Etiqueta::all();
-        $producto->load('etiquetas');
+        $atributos = Atributo::with(['valoresActivos' => function($query) {
+            $query->where('bActivo', true)->orderBy('iOrden');
+        }])->where('bActivo', true)->get();
+        $producto->load(['etiquetas', 'variaciones.atributos', 'valoresAtributos.atributo']);
         
-        return view('productos.edit', compact('producto', 'categorias', 'marcas', 'etiquetas'));
+        return view('productos.edit', compact('producto', 'categorias', 'marcas', 'etiquetas', 'atributos'));
     }
 
     public function update(Request $request, Producto $producto)
     {
-        $request->validate([
+        $validated = $request->validate([
             'vCodigo_barras' => [
                 'required',
                 'max:20',
@@ -168,43 +192,35 @@ class ProductoController extends Controller
             ],
             'tDescripcion_corta' => 'nullable|max:255',
             'tDescripcion_larga' => 'nullable',
-            'dPrecio_compra' => ['nullable', 'regex:/^[0-9]+(\.[0-9]{1,2})?$/'],
-            'dPrecio_venta' => ['required', 'regex:/^[0-9]+(\.[0-9]{1,2})?$/'],
-            'iStock' => ['required', 'regex:/^[0-9]+$/'],
+            'dPrecio_compra' => 'nullable|numeric|min:0',
+            'dPrecio_venta' => 'required|numeric|min:0',
+            'iStock' => 'required|integer|min:0',
             'id_categoria' => 'required|exists:tbl_categorias,id_categoria',
             'id_marca' => 'required|exists:tbl_marcas,id_marca',
             'etiquetas' => 'nullable|array',
             'etiquetas.*' => 'exists:tbl_etiquetas,id_etiqueta',
             'imagenes' => 'nullable|array',
-            'imagenes.*' => 'image|mimes:jpg,jpeg,png,gif,webp|max:2048'
+            'imagenes.*' => 'image|mimes:jpg,jpeg,png,gif,webp|max:2048',
+            'atributos' => 'nullable|array',
         ], [
             'vCodigo_barras.required' => 'El código de barras es obligatorio',
             'vCodigo_barras.unique' => 'Ya existe un producto con este código de barras',
-            'vCodigo_barras.max' => 'El código de barras no puede tener más de 20 caracteres',
-            'vCodigo_barras.regex' => 'El código de barras solo puede contener números (0-9)',
-
+            'vCodigo_barras.regex' => 'El código de barras solo puede contener números',
             'vNombre.required' => 'El nombre del producto es obligatorio',
             'vNombre.unique' => 'Ya existe un producto con este nombre',
-
-            'dPrecio_compra.regex' => 'El precio de compra debe ser un número válido (ej: 150.50)',
             'dPrecio_venta.required' => 'El precio de venta es obligatorio',
-            'dPrecio_venta.regex' => 'El precio de venta debe ser un número válido (ej: 200.75)',
-
+            'dPrecio_venta.numeric' => 'El precio de venta debe ser un número válido',
+            'dPrecio_venta.min' => 'El precio de venta no puede ser negativo',
             'iStock.required' => 'El stock es obligatorio',
-            'iStock.regex' => 'El stock solo puede contener números enteros (0-9)',
-
+            'iStock.integer' => 'El stock debe ser un número entero',
+            'iStock.min' => 'El stock no puede ser negativo',
             'id_categoria.required' => 'La categoría es obligatoria',
             'id_marca.required' => 'La marca es obligatoria',
-
-            'imagenes.*.image' => 'Cada archivo debe ser una imagen válida',
-            'imagenes.*.mimes' => 'Las imágenes deben ser de tipo: jpg, jpeg, png, gif o webp',
-            'imagenes.*.max' => 'Cada imagen no debe pesar más de 2MB'
         ]);
 
         try {
             DB::beginTransaction();
 
-            // Validar que no se excedan 6 imágenes en total
             $imagenesActuales = $producto->getNumeroImagenes();
             $nuevasImagenes = $request->hasFile('imagenes') ? count($request->file('imagenes')) : 0;
             
@@ -214,22 +230,52 @@ class ProductoController extends Controller
                     ->withErrors(['imagenes' => 'No puedes tener más de 6 imágenes. Actualmente tienes ' . $imagenesActuales . ' imágenes.']);
             }
 
-            $productoData = $request->all();
-            $productoData['bActivo'] = $request->has('bActivo') ? true : false;
-
-            $producto->update($productoData);
+            $producto->update([
+                'vCodigo_barras' => $request->vCodigo_barras,
+                'vNombre' => $request->vNombre,
+                'tDescripcion_corta' => $request->tDescripcion_corta,
+                'tDescripcion_larga' => $request->tDescripcion_larga,
+                'dPrecio_compra' => $request->dPrecio_compra ?: null,
+                'dPrecio_venta' => $request->dPrecio_venta,
+                'iStock' => $request->iStock,
+                'id_categoria' => $request->id_categoria,
+                'id_marca' => $request->id_marca,
+                'bActivo' => $request->has('bActivo') ? true : false,
+            ]);
             
-            // Guardar nuevas imágenes si se enviaron
             if ($request->hasFile('imagenes')) {
                 $producto->guardarImagenes($request->file('imagenes'));
             }
 
             $producto->etiquetas()->sync($request->etiquetas ?? []);
 
+            DB::table('tbl_producto_atributos')->where('id_producto', $producto->id_producto)->delete();
+            
+            if ($request->has('atributos')) {
+                foreach ($request->atributos as $atributoId => $valores) {
+                    if (!empty($valores) && is_array($valores)) {
+                        foreach ($valores as $valorId) {
+                            $valor = AtributoValor::where('id_atributo_valor', $valorId)
+                                ->where('id_atributo', $atributoId)
+                                ->first();
+                            
+                            if ($valor) {
+                                DB::table('tbl_producto_atributos')->insert([
+                                    'id_producto' => $producto->id_producto,
+                                    'id_atributo' => $atributoId,
+                                    'id_atributo_valor' => $valorId,
+                                    'dPrecio_extra' => 0
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+
             DB::commit();
 
-            return redirect()->route('productos.index')
-                ->with('success', 'Producto actualizado exitosamente');
+            return redirect()->route('productos.show', $producto->id_producto)
+                ->with('success', 'Producto actualizado exitosamente.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -245,10 +291,9 @@ class ProductoController extends Controller
         try {
             DB::beginTransaction();
 
-            // Eliminar imágenes del producto
             $producto->eliminarImagenes();
-            
             $producto->etiquetas()->detach();
+            DB::table('tbl_producto_atributos')->where('id_producto', $producto->id_producto)->delete();
             $producto->delete();
             
             DB::commit();
@@ -291,10 +336,8 @@ class ProductoController extends Controller
         try {
             DB::beginTransaction();
 
-            // Eliminar variaciones existentes
             $producto->variaciones()->delete();
 
-            // Crear nuevas variaciones
             foreach ($request->variaciones as $variacionData) {
                 $variacion = ProductoVariacion::create([
                     'id_producto' => $producto->id_producto,
@@ -310,7 +353,6 @@ class ProductoController extends Controller
                     'bActivo' => true
                 ]);
 
-                // Guardar atributos de la variación
                 foreach ($variacionData['atributos'] as $atributoData) {
                     VariacionAtributo::create([
                         'id_variacion' => $variacion->id_variacion,
@@ -349,7 +391,6 @@ class ProductoController extends Controller
         try {
             $atributos = $request->atributos_seleccionados;
             
-            // Preparar arrays para la combinación
             $arraysParaCombinar = [];
             foreach ($atributos as $atributo) {
                 $valores = [];
@@ -367,10 +408,8 @@ class ProductoController extends Controller
                 $arraysParaCombinar[] = $valores;
             }
 
-            // Generar combinaciones
             $combinaciones = $this->generarCombinacionesRecursivo($arraysParaCombinar);
             
-            // Generar SKUs únicos
             $prefijo = 'SKU-' . strtoupper(substr(md5(time()), 0, 6)) . '-';
             $combinacionesConSKU = [];
             
@@ -383,7 +422,7 @@ class ProductoController extends Controller
                 $sku = $prefijo . ($index + 1);
                 $codigoBarras = 'CB' . str_pad($index + 1, 10, '0', STR_PAD_LEFT);
                 
-                $combinacionConSKU = [
+                $combinacionesConSKU[] = [
                     'sku' => $sku,
                     'codigo_barras' => $codigoBarras,
                     'atributos' => $combinacion,
@@ -395,8 +434,6 @@ class ProductoController extends Controller
                     'alto' => null,
                     'profundidad' => null
                 ];
-                
-                $combinacionesConSKU[] = $combinacionConSKU;
             }
 
             return response()->json([
@@ -454,10 +491,8 @@ class ProductoController extends Controller
         try {
             DB::beginTransaction();
 
-            // Limpiar atributos actuales
             DB::table('tbl_producto_atributos')->where('id_producto', $producto->id_producto)->delete();
 
-            // Asignar nuevos atributos
             if ($request->has('atributos')) {
                 foreach ($request->atributos as $atributoData) {
                     foreach ($atributoData['valores'] as $valorData) {
@@ -465,9 +500,7 @@ class ProductoController extends Controller
                             'id_producto' => $producto->id_producto,
                             'id_atributo' => $atributoData['id_atributo'],
                             'id_atributo_valor' => $valorData['id_valor'],
-                            'dPrecio_extra' => $valorData['precio_extra'] ?? 0,
-                            'created_at' => now(),
-                            'updated_at' => now()
+                            'dPrecio_extra' => $valorData['precio_extra'] ?? 0
                         ]);
                     }
                 }
@@ -486,13 +519,14 @@ class ProductoController extends Controller
                 ->withErrors(['error' => 'Error al asignar atributos: ' . $e->getMessage()]);
         }
     }
+
     public function valoraciones()
-{
-    $productos = Producto::with(['variaciones.atributos.valor', 'variaciones.atributos.atributo'])
-        ->whereHas('variaciones')
-        ->orderBy('vNombre')
-        ->get();
-        
-    return view('productos.valoraciones', compact('productos'));
-}
+    {
+        $productos = Producto::with(['variaciones.atributos.valor', 'variaciones.atributos.atributo', 'marca', 'categoria'])
+            ->whereHas('variaciones')
+            ->orderBy('vNombre')
+            ->get();
+            
+        return view('productos.valoraciones', compact('productos'));
+    }
 }

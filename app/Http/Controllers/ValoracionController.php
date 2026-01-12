@@ -35,6 +35,12 @@ class ValoracionController extends Controller
     {
         $producto = Producto::with(['valoresAtributos.atributo'])->findOrFail($producto_id);
         
+        // Verificar si el producto tiene atributos asignados
+        if ($producto->valoresAtributos->count() === 0) {
+            return redirect()->route('valoraciones.show', $producto->id_producto)
+                ->with('warning', 'Primero debes asignar atributos al producto desde la página de edición.');
+        }
+        
         // Agrupar atributos por nombre
         $atributos = [];
         foreach ($producto->valoresAtributos as $valor) {
@@ -60,7 +66,9 @@ class ValoracionController extends Controller
             'vClase_envio' => 'nullable|max:50',
             'tDescripcion' => 'nullable',
             'bActivo' => 'boolean',
-            'imagen' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:2048'
+            'imagen' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:2048',
+            'atributos' => 'required|array',
+            'atributos.*' => 'required|exists:tbl_atributo_valores,id_atributo_valor'
         ]);
 
         try {
@@ -85,14 +93,12 @@ class ValoracionController extends Controller
             }
 
             // Guardar atributos de la valoración
-            if ($request->has('atributos')) {
-                foreach ($request->atributos as $atributo_id => $valor_id) {
-                    VariacionAtributo::create([
-                        'id_variacion' => $variacion->id_variacion,
-                        'id_atributo' => $atributo_id,
-                        'id_atributo_valor' => $valor_id
-                    ]);
-                }
+            foreach ($request->atributos as $atributo_id => $valor_id) {
+                VariacionAtributo::create([
+                    'id_variacion' => $variacion->id_variacion,
+                    'id_atributo' => $atributo_id,
+                    'id_atributo_valor' => $valor_id
+                ]);
             }
 
             DB::commit();
@@ -125,7 +131,13 @@ class ValoracionController extends Controller
             $atributos[$nombreAtributo][] = $valor;
         }
         
-        return view('valoraciones.edit', compact('producto', 'variacion', 'atributos'));
+        // Marcar los valores seleccionados
+        $valoresSeleccionados = [];
+        foreach ($variacion->atributos as $atributoVariacion) {
+            $valoresSeleccionados[$atributoVariacion->id_atributo] = $atributoVariacion->id_atributo_valor;
+        }
+        
+        return view('valoraciones.edit', compact('producto', 'variacion', 'atributos', 'valoresSeleccionados'));
     }
 
     public function update(Request $request, $producto_id, $variacion_id)
@@ -140,7 +152,9 @@ class ValoracionController extends Controller
             'vClase_envio' => 'nullable|max:50',
             'tDescripcion' => 'nullable',
             'bActivo' => 'boolean',
-            'imagen' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:2048'
+            'imagen' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:2048',
+            'atributos' => 'required|array',
+            'atributos.*' => 'required|exists:tbl_atributo_valores,id_atributo_valor'
         ]);
 
         try {
@@ -169,14 +183,12 @@ class ValoracionController extends Controller
             // Eliminar atributos existentes y guardar nuevos
             $variacion->atributos()->delete();
             
-            if ($request->has('atributos')) {
-                foreach ($request->atributos as $atributo_id => $valor_id) {
-                    VariacionAtributo::create([
-                        'id_variacion' => $variacion->id_variacion,
-                        'id_atributo' => $atributo_id,
-                        'id_atributo_valor' => $valor_id
-                    ]);
-                }
+            foreach ($request->atributos as $atributo_id => $valor_id) {
+                VariacionAtributo::create([
+                    'id_variacion' => $variacion->id_variacion,
+                    'id_atributo' => $atributo_id,
+                    'id_atributo_valor' => $valor_id
+                ]);
             }
 
             DB::commit();
