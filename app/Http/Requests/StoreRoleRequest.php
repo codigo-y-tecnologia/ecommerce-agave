@@ -13,22 +13,29 @@ class StoreRoleRequest extends FormRequest
     public function authorize(): bool
     {
 
-        if (in_array($this->name, [
-            'configurar_sistema',
-            'gestionar_permisos',
-            'gestionar_sistema'
-        ])) {
+        if (! $this->user()->can('gestionar_permisos')) {
             return false;
         }
 
-        return $this->user()->can('gestionar_permisos');
+        if (in_array($this->name, ['superadmin'])) {
+            return false;
+        }
+
+        return true;
     }
 
     protected function failedAuthorization()
     {
         throw new AuthorizationException(
-            'No puedes crear este permiso porque es un permiso crítico del sistema.'
+            'No puedes crear ni modificar este rol porque es crítico para el sistema.'
         );
+    }
+
+    protected function prepareForValidation()
+    {
+        $this->merge([
+            'name' => strtolower(trim($this->name)),
+        ]);
     }
 
     /**

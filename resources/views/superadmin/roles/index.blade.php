@@ -2,29 +2,23 @@
 
 @section('content')
 
-@if (session('success'))
-<div class="alert alert-success">
-    {{ session('success') }}
-</div>
-@endif
-
-@if ($errors->any())
-<div class="alert alert-danger">
-    <ul class="mb-0">
-        @foreach ($errors->all() as $error)
-            <li>{{ $error }}</li>
-        @endforeach
-    </ul>
-</div>
-@endif
-
-@if (session('error'))
-<div class="alert alert-danger">
-    {{ session('error') }}
-</div>
-@endif
+@include('superadmin.partials.alerts')
 
 <h2>🧾 Roles del sistema</h2>
+
+<a href="{{ route('roles.create') }}"
+   class="btn btn-primary mb-3 mt-2">
+    Nuevo rol
+</a>
+
+{{-- Buscador --}}
+<form method="GET" class="mb-3">
+    <input type="text"
+           name="search"
+           class="form-control"
+           placeholder="Buscar rol..."
+           value="{{ request('search') }}">
+</form>
 
 <table class="table table-bordered">
     <tr>
@@ -32,7 +26,7 @@
         <th>Acciones</th>
     </tr>
 
-    @foreach($roles as $role)
+    @forelse($roles as $role)
     <tr>
         <td>{{ $role->name }}</td>
         <td>
@@ -42,6 +36,15 @@
             </a>
         </td>
     </tr>
-    @endforeach
+    @empty
+    <tr>
+        <td colspan="2" class="text-center text-muted">
+            No hay roles registrados.
+        </td>
+    </tr>
+    @endforelse
 </table>
+
+{{-- Paginación --}}
+{{ $roles->links() }}
 @endsection

@@ -25,6 +25,7 @@
                     {{ $message }}
                 </div>
             @enderror
+        </div>
 
         <button class="btn btn-success">
             Guardar permiso

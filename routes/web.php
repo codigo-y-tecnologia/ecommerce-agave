@@ -234,6 +234,12 @@ Route::middleware(['auth', 'permission:gestionar_permisos'])->group(function () 
     Route::get('/superadmin/roles', [SpatieRoleController::class, 'index'])
         ->name('roles.index');
 
+    Route::post('/superadmin/roles', [SpatieRoleController::class, 'store'])
+        ->name('roles.store');
+
+    Route::get('/superadmin/roles/create', [SpatieRoleController::class, 'create'])
+        ->name('roles.create');
+
     // Permisos
     Route::get('/superadmin/permissions', [SpatiePermissionController::class, 'index'])
         ->name('permissions.index');
