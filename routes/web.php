@@ -240,6 +240,13 @@ Route::middleware(['auth', 'permission:gestionar_permisos'])->group(function () 
     Route::get('/superadmin/roles/create', [SpatieRoleController::class, 'create'])
         ->name('roles.create');
 
+    Route::get('/superadmin/roles/{role}', [SpatieRoleController::class, 'edit'])->name('roles.edit');
+
+    Route::put('/superadmin/roles/{role}', [SpatieRoleController::class, 'update'])->name('roles.update');
+
+    Route::delete('/superadmin/roles/{role}', [SpatieRoleController::class, 'destroy'])
+        ->name('roles.destroy');
+
     // Permisos
     Route::get('/superadmin/permissions', [SpatiePermissionController::class, 'index'])
         ->name('permissions.index');

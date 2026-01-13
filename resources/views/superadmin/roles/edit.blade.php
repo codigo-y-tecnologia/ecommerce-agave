@@ -1,24 +1,56 @@
 @extends('layouts.admins')
 
+@section('title', 'Editar Rol')
+
 @section('content')
-<h2>Editar Rol: {{ $role->name }}</h2>
+<div class="container">
+    <h2 class="mb-4">✏️ Editar rol</h2>
 
-<form method="POST" action="{{ route('roles.update', $role) }}">
-@csrf
-@method('PUT')
+    @include('superadmin.partials.alerts')
 
-<input class="form-control mb-3" name="name" value="{{ $role->name }}">
+    <form method="POST" action="{{ route('roles.update', $role) }}">
+        @csrf
+        @method('PUT')
 
-@foreach($permissions as $permission)
-<div class="form-check">
-    <input type="checkbox"
-           name="permissions[]"
-           value="{{ $permission->name }}"
-           {{ $role->hasPermissionTo($permission->name) ? 'checked' : '' }}>
-    {{ $permission->name }}
+        {{-- Nombre --}}
+        <div class="mb-3">
+            <label class="form-label">Nombre del rol</label>
+            <input type="text"
+                   name="name"
+                   value="{{ old('name', $role->name) }}"
+                   class="form-control @error('name') is-invalid @enderror"
+                   required>
+
+            @error('name')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+        </div>
+
+        {{-- Permisos --}}
+        <div class="mb-3">
+            <label class="form-label">Permisos</label>
+
+            @foreach($permissions as $permission)
+                <div class="form-check">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           name="permissions[]"
+                           value="{{ $permission->id }}"
+                           id="perm_{{ $permission->id }}"
+                           {{ in_array(
+                               $permission->id,
+                               old('permissions', $role->permissions->pluck('id')->toArray())
+                           ) ? 'checked' : '' }}>
+
+                    <label class="form-check-label" for="perm_{{ $permission->id }}">
+                        {{ $permission->name }}
+                    </label>
+                </div>
+            @endforeach
+        </div>
+
+        <button class="btn btn-primary">Actualizar</button>
+        <a href="{{ route('roles.index') }}" class="btn btn-secondary ms-2">Cancelar</a>
+    </form>
 </div>
-@endforeach
-
-<button class="btn btn-success mt-3">Actualizar</button>
-</form>
 @endsection

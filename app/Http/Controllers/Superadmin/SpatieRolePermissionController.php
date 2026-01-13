@@ -12,7 +12,7 @@ class SpatieRolePermissionController extends Controller
     public function edit(Role $role)
     {
         $permissions = Permission::all();
-        return view('superadmin.roles.permissions', compact('role', 'permissions'));
+        return view('superadmin.asignar-permisos-a-roles.permissions', compact('role', 'permissions'));
     }
 
     public function update(Request $request, Role $role)
