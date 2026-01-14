@@ -12,7 +12,7 @@ class SpatiePermissionController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Permission::query();
+        $query = Permission::with('roles');
 
         if ($request->filled('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
@@ -62,12 +62,27 @@ class SpatiePermissionController extends Controller
 
     public function destroy(Permission $permission)
     {
-        if (in_array($permission->name, [
+
+        $critical = [
             'configurar_sistema',
             'gestionar_permisos',
             'gestionar_sistema'
-        ])) {
-            return back()->with('error', 'Este permiso es crítico y no puede eliminarse');
+        ];
+
+        // Si el permiso es crítico
+        if (in_array($permission->name, $critical)) {
+            return back()->with(
+                'error',
+                'Este permiso es crítico y no puede eliminarse.'
+            );
+        }
+
+        // Si el permiso está asignado a roles
+        if ($permission->roles()->count() > 0) {
+            return back()->with(
+                'error',
+                'No se puede eliminar el permiso porque está asignado a uno o más roles.'
+            );
         }
 
         $permission->delete();

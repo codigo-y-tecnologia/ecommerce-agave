@@ -47,17 +47,28 @@
 
                 {{-- Eliminar rol (protegido) --}}
                 @if ($role->name !== 'superadmin')
-                    <form action="{{ route('roles.destroy', $role) }}"
-                          method="POST"
-                          onsubmit="return confirm('¿Seguro que deseas eliminar este rol?');">
-                        @csrf
-                        @method('DELETE')
 
-                        <button class="btn btn-danger btn-sm">
-                            Eliminar
-                        </button>
-                    </form>
-                @endif
+            @if ($role->users_count > 0)
+                <button class="btn btn-outline-secondary btn-sm" disabled
+        data-bs-toggle="tooltip"
+        title="Este rol está asignado a {{ $role->users_count }} usuario(s)">
+    En uso ({{ $role->users_count }})
+</button>
+
+            @else
+                <form action="{{ route('roles.destroy', $role) }}"
+                      method="POST"
+                      onsubmit="return confirm('¿Seguro que deseas eliminar este rol?');">
+                    @csrf
+                    @method('DELETE')
+
+                    <button class="btn btn-danger btn-sm">
+                        Eliminar
+                    </button>
+                </form>
+            @endif
+
+        @endif
 
             </div>
         </td>
@@ -73,4 +84,11 @@
 
 {{-- Paginación --}}
 {{ $roles->links() }}
+
+<script>
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        new bootstrap.Tooltip(el)
+    })
+</script>
+
 @endsection

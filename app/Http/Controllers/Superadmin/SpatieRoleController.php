@@ -14,9 +14,11 @@ class SpatieRoleController extends Controller
 {
     public function index(Request $request)
     {
-        $roles = Role::when($request->search, function ($q) use ($request) {
-            $q->where('name', 'like', '%' . $request->search . '%');
-        })->paginate(10);
+        $roles = Role::withCount('users')
+            ->when($request->search, function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%');
+            })
+            ->paginate(10);
 
         return view('superadmin.roles.index', compact('roles'));
     }

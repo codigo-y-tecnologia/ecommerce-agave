@@ -26,41 +26,67 @@
     </div>
 </form>
 
-<table class="table table-bordered">
-    <tr>
-        <th>Permiso</th>
-        <th width="180">Acciones</th>
-    </tr>
+<table class="table table-bordered align-middle">
+    <thead>
+        <tr>
+            <th>Permiso</th>
+            <th>Usado por roles</th>
+            <th width="220">Acciones</th>
+        </tr>
+    </thead>
 
+    <tbody>
     @forelse($permissions as $permission)
-    <tr>
-        <td>{{ $permission->name }}</td>
-        <td>
-            <a href="{{ route('permissions.edit', $permission) }}"
-               class="btn btn-sm btn-warning">
-                Editar
-            </a>
+        <tr>
+            <td>{{ $permission->name }}</td>
 
-            <form action="{{ route('permissions.destroy', $permission) }}"
-                  method="POST"
-                  class="d-inline"
-                  onsubmit="return confirm('¿Eliminar permiso?')">
-                @csrf
-                @method('DELETE')
+            {{-- Roles que usan el permiso --}}
+            <td>
+                @if ($permission->roles->isEmpty())
+                    <span class="text-muted">No asignado</span>
+                @else
+                    @foreach($permission->roles as $role)
+                        <span class="badge bg-secondary me-1">
+                            {{ $role->name }}
+                        </span>
+                    @endforeach
+                @endif
+            </td>
 
-                <button class="btn btn-sm btn-danger">
-                    Eliminar
-                </button>
-            </form>
-        </td>
-    </tr>
+            {{-- Acciones --}}
+            <td>
+                <a href="{{ route('permissions.edit', $permission) }}"
+                   class="btn btn-sm btn-warning">
+                    Editar
+                </a>
+
+                @if ($permission->roles->isEmpty())
+                    <form action="{{ route('permissions.destroy', $permission) }}"
+                          method="POST"
+                          class="d-inline"
+                          onsubmit="return confirm('¿Eliminar permiso?');">
+                        @csrf
+                        @method('DELETE')
+
+                        <button class="btn btn-sm btn-danger">
+                            Eliminar
+                        </button>
+                    </form>
+                @else
+                    <button class="btn btn-sm btn-secondary" disabled>
+                        En uso
+                    </button>
+                @endif
+            </td>
+        </tr>
     @empty
-    <tr>
-        <td colspan="2" class="text-center text-muted">
-            No se encontraron permisos
-        </td>
-    </tr>
+        <tr>
+            <td colspan="3" class="text-center text-muted">
+                No se encontraron permisos
+            </td>
+        </tr>
     @endforelse
+    </tbody>
 </table>
 
 {{-- Paginación --}}

@@ -1,6 +1,9 @@
 @extends('layouts.admins')
 
 @section('content')
+
+@include('superadmin.partials.alerts')
+
 <h3>Permisos del rol: {{ $role->name }}</h3>
 
 <form method="POST"
