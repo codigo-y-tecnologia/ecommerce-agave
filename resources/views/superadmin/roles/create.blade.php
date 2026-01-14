@@ -6,8 +6,6 @@
 <div class="container">
     <h2 class="mb-4">➕ Crear nuevo rol</h2>
 
-    @include('superadmin.partials.alerts')
-
     <form method="POST" action="{{ route('roles.store') }}">
         @csrf
 
@@ -37,9 +35,9 @@
                     <input class="form-check-input"
                            type="checkbox"
                            name="permissions[]"
-                           value="{{ $permission->id }}"
+                           value="{{ $permission->name }}"
                            id="perm_{{ $permission->id }}"
-                           {{ in_array($permission->id, old('permissions', [])) ? 'checked' : '' }}>
+                           {{ in_array($permission->name, old('permissions', [])) ? 'checked' : '' }}>
 
                     <label class="form-check-label" for="perm_{{ $permission->id }}">
                         {{ $permission->name }}

@@ -17,6 +17,12 @@
                 🧾 Permisos del sistema
             </a>
         @endcan
+        @can('gestionar_roles')
+            <a href="{{ route('usuarios.roles.edit', $usuario) }}"
+   class="btn btn-sm btn-info">
+   Asignar rol
+</a>
+        @endcan
     </div>
 </div>
 @endsection

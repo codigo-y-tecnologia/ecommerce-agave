@@ -35,11 +35,11 @@
                     <input class="form-check-input"
                            type="checkbox"
                            name="permissions[]"
-                           value="{{ $permission->id }}"
+                           value="{{ $permission->name }}"
                            id="perm_{{ $permission->id }}"
                            {{ in_array(
-                               $permission->id,
-                               old('permissions', $role->permissions->pluck('id')->toArray())
+                               $permission->name,
+                               old('permissions', $role->permissions->pluck('name')->toArray())
                            ) ? 'checked' : '' }}>
 
                     <label class="form-check-label" for="perm_{{ $permission->id }}">

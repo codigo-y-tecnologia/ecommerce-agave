@@ -22,6 +22,7 @@ use App\Http\Controllers\Superadmin\CambiarEmailController;
 use App\Http\Controllers\Superadmin\SpatieRoleController;
 use App\Http\Controllers\Superadmin\SpatiePermissionController;
 use App\Http\Controllers\Superadmin\SpatieRolePermissionController;
+use App\Http\Controllers\Superadmin\UsuarioRolController;
 
 Route::get('/', function () {
     // Si el usuario está autenticado, lo redirigimos a su dashboard según su rol
@@ -266,4 +267,17 @@ Route::middleware(['auth', 'permission:gestionar_permisos'])->group(function () 
 
     Route::post('/superadmin/roles/{role}/permissions', [SpatieRolePermissionController::class, 'update'])
         ->name('roles.permissions.update');
+
+    // Asignar rol a usuario
+    Route::get(
+        'usuarios/{usuario}/rol',
+        [UsuarioRolController::class, 'edit']
+    )
+        ->name('usuarios.roles.edit');
+
+    Route::put(
+        'usuarios/{usuario}/rol',
+        [UsuarioRolController::class, 'update']
+    )
+        ->name('usuarios.roles.update');
 });

@@ -78,7 +78,7 @@
                                         <li><a class="dropdown-item" href="#">Configuración global</a></li>
                                     @endcan
                                     @can('gestionar_permisos')
-                                        <li><a class="dropdown-item" href="{{ route('roles.permisos') }}">Gestión de permisos</a></li>
+                                        <li><a class="dropdown-item" href="{{ route('roles.permisos') }}">Gestión de permisos y roles</a></li>
                                     @endcan
                                     </ul>
                                 </li>

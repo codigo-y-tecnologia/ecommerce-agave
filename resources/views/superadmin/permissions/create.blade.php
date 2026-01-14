@@ -6,8 +6,6 @@
 <div class="container">
     <h2 class="mb-4">➕ Crear nuevo permiso</h2>
 
-    @include('superadmin.partials.alerts')
-
     <form action="{{ route('permissions.store') }}" method="POST">
         @csrf
 
