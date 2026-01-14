@@ -21,7 +21,23 @@ class ReembolsosController extends Controller
             $query->where(function($q) use ($search) {
                 $q->where('id_reembolso', 'like', "%{$search}%")
                   ->orWhere('id_venta', 'like', "%{$search}%")
-                  ->orWhere('vMotivo', 'like', "%{$search}%");
+                  ->orWhere('vMotivo', 'like', "%{$search}%")
+                  ->orWhere('dMonto', 'like', "%{$search}%")
+                  ->orWhere('eMetodo_pago', 'like', "%{$search}%")
+                  ->orWhere('eEstado', 'like', "%{$search}%");
+                
+                // BÚSQUEDA POR FECHA 
+                if (preg_match('/^\d{1,2}\/\d{1,2}\/\d{4}$/', $search)) {
+                    try {
+                        $fecha = \Carbon\Carbon::createFromFormat('d/m/Y', $search);
+                        $q->orWhereDate('tFecha_reembolso', $fecha->format('Y-m-d'));
+                    } catch (\Exception $e) {
+                    }
+                }
+                // Formato yyyy-mm-dd (2025-11-16)
+                elseif (preg_match('/^\d{4}-\d{1,2}-\d{1,2}$/', $search)) {
+                    $q->orWhereDate('tFecha_reembolso', $search);
+                }
             });
         }
         
@@ -50,7 +66,7 @@ class ReembolsosController extends Controller
             'dMonto' => 'required|numeric|min:0',
             'vMotivo' => 'nullable|string|max:255',
             'eMetodo_pago' => 'required|in:paypal,stripe',
-            'eEstado' => 'required|in:pendiente,procesado,completado,fallido'
+            'eEstado' => 'required|in:pendiente,procesado,fallido'
         ]);
         
         reembolsos::create($request->all());
@@ -90,7 +106,7 @@ class ReembolsosController extends Controller
             'dMonto' => 'required|numeric|min:0',
             'vMotivo' => 'nullable|string|max:255',
             'eMetodo_pago' => 'required|in:paypal,stripe',
-            'eEstado' => 'required|in:pendiente,procesado,completado,fallido'
+            'eEstado' => 'required|in:pendiente,procesado,fallido'
         ]);
         
         $reembolso->update($request->all());

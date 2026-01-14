@@ -64,7 +64,7 @@
             <label class="form-label">Estado *</label>
             <select name="eEstado" class="form-select" required>
                 <option value="pendiente" @selected(old('eEstado', $reembolso->eEstado)=='pendiente')>Pendiente</option>
-                <option value="procesado" @selected(old('eEstado', $reembolso->eEstado)=='Procesado')>Procesado</option>
+                <option value="procesado" @selected(old('eEstado', $reembolso->eEstado)=='procesado')>Procesado</option>
                 <option value="fallido" @selected(old('eEstado', $reembolso->eEstado)=='fallido')>Fallido</option>
             </select>
         </div>
