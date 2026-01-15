@@ -14,18 +14,18 @@ class ReembolsosController extends Controller
     {
         // Crear consulta
         $query = reembolsos::query();
-        
+
         // Búsqueda
         if ($request->has('search') && $request->search != '') {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('id_reembolso', 'like', "%{$search}%")
-                  ->orWhere('id_venta', 'like', "%{$search}%")
-                  ->orWhere('vMotivo', 'like', "%{$search}%")
-                  ->orWhere('dMonto', 'like', "%{$search}%")
-                  ->orWhere('eMetodo_pago', 'like', "%{$search}%")
-                  ->orWhere('eEstado', 'like', "%{$search}%");
-                
+                    ->orWhere('id_venta', 'like', "%{$search}%")
+                    ->orWhere('vMotivo', 'like', "%{$search}%")
+                    ->orWhere('dMonto', 'like', "%{$search}%")
+                    ->orWhere('eMetodo_pago', 'like', "%{$search}%")
+                    ->orWhere('eEstado', 'like', "%{$search}%");
+
                 // BÚSQUEDA POR FECHA 
                 if (preg_match('/^\d{1,2}\/\d{1,2}\/\d{4}$/', $search)) {
                     try {
@@ -34,16 +34,16 @@ class ReembolsosController extends Controller
                     } catch (\Exception $e) {
                     }
                 }
-                // Formato yyyy-mm-dd (2025-11-16)
+                // Formato(2025-11-16)
                 elseif (preg_match('/^\d{4}-\d{1,2}-\d{1,2}$/', $search)) {
                     $q->orWhereDate('tFecha_reembolso', $search);
                 }
             });
         }
-        
+
         // Paginar resultados
         $reembolsos = $query->orderBy('id_reembolso', 'desc')->paginate(10);
-        
+
         return view('reembolsos.index', compact('reembolsos'));
     }
 
@@ -68,11 +68,11 @@ class ReembolsosController extends Controller
             'eMetodo_pago' => 'required|in:paypal,stripe',
             'eEstado' => 'required|in:pendiente,procesado,fallido'
         ]);
-        
+
         reembolsos::create($request->all());
-        
+
         return redirect()->route('reembolsos.index')
-                         ->with('success', 'Reembolso creado correctamente');
+            ->with('success', 'Reembolso creado correctamente');
     }
 
     /**
@@ -99,7 +99,7 @@ class ReembolsosController extends Controller
     public function update(Request $request, $id)
     {
         $reembolso = reembolsos::findOrFail($id);
-        
+
         $request->validate([
             'id_venta' => 'required|integer',
             'tFecha_reembolso' => 'required|date',
@@ -108,11 +108,11 @@ class ReembolsosController extends Controller
             'eMetodo_pago' => 'required|in:paypal,stripe',
             'eEstado' => 'required|in:pendiente,procesado,fallido'
         ]);
-        
+
         $reembolso->update($request->all());
-        
-          return redirect()->route('reembolsos.index')
-                     ->with('success', 'Reembolso actualizado correctamente');
+
+        return redirect()->route('reembolsos.index')
+            ->with('success', 'Reembolso actualizado correctamente');
     }
 
     /**
@@ -122,8 +122,8 @@ class ReembolsosController extends Controller
     {
         $reembolso = reembolsos::findOrFail($id);
         $reembolso->delete();
-        
+
         return redirect()->route('reembolsos.index')
-                         ->with('success', 'Reembolso eliminado correctamente');
+            ->with('success', 'Reembolso eliminado correctamente');
     }
 }
