@@ -77,7 +77,6 @@
                                         <th>Imagen</th>
                                         <th>SKU</th>
                                         <th>Combinación</th>
-                                        <th>Código Barras</th>
                                         <th>Precio</th>
                                         <th>Stock</th>
                                         <th>Peso (kg)</th>
@@ -88,11 +87,24 @@
                                 </thead>
                                 <tbody>
                                     @foreach($producto->variaciones as $variacion)
+                                        @php
+                                            // Obtener nombre de la combinación basado en atributos
+                                            $nombresAtributos = [];
+                                            foreach ($variacion->atributos as $atributoVariacion) {
+                                                if ($atributoVariacion->valor) {
+                                                    $nombresAtributos[] = $atributoVariacion->valor->vValor;
+                                                }
+                                            }
+                                            $nombreCombinacion = !empty($nombresAtributos) ? implode(' / ', $nombresAtributos) : 'Sin atributos';
+                                            
+                                            // Obtener el stock de la variación
+                                            $stockVariacion = $variacion->iStock ?? 0;
+                                        @endphp
                                         <tr>
                                             <td>
                                                 @if($variacion->vImagen)
-                                                    <img src="{{ $variacion->vImagen }}" 
-                                                         alt="{{ $variacion->nombre_combinacion }}"
+                                                    <img src="{{ asset($variacion->vImagen) }}" 
+                                                         alt="{{ $nombreCombinacion }}"
                                                          style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
                                                 @else
                                                     <div style="width: 50px; height: 50px; background-color: #f8f9fa; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #6c757d;">
@@ -104,14 +116,11 @@
                                                 <code>{{ $variacion->vSKU }}</code>
                                             </td>
                                             <td>
-                                                <small>{{ $variacion->nombre_combinacion }}</small>
-                                            </td>
-                                            <td>
-                                                <small>{{ $variacion->vCodigo_barras }}</small>
+                                                <small>{{ $nombreCombinacion }}</small>
                                             </td>
                                             <td>
                                                 <strong>${{ number_format($variacion->dPrecio, 2) }}</strong>
-                                                @if($variacion->tieneOferta())
+                                                @if($variacion->dPrecio_oferta && $variacion->dPrecio_oferta > 0)
                                                     <br>
                                                     <small class="text-success">
                                                         Oferta: ${{ number_format($variacion->dPrecio_oferta, 2) }}
@@ -119,8 +128,8 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                <span class="badge {{ $variacion->iStock > 10 ? 'bg-success' : ($variacion->iStock > 0 ? 'bg-warning' : 'bg-danger') }}">
-                                                    {{ $variacion->iStock }}
+                                                <span class="badge {{ $stockVariacion > 10 ? 'bg-success' : ($stockVariacion > 0 ? 'bg-warning' : 'bg-danger') }}">
+                                                    {{ $stockVariacion }} unidades
                                                 </span>
                                             </td>
                                             <td>
@@ -152,6 +161,26 @@
                                         </tr>
                                     @endforeach
                                 </tbody>
+                                <tfoot>
+                                    <tr class="table-info">
+                                        <td colspan="3" class="text-end fw-bold">Totales:</td>
+                                        <td class="fw-bold">
+                                            @php
+                                                $precioMin = $producto->variaciones->min('dPrecio');
+                                                $precioMax = $producto->variaciones->max('dPrecio');
+                                            @endphp
+                                            @if($precioMin == $precioMax)
+                                                ${{ number_format($precioMin, 2) }}
+                                            @else
+                                                ${{ number_format($precioMin, 2) }} - ${{ number_format($precioMax, 2) }}
+                                            @endif
+                                        </td>
+                                        <td class="fw-bold">
+                                            {{ $producto->variaciones->sum('iStock') }} unidades
+                                        </td>
+                                        <td colspan="4"></td>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     @else

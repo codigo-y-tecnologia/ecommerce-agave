@@ -15,8 +15,8 @@ class ValoracionController extends Controller
 {
     public function index()
     {
-        $productos = Producto::with(['variaciones.atributos.valor', 'variaciones.atributos.atributo', 'marca', 'categoria'])
-            ->whereHas('variaciones')
+        $productos = Producto::with(['marca', 'categoria', 'variaciones.atributos.valor'])
+            ->whereHas('valoresAtributos')
             ->orderBy('vNombre')
             ->get();
             
@@ -35,13 +35,11 @@ class ValoracionController extends Controller
     {
         $producto = Producto::with(['valoresAtributos.atributo'])->findOrFail($producto_id);
         
-        // Verificar si el producto tiene atributos asignados
         if ($producto->valoresAtributos->count() === 0) {
             return redirect()->route('valoraciones.show', $producto->id_producto)
                 ->with('warning', 'Primero debes asignar atributos al producto desde la página de edición.');
         }
         
-        // Agrupar atributos por nombre
         $atributos = [];
         foreach ($producto->valoresAtributos as $valor) {
             $nombreAtributo = $valor->atributo->vNombre;
@@ -58,7 +56,6 @@ class ValoracionController extends Controller
     {
         $request->validate([
             'vSKU' => 'required|unique:tbl_producto_variaciones,vSKU',
-            'vCodigo_barras' => 'nullable|max:50',
             'dPrecio' => 'required|numeric|min:0',
             'dPrecio_oferta' => 'nullable|numeric|min:0',
             'iStock' => 'required|integer|min:0',
@@ -66,33 +63,49 @@ class ValoracionController extends Controller
             'vClase_envio' => 'nullable|max:50',
             'tDescripcion' => 'nullable',
             'bActivo' => 'boolean',
-            'imagen' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:2048',
+            'imagen' => 'nullable|image|max:5120|mimes:jpg,jpeg,png,gif,webp,bmp,svg',
             'atributos' => 'required|array',
             'atributos.*' => 'required|exists:tbl_atributo_valores,id_atributo_valor'
+        ], [
+            'imagen.image' => 'El archivo debe ser una imagen válida',
+            'imagen.max' => 'La imagen no debe pesar más de 5MB',
+            'imagen.mimes' => 'Formatos aceptados: JPG, JPEG, PNG, GIF, WebP, BMP, SVG',
+            'vSKU.unique' => 'Este SKU ya está registrado',
+            'dPrecio.required' => 'El precio es obligatorio',
+            'iStock.required' => 'El stock es obligatorio',
         ]);
 
         try {
             DB::beginTransaction();
 
-            $variacion = ProductoVariacion::create([
+            $productoPadre = Producto::find($producto_id);
+            
+            $variacionData = [
                 'id_producto' => $producto_id,
                 'vSKU' => $request->vSKU,
-                'vCodigo_barras' => $request->vCodigo_barras,
                 'dPrecio' => $request->dPrecio,
                 'dPrecio_oferta' => $request->dPrecio_oferta,
                 'iStock' => $request->iStock,
                 'dPeso' => $request->dPeso,
-                'vClase_envio' => $request->vClase_envio,
                 'tDescripcion' => $request->tDescripcion,
                 'bActivo' => $request->has('bActivo')
-            ]);
+            ];
+
+            if ($request->filled('vClase_envio')) {
+                $variacionData['vClase_envio'] = $request->vClase_envio;
+            } elseif ($productoPadre && $productoPadre->vClase_envio) {
+                $variacionData['vClase_envio'] = $productoPadre->vClase_envio;
+            } else {
+                $variacionData['vClase_envio'] = 'Estándar';
+            }
+
+            $variacion = ProductoVariacion::create($variacionData);
 
             // Guardar imagen si se envió
             if ($request->hasFile('imagen')) {
                 $this->guardarImagenVariacion($variacion, $request->file('imagen'));
             }
 
-            // Guardar atributos de la valoración
             foreach ($request->atributos as $atributo_id => $valor_id) {
                 VariacionAtributo::create([
                     'id_variacion' => $variacion->id_variacion,
@@ -121,7 +134,6 @@ class ValoracionController extends Controller
         $variacion = ProductoVariacion::with('atributos.valor', 'atributos.atributo')
             ->findOrFail($variacion_id);
         
-        // Agrupar atributos por nombre
         $atributos = [];
         foreach ($producto->valoresAtributos as $valor) {
             $nombreAtributo = $valor->atributo->vNombre;
@@ -131,7 +143,6 @@ class ValoracionController extends Controller
             $atributos[$nombreAtributo][] = $valor;
         }
         
-        // Marcar los valores seleccionados
         $valoresSeleccionados = [];
         foreach ($variacion->atributos as $atributoVariacion) {
             $valoresSeleccionados[$atributoVariacion->id_atributo] = $atributoVariacion->id_atributo_valor;
@@ -144,7 +155,6 @@ class ValoracionController extends Controller
     {
         $request->validate([
             'vSKU' => 'required|unique:tbl_producto_variaciones,vSKU,' . $variacion_id . ',id_variacion',
-            'vCodigo_barras' => 'nullable|max:50',
             'dPrecio' => 'required|numeric|min:0',
             'dPrecio_oferta' => 'nullable|numeric|min:0',
             'iStock' => 'required|integer|min:0',
@@ -152,35 +162,56 @@ class ValoracionController extends Controller
             'vClase_envio' => 'nullable|max:50',
             'tDescripcion' => 'nullable',
             'bActivo' => 'boolean',
-            'imagen' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:2048',
+            'imagen' => 'nullable|image|max:5120|mimes:jpg,jpeg,png,gif,webp,bmp,svg',
             'atributos' => 'required|array',
             'atributos.*' => 'required|exists:tbl_atributo_valores,id_atributo_valor'
+        ], [
+            'imagen.image' => 'El archivo debe ser una imagen válida',
+            'imagen.max' => 'La imagen no debe pesar más de 5MB',
+            'imagen.mimes' => 'Formatos aceptados: JPG, JPEG, PNG, GIF, WebP, BMP, SVG',
+            'vSKU.unique' => 'Este SKU ya está registrado',
+            'dPrecio.required' => 'El precio es obligatorio',
+            'iStock.required' => 'El stock es obligatorio',
         ]);
 
         try {
             DB::beginTransaction();
 
             $variacion = ProductoVariacion::findOrFail($variacion_id);
+            $productoPadre = Producto::find($producto_id);
             
-            $variacion->update([
+            $updateData = [
                 'vSKU' => $request->vSKU,
-                'vCodigo_barras' => $request->vCodigo_barras,
                 'dPrecio' => $request->dPrecio,
                 'dPrecio_oferta' => $request->dPrecio_oferta,
                 'iStock' => $request->iStock,
                 'dPeso' => $request->dPeso,
-                'vClase_envio' => $request->vClase_envio,
                 'tDescripcion' => $request->tDescripcion,
                 'bActivo' => $request->has('bActivo')
-            ]);
+            ];
 
-            // Guardar imagen si se envió
-            if ($request->hasFile('imagen')) {
-                $this->eliminarImagenVariacion($variacion);
-                $this->guardarImagenVariacion($variacion, $request->file('imagen'));
+            if ($request->filled('vClase_envio')) {
+                $updateData['vClase_envio'] = $request->vClase_envio;
+            } else {
+                $updateData['vClase_envio'] = $variacion->vClase_envio ?: 
+                    ($productoPadre->vClase_envio ?: 'Estándar');
             }
 
-            // Eliminar atributos existentes y guardar nuevos
+            $variacion->update($updateData);
+
+            // Manejo de imagen mejorado
+            if ($request->hasFile('imagen')) {
+                // Si se sube nueva imagen, reemplazar
+                $this->eliminarImagenVariacion($variacion);
+                $this->guardarImagenVariacion($variacion, $request->file('imagen'));
+            } elseif ($request->has('mantener_imagen') && $request->mantener_imagen == '1') {
+                // Si se marca "mantener imagen", no hacer nada (mantener la existente)
+                // No se elimina ni se cambia la imagen
+            } else {
+                // Si no se especifica nada, mantener la imagen existente
+                // No hacer nada
+            }
+
             $variacion->atributos()->delete();
             
             foreach ($request->atributos as $atributo_id => $valor_id) {
@@ -212,13 +243,8 @@ class ValoracionController extends Controller
 
             $variacion = ProductoVariacion::findOrFail($variacion_id);
             
-            // Eliminar imagen
             $this->eliminarImagenVariacion($variacion);
-            
-            // Eliminar atributos
             $variacion->atributos()->delete();
-            
-            // Eliminar valoración
             $variacion->delete();
 
             DB::commit();
@@ -242,7 +268,19 @@ class ValoracionController extends Controller
             Storage::disk('public')->makeDirectory($carpeta);
         }
         
-        $nombreArchivo = 'imagen.' . $imagen->getClientOriginalExtension();
+        // Obtener la extensión original del archivo
+        $extension = strtolower($imagen->getClientOriginalExtension());
+        
+        // Lista de extensiones de imagen válidas
+        $extensionesValidas = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'tiff', 'ico', 'heic', 'heif'];
+        
+        // Si no hay extensión o no es válida, usar jpg como predeterminado
+        if (!$extension || !in_array($extension, $extensionesValidas)) {
+            $extension = 'jpg';
+        }
+        
+        // Generar nombre único para evitar colisiones
+        $nombreArchivo = 'imagen_' . time() . '_' . uniqid() . '.' . $extension;
         $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
         
         $variacion->vImagen = Storage::url($ruta);
@@ -252,10 +290,25 @@ class ValoracionController extends Controller
     private function eliminarImagenVariacion($variacion)
     {
         if ($variacion->vImagen) {
+            // Extraer la ruta relativa del URL completo
+            $urlBase = Storage::url('');
+            $rutaRelativa = str_replace($urlBase, '', $variacion->vImagen);
+            
+            // Eliminar el archivo específico
+            if (Storage::disk('public')->exists($rutaRelativa)) {
+                Storage::disk('public')->delete($rutaRelativa);
+            }
+            
+            // Intentar eliminar la carpeta si está vacía
             $carpeta = 'variaciones/' . $variacion->id_variacion;
             if (Storage::disk('public')->exists($carpeta)) {
-                Storage::disk('public')->deleteDirectory($carpeta);
+                // Verificar si la carpeta está vacía
+                $archivos = Storage::disk('public')->files($carpeta);
+                if (empty($archivos)) {
+                    Storage::disk('public')->deleteDirectory($carpeta);
+                }
             }
+            
             $variacion->vImagen = null;
             $variacion->save();
         }

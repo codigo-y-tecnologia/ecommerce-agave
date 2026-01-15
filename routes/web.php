@@ -136,13 +136,6 @@ Route::get('/productos/{id}/generar-combinaciones-view', function($id) {
 })->name('productos.generar-combinaciones-view');
 
 // =====================================================================
-// RUTAS DE ADMINISTRACIÓN (si es necesario agregar más adelante)
-// =====================================================================
-// Ejemplo: Route::middleware(['auth', 'admin'])->group(function () {
-//     // Rutas de administración aquí
-// });
-
-// =====================================================================
 // RUTAS DE FALLBACK (si ninguna ruta coincide)
 // =====================================================================
 Route::fallback(function () {

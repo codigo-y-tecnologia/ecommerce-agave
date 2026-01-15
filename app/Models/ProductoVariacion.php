@@ -12,29 +12,28 @@ class ProductoVariacion extends Model
     protected $table = 'tbl_producto_variaciones';
     protected $primaryKey = 'id_variacion';
 
+    // Desactivar timestamps
+    public $timestamps = false;
+
     protected $fillable = [
         'id_producto',
         'vSKU',
-        'vCodigo_barras',
         'dPrecio',
         'dPrecio_oferta',
         'iStock',
         'dPeso',
-        'dAncho',
-        'dAlto',
-        'dProfundidad',
+        'vClase_envio',
+        'tDescripcion',
+        'vImagen',
         'bActivo'
     ];
 
     protected $casts = [
+        'bActivo' => 'boolean',
         'dPrecio' => 'decimal:2',
         'dPrecio_oferta' => 'decimal:2',
         'iStock' => 'integer',
-        'dPeso' => 'decimal:2',
-        'dAncho' => 'decimal:2',
-        'dAlto' => 'decimal:2',
-        'dProfundidad' => 'decimal:2',
-        'bActivo' => 'boolean'
+        'dPeso' => 'decimal:2'
     ];
 
     public function producto()
@@ -44,46 +43,24 @@ class ProductoVariacion extends Model
 
     public function atributos()
     {
-        return $this->hasMany(VariacionAtributo::class, 'id_variacion')
-            ->with(['atributo', 'valor']);
+        return $this->hasMany(VariacionAtributo::class, 'id_variacion');
     }
 
+    // Accesor para verificar si tiene oferta
+    public function getTieneOfertaAttribute()
+    {
+        return $this->dPrecio_oferta && $this->dPrecio_oferta > 0 && $this->dPrecio_oferta < $this->dPrecio;
+    }
+
+    // Accesor para nombre de la combinación
     public function getNombreCombinacionAttribute()
     {
         $nombres = [];
         foreach ($this->atributos as $atributo) {
-            $nombres[] = $atributo->atributo->vNombre . ': ' . $atributo->valor->vValor;
+            if ($atributo->valor) {
+                $nombres[] = $atributo->valor->vValor;
+            }
         }
-        return implode(' / ', $nombres);
-    }
-
-    public function getPrecioFinalAttribute()
-    {
-        return $this->dPrecio_oferta ?: $this->dPrecio;
-    }
-
-    public function tieneOferta()
-    {
-        return !empty($this->dPrecio_oferta) && $this->dPrecio_oferta < $this->dPrecio;
-    }
-
-    public function porcentajeDescuento()
-    {
-        if (!$this->tieneOferta()) {
-            return 0;
-        }
-        
-        $descuento = (($this->dPrecio - $this->dPrecio_oferta) / $this->dPrecio) * 100;
-        return round($descuento);
-    }
-
-    public function estaBajoStock()
-    {
-        return $this->iStock > 0 && $this->iStock <= 5;
-    }
-
-    public function sinStock()
-    {
-        return $this->iStock <= 0;
+        return !empty($nombres) ? implode(' / ', $nombres) : 'Sin atributos';
     }
 }
