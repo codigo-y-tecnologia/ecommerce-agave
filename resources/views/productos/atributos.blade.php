@@ -148,7 +148,7 @@
                                     </td>
                                     <td>
                                         ${{ number_format($variacion->dPrecio, 2) }}
-                                        @if($variacion->tieneOferta())
+                                        @if($variacion->tiene_oferta) {{-- ¡CORREGIDO! Cambiado de tieneOferta() a tiene_oferta --}}
                                         <br>
                                         <small class="text-success">Oferta: ${{ number_format($variacion->dPrecio_oferta, 2) }}</small>
                                         @endif
