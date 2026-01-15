@@ -6,8 +6,6 @@
 <div class="container">
     <h2 class="mb-4">✏️ Editar rol</h2>
 
-    @include('superadmin.partials.alerts')
-
     <form method="POST" action="{{ route('roles.update', $role) }}">
         @csrf
         @method('PUT')

@@ -269,6 +269,13 @@ Route::middleware(['auth', 'permission:gestionar_permisos'])->group(function () 
         ->name('roles.permissions.update');
 
     // Asignar rol a usuario
+
+    Route::get(
+        'usuarios',
+        [UsuarioRolController::class, 'index']
+    )
+        ->name('usuarios.index');
+
     Route::get(
         'usuarios/{usuario}/rol',
         [UsuarioRolController::class, 'edit']

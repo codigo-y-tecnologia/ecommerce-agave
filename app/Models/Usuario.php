@@ -15,6 +15,8 @@ class Usuario extends Authenticatable implements CanResetPassword
 
     use Notifiable, CanResetPasswordTrait, HasRoles;
 
+    protected $guard_name = 'web';
+
     protected $table = 'tbl_usuarios';
     protected $primaryKey = 'id_usuario';
     public $timestamps = false;

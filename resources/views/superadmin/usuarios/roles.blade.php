@@ -40,7 +40,7 @@
                     Guardar cambios
                 </button>
 
-                <a href="{{ route('roles.permisos') }}"
+                <a href="{{ route('usuarios.index') }}"
                    class="btn btn-secondary ms-2">
                     Cancelar
                 </a>

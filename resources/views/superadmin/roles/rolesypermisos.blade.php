@@ -17,11 +17,11 @@
                 🧾 Permisos del sistema
             </a>
         @endcan
-        @can('gestionar_roles')
-            <a href="{{ route('usuarios.roles.edit', $usuario) }}"
-   class="btn btn-sm btn-info">
-   Asignar rol
-</a>
+        @can('gestionar_permisos')
+            <a href="{{ route('usuarios.index') }}"
+               class="list-group-item list-group-item-action">
+                👤 Asignar roles a usuarios
+            </a>
         @endcan
     </div>
 </div>
