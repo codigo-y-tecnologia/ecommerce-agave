@@ -17,7 +17,7 @@
                 🧾 Permisos del sistema
             </a>
         @endcan
-        @can('gestionar_permisos')
+        @can('gestionar_roles')
             <a href="{{ route('usuarios.index') }}"
                class="list-group-item list-group-item-action">
                 👤 Asignar roles a usuarios

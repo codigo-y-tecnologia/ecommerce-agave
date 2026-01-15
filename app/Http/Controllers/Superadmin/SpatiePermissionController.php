@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Spatie\Permission\Models\Permission;
 use App\Http\Requests\StorePermissionRequest;
 use App\Http\Requests\UpdatePermissionRequest;
+use Spatie\Permission\Models\Role;
 
 class SpatiePermissionController extends Controller
 {
@@ -34,10 +35,17 @@ class SpatiePermissionController extends Controller
     public function store(StorePermissionRequest $request)
     {
 
-        Permission::create([
+        $permission = Permission::create([
             'name' => strtolower(trim($request->name)),
             'guard_name' => 'web'
         ]);
+
+        // Asignar automáticamente al superadmin
+        $superadmin = Role::where('name', 'superadmin')->first();
+
+        if ($superadmin) {
+            $superadmin->givePermissionTo($permission);
+        }
 
         return redirect()
             ->route('permissions.index')

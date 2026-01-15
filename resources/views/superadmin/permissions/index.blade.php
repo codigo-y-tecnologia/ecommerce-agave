@@ -4,6 +4,11 @@
 
 @include('superadmin.partials.alerts')
 
+<a href="{{ route('roles.permisos') }}"
+   class="btn btn-secondary mb-3">
+    ← Volver
+</a>
+
 <h2>🧾 Permisos</h2>
 
 <a href="{{ route('permissions.create') }}"
