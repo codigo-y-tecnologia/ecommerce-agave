@@ -30,7 +30,7 @@
 
                         {{-- 👤 Cliente --}}
                         @role('cliente')
-                        @can('mi_carrito')
+                        @can('ver_carrito')
                             <li class="nav-item"><a class="nav-link" href="{{ route('carrito.index') }}">🛒 Mi Carrito</a></li>
                         @endcan
                         @can('comprar_productos')

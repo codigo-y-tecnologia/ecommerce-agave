@@ -18,7 +18,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $permissions = [
             // Clientes
-            'mi_carrito',
+            'ver_carrito',
             'comprar_productos',
             'ver_pedidos_propios', //pendiente
             'ver_perfil',
@@ -55,7 +55,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $superadmin = Role::firstOrCreate(['name' => 'superadmin']);
 
         $cliente->syncPermissions([
-            'mi_carrito',
+            'ver_carrito',
             'comprar_productos',
             'ver_pedidos_propios',
             'ver_perfil',

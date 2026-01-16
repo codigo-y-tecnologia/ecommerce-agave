@@ -14,7 +14,7 @@
            {{-- Panel de cliente --}}
          <nav class="navbar">
     <ul>
-        @can('mi_carrito')
+        @can('ver_carrito')
             <li><a href="{{ route('carrito.index') }}">🛒 Mi Carrito</a></li>
         @endcan
             <li><a href="#">Mis Pedidos</a></li>

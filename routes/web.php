@@ -132,7 +132,7 @@ Route::middleware(['auth', 'permission:gestionar_direcciones'])->group(function 
     });
 });
 
-Route::middleware(['auth', 'permission:mi_carrito'])->group(function () {
+Route::middleware(['auth', 'permission:ver_carrito'])->group(function () {
 
     // --------------------
     // Rutas de Carrito
