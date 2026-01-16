@@ -7,13 +7,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Direccion extends Model
 {
-     use HasFactory;
+    use HasFactory;
 
-     protected $table = 'tbl_direcciones';
-     protected $primaryKey = 'id_direccion';
-     public $timestamps = false;
+    protected $table = 'tbl_direcciones';
+    protected $primaryKey = 'id_direccion';
+    public $timestamps = false;
 
-     protected $fillable = [
+    protected $fillable = [
         'id_usuario',
         'vTelefono_contacto',
         'vCalle',

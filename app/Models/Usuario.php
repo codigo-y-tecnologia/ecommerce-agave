@@ -8,11 +8,14 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Auth\Passwords\CanResetPassword as CanResetPasswordTrait;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Support\Str;
+use Spatie\Permission\Traits\HasRoles;
 
 class Usuario extends Authenticatable implements CanResetPassword
 {
 
-    use Notifiable, CanResetPasswordTrait;
+    use Notifiable, CanResetPasswordTrait, HasRoles;
+
+    protected $guard_name = 'web';
 
     protected $table = 'tbl_usuarios';
     protected $primaryKey = 'id_usuario';
@@ -23,6 +26,9 @@ class Usuario extends Authenticatable implements CanResetPassword
         'vApaterno',
         'vAmaterno',
         'vEmail',
+        'email_pending',
+        'email_verification_token',
+        'email_verified_at',
         'is_verified',
         'verification_token',
         'vPassword',
@@ -33,12 +39,13 @@ class Usuario extends Authenticatable implements CanResetPassword
     ];
 
     protected $hidden = [
+        'email_verification_token',
         'verification_token',
         'vPassword',
         'remember_token',
         'api_token'
     ];
-    
+
     public function getEmailForPasswordReset()
     {
         return $this->vEmail;
@@ -60,7 +67,7 @@ class Usuario extends Authenticatable implements CanResetPassword
     {
         $this->verification_token = Str::random(60);
         $this->save();
-        
+
         return $this->verification_token;
     }
 

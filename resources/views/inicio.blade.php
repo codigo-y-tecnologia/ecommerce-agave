@@ -3,41 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Inicio</title>
 </head>
 <body>
     <header>
           @auth
           <p>Hola, {{ Auth::user()->vNombre }}. Tu rol es: {{ Auth::user()->eRol }}</p>
 
-          @if(Auth::user()->eRol === 'cliente')
+          @role('cliente')
            {{-- Panel de cliente --}}
          <nav class="navbar">
     <ul>
+        @can('mi_carrito')
             <li><a href="{{ route('carrito.index') }}">🛒 Mi Carrito</a></li>
+        @endcan
             <li><a href="#">Mis Pedidos</a></li>
+            @can('ver_perfil')
+                <li><a href="{{ route('perfil.index') }}">👤 Mi Perfil</a></li>
+            @endcan
         </ul>
     </nav>
+    @endrole
 
-    @elseif(Auth::user()->eRol === 'admin')
+    @role('admin')
         {{-- Panel de administrador --}}
         <nav class="navbar">
             <ul>
-                <li><a href="#">Gestionar Usuarios</a></li>
+                @can('mi_perfil_admin')
+                <li><a href="{{ route('admin.perfil.index') }}">Mi Perfil</a></li>
+                @endcan
+                @can('ver_clientes')
+                <li><a href="{{ route('admin.usuarios') }}">Clientes registrados</a></li>
+                @endcan
                 <li><a href="#">Ver Carritos de Clientes</a></li>
                 <li><a href="#">Reportes</a></li>
             </ul>
         </nav>
-    @elseif(Auth::user()->eRol === 'superadmin')
+    @endrole
+    @role('superadmin')
         {{-- Panel de superadmin --}}
         <nav class="navbar">
             <ul>
+                @can('mi_perfil_superadmin')
+                <li><a href="{{ route('superadmin.perfil.index') }}">Mi Perfil</a></li>
+                @endcan
+                @can('gestionar_administradores')
+                <li><a href="{{ route('superadmin.admins.index') }}">Gestión de Administradores</a></li>
+                @endcan
                 <li><a href="#">⚙ Configuración General</a></li>
-                <li><a href="#">Gestión Avanzada de Usuarios</a></li>
                 <li><a href="#">Monitoreo del Sistema</a></li>
+                @can('gestionar_permisos')
+                <li><a href="{{ route('roles.permisos') }}">Gestión de permisos</a></li>
+                @endcan
             </ul>
         </nav>
-    @endif
+    @endrole
 
     {{-- Botón de cerrar sesión --}}
     <form method="POST" action="{{ route('logout') }}">

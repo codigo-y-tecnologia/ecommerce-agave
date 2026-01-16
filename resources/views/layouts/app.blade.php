@@ -29,21 +29,31 @@
                         @endguest
 
                         {{-- 👤 Cliente --}}
-                        @auth
-                            @if(Auth::user()->eRol === 'cliente')
-                                <li class="nav-item"><a class="nav-link" href="{{ route('carrito.index') }}">🛒 Mi Carrito</a></li>
+                        @role('cliente')
+                        @can('mi_carrito')
+                            <li class="nav-item"><a class="nav-link" href="{{ route('carrito.index') }}">🛒 Mi Carrito</a></li>
+                        @endcan
+                        @can('comprar_productos')
                                 <li class="nav-item"><a class="nav-link" href="{{ route('checkout.index') }}">🧾 Checkout</a></li>
+                                @endcan
                                 <li class="nav-item"><a class="nav-link" href="#">📦 Mis Pedidos</a></li>
-                                <li class="nav-item"><a class="nav-link" href="#">👤 Mi Perfil</a></li>
-
+                                @can('ver_perfil')
+                                <li class="nav-item"><a class="nav-link" href="{{ route('perfil.index') }}">👤 Mi Perfil</a></li>
+                                @endcan
+                        @endrole
                             {{-- ⚙️ Admin --}}
-                            @elseif(Auth::user()->eRol === 'admin')
+                            @role('admin')
                                 <li class="nav-item dropdown">
                                     <a class="nav-link dropdown-toggle" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown">
                                         👨‍💼 Administración
                                     </a>
                                     <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#">Clientes registrados</a></li>
+                                        @can('mi_perfil_admin')
+                                            <li><a class="dropdown-item" href="{{ route('admin.perfil.index') }}">Mi Perfil</a></li>
+                                        @endcan
+                                        @can('ver_clientes')
+                                        <li><a class="dropdown-item" href="{{ route('admin.usuarios') }}">Clientes registrados</a></li>
+                                        @endcan
                                         <li><a class="dropdown-item" href="#">Cupones</a></li>
                                         <li><a class="dropdown-item" href="#">Impuestos</a></li>
                                         <li><a class="dropdown-item" href="#">Productos</a></li>
@@ -51,29 +61,36 @@
                                         <li><a class="dropdown-item" href="#">Reportes</a></li>
                                     </ul>
                                 </li>
+                            @endrole
 
                             {{-- 👑 Superadmin --}}
-                            @elseif(Auth::user()->eRol === 'superadmin')
+                            @role('superadmin')
                                 <li class="nav-item dropdown">
                                     <a class="nav-link dropdown-toggle" href="#" id="superadminMenu" role="button" data-bs-toggle="dropdown">
                                         👑 Panel Superadmin
                                     </a>
                                     <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#">Gestión de administradores</a></li>
+                                        @can('mi_perfil_superadmin')
+                                            <li><a class="dropdown-item" href="{{ route('superadmin.perfil.index') }}">Mi Perfil</a></li>
+                                        @endcan
+                                        @can('gestionar_administradores')
+                                        <li><a class="dropdown-item" href="{{ route('superadmin.admins.index') }}">Gestión de administradores</a></li>
+                                        @endcan
                                         <li><a class="dropdown-item" href="#">Monitoreo del sistema</a></li>
                                         <li><a class="dropdown-item" href="#">Logs de seguridad</a></li>
                                         <li><a class="dropdown-item" href="#">Configuración global</a></li>
-                                        <li><a class="dropdown-item" href="#">Gestión de permisos</a></li>
+                                        @can('gestionar_permisos')
+                                        <li><a class="dropdown-item" href="{{ route('roles.permisos') }}">Gestión de permisos</a></li>
+                                        @endcan
                                     </ul>
                                 </li>
-                            @endif
-                        @endauth
+                            @endrole
                     </ul>
 
                     {{-- 🟢 Usuario autenticado (lado derecho) --}}
                     @auth
                         <div class="d-flex align-items-center">
-                            <span class="text-white me-3">Hola, {{ Auth::user()->vNombre }} <small>({{ Auth::user()->eRol }})</small></span>
+                            <span class="text-white me-3">Hola, {{ Auth::user()->vNombre }} <small>({{ Auth::user()->getRoleNames()->first() }})</small></span>
                             <form action="{{ route('logout') }}" method="POST">
                                 @csrf
                                 <button class="btn btn-outline-light btn-sm">Cerrar sesión</button>
