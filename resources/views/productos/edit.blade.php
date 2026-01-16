@@ -84,7 +84,7 @@
                                        oninput="soloNumerosYDecimal(this)">
                                 @error('dPrecio_venta')
                                     <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                            @enderror
                             </div>
                         </div>
                     </div>
@@ -125,16 +125,56 @@
                                     class="form-select @error('id_categoria') is-invalid @enderror" 
                                     required>
                                 <option value="">Seleccionar categoría</option>
-                                @foreach ($categorias as $categoria)
-                                    <option value="{{ $categoria->id_categoria }}" 
-                                        {{ $categoria->id_categoria == old('id_categoria', $producto->id_categoria) ? 'selected' : '' }}>
-                                        {{ $categoria->vNombre }}
-                                    </option>
-                                @endforeach
+                                @php
+                                    function mostrarCategoriasJerarquicamenteEdit($categorias, $nivel = 0, $oldValue = null, $productoCategoria = null)
+                                    {
+                                        foreach($categorias as $categoria) {
+                                            $prefijo = str_repeat('&nbsp;&nbsp;&nbsp;', $nivel);
+                                            $icono = '';
+                                            
+                                            if ($nivel == 0) {
+                                                $icono = '🏠 ';
+                                            } elseif ($nivel == 1) {
+                                                $icono = '↳ ';
+                                            } elseif ($nivel >= 2) {
+                                                $icono = str_repeat('↳&nbsp;', $nivel);
+                                            }
+                                            
+                                            // Determinar si está seleccionado (prioridad: old value, luego producto actual)
+                                            $selected = false;
+                                            if ($oldValue !== null) {
+                                                $selected = ($oldValue == $categoria->id_categoria);
+                                            } elseif ($productoCategoria !== null) {
+                                                $selected = ($productoCategoria == $categoria->id_categoria);
+                                            }
+                                            
+                                            echo '<option value="' . $categoria->id_categoria . '" ' . 
+                                                 ($selected ? 'selected' : '') . '>' .
+                                                 $prefijo . $icono . htmlspecialchars($categoria->vNombre) . 
+                                                 '</option>';
+                                            
+                                            if ($categoria->hijos && $categoria->hijos->count() > 0) {
+                                                mostrarCategoriasJerarquicamenteEdit($categoria->hijos, $nivel + 1, $oldValue, $productoCategoria);
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Pasar el valor old si existe, o el valor actual del producto
+                                    $oldCategoria = old('id_categoria');
+                                    $productoCategoria = $producto->id_categoria;
+                                    $categoriasRaiz = $categorias->where('id_categoria_padre', null)->where('bActivo', true);
+                                @endphp
+                                
+                                @php
+                                    mostrarCategoriasJerarquicamenteEdit($categoriasRaiz, 0, $oldCategoria, $productoCategoria);
+                                @endphp
                             </select>
                             @error('id_categoria')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                            <small class="form-text text-muted">
+                                Selecciona la categoría principal o subcategoría para este producto
+                            </small>
                         </div>
                     </div>
                     
@@ -561,6 +601,89 @@ document.addEventListener('DOMContentLoaded', function() {
 .form-control:focus + .input-group-text {
     border-color: #86b7fe;
     background-color: #f8f9fa;
+}
+
+/* Estilos para la jerarquía de categorías */
+select option {
+    padding: 8px 12px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+select option[value=""] {
+    color: #6c757d;
+    font-style: italic;
+    font-size: 14px;
+}
+
+/* Para Firefox que no soporta bien los espacios HTML */
+@-moz-document url-prefix() {
+    select option {
+        white-space: pre-wrap !important;
+        font-family: 'Consolas', 'Monaco', monospace !important;
+    }
+}
+
+/* Mejorar el select para mostrar jerarquía */
+.form-select {
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Resaltar la opción seleccionada */
+.form-select option:checked {
+    background-color: #007bff;
+    color: white;
+    font-weight: bold;
+}
+
+/* Estilos específicos para categorías */
+select option.categoria-raiz {
+    font-weight: bold;
+    color: #2c3e50;
+    background-color: #f8f9fa;
+    padding-left: 10px;
+}
+
+select option.categoria-hijo {
+    color: #34495e;
+    padding-left: 30px;
+    font-size: 14px;
+}
+
+select option.categoria-subhijo {
+    color: #7f8c8d;
+    padding-left: 50px;
+    font-size: 13px;
+    font-style: italic;
+}
+
+/* Mejorar la visualización de los iconos */
+select option {
+    white-space: pre;
+}
+
+/* Asegurar que el select tenga suficiente altura para mostrar la jerarquía */
+.form-select {
+    min-height: 45px;
+    padding: 10px 12px;
+}
+
+/* Para Chrome/Edge que soportan mejor la jerarquía */
+@supports (-webkit-appearance: none) {
+    select option {
+        padding-left: 20px;
+        text-indent: -20px;
+    }
+    
+    select option.categoria-hijo {
+        padding-left: 40px;
+        text-indent: -20px;
+    }
+    
+    select option.categoria-subhijo {
+        padding-left: 60px;
+        text-indent: -20px;
+    }
 }
 </style>
 @endsection

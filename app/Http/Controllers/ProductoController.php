@@ -25,7 +25,22 @@ class ProductoController extends Controller
 
     public function create()
     {
-        $categorias = Categoria::orderBy('vNombre', 'asc')->get();
+        $categorias = Categoria::with(['hijos' => function($query) {
+        $query->where('bActivo', true)
+              ->with(['hijos' => function($subQuery) {
+                  $subQuery->where('bActivo', true)
+                           ->orderBy('iOrden')
+                           ->orderBy('vNombre');
+              }])
+              ->orderBy('iOrden')
+              ->orderBy('vNombre');
+        }])
+        ->whereNull('id_categoria_padre')
+        ->where('bActivo', true)
+        ->orderBy('iOrden')
+        ->orderBy('vNombre')
+        ->get();
+        
         $marcas = Marca::all();
         $etiquetas = Etiqueta::all();
         $atributos = Atributo::with(['valoresActivos' => function($query) {
@@ -165,7 +180,22 @@ class ProductoController extends Controller
 
     public function edit(Producto $producto)
     {
-        $categorias = Categoria::orderBy('vNombre', 'asc')->get();
+        $categorias = Categoria::with(['hijos' => function($query) {
+        $query->where('bActivo', true)
+              ->with(['hijos' => function($subQuery) {
+                  $subQuery->where('bActivo', true)
+                           ->orderBy('iOrden')
+                           ->orderBy('vNombre');
+              }])
+              ->orderBy('iOrden')
+              ->orderBy('vNombre');
+        }])
+        ->whereNull('id_categoria_padre')
+        ->where('bActivo', true)
+        ->orderBy('iOrden')
+        ->orderBy('vNombre')
+        ->get();
+        
         $marcas = Marca::all();
         $etiquetas = Etiqueta::all();
         $atributos = Atributo::with(['valoresActivos' => function($query) {

@@ -14,14 +14,15 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-4 text-center">
-                            @if($categoria->vImagen)
-                                <img src="{{ asset('storage/categorias/' . $categoria->vImagen) }}" 
+                            @if($categoria->tiene_imagen)
+                                <img src="{{ $categoria->imagen_url }}" 
                                      class="img-fluid rounded mb-3" 
                                      style="max-height: 200px; object-fit: cover;"
                                      alt="{{ $categoria->vNombre }}">
                             @else
-                                <div class="border rounded p-4 mb-3 text-muted">
-                                    Sin imagen
+                                <div class="border rounded p-4 mb-3 text-muted text-center">
+                                    <div style="font-size: 3rem; margin-bottom: 15px;">📷</div>
+                                    <p>Sin imagen</p>
                                 </div>
                             @endif
                             

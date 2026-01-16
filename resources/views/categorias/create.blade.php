@@ -12,7 +12,7 @@
                 </div>
 
                 <div class="card-body">
-                    <form action="{{ route('categorias.store') }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ route('categorias.store') }}" method="POST" enctype="multipart/form-data" id="createForm">
                         @csrf
                         
                         <div class="mb-3">
@@ -81,13 +81,55 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="vImagen" class="form-label">Imagen de la Categoría</label>
-                            <input type="file" class="form-control @error('vImagen') is-invalid @enderror" 
-                                   id="vImagen" name="vImagen"
-                                   accept="image/*">
+                            <label class="form-label">Imagen de la Categoría</label>
+                            
+                            <!-- Sección para mostrar que no hay imagen actual (en creación) -->
+                            <div class="mb-3" id="noImageSection">
+                                <div class="border rounded p-4 mb-3 text-muted text-center">
+                                    <div style="font-size: 2rem; margin-bottom: 10px;">📷</div>
+                                    <p>No hay imagen seleccionada</p>
+                                    <small class="text-muted d-block mt-2">
+                                        La imagen es completamente opcional. Puedes agregar una imagen ahora o después.
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <!-- Preview de nueva imagen seleccionada -->
+                            <div class="mb-3" id="newImagePreviewSection" style="display: none;">
+                                <div class="mb-2">
+                                    <img id="newImagePreview" src="#" 
+                                         class="img-thumbnail" 
+                                         style="width: 200px; height: 200px; object-fit: cover;"
+                                         alt="Preview de nueva imagen">
+                                    <br>
+                                    <small class="text-muted">Vista previa de la imagen seleccionada</small>
+                                    <div class="mt-2">
+                                        
+                                        <small class="form-text text-muted d-block mt-1">
+                                            Si cancelas, no se agregará ninguna imagen a la categoría
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <label for="vImagen" class="form-label">Agregar imagen (opcional)</label>
+                            <div class="input-group">
+                                <input type="file" class="form-control @error('vImagen') is-invalid @enderror" 
+                                       id="vImagen" name="vImagen"
+                                       accept="image/*">
+                                <button type="button" class="btn btn-outline-secondary" onclick="resetFileInput()">
+                                    🔄
+                                </button>
+                            </div>
                             @error('vImagen')
                                 <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror>
+                            @enderror
+                            <small class="form-text text-muted">
+                                La imagen es opcional. <br>
+                                Si seleccionas un archivo y luego abres de nuevo el selector, <br>
+                                puedes seleccionar el mismo u otro archivo sin problema. <br>
+                                Formatos aceptados: JPG, JPEG, PNG, GIF, WebP. Tamaño máximo: 2MB
+                            </small>
                         </div>
 
                         <div class="d-flex justify-content-between">
@@ -106,6 +148,20 @@
 </div>
 
 <script>
+    // Variables de estado
+    let selectedFile = null;
+    let hasImageSelected = false;
+    
+    // Obtener elementos del DOM
+    const fileInput = document.getElementById('vImagen');
+    const previewSection = document.getElementById('newImagePreviewSection');
+    const noImageSection = document.getElementById('noImageSection');
+    
+    // Configurar evento change del input de archivo
+    fileInput.addEventListener('change', function(event) {
+        handleFileSelection(event);
+    });
+    
     function actualizarSlug(nombre) {
         if (!nombre) return;
         
@@ -121,21 +177,116 @@
         
         document.getElementById('vSlug').value = slug;
     }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.querySelector('form');
-        const nombreInput = document.getElementById('vNombre');
+    
+    // Función para manejar la selección de archivo
+    function handleFileSelection(event) {
+        const input = event.target;
         
-        form.addEventListener('submit', function(e) {
-            if (!nombreInput.value.trim()) {
+        if (input.files && input.files[0]) {
+            // Hay un archivo seleccionado
+            selectedFile = input.files[0];
+            hasImageSelected = true;
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const preview = document.getElementById('newImagePreview');
+                preview.src = e.target.result;
+                previewSection.style.display = 'block';
+                noImageSection.style.display = 'none';
+            }
+            
+            reader.readAsDataURL(input.files[0]);
+        } else {
+            // No hay archivo seleccionado (usuario canceló)
+            // PERO mantenemos el archivo seleccionado anteriormente si existe
+            if (selectedFile) {
+                // Restaurar el archivo seleccionado
+                restoreSelectedFile();
+            }
+        }
+    }
+    
+    // Función para restaurar el archivo seleccionado
+    function restoreSelectedFile() {
+        if (selectedFile) {
+            // Crear un nuevo DataTransfer para asignar el archivo
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(selectedFile);
+            fileInput.files = dataTransfer.files;
+            
+            // Forzar el evento change para mostrar el preview
+            const event = new Event('change', { bubbles: true });
+            fileInput.dispatchEvent(event);
+        }
+    }
+    
+    // Función para resetear el input de archivo (permitir nueva selección)
+    function resetFileInput() {
+        // Crear un nuevo input de archivo para resetearlo completamente
+        const newInput = document.createElement('input');
+        newInput.type = 'file';
+        newInput.name = 'vImagen';
+        newInput.id = 'vImagen';
+        newInput.className = 'form-control';
+        newInput.accept = 'image/*';
+        
+        // Reemplazar el input viejo con el nuevo
+        const parent = fileInput.parentNode;
+        parent.replaceChild(newInput, fileInput);
+        
+        // Actualizar referencia y eventos
+        document.getElementById('vImagen').addEventListener('change', function(event) {
+            handleFileSelection(event);
+        });
+        
+        // Resetear variables
+        selectedFile = null;
+        hasImageSelected = false;
+        previewSection.style.display = 'none';
+        noImageSection.style.display = 'block';
+    }
+    
+    // Función para cancelar la nueva imagen seleccionada
+    function cancelNewImage() {
+        // Resetear el input
+        resetFileInput();
+        
+        // Resetear variables
+        selectedFile = null;
+        hasImageSelected = false;
+    }
+    
+    // Función para manejar el envío del formulario
+    document.getElementById('createForm')?.addEventListener('submit', function(e) {
+        // Validar que si hay una imagen seleccionada, se envíe correctamente
+        if (hasImageSelected && selectedFile) {
+            // El archivo ya está en el input, se enviará automáticamente
+            // No necesitamos hacer nada más
+        }
+        
+        // Validación adicional del nombre (opcional)
+        const nombreInput = document.getElementById('vNombre');
+        if (!nombreInput.value.trim()) {
+            e.preventDefault();
+            alert('El nombre de la categoría es obligatorio');
+            nombreInput.focus();
+            return false;
+        }
+    });
+    
+    // Inicializar
+    document.addEventListener('DOMContentLoaded', function() {
+        // Prevenir envío accidental con Enter en el input de archivo
+        fileInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
                 e.preventDefault();
-                alert('El nombre de la categoría es obligatorio');
-                nombreInput.focus();
-                return false;
             }
         });
         
-        if (nombreInput.value) {
+        // Inicializar slug si hay nombre en el input
+        const nombreInput = document.getElementById('vNombre');
+        if (nombreInput && nombreInput.value) {
             actualizarSlug(nombreInput.value);
         }
     });

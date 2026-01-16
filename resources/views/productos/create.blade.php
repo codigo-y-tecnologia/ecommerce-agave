@@ -130,16 +130,48 @@
                                     class="form-select @error('id_categoria') is-invalid @enderror" 
                                     required>
                                 <option value="">Seleccionar categoría</option>
-                                @foreach ($categorias as $categoria)
-                                    <option value="{{ $categoria->id_categoria }}" 
-                                        {{ old('id_categoria') == $categoria->id_categoria ? 'selected' : '' }}>
-                                        {{ $categoria->vNombre }}
-                                    </option>
-                                @endforeach
+                                @php
+                                    function mostrarCategoriasJerarquicamente($categorias, $nivel = 0, $oldValue = null)
+                                    {
+                                        foreach($categorias as $categoria) {
+                                            $prefijo = str_repeat('&nbsp;&nbsp;&nbsp;', $nivel);
+                                            $icono = '';
+                                            
+                                            if ($nivel == 0) {
+                                                $icono = '🏠 ';
+                                            } elseif ($nivel == 1) {
+                                                $icono = '↳ ';
+                                            } elseif ($nivel >= 2) {
+                                                $icono = str_repeat('↳&nbsp;', $nivel);
+                                            }
+                                            
+                                            $selected = ($oldValue == $categoria->id_categoria) ? 'selected' : '';
+                                            
+                                            echo '<option value="' . $categoria->id_categoria . '" ' . $selected . '>' .
+                                                 $prefijo . $icono . htmlspecialchars($categoria->vNombre) . 
+                                                 '</option>';
+                                            
+                                            if ($categoria->hijos && $categoria->hijos->count() > 0) {
+                                                mostrarCategoriasJerarquicamente($categoria->hijos, $nivel + 1, $oldValue);
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Pasar el valor old si existe
+                                    $oldCategoria = old('id_categoria');
+                                    $categoriasRaiz = $categorias->where('id_categoria_padre', null)->where('bActivo', true);
+                                @endphp
+                                
+                                @php
+                                    mostrarCategoriasJerarquicamente($categoriasRaiz, 0, $oldCategoria);
+                                @endphp
                             </select>
                             @error('id_categoria')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                            <small class="form-text text-muted">
+                                Selecciona la categoría principal o subcategoría para este producto
+                            </small>
                         </div>
                     </div>
                     
@@ -432,6 +464,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
 #preview-container img:hover {
     transform: scale(1.05);
+}
+
+/* Estilos para la jerarquía de categorías */
+select option.categoria-raiz {
+    font-weight: bold;
+    color: #2c3e50;
+    padding: 8px;
+    background-color: #f8f9fa;
+}
+
+select option.categoria-hijo {
+    color: #34495e;
+    padding-left: 20px;
+    font-size: 14px;
+}
+
+select option.categoria-subhijo {
+    color: #7f8c8d;
+    padding-left: 40px;
+    font-size: 13px;
+    font-style: italic;
+}
+
+select option[value=""] {
+    color: #95a5a6;
+    font-style: italic;
+}
+
+/* Mejorar la visualización de los iconos */
+select option {
+    white-space: pre;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 </style>
 @endsection

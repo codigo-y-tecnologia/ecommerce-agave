@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class Categoria extends Model
@@ -13,7 +14,7 @@ class Categoria extends Model
     protected $table = 'tbl_categorias';
     protected $primaryKey = 'id_categoria';
     
-    public $timestamps = false; // IMPORTANTE: Desactivar timestamps
+    public $timestamps = false;
     
     protected $fillable = [
         'vNombre',
@@ -30,13 +31,49 @@ class Categoria extends Model
         'iOrden' => 'integer'
     ];
 
+    protected $appends = ['imagen_url', 'tiene_imagen'];
+
     // Accesor para obtener la URL completa de la imagen
     public function getImagenUrlAttribute()
     {
-        if ($this->vImagen) {
+        if (!$this->vImagen) {
+            return null;
+        }
+        
+        // Verificar directamente en public/storage/categorias/
+        $publicPath = public_path('storage/categorias/' . $this->vImagen);
+        
+        if (file_exists($publicPath)) {
             return asset('storage/categorias/' . $this->vImagen);
         }
+        
         return null;
+    }
+
+    // Accesor para obtener la ruta completa del archivo
+    public function getImagenPathAttribute()
+    {
+        if (!$this->vImagen) {
+            return null;
+        }
+        
+        $path = public_path('storage/categorias/' . $this->vImagen);
+        if (file_exists($path)) {
+            return $path;
+        }
+        
+        return null;
+    }
+
+    // Accesor para verificar si la imagen existe
+    public function getTieneImagenAttribute()
+    {
+        if (!$this->vImagen) {
+            return false;
+        }
+        
+        $path = public_path('storage/categorias/' . $this->vImagen);
+        return file_exists($path);
     }
 
     // Evento para generar slug automáticamente

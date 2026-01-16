@@ -77,6 +77,7 @@ class CategoriaController extends Controller
     {
         $request->validate([
             'vNombre' => 'required|max:100|unique:tbl_categorias,vNombre',
+            'vSlug' => 'required|max:100|unique:tbl_categorias,vSlug',
             'id_categoria_padre' => 'nullable|exists:tbl_categorias,id_categoria',
             'tDescripcion' => 'nullable|max:500',
             'iOrden' => 'nullable|integer|min:0',
@@ -85,6 +86,9 @@ class CategoriaController extends Controller
             'vNombre.required' => 'El nombre de la categoría es obligatorio',
             'vNombre.unique' => 'Ya existe una categoría con este nombre',
             'vNombre.max' => 'El nombre no puede tener más de 100 caracteres',
+            'vSlug.required' => 'El slug es obligatorio',
+            'vSlug.unique' => 'Ya existe una categoría con este slug',
+            'vSlug.max' => 'El slug no puede tener más de 100 caracteres',
             'id_categoria_padre.exists' => 'La categoría padre seleccionada no existe',
             'tDescripcion.max' => 'La descripción no puede tener más de 500 caracteres',
             'iOrden.integer' => 'El orden debe ser un número entero',
@@ -101,6 +105,7 @@ class CategoriaController extends Controller
             $categoria = new Categoria();
             
             $categoria->vNombre = $request->vNombre;
+            $categoria->vSlug = $request->vSlug;
             $categoria->id_categoria_padre = $request->id_categoria_padre;
             $categoria->tDescripcion = $request->tDescripcion;
             
@@ -115,16 +120,28 @@ class CategoriaController extends Controller
             
             $categoria->bActivo = $request->has('bActivo') ? 1 : 0;
             
-            // Generar slug automáticamente
-            $categoria->vSlug = Str::slug($request->vNombre);
-            
-            // Manejar la imagen si se subió
-            if ($request->hasFile('vImagen')) {
+            // Manejar la imagen si se subió (IMAGEN ES OPCIONAL EN CREACIÓN)
+            if ($request->hasFile('vImagen') && $request->file('vImagen')->isValid()) {
                 $imagen = $request->file('vImagen');
-                $nombreImagen = time() . '_' . $imagen->getClientOriginalName();
-                $imagen->storeAs('public/categorias', $nombreImagen);
-                $categoria->vImagen = $nombreImagen; // Solo el nombre del archivo
+                
+                // Generar nombre único para la imagen
+                $nombreImagen = 'categoria_' . time() . '_' . Str::slug($request->vNombre) . '.' . $imagen->getClientOriginalExtension();
+                
+                // Mover la imagen directamente a public/storage/categorias/
+                $directPath = public_path('storage/categorias');
+                
+                // Asegurar que el directorio existe
+                if (!file_exists($directPath)) {
+                    mkdir($directPath, 0755, true);
+                }
+                
+                // Mover el archivo
+                $imagen->move($directPath, $nombreImagen);
+                
+                // Asignar nombre de imagen a la categoría
+                $categoria->vImagen = $nombreImagen;
             }
+            // Si no se sube imagen, $categoria->vImagen permanece como null (CORRECTO)
             
             $categoria->save();
             
@@ -168,6 +185,7 @@ class CategoriaController extends Controller
     {
         $request->validate([
             'vNombre' => 'required|max:100|unique:tbl_categorias,vNombre,' . $categoria->id_categoria . ',id_categoria',
+            'vSlug' => 'required|max:100|unique:tbl_categorias,vSlug,' . $categoria->id_categoria . ',id_categoria',
             'id_categoria_padre' => 'nullable|exists:tbl_categorias,id_categoria',
             'tDescripcion' => 'nullable|max:500',
             'iOrden' => 'nullable|integer|min:0',
@@ -176,6 +194,9 @@ class CategoriaController extends Controller
             'vNombre.required' => 'El nombre de la categoría es obligatorio',
             'vNombre.unique' => 'Ya existe una categoría con este nombre',
             'vNombre.max' => 'El nombre no puede tener más de 100 caracteres',
+            'vSlug.required' => 'El slug es obligatorio',
+            'vSlug.unique' => 'Ya existe una categoría con este slug',
+            'vSlug.max' => 'El slug no puede tener más de 100 caracteres',
             'id_categoria_padre.exists' => 'La categoría padre seleccionada no existe',
             'tDescripcion.max' => 'La descripción no puede tener más de 500 caracteres',
             'iOrden.integer' => 'El orden debe ser un número entero',
@@ -205,40 +226,54 @@ class CategoriaController extends Controller
 
             // Actualizar campos básicos
             $categoria->vNombre = $request->vNombre;
+            $categoria->vSlug = $request->vSlug;
             $categoria->id_categoria_padre = $request->id_categoria_padre;
             $categoria->tDescripcion = $request->tDescripcion;
             $categoria->iOrden = $request->iOrden;
             $categoria->bActivo = $request->has('bActivo') ? 1 : 0;
-            
-            // Actualizar slug si cambió el nombre
-            if ($categoria->isDirty('vNombre')) {
-                $categoria->vSlug = Str::slug($request->vNombre);
-            }
 
-            // Manejar la imagen si se subió
-            if ($request->hasFile('vImagen')) {
+            // MANEJO DE IMAGEN CORREGIDO:
+            // 1. Si se sube una NUEVA imagen (y es válida)
+            if ($request->hasFile('vImagen') && $request->file('vImagen')->isValid()) {
                 // Eliminar imagen anterior si existe
                 if ($categoria->vImagen) {
-                    $rutaImagen = storage_path('app/public/categorias/' . $categoria->vImagen);
+                    $rutaImagen = public_path('storage/categorias/' . $categoria->vImagen);
                     if (file_exists($rutaImagen)) {
                         unlink($rutaImagen);
                     }
                 }
 
                 $imagen = $request->file('vImagen');
-                $nombreImagen = time() . '_' . $imagen->getClientOriginalName();
-                $imagen->storeAs('public/categorias', $nombreImagen);
+                // Generar nombre único para la imagen
+                $nombreImagen = 'categoria_' . time() . '_' . Str::slug($request->vNombre) . '.' . $imagen->getClientOriginalExtension();
+                
+                // Mover la imagen directamente a public/storage/categorias/
+                $directPath = public_path('storage/categorias');
+                
+                // Asegurar que el directorio existe
+                if (!file_exists($directPath)) {
+                    mkdir($directPath, 0755, true);
+                }
+                
+                // Mover el archivo
+                $imagen->move($directPath, $nombreImagen);
+                
+                // Asignar nombre de imagen a la categoría
                 $categoria->vImagen = $nombreImagen;
-            } elseif ($request->has('eliminar_imagen') && $request->eliminar_imagen == '1') {
-                // Eliminar imagen si se solicitó
+            } 
+            // 2. Si NO se sube nueva imagen PERO se marca ELIMINAR
+            elseif ($request->has('eliminar_imagen') && $request->eliminar_imagen == '1') {
+                // Solo eliminar imagen si se marcó explícitamente el checkbox
                 if ($categoria->vImagen) {
-                    $rutaImagen = storage_path('app/public/categorias/' . $categoria->vImagen);
+                    $rutaImagen = public_path('storage/categorias/' . $categoria->vImagen);
                     if (file_exists($rutaImagen)) {
                         unlink($rutaImagen);
                     }
                 }
                 $categoria->vImagen = null;
             }
+            // 3. Si NO se sube nueva imagen y NO se marca eliminar → MANTENER IMAGEN ACTUAL
+            // (no hacer nada, la imagen actual se mantiene automáticamente)
 
             $categoria->save();
             
@@ -278,7 +313,7 @@ class CategoriaController extends Controller
 
             // Eliminar imagen si existe
             if ($categoria->vImagen) {
-                $rutaImagen = storage_path('app/public/categorias/' . $categoria->vImagen);
+                $rutaImagen = public_path('storage/categorias/' . $categoria->vImagen);
                 if (file_exists($rutaImagen)) {
                     unlink($rutaImagen);
                 }

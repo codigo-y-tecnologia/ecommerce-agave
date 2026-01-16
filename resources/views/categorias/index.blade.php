@@ -81,12 +81,16 @@
                         <tr>
                             <td>#{{ $categoria->id_categoria }}</td>
                             <td>
-                                @if($categoria->vImagen)
-                                    <img src="{{ asset('storage/categorias/' . $categoria->vImagen) }}" 
+                                @if($categoria->tiene_imagen)
+                                    <img src="{{ $categoria->imagen_url }}" 
                                          style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px;"
                                          alt="{{ $categoria->vNombre }}">
                                 @else
-                                    <span class="text-muted">—</span>
+                                    <div style="width: 50px; height: 50px; background-color: #f8f9fa; 
+                                                display: flex; align-items: center; justify-content: center; 
+                                                border-radius: 5px;">
+                                        <span class="text-muted">—</span>
+                                    </div>
                                 @endif
                             </td>
                             <td>
@@ -163,12 +167,16 @@
                         <tr>
                             <td>#{{ $categoria->id_categoria }}</td>
                             <td>
-                                @if($categoria->vImagen)
-                                    <img src="{{ asset('storage/categorias/' . $categoria->vImagen) }}" 
+                                @if($categoria->tiene_imagen)
+                                    <img src="{{ $categoria->imagen_url }}" 
                                          style="width: 50px; height: 50px; object-fit: cover; border-radius: 5px;"
                                          alt="{{ $categoria->vNombre }}">
                                 @else
-                                    <span class="text-muted">—</span>
+                                    <div style="width: 50px; height: 50px; background-color: #f8f9fa; 
+                                                display: flex; align-items: center; justify-content: center; 
+                                                border-radius: 5px;">
+                                        <span class="text-muted">—</span>
+                                    </div>
                                 @endif
                             </td>
                             <td>
