@@ -231,17 +231,34 @@ class Producto extends Model
         return $this->variaciones()->count() > 0;
     }
 
-    // Sobrescribe el accesor de precio
+    // Accesor CORREGIDO para precio de venta (siempre devuelve el valor numérico de la BD)
     public function getDPrecioVentaAttribute()
+    {
+        return $this->attributes['dPrecio_venta'];
+    }
+
+    // Nuevo método para mostrar rango de precios cuando hay variaciones
+    public function getRangoPreciosAttribute()
     {
         if ($this->tieneVariaciones()) {
             $precioMin = $this->variacionesActivas()->min('dPrecio');
             $precioMax = $this->variacionesActivas()->max('dPrecio');
             
             if ($precioMin == $precioMax) {
-                return $precioMin;
+                return number_format($precioMin, 2);
             }
-            return $precioMin . ' - ' . $precioMax;
+            return number_format($precioMin, 2) . ' - ' . number_format($precioMax, 2);
+        }
+        
+        return number_format($this->dPrecio_venta, 2);
+    }
+
+    // Método para obtener el precio numérico (el más bajo si hay variaciones)
+    public function getPrecioMostrarAttribute()
+    {
+        if ($this->tieneVariaciones()) {
+            $precioMin = $this->variacionesActivas()->min('dPrecio');
+            return $precioMin ?: $this->attributes['dPrecio_venta'];
         }
         
         return $this->attributes['dPrecio_venta'];

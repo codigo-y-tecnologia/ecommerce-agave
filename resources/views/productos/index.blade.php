@@ -31,7 +31,13 @@
                     <tr>
                         <td><span class="badge bg-secondary">{{ $producto->vCodigo_barras }}</span></td>
                         <td>{{ $producto->vNombre }}</td>
-                        <td>${{ number_format($producto->dPrecio_venta, 2) }}</td>
+                        <td>
+                            @if($producto->tieneVariaciones())
+                                ${{ $producto->rangoPrecios }}
+                            @else
+                                ${{ number_format($producto->dPrecio_venta, 2) }}
+                            @endif
+                        </td>
                         <td>
                             <span class="badge {{ $producto->iStock > 10 ? 'bg-success' : 'bg-warning' }}">
                                 {{ $producto->iStock }} unidades

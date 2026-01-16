@@ -574,18 +574,23 @@
             <div class="producto-info-detalle">
                 <h1>{{ $producto->vNombre }}</h1>
                 
+                <!-- SECCIÓN DE PRECIO CORREGIDA -->
                 <div class="producto-precio-detalle">
-                    @if($producto->tieneDescuento())
-                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
-                            <span style="text-decoration: line-through; color: #6c757d; font-size: 22px;">
-                                ${{ number_format($producto->dPrecio_compra, 2) }}
-                            </span>
-                            <span style="color: #dc3545; font-size: 16px; font-weight: bold; background: #ffebee; padding: 4px 8px; border-radius: 4px;">
-                                -{{ $producto->porcentajeDescuento() }}%
-                            </span>
-                        </div>
+                    @if($producto->tieneVariaciones())
+                        ${{ $producto->rangoPrecios }}
+                    @else
+                        @if($producto->tieneDescuento())
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                                <span style="text-decoration: line-through; color: #6c757d; font-size: 22px;">
+                                    ${{ number_format($producto->dPrecio_compra, 2) }}
+                                </span>
+                                <span style="color: #dc3545; font-size: 16px; font-weight: bold; background: #ffebee; padding: 4px 8px; border-radius: 4px;">
+                                    -{{ $producto->porcentajeDescuento() }}%
+                                </span>
+                            </div>
+                        @endif
+                        ${{ number_format($producto->dPrecio_venta, 2) }}
                     @endif
-                    ${{ number_format($producto->dPrecio_venta, 2) }}
                 </div>
 
                 <div class="stock-info-detalle {{ $producto->iStock > 10 ? 'stock-bueno' : ($producto->iStock > 0 ? 'stock-bajo' : 'sin-stock') }}">
@@ -668,6 +673,8 @@
                 </div>
             </div>
         </div>
+        
+        <!-- NOTA: Se han eliminado las líneas que mostraban elementos de paginación no deseados -->
     </div>
 
     <script>

@@ -157,7 +157,11 @@
                             <div class="col-md-6">
                                 <h5>Precio de venta</h5>
                                 <div class="precio-destacado">
-                                    ${{ number_format($producto->dPrecio_venta, 2) }}
+                                    @if($producto->tieneVariaciones())
+                                        ${{ $producto->rangoPrecios }}
+                                    @else
+                                        ${{ number_format($producto->dPrecio_venta, 2) }}
+                                    @endif
                                 </div>
                                 
                                 @if($producto->dPrecio_compra)
