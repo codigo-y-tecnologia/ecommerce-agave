@@ -44,19 +44,29 @@
                         <div class="col-md-3">
                             <strong>Precio Base:</strong>
                             <br>
-                            ${{ number_format($producto->dPrecio_venta, 2) }}
+                            ${{ number_format(floatval($producto->dPrecio_venta ?? 0), 2) }}
                         </div>
                     </div>
                     
-                    @if($producto->atributosAgrupados)
+                    @php
+                        // Verificar si hay atributos agrupados y formatearlos correctamente
+                        $atributosAgrupados = $producto->atributosAgrupados ?? [];
+                    @endphp
+                    
+                    @if(!empty($atributosAgrupados))
                         <div class="mt-3">
                             <strong>Atributos Disponibles:</strong>
                             <div class="mt-2">
-                                @foreach($producto->atributosAgrupados as $atributo)
-                                    <span class="badge bg-info me-2 mb-2">
-                                        {{ $atributo['nombre'] }}: 
-                                        {{ collect($atributo['valores'])->pluck('valor')->implode(', ') }}
-                                    </span>
+                                @foreach($atributosAgrupados as $atributo)
+                                    @php
+                                        $nombre = $atributo['nombre'] ?? 'Sin nombre';
+                                        $valores = collect($atributo['valores'] ?? [])->pluck('valor')->filter()->implode(', ');
+                                    @endphp
+                                    @if($valores)
+                                        <span class="badge bg-info me-2 mb-2">
+                                            {{ $nombre }}: {{ $valores }}
+                                        </span>
+                                    @endif
                                 @endforeach
                             </div>
                         </div>
@@ -90,15 +100,22 @@
                                         @php
                                             // Obtener nombre de la combinación basado en atributos
                                             $nombresAtributos = [];
-                                            foreach ($variacion->atributos as $atributoVariacion) {
-                                                if ($atributoVariacion->valor) {
-                                                    $nombresAtributos[] = $atributoVariacion->valor->vValor;
+                                            if ($variacion->atributos) {
+                                                foreach ($variacion->atributos as $atributoVariacion) {
+                                                    if ($atributoVariacion->valor) {
+                                                        $nombresAtributos[] = $atributoVariacion->valor->vValor;
+                                                    }
                                                 }
                                             }
                                             $nombreCombinacion = !empty($nombresAtributos) ? implode(' / ', $nombresAtributos) : 'Sin atributos';
                                             
                                             // Obtener el stock de la variación
                                             $stockVariacion = $variacion->iStock ?? 0;
+                                            
+                                            // Convertir precio a float para number_format
+                                            $precioVariacion = floatval($variacion->dPrecio ?? 0);
+                                            $precioOferta = $variacion->dPrecio_oferta ? floatval($variacion->dPrecio_oferta) : null;
+                                            $pesoVariacion = $variacion->dPeso ? floatval($variacion->dPeso) : null;
                                         @endphp
                                         <tr>
                                             <td>
@@ -113,17 +130,17 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                <code>{{ $variacion->vSKU }}</code>
+                                                <code>{{ $variacion->vSKU ?? 'N/A' }}</code>
                                             </td>
                                             <td>
                                                 <small>{{ $nombreCombinacion }}</small>
                                             </td>
                                             <td>
-                                                <strong>${{ number_format($variacion->dPrecio, 2) }}</strong>
-                                                @if($variacion->dPrecio_oferta && $variacion->dPrecio_oferta > 0)
+                                                <strong>${{ number_format($precioVariacion, 2) }}</strong>
+                                                @if($precioOferta && $precioOferta > 0)
                                                     <br>
                                                     <small class="text-success">
-                                                        Oferta: ${{ number_format($variacion->dPrecio_oferta, 2) }}
+                                                        Oferta: ${{ number_format($precioOferta, 2) }}
                                                     </small>
                                                 @endif
                                             </td>
@@ -133,7 +150,7 @@
                                                 </span>
                                             </td>
                                             <td>
-                                                {{ $variacion->dPeso ? number_format($variacion->dPeso, 2) . ' kg' : '-' }}
+                                                {{ $pesoVariacion ? number_format($pesoVariacion, 2) . ' kg' : '-' }}
                                             </td>
                                             <td>
                                                 <span class="badge bg-secondary">{{ $variacion->vClase_envio ?: 'Estándar' }}</span>
@@ -162,13 +179,21 @@
                                     @endforeach
                                 </tbody>
                                 <tfoot>
+                                    @php
+                                        // Calcular totales de manera segura
+                                        $precios = $producto->variaciones->pluck('dPrecio')->filter();
+                                        $stockTotal = $producto->variaciones->sum('iStock');
+                                        
+                                        if ($precios->count() > 0) {
+                                            $precioMin = floatval($precios->min());
+                                            $precioMax = floatval($precios->max());
+                                        } else {
+                                            $precioMin = $precioMax = 0;
+                                        }
+                                    @endphp
                                     <tr class="table-info">
                                         <td colspan="3" class="text-end fw-bold">Totales:</td>
                                         <td class="fw-bold">
-                                            @php
-                                                $precioMin = $producto->variaciones->min('dPrecio');
-                                                $precioMax = $producto->variaciones->max('dPrecio');
-                                            @endphp
                                             @if($precioMin == $precioMax)
                                                 ${{ number_format($precioMin, 2) }}
                                             @else
@@ -176,7 +201,7 @@
                                             @endif
                                         </td>
                                         <td class="fw-bold">
-                                            {{ $producto->variaciones->sum('iStock') }} unidades
+                                            {{ $stockTotal }} unidades
                                         </td>
                                         <td colspan="4"></td>
                                     </tr>

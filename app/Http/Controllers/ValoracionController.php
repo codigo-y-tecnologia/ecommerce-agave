@@ -153,7 +153,7 @@ class ValoracionController extends Controller
 
     public function update(Request $request, $producto_id, $variacion_id)
     {
-        $request->validate([
+           $request->validate([
             'vSKU' => 'required|unique:tbl_producto_variaciones,vSKU,' . $variacion_id . ',id_variacion',
             'dPrecio' => 'required|numeric|min:0',
             'dPrecio_oferta' => 'nullable|numeric|min:0',
@@ -197,20 +197,23 @@ class ValoracionController extends Controller
                     ($productoPadre->vClase_envio ?: 'Estándar');
             }
 
-            $variacion->update($updateData);
-
-            // Manejo de imagen mejorado
+            // Manejo de imagen MEJORADO
             if ($request->hasFile('imagen')) {
                 // Si se sube nueva imagen, reemplazar
                 $this->eliminarImagenVariacion($variacion);
                 $this->guardarImagenVariacion($variacion, $request->file('imagen'));
             } elseif ($request->has('mantener_imagen') && $request->mantener_imagen == '1') {
                 // Si se marca "mantener imagen", no hacer nada (mantener la existente)
+                // El campo mantener_imagen viene del checkbox en la vista
                 // No se elimina ni se cambia la imagen
             } else {
-                // Si no se especifica nada, mantener la imagen existente
-                // No hacer nada
+                // Si no se especifica nada y no se envió nueva imagen
+                // y tampoco se marcó "mantener imagen", entonces eliminar la imagen actual
+                // Esto ocurre cuando el usuario presiona el botón "Eliminar imagen"
+                $this->eliminarImagenVariacion($variacion);
             }
+
+            $variacion->update($updateData);
 
             $variacion->atributos()->delete();
             

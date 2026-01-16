@@ -264,53 +264,93 @@
 document.addEventListener('DOMContentLoaded', function() {
     const imagenInput = document.getElementById('imagen');
     const previewContainer = document.getElementById('preview-container');
+    const form = document.getElementById('valoracionForm');
+    
+    // Variable para almacenar el archivo original
+    let archivoOriginal = null;
+    let archivoTemporal = null;
     
     // Manejar la selección de imagen
     imagenInput.addEventListener('change', function(e) {
         // Solo procesar si realmente seleccionó un archivo
         if (this.files && this.files[0]) {
             const file = this.files[0];
+            archivoOriginal = file;
+            archivoTemporal = file;
             
-            // Leer el archivo como Data URL
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                const imagenDataURL = e.target.result;
+            // Mostrar vista previa
+            mostrarVistaPrevia(file);
+        } else {
+            // Si el usuario canceló la selección pero ya tenía un archivo
+            // Restaurar el archivo original si existe
+            if (archivoTemporal && archivoOriginal) {
+                // Restaurar el archivo en el input
+                restaurarArchivoEnInput(archivoOriginal);
                 
-                // Mostrar vista previa
+                // Mostrar la vista previa del archivo original
+                mostrarVistaPrevia(archivoOriginal);
+            } else if (archivoTemporal && !archivoOriginal) {
+                // Si solo hay temporal (primera selección), mantenerlo
+                restaurarArchivoEnInput(archivoTemporal);
+                mostrarVistaPrevia(archivoTemporal);
+            } else {
+                // Si no hay archivo, limpiar la vista previa
                 previewContainer.innerHTML = '';
-                const img = document.createElement('img');
-                img.src = imagenDataURL;
-                img.style.maxWidth = '200px';
-                img.style.maxHeight = '200px';
-                img.style.objectFit = 'cover';
-                img.style.borderRadius = '8px';
-                img.style.marginTop = '10px';
-                img.style.border = '1px solid #dee2e6';
-                
-                // Botón para quitar imagen
-                const removeBtn = document.createElement('button');
-                removeBtn.type = 'button';
-                removeBtn.className = 'btn btn-danger btn-sm mt-2';
-                removeBtn.innerHTML = '<i class="fas fa-trash me-1"></i> Quitar imagen';
-                removeBtn.onclick = function() {
-                    imagenInput.value = '';
-                    previewContainer.innerHTML = '';
-                };
-                
-                previewContainer.appendChild(img);
-                previewContainer.appendChild(removeBtn);
-            };
-            
-            reader.readAsDataURL(file);
+            }
         }
     });
     
-    // Eliminar el auto-generar SKU para que el usuario pueda escribir su propio SKU
-    // El campo estará vacío por defecto
+    // También manejar cuando el usuario hace clic en el input
+    imagenInput.addEventListener('click', function() {
+        // Guardar el archivo actual como original antes de que el usuario interactúe
+        if (this.files && this.files[0]) {
+            archivoOriginal = this.files[0];
+            archivoTemporal = this.files[0];
+        }
+    });
     
-    // Validación de atributos
-    document.getElementById('valoracionForm').addEventListener('submit', function(e) {
+    function mostrarVistaPrevia(file) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            previewContainer.innerHTML = '';
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.style.maxWidth = '200px';
+            img.style.maxHeight = '200px';
+            img.style.objectFit = 'cover';
+            img.style.borderRadius = '8px';
+            img.style.marginTop = '10px';
+            
+            // Botón para quitar imagen (sin borde)
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn btn-danger btn-sm mt-2';
+            removeBtn.innerHTML = '<i class="fas fa-trash me-1"></i> Eliminar imagen';
+            removeBtn.onclick = function() {
+                imagenInput.value = '';
+                previewContainer.innerHTML = '';
+                archivoOriginal = null;
+                archivoTemporal = null;
+            };
+            
+            previewContainer.appendChild(img);
+            previewContainer.appendChild(removeBtn);
+        };
+        
+        reader.readAsDataURL(file);
+    }
+    
+    function restaurarArchivoEnInput(file) {
+        // Crear un nuevo DataTransfer para asignar el archivo
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        imagenInput.files = dataTransfer.files;
+    }
+    
+    // Asegurar que el archivo se mantenga al enviar el formulario
+    form.addEventListener('submit', function(e) {
+        // Validación de atributos
         const atributosRadios = document.querySelectorAll('input[type="radio"][name^="atributos"]:checked');
         const atributosRequeridos = document.querySelectorAll('.border.rounded').length;
         
@@ -318,6 +358,16 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             alert('Debes seleccionar un valor para cada atributo.');
             return false;
+        }
+        
+        // Si hay un archivo temporal pero el input está vacío, restaurarlo
+        if (archivoTemporal && (!imagenInput.files || imagenInput.files.length === 0)) {
+            restaurarArchivoEnInput(archivoTemporal);
+        }
+        
+        // Si se eliminó la imagen explícitamente, asegurar que el input esté vacío
+        if (!archivoTemporal && imagenInput.files && imagenInput.files.length > 0) {
+            imagenInput.value = '';
         }
     });
 });

@@ -20,6 +20,9 @@
         @csrf
         @method('PUT')
 
+        <!-- Campo oculto para controlar la imagen -->
+        <input type="hidden" name="mantener_imagen" id="mantener_imagen_hidden" value="1">
+
         <div class="row">
             <div class="col-md-8">
                 <div class="card mb-4">
@@ -115,7 +118,7 @@
                                     <select name="vClase_envio" id="vClase_envio" 
                                             class="form-control @error('vClase_envio') is-invalid @enderror">
                                         <option value="">Igual que el producto padre</option>
-                                        <option value="Otro" {{ old('vClase_envio', $variacion->vClase_envio) == 'Otro' ? 'selected' : '' }}>Otro</option>
+                                        <option value="Otro" {{ old('vClase_envio', $variacion->vClase_envio) == 'Estandar' ? 'selected' : '' }}>Estandar</option>
                                     </select>
                                     @error('vClase_envio')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -145,29 +148,38 @@
                                         accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.tiff,.ico,.heic,.heif">
                                     @error('imagen')
                                         <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror>
+                                    @enderror
                                     
-                                    <!-- Campos ocultos para controlar la imagen -->
-                                    <input type="hidden" name="mantener_imagen" id="mantener_imagen_hidden" value="1">
-                                    
+                                    <!-- Vista previa de la imagen actual -->
                                     @if($variacion->vImagen)
                                         <div class="mt-2">
                                             <img src="{{ asset($variacion->vImagen) }}" 
                                                 alt="Imagen actual"
-                                                style="max-width: 100px; max-height: 100px; object-fit: cover; border-radius: 4px;"
+                                                style="max-width: 150px; max-height: 150px; object-fit: cover; border-radius: 4px; margin-top: 10px;"
                                                 id="current-image-preview">
-                                            <div class="form-check mt-1">
+                                            <div class="form-check mt-2">
                                                 <input type="checkbox" name="usar_imagen_actual" id="usar_imagen_actual" 
                                                     class="form-check-input" value="1" checked>
-                                                <label for="usar_imagen_actual" class="form-check-label small">
-                                                    Mantener esta imagen
+                                                <label for="usar_imagen_actual" class="form-check-label">
+                                                    <i class="fas fa-check-circle text-success me-1"></i> Mantener imagen actual
                                                 </label>
                                             </div>
-                                            <div class="mt-2" id="nueva-imagen-preview"></div>
                                         </div>
                                     @else
-                                        <div class="mt-2 text-muted small">
+                                        <div class="mt-2 text-muted">
                                             <i class="fas fa-image me-1"></i> No hay imagen asignada a esta valoración
+                                        </div>
+                                    @endif
+                                    
+                                    <!-- Contenedor para vista previa de nueva imagen -->
+                                    <div id="nueva-imagen-container" class="mt-2"></div>
+                                    
+                                    <!-- Botón para eliminar imagen (solo si hay imagen actual) -->
+                                    @if($variacion->vImagen)
+                                        <div class="mt-2">
+                                            <button type="button" class="btn btn-sm btn-outline-danger" id="eliminar-imagen-btn">
+                                                <i class="fas fa-trash-alt me-1"></i> Eliminar imagen actual
+                                            </button>
                                         </div>
                                     @endif
                                 </div>
@@ -269,89 +281,195 @@ document.addEventListener('DOMContentLoaded', function() {
     const imagenInput = document.getElementById('imagen');
     const usarImagenActualCheckbox = document.getElementById('usar_imagen_actual');
     const mantenerImagenHidden = document.getElementById('mantener_imagen_hidden');
-    const nuevaImagenPreview = document.getElementById('nueva-imagen-preview');
+    const nuevaImagenContainer = document.getElementById('nueva-imagen-container');
+    const eliminarImagenBtn = document.getElementById('eliminar-imagen-btn');
+    const currentImagePreview = document.getElementById('current-image-preview');
+    const form = document.getElementById('valoracionForm');
     
-    // Variables para almacenar imagen temporal
-    let nuevaImagenDataURL = null;
+    // Variables para controlar el estado
+    let tieneImagenOriginal = '{{ $variacion->vImagen ? 'true' : 'false' }}' === 'true';
+    let archivoOriginal = null;
+    let archivoNuevo = null;
+    let imagenEliminada = false;
     
-    if (imagenInput) {
-        // Manejar cambio en el input de archivo
-        imagenInput.addEventListener('change', function(e) {
-            if (this.files && this.files[0]) {
-                const file = this.files[0];
+    // Guardar el estado original antes de cualquier interacción
+    if (imagenInput.files && imagenInput.files[0]) {
+        archivoOriginal = imagenInput.files[0];
+    }
+    
+    // Manejar cuando el usuario hace clic en el input de imagen
+    imagenInput.addEventListener('click', function() {
+        // Guardar el archivo actual como original antes de que el usuario interactúe
+        if (this.files && this.files[0]) {
+            archivoOriginal = this.files[0];
+        }
+    });
+    
+    // Manejar cambio en el input de archivo
+    imagenInput.addEventListener('change', function(e) {
+        if (this.files && this.files[0]) {
+            const file = this.files[0];
+            archivoNuevo = file;
+            
+            // Desmarcar checkbox de mantener imagen
+            if (usarImagenActualCheckbox) {
+                usarImagenActualCheckbox.checked = false;
+                mantenerImagenHidden.value = '0';
+            }
+            
+            // Mostrar vista previa de nueva imagen
+            mostrarNuevaImagenPreview(file);
+        } else {
+            // El usuario canceló la selección
+            if (archivoNuevo) {
+                // Si ya había seleccionado una nueva imagen, mantenerla
+                restaurarArchivoEnInput(archivoNuevo);
+                mostrarNuevaImagenPreview(archivoNuevo);
                 
-                // Desmarcar checkbox de mantener imagen
                 if (usarImagenActualCheckbox) {
                     usarImagenActualCheckbox.checked = false;
                     mantenerImagenHidden.value = '0';
                 }
+            } else if (archivoOriginal && !imagenEliminada) {
+                // Restaurar el archivo original
+                restaurarArchivoEnInput(archivoOriginal);
                 
-                // Leer la imagen como Data URL
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    nuevaImagenDataURL = e.target.result;
-                    
-                    // Mostrar vista previa de nueva imagen
-                    if (nuevaImagenPreview) {
-                        nuevaImagenPreview.innerHTML = `
-                            <div class="mt-2">
-                                <strong>Nueva imagen seleccionada:</strong>
-                                <img src="${nuevaImagenDataURL}" 
-                                     style="max-width: 100px; max-height: 100px; object-fit: cover; border-radius: 4px; margin-top: 5px;"
-                                     alt="Nueva imagen">
-                                <button type="button" class="btn btn-danger btn-sm mt-2" onclick="cancelarNuevaImagen()">
-                                    <i class="fas fa-times me-1"></i> Cancelar cambio
-                                </button>
-                            </div>
-                        `;
-                    }
-                };
-                reader.readAsDataURL(file);
-            } else {
-                // Si canceló la selección, restaurar la imagen original
-                if (usarImagenActualCheckbox && usarImagenActualCheckbox.checked) {
+                if (usarImagenActualCheckbox) {
+                    usarImagenActualCheckbox.checked = true;
                     mantenerImagenHidden.value = '1';
-                    if (nuevaImagenPreview) {
-                        nuevaImagenPreview.innerHTML = '';
-                    }
-                    nuevaImagenDataURL = null;
+                }
+                
+                // Limpiar vista previa de nueva imagen
+                if (nuevaImagenContainer) {
+                    nuevaImagenContainer.innerHTML = '';
                 }
             }
-        });
-        
-        // Manejar el checkbox de mantener imagen
-        if (usarImagenActualCheckbox) {
-            usarImagenActualCheckbox.addEventListener('change', function() {
-                mantenerImagenHidden.value = this.checked ? '1' : '0';
-                if (this.checked) {
-                    // Limpiar nueva imagen si se vuelve a marcar "mantener"
-                    nuevaImagenDataURL = null;
-                    if (nuevaImagenPreview) {
-                        nuevaImagenPreview.innerHTML = '';
-                    }
-                    imagenInput.value = '';
-                }
-            });
         }
+    });
+    
+    // Manejar el checkbox de mantener imagen
+    if (usarImagenActualCheckbox) {
+        usarImagenActualCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                mantenerImagenHidden.value = '1';
+                archivoNuevo = null;
+                
+                // Limpiar vista previa de nueva imagen
+                if (nuevaImagenContainer) {
+                    nuevaImagenContainer.innerHTML = '';
+                }
+                
+                // Limpiar el input de archivo
+                imagenInput.value = '';
+            } else {
+                mantenerImagenHidden.value = '0';
+            }
+        });
+    }
+    
+    // Manejar el botón de eliminar imagen
+    if (eliminarImagenBtn) {
+        eliminarImagenBtn.addEventListener('click', function() {
+            if (confirm('¿Estás seguro de que quieres eliminar la imagen actual? Esta acción no se puede deshacer.')) {
+                imagenEliminada = true;
+                mantenerImagenHidden.value = '0';
+                archivoNuevo = null;
+                archivoOriginal = null;
+                
+                // Limpiar el input de archivo
+                imagenInput.value = '';
+                
+                // Ocultar la imagen actual
+                if (currentImagePreview) {
+                    currentImagePreview.style.display = 'none';
+                }
+                
+                // Desmarcar checkbox de mantener imagen
+                if (usarImagenActualCheckbox) {
+                    usarImagenActualCheckbox.checked = false;
+                }
+                
+                // Limpiar cualquier vista previa de nueva imagen
+                if (nuevaImagenContainer) {
+                    nuevaImagenContainer.innerHTML = '';
+                }
+                
+                // Mostrar mensaje de que la imagen será eliminada
+                const mensajeEliminar = document.createElement('div');
+                mensajeEliminar.className = 'alert alert-warning mt-2';
+                mensajeEliminar.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> La imagen actual será eliminada al guardar los cambios.';
+                
+                if (currentImagePreview && currentImagePreview.parentNode) {
+                    currentImagePreview.parentNode.insertBefore(mensajeEliminar, currentImagePreview.nextSibling);
+                }
+                
+                // Ocultar el botón de eliminar
+                eliminarImagenBtn.style.display = 'none';
+            }
+        });
+    }
+    
+    // Función para mostrar vista previa de nueva imagen
+    function mostrarNuevaImagenPreview(file) {
+        if (!nuevaImagenContainer) return;
+        
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            nuevaImagenContainer.innerHTML = `
+                <div class="mt-2">
+                    <strong><i class="fas fa-image me-1"></i> Nueva imagen seleccionada:</strong>
+                    <div class="mt-2">
+                        <img src="${e.target.result}" 
+                             style="max-width: 150px; max-height: 150px; object-fit: cover; border-radius: 4px; margin-top: 10px;"
+                             alt="Nueva imagen">
+                        <button type="button" class="btn btn-sm btn-outline-danger mt-2" onclick="cancelarNuevaImagen()">
+                            <i class="fas fa-times me-1"></i> Cancelar cambio
+                        </button>
+                    </div>
+                </div>
+            `;
+        };
+        
+        reader.readAsDataURL(file);
+    }
+    
+    // Función para restaurar archivo en input
+    function restaurarArchivoEnInput(file) {
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        imagenInput.files = dataTransfer.files;
     }
     
     // Función global para cancelar nueva imagen
     window.cancelarNuevaImagen = function() {
-        nuevaImagenDataURL = null;
-        imagenInput.value = '';
-        
-        if (usarImagenActualCheckbox) {
-            usarImagenActualCheckbox.checked = true;
-            mantenerImagenHidden.value = '1';
-        }
-        
-        if (nuevaImagenPreview) {
-            nuevaImagenPreview.innerHTML = '';
+        if (!imagenEliminada && archivoOriginal) {
+            // Restaurar archivo original
+            restaurarArchivoEnInput(archivoOriginal);
+            
+            // Marcar checkbox de mantener imagen
+            if (usarImagenActualCheckbox) {
+                usarImagenActualCheckbox.checked = true;
+                mantenerImagenHidden.value = '1';
+            }
+            
+            // Limpiar vista previa de nueva imagen
+            if (nuevaImagenContainer) {
+                nuevaImagenContainer.innerHTML = '';
+            }
+            
+            archivoNuevo = null;
+        } else if (imagenEliminada) {
+            // Si ya se eliminó la imagen, limpiar todo
+            imagenInput.value = '';
+            if (nuevaImagenContainer) {
+                nuevaImagenContainer.innerHTML = '';
+            }
         }
     };
     
-    // Validación de atributos
-    document.getElementById('valoracionForm').addEventListener('submit', function(e) {
+    // Validación de atributos y manejo de imagen al enviar
+    form.addEventListener('submit', function(e) {
         const atributosRadios = document.querySelectorAll('input[type="radio"][name^="atributos"]:checked');
         const atributosRequeridos = document.querySelectorAll('.border.rounded').length;
         
@@ -359,6 +477,21 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             alert('Debes seleccionar un valor para cada atributo.');
             return false;
+        }
+        
+        // Si hay un archivo nuevo pero el input está vacío, restaurarlo
+        if (archivoNuevo && (!imagenInput.files || imagenInput.files.length === 0)) {
+            restaurarArchivoEnInput(archivoNuevo);
+        }
+        
+        // Si se eliminó la imagen explícitamente, asegurar que el input esté vacío
+        if (imagenEliminada && imagenInput.files && imagenInput.files.length > 0) {
+            imagenInput.value = '';
+        }
+        
+        // Si no hay archivo nuevo y no se eliminó, asegurar que se mantenga la imagen
+        if (!archivoNuevo && !imagenEliminada && usarImagenActualCheckbox) {
+            mantenerImagenHidden.value = '1';
         }
     });
 });
