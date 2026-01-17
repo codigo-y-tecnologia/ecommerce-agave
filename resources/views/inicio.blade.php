@@ -10,16 +10,61 @@
         <h1>Bienvenido a la página de inicio</h1>
 
          <nav class="navbar">
-            {{-- {{ dd(Auth::check(), Auth::user()) }} --}}
-            <p>Auth::check() = {{ Auth::check() ? 'true' : 'false' }}</p>
-<p>Usuario = {{ Auth::user() ? Auth::user()->id_usuario : 'ninguno' }}</p>
 
     <ul>
-        @auth('web')
+        @auth
+
+        @role('cliente')
+           {{-- Panel de cliente --}}
             <li>Hola, {{ Auth::user()->vNombre }}</li>
-            <li><a href="{{ route('carrito.index') }}">Mi Carrito</a></li>
-            <li><a href="#">Mis Pedidos</a></li>
-            <li><a href="{{ route('logout') }}">Cerrar Sesión</a></li>
+            @can('ver_carrito')
+                <li><a href="{{ route('carrito.index') }}">Mi Carrito</a></li>
+            @endcan
+            @can('ver_pedidos_propios')
+                <li><a href="#">Mis Pedidos</a></li>
+            @endcan
+            
+            {{-- Botón de cerrar sesión --}}
+    <form method="POST" action="{{ route('logout') }}">
+        @csrf
+        <button type="submit">Cerrar sesión</button>
+    </form>
+        @endrole
+
+        @role('admin')
+        {{-- Panel de administrador --}}
+        <nav class="navbar">
+            <ul>
+                @can('mi_perfil_admin')
+                <li><a href="{{ route('admin.perfil.index') }}">Mi Perfil</a></li>
+                @endcan
+                @can('ver_clientes')
+                <li><a href="{{ route('admin.usuarios') }}">Clientes registrados</a></li>
+                @endcan
+                <li><a href="#">Ver Carritos de Clientes</a></li>
+                <li><a href="#">Reportes</a></li>
+            </ul>
+        </nav>
+    @endrole
+
+    @role('superadmin')
+        {{-- Panel de superadmin --}}
+        <nav class="navbar">
+            <ul>
+                @can('mi_perfil_superadmin')
+                <li><a href="{{ route('superadmin.perfil.index') }}">Mi Perfil</a></li>
+                @endcan
+                @can('gestionar_administradores')
+                <li><a href="{{ route('superadmin.admins.index') }}">Gestión de Administradores</a></li>
+                @endcan
+                <li><a href="#">⚙ Configuración General</a></li>
+                <li><a href="#">Monitoreo del Sistema</a></li>
+                @can('gestionar_permisos')
+                <li><a href="{{ route('roles.permisos') }}">Gestión de permisos</a></li>
+                @endcan
+            </ul>
+        </nav>
+    @endrole
         @endauth
 
         @guest
@@ -32,10 +77,6 @@
     <main>
         @auth
             <p>Hola, {{ Auth::user()->vNombre }}. Has iniciado sesión.</p>
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit">Cerrar sesión</button>
-            </form>
         @else
             <p>No has iniciado sesión.</p>
             <a href="{{ route('login') }}">Iniciar sesión</a> |
