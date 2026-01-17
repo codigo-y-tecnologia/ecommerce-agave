@@ -60,6 +60,7 @@ class AuthController extends Controller
             }
 
             $request->session()->regenerate();
+
             return redirect()->intended('/');
 
             // Redirigir al dashboard según rol

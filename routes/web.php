@@ -30,6 +30,12 @@ Route::get('/', function () {
     return view('inicio', compact('productos'));
 });
 
+// Rutas públicas para el carrito de compras
+Route::get('/carrito', [CarritoController::class, 'index'])->name('carrito.index');
+Route::post('/carrito/{producto}', [CarritoController::class, 'store'])->name('carrito.store');
+Route::put('/carrito/{detalle}', [CarritoController::class, 'update'])->name('carrito.update');
+Route::delete('/carrito/{detalle}', [CarritoController::class, 'destroy'])->name('carrito.destroy');
+
 // Login y registro solo para invitados
 Route::middleware('guest')->group(function () {
 
@@ -114,17 +120,6 @@ Route::middleware(['auth', 'permission:gestionar_direcciones'])->group(function 
 
         return response()->json(['success' => true, 'direccion' => $direccion]);
     });
-});
-
-Route::middleware(['auth', 'permission:ver_carrito'])->group(function () {
-
-    // --------------------
-    // Rutas de Carrito
-    // --------------------
-    Route::get('/carrito', [CarritoController::class, 'index'])->name('carrito.index');
-    Route::post('/carrito/{producto}', [CarritoController::class, 'store'])->name('carrito.store');
-    Route::put('/carrito/{detalle}', [CarritoController::class, 'update'])->name('carrito.update');
-    Route::delete('/carrito/{detalle}', [CarritoController::class, 'destroy'])->name('carrito.destroy');
 });
 
 Route::middleware(['auth', 'permission:comprar_productos'])->group(function () {
