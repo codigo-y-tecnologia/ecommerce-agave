@@ -294,6 +294,165 @@ class Producto extends Model
         return $this->attributes['dPrecio_venta'];
     }
 
+    // NUEVO: Método para obtener dimensiones promedio de las variaciones
+    public function getDimensionesPromedio()
+    {
+        if ($this->variaciones->count() > 0) {
+            $variacionesConDimensiones = $this->variaciones->filter(function($variacion) {
+                return $variacion->dLargo_cm && $variacion->dAncho_cm && $variacion->dAlto_cm;
+            });
+            
+            if ($variacionesConDimensiones->count() > 0) {
+                $largo = $variacionesConDimensiones->avg('dLargo_cm');
+                $ancho = $variacionesConDimensiones->avg('dAncho_cm');
+                $alto = $variacionesConDimensiones->avg('dAlto_cm');
+                
+                return [
+                    'largo' => $largo ? floatval($largo) : null,
+                    'ancho' => $ancho ? floatval($ancho) : null,
+                    'alto' => $alto ? floatval($alto) : null,
+                    'volumen' => $largo && $ancho && $alto ? $largo * $ancho * $alto : null
+                ];
+            }
+        }
+        
+        return ['largo' => null, 'ancho' => null, 'alto' => null, 'volumen' => null];
+    }
+
+    // NUEVO: Accesor para dimensiones promedio formateadas
+    public function getDimensionesPromedioFormateadasAttribute()
+    {
+        $dimensiones = $this->getDimensionesPromedio();
+        
+        if ($dimensiones['largo'] && $dimensiones['ancho'] && $dimensiones['alto']) {
+            return number_format($dimensiones['largo'], 1) . ' × ' . 
+                   number_format($dimensiones['ancho'], 1) . ' × ' . 
+                   number_format($dimensiones['alto'], 1) . ' cm';
+        }
+        
+        return 'No especificado';
+    }
+
+    // NUEVO: Método para verificar si alguna variación tiene dimensiones
+    public function tieneDimensiones()
+    {
+        return $this->variaciones()
+            ->whereNotNull('dLargo_cm')
+            ->whereNotNull('dAncho_cm')
+            ->whereNotNull('dAlto_cm')
+            ->exists();
+    }
+
+    // NUEVO: Método para obtener las dimensiones más comunes
+    public function getDimensionesMasComunes()
+    {
+        $dimensionesFrecuentes = [];
+        
+        foreach ($this->variaciones as $variacion) {
+            if ($variacion->dLargo_cm && $variacion->dAncho_cm && $variacion->dAlto_cm) {
+                $key = $variacion->dLargo_cm . '|' . $variacion->dAncho_cm . '|' . $variacion->dAlto_cm;
+                
+                if (!isset($dimensionesFrecuentes[$key])) {
+                    $dimensionesFrecuentes[$key] = [
+                        'largo' => $variacion->dLargo_cm,
+                        'ancho' => $variacion->dAncho_cm,
+                        'alto' => $variacion->dAlto_cm,
+                        'count' => 0,
+                        'variaciones' => []
+                    ];
+                }
+                
+                $dimensionesFrecuentes[$key]['count']++;
+                $dimensionesFrecuentes[$key]['variaciones'][] = $variacion->vSKU;
+            }
+        }
+        
+        // Ordenar por frecuencia descendente
+        usort($dimensionesFrecuentes, function($a, $b) {
+            return $b['count'] - $a['count'];
+        });
+        
+        return $dimensionesFrecuentes;
+    }
+
+    // NUEVO: Accesor para el volumen total estimado de inventario
+    public function getVolumenTotalInventarioAttribute()
+    {
+        $volumenTotal = 0;
+        
+        foreach ($this->variaciones as $variacion) {
+            if ($variacion->dLargo_cm && $variacion->dAncho_cm && $variacion->dAlto_cm) {
+                $volumenUnidad = $variacion->dLargo_cm * $variacion->dAncho_cm * $variacion->dAlto_cm;
+                $volumenTotal += $volumenUnidad * $variacion->iStock;
+            }
+        }
+        
+        return $volumenTotal;
+    }
+
+    // NUEVO: Accesor para el peso total estimado de inventario
+    public function getPesoTotalInventarioAttribute()
+    {
+        $pesoTotal = 0;
+        
+        foreach ($this->variaciones as $variacion) {
+            if ($variacion->dPeso) {
+                $pesoTotal += $variacion->dPeso * $variacion->iStock;
+            }
+        }
+        
+        return $pesoTotal;
+    }
+
+    // NUEVO: Método para obtener estadísticas de dimensiones
+    public function getEstadisticasDimensiones()
+    {
+        $variacionesConDimensiones = $this->variaciones->filter(function($variacion) {
+            return $variacion->dLargo_cm && $variacion->dAncho_cm && $variacion->dAlto_cm;
+        });
+        
+        $totalVariaciones = $variacionesConDimensiones->count();
+        
+        if ($totalVariaciones === 0) {
+            return [
+                'total_variaciones' => 0,
+                'con_dimensiones' => 0,
+                'porcentaje_con_dimensiones' => 0,
+                'largo_min' => null,
+                'largo_max' => null,
+                'ancho_min' => null,
+                'ancho_max' => null,
+                'alto_min' => null,
+                'alto_max' => null,
+                'volumen_promedio' => null
+            ];
+        }
+        
+        $largoMin = $variacionesConDimensiones->min('dLargo_cm');
+        $largoMax = $variacionesConDimensiones->max('dLargo_cm');
+        $anchoMin = $variacionesConDimensiones->min('dAncho_cm');
+        $anchoMax = $variacionesConDimensiones->max('dAncho_cm');
+        $altoMin = $variacionesConDimensiones->min('dAlto_cm');
+        $altoMax = $variacionesConDimensiones->max('dAlto_cm');
+        
+        $volumenPromedio = $variacionesConDimensiones->avg(function($variacion) {
+            return $variacion->dLargo_cm * $variacion->dAncho_cm * $variacion->dAlto_cm;
+        });
+        
+        return [
+            'total_variaciones' => $this->variaciones->count(),
+            'con_dimensiones' => $totalVariaciones,
+            'porcentaje_con_dimensiones' => round(($totalVariaciones / $this->variaciones->count()) * 100, 1),
+            'largo_min' => floatval($largoMin),
+            'largo_max' => floatval($largoMax),
+            'ancho_min' => floatval($anchoMin),
+            'ancho_max' => floatval($anchoMax),
+            'alto_min' => floatval($altoMin),
+            'alto_max' => floatval($altoMax),
+            'volumen_promedio' => $volumenPromedio ? floatval($volumenPromedio) : null
+        ];
+    }
+
     protected static function boot()
     {
         parent::boot();

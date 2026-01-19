@@ -26,30 +26,24 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <strong>SKU Base:</strong>
                             <br>
                             <code>{{ $producto->vCodigo_barras }}</code>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <strong>Categoría:</strong>
                             <br>
                             {{ $producto->categoria->vNombre ?? 'Sin categoría' }}
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <strong>Marca:</strong>
                             <br>
                             {{ $producto->marca->vNombre ?? 'Sin marca' }}
                         </div>
-                        <div class="col-md-3">
-                            <strong>Precio Base:</strong>
-                            <br>
-                            ${{ number_format(floatval($producto->dPrecio_venta ?? 0), 2) }}
-                        </div>
                     </div>
                     
                     @php
-                        // Verificar si hay atributos agrupados y formatearlos correctamente
                         $atributosAgrupados = $producto->atributosAgrupados ?? [];
                     @endphp
                     
@@ -86,9 +80,11 @@
                                     <tr>
                                         <th>Imagen</th>
                                         <th>SKU</th>
-                                        <th>Combinación</th>
                                         <th>Precio</th>
                                         <th>Stock</th>
+                                        <th>Largo (cm)</th>
+                                        <th>Ancho (cm)</th>
+                                        <th>Alto (cm)</th>
                                         <th>Peso (kg)</th>
                                         <th>Clase Envío</th>
                                         <th>Estado</th>
@@ -98,30 +94,21 @@
                                 <tbody>
                                     @foreach($producto->variaciones as $variacion)
                                         @php
-                                            // Obtener nombre de la combinación basado en atributos
-                                            $nombresAtributos = [];
-                                            if ($variacion->atributos) {
-                                                foreach ($variacion->atributos as $atributoVariacion) {
-                                                    if ($atributoVariacion->valor) {
-                                                        $nombresAtributos[] = $atributoVariacion->valor->vValor;
-                                                    }
-                                                }
-                                            }
-                                            $nombreCombinacion = !empty($nombresAtributos) ? implode(' / ', $nombresAtributos) : 'Sin atributos';
-                                            
-                                            // Obtener el stock de la variación
                                             $stockVariacion = $variacion->iStock ?? 0;
-                                            
-                                            // Convertir precio a float para number_format
                                             $precioVariacion = floatval($variacion->dPrecio ?? 0);
                                             $precioOferta = $variacion->dPrecio_oferta ? floatval($variacion->dPrecio_oferta) : null;
                                             $pesoVariacion = $variacion->dPeso ? floatval($variacion->dPeso) : null;
+                                            
+                                            // Dimensiones separadas
+                                            $largo = $variacion->dLargo_cm ? floatval($variacion->dLargo_cm) : null;
+                                            $ancho = $variacion->dAncho_cm ? floatval($variacion->dAncho_cm) : null;
+                                            $alto = $variacion->dAlto_cm ? floatval($variacion->dAlto_cm) : null;
                                         @endphp
                                         <tr>
                                             <td>
                                                 @if($variacion->vImagen)
                                                     <img src="{{ asset($variacion->vImagen) }}" 
-                                                         alt="{{ $nombreCombinacion }}"
+                                                         alt="Imagen"
                                                          style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
                                                 @else
                                                     <div style="width: 50px; height: 50px; background-color: #f8f9fa; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #6c757d;">
@@ -131,9 +118,6 @@
                                             </td>
                                             <td>
                                                 <code>{{ $variacion->vSKU ?? 'N/A' }}</code>
-                                            </td>
-                                            <td>
-                                                <small>{{ $nombreCombinacion }}</small>
                                             </td>
                                             <td>
                                                 <strong>${{ number_format($precioVariacion, 2) }}</strong>
@@ -149,8 +133,29 @@
                                                     {{ $stockVariacion }} unidades
                                                 </span>
                                             </td>
+                                            <td style="text-align: center;">
+                                                @if($largo)
+                                                    {{ number_format($largo, 1) }}
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
+                                            <td style="text-align: center;">
+                                                @if($ancho)
+                                                    {{ number_format($ancho, 1) }}
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
+                                            <td style="text-align: center;">
+                                                @if($alto)
+                                                    {{ number_format($alto, 1) }}
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
                                             <td>
-                                                {{ $pesoVariacion ? number_format($pesoVariacion, 2) . ' kg' : '-' }}
+                                                {{ $pesoVariacion ? number_format($pesoVariacion, 2) : '-' }}
                                             </td>
                                             <td>
                                                 <span class="badge bg-secondary">{{ $variacion->vClase_envio ?: 'Estándar' }}</span>
@@ -180,30 +185,19 @@
                                 </tbody>
                                 <tfoot>
                                     @php
-                                        // Calcular totales de manera segura
-                                        $precios = $producto->variaciones->pluck('dPrecio')->filter();
+                                        // Calcular SOLO precio total y stock total
                                         $stockTotal = $producto->variaciones->sum('iStock');
-                                        
-                                        if ($precios->count() > 0) {
-                                            $precioMin = floatval($precios->min());
-                                            $precioMax = floatval($precios->max());
-                                        } else {
-                                            $precioMin = $precioMax = 0;
-                                        }
+                                        $precioTotal = $producto->variaciones->sum('dPrecio');
                                     @endphp
                                     <tr class="table-info">
-                                        <td colspan="3" class="text-end fw-bold">Totales:</td>
+                                        <td colspan="2" class="text-end fw-bold">TOTALES:</td>
                                         <td class="fw-bold">
-                                            @if($precioMin == $precioMax)
-                                                ${{ number_format($precioMin, 2) }}
-                                            @else
-                                                ${{ number_format($precioMin, 2) }} - ${{ number_format($precioMax, 2) }}
-                                            @endif
+                                            ${{ number_format($precioTotal, 2) }}
                                         </td>
                                         <td class="fw-bold">
                                             {{ $stockTotal }} unidades
                                         </td>
-                                        <td colspan="4"></td>
+                                        <td colspan="7"></td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -223,4 +217,56 @@
         </div>
     </div>
 </div>
+
+<style>
+.table th {
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 8px;
+}
+
+.table-dark th {
+    background-color: #2E8B57;
+    color: white;
+}
+
+.table-info {
+    background-color: #d1ecf1;
+}
+
+.table-info td {
+    font-weight: bold;
+}
+
+.card {
+    border: 1px solid #dee2e6;
+}
+
+.card-header.bg-success {
+    background-color: #2E8B57 !important;
+}
+
+.card-header.bg-primary {
+    background-color: #2c3e50 !important;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 12px;
+}
+
+.btn-group-sm .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+</style>
 @endsection

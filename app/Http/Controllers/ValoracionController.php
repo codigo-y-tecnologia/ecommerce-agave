@@ -56,10 +56,13 @@ class ValoracionController extends Controller
     {
         $request->validate([
             'vSKU' => 'required|unique:tbl_producto_variaciones,vSKU',
-            'dPrecio' => 'required|numeric|min:0',
-            'dPrecio_oferta' => 'nullable|numeric|min:0',
-            'iStock' => 'required|integer|min:0',
-            'dPeso' => 'nullable|numeric|min:0',
+            'dPrecio' => 'required|numeric|min:0|max:9999999.99|regex:/^\d{1,7}(\.\d{1,2})?$/',
+            'dPrecio_oferta' => 'nullable|numeric|min:0|max:9999999.99|regex:/^\d{1,7}(\.\d{1,2})?$/',
+            'iStock' => 'required|integer|min:0|max:999999',
+            'dPeso' => 'nullable|numeric|min:0|max:1000|regex:/^\d{1,4}(\.\d{1,2})?$/',
+            'dLargo_cm' => 'nullable|numeric|min:0|max:500|regex:/^\d{1,3}(\.\d{1,2})?$/',
+            'dAncho_cm' => 'nullable|numeric|min:0|max:500|regex:/^\d{1,3}(\.\d{1,2})?$/',
+            'dAlto_cm' => 'nullable|numeric|min:0|max:500|regex:/^\d{1,3}(\.\d{1,2})?$/',
             'vClase_envio' => 'nullable|max:50',
             'tDescripcion' => 'nullable',
             'bActivo' => 'boolean',
@@ -67,12 +70,28 @@ class ValoracionController extends Controller
             'atributos' => 'required|array',
             'atributos.*' => 'required|exists:tbl_atributo_valores,id_atributo_valor'
         ], [
+            'vSKU.required' => 'El SKU es obligatorio',
+            'vSKU.unique' => 'Este SKU ya está registrado',
+            'dPrecio.required' => 'El precio es obligatorio',
+            'dPrecio.regex' => 'El precio debe tener máximo 7 enteros y 2 decimales',
+            'dPrecio.max' => 'El precio no puede exceder $9,999,999.99',
+            'dPrecio_oferta.regex' => 'El precio de oferta debe tener máximo 7 enteros y 2 decimales',
+            'dPrecio_oferta.max' => 'El precio de oferta no puede exceder $9,999,999.99',
+            'iStock.required' => 'El stock es obligatorio',
+            'iStock.max' => 'El stock no puede exceder 999,999 unidades',
+            'dPeso.regex' => 'El peso debe tener máximo 4 enteros y 2 decimales',
+            'dPeso.max' => 'El peso no puede exceder 1000 kg',
+            'dLargo_cm.regex' => 'El largo debe tener máximo 3 enteros y 2 decimales',
+            'dLargo_cm.max' => 'El largo no puede exceder 500 cm',
+            'dAncho_cm.regex' => 'El ancho debe tener máximo 3 enteros y 2 decimales',
+            'dAncho_cm.max' => 'El ancho no puede exceder 500 cm',
+            'dAlto_cm.regex' => 'El alto debe tener máximo 3 enteros y 2 decimales',
+            'dAlto_cm.max' => 'El alto no puede exceder 500 cm',
             'imagen.image' => 'El archivo debe ser una imagen válida',
             'imagen.max' => 'La imagen no debe pesar más de 5MB',
             'imagen.mimes' => 'Formatos aceptados: JPG, JPEG, PNG, GIF, WebP, BMP, SVG',
-            'vSKU.unique' => 'Este SKU ya está registrado',
-            'dPrecio.required' => 'El precio es obligatorio',
-            'iStock.required' => 'El stock es obligatorio',
+            'atributos.required' => 'Debes seleccionar valores para todos los atributos',
+            'atributos.*.required' => 'Debes seleccionar un valor para cada atributo',
         ]);
 
         try {
@@ -87,6 +106,9 @@ class ValoracionController extends Controller
                 'dPrecio_oferta' => $request->dPrecio_oferta,
                 'iStock' => $request->iStock,
                 'dPeso' => $request->dPeso,
+                'dLargo_cm' => $request->dLargo_cm,
+                'dAncho_cm' => $request->dAncho_cm,
+                'dAlto_cm' => $request->dAlto_cm,
                 'tDescripcion' => $request->tDescripcion,
                 'bActivo' => $request->has('bActivo')
             ];
@@ -101,7 +123,6 @@ class ValoracionController extends Controller
 
             $variacion = ProductoVariacion::create($variacionData);
 
-            // Guardar imagen si se envió
             if ($request->hasFile('imagen')) {
                 $this->guardarImagenVariacion($variacion, $request->file('imagen'));
             }
@@ -153,25 +174,45 @@ class ValoracionController extends Controller
 
     public function update(Request $request, $producto_id, $variacion_id)
     {
-           $request->validate([
+        $request->validate([
             'vSKU' => 'required|unique:tbl_producto_variaciones,vSKU,' . $variacion_id . ',id_variacion',
-            'dPrecio' => 'required|numeric|min:0',
-            'dPrecio_oferta' => 'nullable|numeric|min:0',
-            'iStock' => 'required|integer|min:0',
-            'dPeso' => 'nullable|numeric|min:0',
+            'dPrecio' => 'required|numeric|min:0|max:9999999.99|regex:/^\d{1,7}(\.\d{1,2})?$/',
+            'dPrecio_oferta' => 'nullable|numeric|min:0|max:9999999.99|regex:/^\d{1,7}(\.\d{1,2})?$/',
+            'iStock' => 'required|integer|min:0|max:999999',
+            'dPeso' => 'nullable|numeric|min:0|max:1000|regex:/^\d{1,4}(\.\d{1,2})?$/',
+            'dLargo_cm' => 'nullable|numeric|min:0|max:500|regex:/^\d{1,3}(\.\d{1,2})?$/',
+            'dAncho_cm' => 'nullable|numeric|min:0|max:500|regex:/^\d{1,3}(\.\d{1,2})?$/',
+            'dAlto_cm' => 'nullable|numeric|min:0|max:500|regex:/^\d{1,3}(\.\d{1,2})?$/',
             'vClase_envio' => 'nullable|max:50',
             'tDescripcion' => 'nullable',
             'bActivo' => 'boolean',
             'imagen' => 'nullable|image|max:5120|mimes:jpg,jpeg,png,gif,webp,bmp,svg',
+            'mantener_imagen' => 'sometimes|boolean',
             'atributos' => 'required|array',
             'atributos.*' => 'required|exists:tbl_atributo_valores,id_atributo_valor'
         ], [
+            'vSKU.required' => 'El SKU es obligatorio',
+            'vSKU.unique' => 'Este SKU ya está registrado',
+            'dPrecio.required' => 'El precio es obligatorio',
+            'dPrecio.regex' => 'El precio debe tener máximo 7 enteros y 2 decimales',
+            'dPrecio.max' => 'El precio no puede exceder $9,999,999.99',
+            'dPrecio_oferta.regex' => 'El precio de oferta debe tener máximo 7 enteros y 2 decimales',
+            'dPrecio_oferta.max' => 'El precio de oferta no puede exceder $9,999,999.99',
+            'iStock.required' => 'El stock es obligatorio',
+            'iStock.max' => 'El stock no puede exceder 999,999 unidades',
+            'dPeso.regex' => 'El peso debe tener máximo 4 enteros y 2 decimales',
+            'dPeso.max' => 'El peso no puede exceder 1000 kg',
+            'dLargo_cm.regex' => 'El largo debe tener máximo 3 enteros y 2 decimales',
+            'dLargo_cm.max' => 'El largo no puede exceder 500 cm',
+            'dAncho_cm.regex' => 'El ancho debe tener máximo 3 enteros y 2 decimales',
+            'dAncho_cm.max' => 'El ancho no puede exceder 500 cm',
+            'dAlto_cm.regex' => 'El alto debe tener máximo 3 enteros y 2 decimales',
+            'dAlto_cm.max' => 'El alto no puede exceder 500 cm',
             'imagen.image' => 'El archivo debe ser una imagen válida',
             'imagen.max' => 'La imagen no debe pesar más de 5MB',
             'imagen.mimes' => 'Formatos aceptados: JPG, JPEG, PNG, GIF, WebP, BMP, SVG',
-            'vSKU.unique' => 'Este SKU ya está registrado',
-            'dPrecio.required' => 'El precio es obligatorio',
-            'iStock.required' => 'El stock es obligatorio',
+            'atributos.required' => 'Debes seleccionar valores para todos los atributos',
+            'atributos.*.required' => 'Debes seleccionar un valor para cada atributo',
         ]);
 
         try {
@@ -186,6 +227,9 @@ class ValoracionController extends Controller
                 'dPrecio_oferta' => $request->dPrecio_oferta,
                 'iStock' => $request->iStock,
                 'dPeso' => $request->dPeso,
+                'dLargo_cm' => $request->dLargo_cm,
+                'dAncho_cm' => $request->dAncho_cm,
+                'dAlto_cm' => $request->dAlto_cm,
                 'tDescripcion' => $request->tDescripcion,
                 'bActivo' => $request->has('bActivo')
             ];
@@ -197,24 +241,24 @@ class ValoracionController extends Controller
                     ($productoPadre->vClase_envio ?: 'Estándar');
             }
 
-            // Manejo de imagen MEJORADO
+            // CORRECCIÓN IMPORTANTE: Manejo de imagen
             if ($request->hasFile('imagen')) {
-                // Si se sube nueva imagen, reemplazar
+                // Subir nueva imagen
                 $this->eliminarImagenVariacion($variacion);
                 $this->guardarImagenVariacion($variacion, $request->file('imagen'));
-            } elseif ($request->has('mantener_imagen') && $request->mantener_imagen == '1') {
-                // Si se marca "mantener imagen", no hacer nada (mantener la existente)
-                // El campo mantener_imagen viene del checkbox en la vista
-                // No se elimina ni se cambia la imagen
             } else {
-                // Si no se especifica nada y no se envió nueva imagen
-                // y tampoco se marcó "mantener imagen", entonces eliminar la imagen actual
-                // Esto ocurre cuando el usuario presiona el botón "Eliminar imagen"
-                $this->eliminarImagenVariacion($variacion);
+                // Si no se sube nueva imagen
+                if ($request->has('mantener_imagen') && $request->mantener_imagen == '1') {
+                    // Mantener imagen actual - no hacer nada
+                } else {
+                    // Eliminar imagen actual
+                    $this->eliminarImagenVariacion($variacion);
+                }
             }
 
             $variacion->update($updateData);
 
+            // Actualizar atributos
             $variacion->atributos()->delete();
             
             foreach ($request->atributos as $atributo_id => $valor_id) {
@@ -271,18 +315,14 @@ class ValoracionController extends Controller
             Storage::disk('public')->makeDirectory($carpeta);
         }
         
-        // Obtener la extensión original del archivo
         $extension = strtolower($imagen->getClientOriginalExtension());
         
-        // Lista de extensiones de imagen válidas
         $extensionesValidas = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'tiff', 'ico', 'heic', 'heif'];
         
-        // Si no hay extensión o no es válida, usar jpg como predeterminado
         if (!$extension || !in_array($extension, $extensionesValidas)) {
             $extension = 'jpg';
         }
         
-        // Generar nombre único para evitar colisiones
         $nombreArchivo = 'imagen_' . time() . '_' . uniqid() . '.' . $extension;
         $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
         
@@ -293,19 +333,15 @@ class ValoracionController extends Controller
     private function eliminarImagenVariacion($variacion)
     {
         if ($variacion->vImagen) {
-            // Extraer la ruta relativa del URL completo
             $urlBase = Storage::url('');
             $rutaRelativa = str_replace($urlBase, '', $variacion->vImagen);
             
-            // Eliminar el archivo específico
             if (Storage::disk('public')->exists($rutaRelativa)) {
                 Storage::disk('public')->delete($rutaRelativa);
             }
             
-            // Intentar eliminar la carpeta si está vacía
             $carpeta = 'variaciones/' . $variacion->id_variacion;
             if (Storage::disk('public')->exists($carpeta)) {
-                // Verificar si la carpeta está vacía
                 $archivos = Storage::disk('public')->files($carpeta);
                 if (empty($archivos)) {
                     Storage::disk('public')->deleteDirectory($carpeta);

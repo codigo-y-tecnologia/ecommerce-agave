@@ -100,10 +100,11 @@
                                     <label for="dPeso" class="form-label fw-bold">
                                         Peso (kg)
                                     </label>
-                                    <input type="number" name="dPeso" id="dPeso" 
-                                           class="form-control @error('dPeso') is-invalid @enderror"
-                                           value="{{ old('dPeso', $variacion->dPeso) }}" min="0" step="0.01"
-                                           placeholder="Ej: 1.25">
+                                    <input type="text" name="dPeso" id="dPeso" 
+                                           class="form-control dimension-input @error('dPeso') is-invalid @enderror"
+                                           value="{{ old('dPeso', $variacion->dPeso) }}"
+                                           placeholder="Ej: 1.25"
+                                           data-max="1000">
                                     @error('dPeso')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -118,7 +119,9 @@
                                     <select name="vClase_envio" id="vClase_envio" 
                                             class="form-control @error('vClase_envio') is-invalid @enderror">
                                         <option value="">Igual que el producto padre</option>
-                                        <option value="Otro" {{ old('vClase_envio', $variacion->vClase_envio) == 'Estandar' ? 'selected' : '' }}>Estandar</option>
+                                        <option value="Estandar" {{ old('vClase_envio', $variacion->vClase_envio) == 'Estandar' ? 'selected' : '' }}>Estándar</option>
+                                        <option value="Fragil" {{ old('vClase_envio', $variacion->vClase_envio) == 'Fragil' ? 'selected' : '' }}>Frágil</option>
+                                        <option value="Pesado" {{ old('vClase_envio', $variacion->vClase_envio) == 'Pesado' ? 'selected' : '' }}>Pesado</option>
                                     </select>
                                     @error('vClase_envio')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -133,6 +136,68 @@
                                             <br>Actual: <strong>{{ $variacion->vClase_envio }}</strong>
                                         @endif
                                     </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECCIÓN: DIMENSIONES -->
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="border rounded p-3 mb-4">
+                                    <h6 class="fw-bold mb-3"><i class="fas fa-ruler-combined me-2"></i>Dimensiones del Producto</h6>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-group mb-3">
+                                                <label for="dLargo_cm" class="form-label fw-bold">
+                                                    Largo (cm)
+                                                </label>
+                                                <input type="text" name="dLargo_cm" id="dLargo_cm" 
+                                                       class="form-control dimension-input @error('dLargo_cm') is-invalid @enderror"
+                                                       value="{{ old('dLargo_cm', $variacion->dLargo_cm) }}"
+                                                       placeholder="Ej: 30.5"
+                                                       data-max="500">
+                                                @error('dLargo_cm')
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-4">
+                                            <div class="form-group mb-3">
+                                                <label for="dAncho_cm" class="form-label fw-bold">
+                                                    Ancho (cm)
+                                                </label>
+                                                <input type="text" name="dAncho_cm" id="dAncho_cm" 
+                                                       class="form-control dimension-input @error('dAncho_cm') is-invalid @enderror"
+                                                       value="{{ old('dAncho_cm', $variacion->dAncho_cm) }}"
+                                                       placeholder="Ej: 15.2"
+                                                       data-max="500">
+                                                @error('dAncho_cm')
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-4">
+                                            <div class="form-group mb-3">
+                                                <label for="dAlto_cm" class="form-label fw-bold">
+                                                    Alto (cm)
+                                                </label>
+                                                <input type="text" name="dAlto_cm" id="dAlto_cm" 
+                                                       class="form-control dimension-input @error('dAlto_cm') is-invalid @enderror"
+                                                       value="{{ old('dAlto_cm', $variacion->dAlto_cm) }}"
+                                                       placeholder="Ej: 45.0"
+                                                       data-max="500">
+                                                @error('dAlto_cm')
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="alert alert-info small mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        <strong>Nota:</strong> Las dimensiones se utilizan para calcular el costo de envío.
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -229,20 +294,21 @@
                             @endphp
                             
                             @foreach($atributos as $nombreAtributo => $valores)
-                                <div class="mb-4 p-3 border rounded">
+                                <div class="mb-4 p-3 border rounded atributo-container">
                                     <label class="fw-bold mb-2">{{ $nombreAtributo }} <span class="text-danger">*</span></label>
                                     <div class="form-group">
                                         @foreach($valores as $valor)
                                             <div class="form-check mb-2">
                                                 <input type="radio" 
                                                        name="atributos[{{ $valor->atributo->id_atributo }}]" 
-                                                       id="atributo_{{ $valor->id_atributo_valor }}"
+                                                       id="atributo_{{ $valor->atributo->id_atributo }}_{{ $valor->id_atributo_valor }}"
                                                        value="{{ $valor->id_atributo_valor }}"
-                                                       class="form-check-input"
+                                                       class="form-check-input atributo-radio"
+                                                       data-atributo-id="{{ $valor->atributo->id_atributo }}"
                                                        {{ isset($atributosSeleccionados[$valor->atributo->id_atributo]) && 
                                                           $atributosSeleccionados[$valor->atributo->id_atributo] == $valor->id_atributo_valor ? 'checked' : '' }}
                                                        required>
-                                                <label class="form-check-label" for="atributo_{{ $valor->id_atributo_valor }}">
+                                                <label class="form-check-label" for="atributo_{{ $valor->atributo->id_atributo }}_{{ $valor->id_atributo_valor }}">
                                                     {{ $valor->vValor }}
                                                     @if($valor->pivot && $valor->pivot->dPrecio_extra > 0)
                                                         <small class="text-muted">
@@ -286,66 +352,175 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentImagePreview = document.getElementById('current-image-preview');
     const form = document.getElementById('valoracionForm');
     
-    // Variables para controlar el estado
-    let tieneImagenOriginal = '{{ $variacion->vImagen ? 'true' : 'false' }}' === 'true';
+    // Variables para dimensiones
+    const largoInput = document.getElementById('dLargo_cm');
+    const anchoInput = document.getElementById('dAncho_cm');
+    const altoInput = document.getElementById('dAlto_cm');
+    const pesoInput = document.getElementById('dPeso');
+    
+    // Array de inputs para validación
+    const dimensionInputs = [largoInput, anchoInput, altoInput, pesoInput];
+    
+    // Variables para controlar el estado de la imagen
     let archivoOriginal = null;
     let archivoNuevo = null;
     let imagenEliminada = false;
     
-    // Guardar el estado original antes de cualquier interacción
-    if (imagenInput.files && imagenInput.files[0]) {
+    // CONFIGURAR VALIDACIÓN PARA TODOS LOS INPUTS DE DIMENSIÓN
+    function setupDimensionInputValidation() {
+        dimensionInputs.forEach(input => {
+            if (!input) return;
+            
+            // Guardar última posición válida del cursor
+            let lastValidValue = input.value;
+            let validationTimeout;
+            
+            input.addEventListener('input', function(e) {
+                // Guardar posición actual del cursor
+                const cursorPos = this.selectionStart;
+                const originalValue = this.value;
+                
+                // Permitir solo números y un punto decimal
+                let newValue = originalValue.replace(/[^0-9.]/g, '');
+                
+                // Asegurar solo un punto decimal
+                const dotCount = (newValue.match(/\./g) || []).length;
+                if (dotCount > 1) {
+                    // Eliminar puntos extra manteniendo solo el primero
+                    const firstDotIndex = newValue.indexOf('.');
+                    newValue = newValue.substring(0, firstDotIndex + 1) + 
+                               newValue.substring(firstDotIndex + 1).replace(/\./g, '');
+                }
+                
+                // Limitar a máximo 2 decimales después del punto
+                if (newValue.includes('.')) {
+                    const parts = newValue.split('.');
+                    if (parts[1] && parts[1].length > 2) {
+                        newValue = parts[0] + '.' + parts[1].substring(0, 2);
+                    }
+                }
+                
+                // Limitar longitud total a 10 caracteres
+                if (newValue.length > 10) {
+                    newValue = newValue.substring(0, 10);
+                }
+                
+                // Aplicar el nuevo valor si es diferente
+                if (newValue !== originalValue) {
+                    this.value = newValue;
+                    
+                    // Ajustar posición del cursor
+                    const lengthDiff = newValue.length - originalValue.length;
+                    const newCursorPos = Math.max(0, Math.min(cursorPos + lengthDiff, newValue.length));
+                    this.setSelectionRange(newCursorPos, newCursorPos);
+                }
+                
+                // Limpiar timeout anterior y programar nueva validación
+                clearTimeout(validationTimeout);
+                validationTimeout = setTimeout(() => {
+                    // Solo remover clases de error si el valor es válido
+                    const numValue = parseFloat(this.value) || 0;
+                    const maxVal = parseFloat(this.dataset.max) || 500;
+                    
+                    if (!this.value || this.value.trim() === '' || (!isNaN(numValue) && numValue >= 0 && numValue <= maxVal)) {
+                        this.classList.remove('is-invalid');
+                        const parent = this.parentNode;
+                        let existingFeedback = parent.querySelector('.invalid-feedback');
+                        if (existingFeedback) {
+                            existingFeedback.remove();
+                        }
+                    }
+                }, 500); // Validar después de 500ms sin escribir
+                
+                lastValidValue = this.value;
+            });
+            
+            // También limpiar errores al perder el foco
+            input.addEventListener('blur', function() {
+                clearTimeout(validationTimeout);
+                const numValue = parseFloat(this.value) || 0;
+                const maxVal = parseFloat(this.dataset.max) || 500;
+                
+                if (!this.value || this.value.trim() === '' || (!isNaN(numValue) && numValue >= 0 && numValue <= maxVal)) {
+                    this.classList.remove('is-invalid');
+                    const parent = this.parentNode;
+                    let existingFeedback = parent.querySelector('.invalid-feedback');
+                    if (existingFeedback) {
+                        existingFeedback.remove();
+                    }
+                }
+            });
+            
+            // Limpiar clases de error al cargar la página
+            input.classList.remove('is-invalid');
+            const parent = input.parentNode;
+            let existingFeedback = parent.querySelector('.invalid-feedback');
+            if (existingFeedback) {
+                existingFeedback.remove();
+            }
+        });
+    }
+    
+    // Inicializar validación de dimensiones
+    setupDimensionInputValidation();
+    
+    // Inicializar estado de la imagen
+    // Por defecto, mantener imagen actual está activado
+    if (usarImagenActualCheckbox) {
+        usarImagenActualCheckbox.checked = true;
+        mantenerImagenHidden.value = '1';
+    }
+    
+    // Guardar el estado original de la imagen
+    if (imagenInput && imagenInput.files && imagenInput.files[0]) {
         archivoOriginal = imagenInput.files[0];
     }
     
-    // Manejar cuando el usuario hace clic en el input de imagen
-    imagenInput.addEventListener('click', function() {
-        // Guardar el archivo actual como original antes de que el usuario interactúe
-        if (this.files && this.files[0]) {
-            archivoOriginal = this.files[0];
-        }
-    });
-    
     // Manejar cambio en el input de archivo
-    imagenInput.addEventListener('change', function(e) {
-        if (this.files && this.files[0]) {
-            const file = this.files[0];
-            archivoNuevo = file;
-            
-            // Desmarcar checkbox de mantener imagen
-            if (usarImagenActualCheckbox) {
-                usarImagenActualCheckbox.checked = false;
-                mantenerImagenHidden.value = '0';
-            }
-            
-            // Mostrar vista previa de nueva imagen
-            mostrarNuevaImagenPreview(file);
-        } else {
-            // El usuario canceló la selección
-            if (archivoNuevo) {
-                // Si ya había seleccionado una nueva imagen, mantenerla
-                restaurarArchivoEnInput(archivoNuevo);
-                mostrarNuevaImagenPreview(archivoNuevo);
+    if (imagenInput) {
+        imagenInput.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                archivoNuevo = file;
                 
+                // Desmarcar checkbox de mantener imagen automáticamente
                 if (usarImagenActualCheckbox) {
                     usarImagenActualCheckbox.checked = false;
                     mantenerImagenHidden.value = '0';
                 }
-            } else if (archivoOriginal && !imagenEliminada) {
-                // Restaurar el archivo original
-                restaurarArchivoEnInput(archivoOriginal);
                 
-                if (usarImagenActualCheckbox) {
-                    usarImagenActualCheckbox.checked = true;
-                    mantenerImagenHidden.value = '1';
-                }
-                
-                // Limpiar vista previa de nueva imagen
-                if (nuevaImagenContainer) {
-                    nuevaImagenContainer.innerHTML = '';
+                // Mostrar vista previa de nueva imagen
+                mostrarNuevaImagenPreview(file);
+            } else {
+                // Si se cancela la selección y había archivo nuevo
+                if (archivoNuevo) {
+                    // Restaurar el archivo nuevo
+                    restaurarArchivoEnInput(archivoNuevo);
+                    mostrarNuevaImagenPreview(archivoNuevo);
+                    
+                    // Mantener checkbox desmarcado
+                    if (usarImagenActualCheckbox) {
+                        usarImagenActualCheckbox.checked = false;
+                        mantenerImagenHidden.value = '0';
+                    }
+                } else if (archivoOriginal && !imagenEliminada) {
+                    // Si había archivo original y no se eliminó, restaurarlo
+                    restaurarArchivoEnInput(archivoOriginal);
+                    
+                    // Marcar checkbox de mantener imagen
+                    if (usarImagenActualCheckbox) {
+                        usarImagenActualCheckbox.checked = true;
+                        mantenerImagenHidden.value = '1';
+                    }
+                    
+                    // Limpiar vista previa de nueva imagen
+                    if (nuevaImagenContainer) {
+                        nuevaImagenContainer.innerHTML = '';
+                    }
                 }
             }
-        }
-    });
+        });
+    }
     
     // Manejar el checkbox de mantener imagen
     if (usarImagenActualCheckbox) {
@@ -354,15 +529,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 mantenerImagenHidden.value = '1';
                 archivoNuevo = null;
                 
+                // Limpiar input de archivo
+                if (imagenInput) {
+                    imagenInput.value = '';
+                }
+                
                 // Limpiar vista previa de nueva imagen
                 if (nuevaImagenContainer) {
                     nuevaImagenContainer.innerHTML = '';
                 }
-                
-                // Limpiar el input de archivo
-                imagenInput.value = '';
             } else {
                 mantenerImagenHidden.value = '0';
+                // Si hay archivo nuevo, restaurarlo
+                if (archivoNuevo) {
+                    restaurarArchivoEnInput(archivoNuevo);
+                    mostrarNuevaImagenPreview(archivoNuevo);
+                }
             }
         });
     }
@@ -376,10 +558,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 archivoNuevo = null;
                 archivoOriginal = null;
                 
-                // Limpiar el input de archivo
-                imagenInput.value = '';
+                // Limpiar input de archivo
+                if (imagenInput) {
+                    imagenInput.value = '';
+                }
                 
-                // Ocultar la imagen actual
+                // Ocultar imagen actual
                 if (currentImagePreview) {
                     currentImagePreview.style.display = 'none';
                 }
@@ -389,12 +573,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     usarImagenActualCheckbox.checked = false;
                 }
                 
-                // Limpiar cualquier vista previa de nueva imagen
+                // Limpiar vista previa de nueva imagen
                 if (nuevaImagenContainer) {
                     nuevaImagenContainer.innerHTML = '';
                 }
                 
-                // Mostrar mensaje de que la imagen será eliminada
+                // Mostrar mensaje de eliminación
                 const mensajeEliminar = document.createElement('div');
                 mensajeEliminar.className = 'alert alert-warning mt-2';
                 mensajeEliminar.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> La imagen actual será eliminada al guardar los cambios.';
@@ -403,7 +587,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     currentImagePreview.parentNode.insertBefore(mensajeEliminar, currentImagePreview.nextSibling);
                 }
                 
-                // Ocultar el botón de eliminar
+                // Ocultar botón de eliminar
                 eliminarImagenBtn.style.display = 'none';
             }
         });
@@ -436,6 +620,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Función para restaurar archivo en input
     function restaurarArchivoEnInput(file) {
+        if (!imagenInput) return;
         const dataTransfer = new DataTransfer();
         dataTransfer.items.add(file);
         imagenInput.files = dataTransfer.files;
@@ -460,40 +645,205 @@ document.addEventListener('DOMContentLoaded', function() {
             
             archivoNuevo = null;
         } else if (imagenEliminada) {
-            // Si ya se eliminó la imagen, limpiar todo
-            imagenInput.value = '';
+            // Si se eliminó la imagen, solo limpiar
+            if (imagenInput) {
+                imagenInput.value = '';
+            }
             if (nuevaImagenContainer) {
                 nuevaImagenContainer.innerHTML = '';
             }
         }
     };
     
-    // Validación de atributos y manejo de imagen al enviar
-    form.addEventListener('submit', function(e) {
-        const atributosRadios = document.querySelectorAll('input[type="radio"][name^="atributos"]:checked');
-        const atributosRequeridos = document.querySelectorAll('.border.rounded').length;
-        
-        if (atributosRadios.length !== atributosRequeridos) {
-            e.preventDefault();
-            alert('Debes seleccionar un valor para cada atributo.');
-            return false;
-        }
-        
-        // Si hay un archivo nuevo pero el input está vacío, restaurarlo
-        if (archivoNuevo && (!imagenInput.files || imagenInput.files.length === 0)) {
-            restaurarArchivoEnInput(archivoNuevo);
-        }
-        
-        // Si se eliminó la imagen explícitamente, asegurar que el input esté vacío
-        if (imagenEliminada && imagenInput.files && imagenInput.files.length > 0) {
-            imagenInput.value = '';
-        }
-        
-        // Si no hay archivo nuevo y no se eliminó, asegurar que se mantenga la imagen
-        if (!archivoNuevo && !imagenEliminada && usarImagenActualCheckbox) {
-            mantenerImagenHidden.value = '1';
-        }
+    // VALIDACIÓN DE ATRIBUTOS AL ENVIAR FORMULARIO
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // 1. Validar atributos
+            let atributosValidos = true;
+            const atributosContainers = document.querySelectorAll('.atributo-container');
+            const mensajesErrorAtributos = [];
+            
+            atributosContainers.forEach(container => {
+                const nombreAtributo = container.querySelector('label').textContent.replace('*', '').trim();
+                const radioButtons = container.querySelectorAll('.atributo-radio');
+                let seleccionado = false;
+                
+                radioButtons.forEach(radio => {
+                    if (radio.checked) {
+                        seleccionado = true;
+                    }
+                });
+                
+                if (!seleccionado) {
+                    atributosValidos = false;
+                    container.classList.add('border-danger');
+                    
+                    const errorExistente = container.querySelector('.error-atributo');
+                    if (errorExistente) {
+                        errorExistente.remove();
+                    }
+                    
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'error-atributo text-danger small mt-1';
+                    errorDiv.innerHTML = `<i class="fas fa-exclamation-circle me-1"></i> Selecciona un valor`;
+                    container.appendChild(errorDiv);
+                    
+                    mensajesErrorAtributos.push(`• ${nombreAtributo}`);
+                } else {
+                    container.classList.remove('border-danger');
+                    const errorExistente = container.querySelector('.error-atributo');
+                    if (errorExistente) {
+                        errorExistente.remove();
+                    }
+                }
+            });
+            
+            if (!atributosValidos) {
+                e.preventDefault();
+                const mensaje = `Debes seleccionar un valor para los siguientes atributos:\n\n${mensajesErrorAtributos.join('\n')}`;
+                alert(mensaje);
+                return false;
+            }
+            
+            // 2. Validar dimensiones y peso (sin mostrar mensajes)
+            let dimensionesValidas = true;
+            
+            dimensionInputs.forEach(input => {
+                if (!input) return;
+                
+                const value = input.value;
+                if (value && value.trim() !== '') {
+                    const numValue = parseFloat(value);
+                    const maxVal = parseFloat(input.dataset.max) || 500;
+                    
+                    if (isNaN(numValue) || numValue < 0 || numValue > maxVal) {
+                        dimensionesValidas = false;
+                        input.classList.add('is-invalid');
+                    }
+                }
+            });
+            
+            if (!dimensionesValidas) {
+                e.preventDefault();
+                alert('Por favor, corrige los valores de dimensiones o peso antes de continuar.');
+                return false;
+            }
+            
+            // 3. Asegurar que el campo hidden tenga el valor correcto
+            // Esto es importante para que el controlador sepa si mantener o no la imagen
+            if (imagenEliminada) {
+                mantenerImagenHidden.value = '0';
+            } else if (archivoNuevo) {
+                // Si hay archivo nuevo, asegurar que el input tenga el archivo
+                mantenerImagenHidden.value = '0';
+                if (!imagenInput.files || imagenInput.files.length === 0) {
+                    restaurarArchivoEnInput(archivoNuevo);
+                }
+            } else if (usarImagenActualCheckbox && usarImagenActualCheckbox.checked) {
+                mantenerImagenHidden.value = '1';
+            } else {
+                mantenerImagenHidden.value = '0';
+            }
+            
+            // 4. Validar que si se desmarcó "mantener imagen" y no se subió nueva, se elimine la actual
+            if (!usarImagenActualCheckbox || !usarImagenActualCheckbox.checked) {
+                if (!archivoNuevo && !imagenEliminada) {
+                    // El usuario desmarcó mantener imagen pero no subió nueva ni eliminó
+                    mantenerImagenHidden.value = '0';
+                }
+            }
+            
+            return true;
+        });
+    }
+    
+    // Validación en tiempo real de atributos
+    document.querySelectorAll('.atributo-radio').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const container = this.closest('.atributo-container');
+            if (container) {
+                container.classList.remove('border-danger');
+                const errorExistente = container.querySelector('.error-atributo');
+                if (errorExistente) {
+                    errorExistente.remove();
+                }
+            }
+        });
     });
 });
 </script>
+
+<style>
+.form-check-input:checked + .form-check-label {
+    font-weight: bold;
+    color: #0d6efd;
+}
+
+.card {
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+#nueva-imagen-container img,
+#current-image-preview {
+    transition: all 0.3s ease;
+}
+
+#nueva-imagen-container img:hover,
+#current-image-preview:hover {
+    transform: scale(1.05);
+}
+
+.form-control:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+    color: #0c5460;
+}
+
+.border-danger {
+    border-color: #dc3545 !important;
+    background-color: rgba(220, 53, 69, 0.05);
+}
+
+.atributo-container {
+    transition: all 0.3s ease;
+}
+
+.atributo-container:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Estilos para validación mejorada */
+.form-control.is-invalid {
+    border-color: #dc3545;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.form-control.is-invalid:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+}
+
+.invalid-feedback {
+    display: block;
+    font-size: 0.875em;
+    margin-top: 0.25rem;
+}
+
+.dimension-input {
+    font-family: monospace;
+}
+</style>
 @endsection

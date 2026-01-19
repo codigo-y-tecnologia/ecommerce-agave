@@ -22,6 +22,9 @@ class ProductoVariacion extends Model
         'dPrecio_oferta',
         'iStock',
         'dPeso',
+        'dLargo_cm',
+        'dAncho_cm',
+        'dAlto_cm',
         'vClase_envio',
         'tDescripcion',
         'vImagen',
@@ -33,7 +36,10 @@ class ProductoVariacion extends Model
         'dPrecio' => 'decimal:2',
         'dPrecio_oferta' => 'decimal:2',
         'iStock' => 'integer',
-        'dPeso' => 'decimal:2'
+        'dPeso' => 'decimal:2',
+        'dLargo_cm' => 'decimal:2',
+        'dAncho_cm' => 'decimal:2',
+        'dAlto_cm' => 'decimal:2'
     ];
 
     public function producto()
@@ -44,6 +50,36 @@ class ProductoVariacion extends Model
     public function atributos()
     {
         return $this->hasMany(VariacionAtributo::class, 'id_variacion');
+    }
+
+    // Calcular volumen cúbico
+    public function getVolumenAttribute()
+    {
+        if ($this->dLargo_cm && $this->dAncho_cm && $this->dAlto_cm) {
+            return $this->dLargo_cm * $this->dAncho_cm * $this->dAlto_cm;
+        }
+        return 0;
+    }
+
+    // Calcular peso volumétrico (para envíos)
+    public function getPesoVolumetricoAttribute()
+    {
+        $volumen = $this->getVolumenAttribute();
+        if ($volumen > 0) {
+            return $volumen / 5000;
+        }
+        return 0;
+    }
+
+    // Método para obtener dimensiones formateadas
+    public function getDimensionesFormateadasAttribute()
+    {
+        if ($this->dLargo_cm && $this->dAncho_cm && $this->dAlto_cm) {
+            return number_format($this->dLargo_cm, 1) . ' × ' . 
+                   number_format($this->dAncho_cm, 1) . ' × ' . 
+                   number_format($this->dAlto_cm, 1) . ' cm';
+        }
+        return 'No especificado';
     }
 
     // Accesor para verificar si tiene oferta
@@ -151,20 +187,16 @@ class ProductoVariacion extends Model
     public function getImagenUrlAttribute()
     {
         if ($this->vImagen) {
-            // Si la imagen ya es una URL completa
             if (filter_var($this->vImagen, FILTER_VALIDATE_URL)) {
                 return $this->vImagen;
             }
-            // Si es una ruta relativa
             return asset('storage/' . $this->vImagen);
         }
         
-        // Si no hay imagen, usar la primera imagen del producto padre
         if ($this->producto && count($this->producto->imagenes) > 0) {
             return $this->producto->imagenes[0];
         }
         
-        // Imagen por defecto
         return asset('images/default-product.png');
     }
 
@@ -191,7 +223,6 @@ class ProductoVariacion extends Model
     // Método para verificar si es la variación predeterminada
     public function esPredeterminada()
     {
-        // Si no tiene atributos, podría ser la variación predeterminada
         return $this->atributos()->count() === 0;
     }
 
@@ -235,14 +266,12 @@ class ProductoVariacion extends Model
         parent::boot();
 
         static::creating(function ($variacion) {
-            // Asegurar que la variación esté activa por defecto
             if (!isset($variacion->bActivo)) {
                 $variacion->bActivo = true;
             }
         });
 
         static::deleting(function ($variacion) {
-            // Eliminar relaciones cuando se elimina la variación
             $variacion->atributos()->delete();
         });
     }
