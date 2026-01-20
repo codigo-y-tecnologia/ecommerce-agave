@@ -10,3 +10,6 @@ Artisan::command('inspire', function () {
 
 Schedule::command('carritos:limpiar-abandonados')
     ->dailyAt('03:00');
+
+Schedule::command('carts:notify-active')
+    ->hourly();
