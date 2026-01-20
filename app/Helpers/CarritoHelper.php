@@ -28,6 +28,7 @@ class CarritoHelper
                 [
                     // Importante: guest_token debe ser null
                     'vGuest_token' => null,
+                    'vEmail_invitado' => null,
                 ]
             );
         }

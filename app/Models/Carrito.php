@@ -8,7 +8,10 @@ class Carrito extends Model
 {
     protected $table = 'tbl_carritos';
     protected $primaryKey = 'id_carrito';
-    public $timestamps = false;
+    public $timestamps = true;
+
+    const CREATED_AT = 'tFecha_creacion';
+    const UPDATED_AT = 'tFecha_actualizacion';
 
     protected $fillable = ['id_usuario', 'vGuest_token', 'vEmail_invitado', 'eEstado'];
 
