@@ -13,3 +13,6 @@ Schedule::command('carritos:limpiar-abandonados')
 
 Schedule::command('carts:notify-active')
     ->hourly();
+
+Schedule::command('carts:cleanup-old')
+    ->dailyAt('04:00');
