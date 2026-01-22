@@ -124,7 +124,7 @@
                     <div class="card-body">
                         <table class="table table-borderless">
                             <tr>
-                                <td width="40%"><strong>Código de barras:</strong></td>
+                                <td width="40%"><strong>SKU:</strong></td>
                                 <td><code>{{ $producto->vCodigo_barras }}</code></td>
                             </tr>
                             <tr>

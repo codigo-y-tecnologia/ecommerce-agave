@@ -46,10 +46,11 @@ class Producto extends Model
             $archivos = Storage::disk('public')->files($carpetaImagenes);
             $imagenes = [];
             
+            // Ordenar por nombre para mantener el orden
             sort($archivos);
             
             foreach ($archivos as $archivo) {
-                if (preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $archivo)) {
+                if (preg_match('/\.(jpg|jpeg|png|gif|webp|jfif|svg)$/i', $archivo)) {
                     $imagenes[] = Storage::url($archivo);
                 }
             }
@@ -60,7 +61,7 @@ class Producto extends Model
         return [];
     }
 
-    // Guardar imágenes
+    // Guardar imágenes NUEVO - CORREGIDO
     public function guardarImagenes($imagenes)
     {
         if (!$this->id_producto) {
@@ -69,21 +70,39 @@ class Producto extends Model
         
         $carpetaImagenes = 'products/' . $this->id_producto;
         
+        // Crear directorio si no existe
         if (!Storage::disk('public')->exists($carpetaImagenes)) {
             Storage::disk('public')->makeDirectory($carpetaImagenes);
         }
         
+        // Obtener imágenes existentes para numeración
         $imagenesExistentes = Storage::disk('public')->files($carpetaImagenes);
-        $numeroInicio = count($imagenesExistentes) + 1;
+        
+        // Filtrar solo imágenes válidas
+        $imagenesExistentes = array_filter($imagenesExistentes, function($archivo) {
+            return preg_match('/\.(jpg|jpeg|png|gif|webp|jfif|svg)$/i', $archivo);
+        });
+        
+        // Obtener el siguiente número disponible
+        $numeroInicio = count($imagenesExistentes);
         
         $imagenesGuardadas = [];
         $contador = 0;
+        $maxImagenes = 8; // Cambiado a 8 según tu requerimiento
         
         foreach ($imagenes as $imagen) {
-            if (($numeroInicio + $contador) > 6) break;
+            // Verificar límite máximo
+            if (($numeroInicio + $contador) >= $maxImagenes) {
+                break;
+            }
+            
+            // Validar que sea una imagen válida
+            if (!$imagen->isValid()) {
+                continue;
+            }
             
             $extension = $imagen->getClientOriginalExtension();
-            $nombreArchivo = 'imagen_' . ($numeroInicio + $contador) . '.' . $extension;
+            $nombreArchivo = 'imagen_' . ($numeroInicio + $contador + 1) . '.' . $extension;
             $ruta = $imagen->storeAs($carpetaImagenes, $nombreArchivo, 'public');
             $imagenesGuardadas[] = Storage::url($ruta);
             $contador++;
@@ -92,8 +111,21 @@ class Producto extends Model
         return $imagenesGuardadas;
     }
 
-    // Eliminar imágenes
-    public function eliminarImagenes()
+    // Eliminar imágenes específicas
+    public function eliminarImagenesEspecificas($nombresArchivos)
+    {
+        $carpetaImagenes = 'products/' . $this->id_producto;
+        
+        foreach ($nombresArchivos as $nombreArchivo) {
+            $rutaCompleta = $carpetaImagenes . '/' . $nombreArchivo;
+            if (Storage::disk('public')->exists($rutaCompleta)) {
+                Storage::disk('public')->delete($rutaCompleta);
+            }
+        }
+    }
+
+    // Eliminar todas las imágenes
+    public function eliminarTodasLasImagenes()
     {
         $carpetaImagenes = 'products/' . $this->id_producto;
         if (Storage::disk('public')->exists($carpetaImagenes)) {
@@ -101,15 +133,42 @@ class Producto extends Model
         }
     }
 
-    // Número de imágenes
-    public function getNumeroImagenes()
+    // Obtener nombres de archivos de imágenes
+    public function getNombresArchivosImagenes()
     {
         $carpetaImagenes = 'products/' . $this->id_producto;
         if (Storage::disk('public')->exists($carpetaImagenes)) {
             $archivos = Storage::disk('public')->files($carpetaImagenes);
-            return count($archivos);
+            
+            // Filtrar solo imágenes
+            $imagenes = [];
+            foreach ($archivos as $archivo) {
+                if (preg_match('/\.(jpg|jpeg|png|gif|webp|jfif|svg)$/i', $archivo)) {
+                    // Extraer solo el nombre del archivo
+                    $nombreArchivo = basename($archivo);
+                    $imagenes[] = [
+                        'nombre' => $nombreArchivo,
+                        'url' => Storage::url($archivo)
+                    ];
+                }
+            }
+            
+            return $imagenes;
         }
-        return 0;
+        
+        return [];
+    }
+
+    // Número de imágenes
+    public function getNumeroImagenes()
+    {
+        return count($this->imagenes);
+    }
+
+    // Verificar si tiene espacio para más imágenes
+    public function puedeAgregarMasImagenes()
+    {
+        return $this->getNumeroImagenes() < 8;
     }
 
     public function marca()
@@ -453,13 +512,22 @@ class Producto extends Model
         ];
     }
 
+    // NUEVO: Método para buscar productos por nombre o SKU
+    public static function buscarPorNombreOSKU($busqueda)
+    {
+        return self::where(function($query) use ($busqueda) {
+            $query->where('vNombre', 'LIKE', '%' . $busqueda . '%')
+                  ->orWhere('vCodigo_barras', 'LIKE', '%' . $busqueda . '%');
+        })->where('bActivo', true);
+    }
+
     protected static function boot()
     {
         parent::boot();
 
         static::deleting(function ($producto) {
             $producto->favoritos()->delete();
-            $producto->eliminarImagenes();
+            $producto->eliminarTodasLasImagenes();
         });
     }
 }

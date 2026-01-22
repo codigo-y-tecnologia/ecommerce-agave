@@ -5,9 +5,132 @@
 <div class="container">
     <h1><i class="fas fa-edit me-2"></i>Editar Producto</h1>
 
-    <form action="{{ route('productos.update', $producto->id_producto) }}" method="POST" enctype="multipart/form-data">
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    @if ($errors->any())
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <form action="{{ route('productos.update', $producto->id_producto) }}" method="POST" enctype="multipart/form-data" id="productoForm">
         @csrf
         @method('PUT')
+
+        <!-- IMÁGENES ACTUALES CON GESTIÓN -->
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white d-flex align-items-center justify-content-between">
+                <div>
+                    <i class="fas fa-images me-2"></i>
+                    <h5 class="mb-0">Imágenes del Producto ({{ count($producto->imagenes) }}/8)</h5>
+                </div>
+                <span class="badge bg-light text-dark">
+                    Espacio disponible: {{ 8 - count($producto->imagenes) }} imágenes
+                </span>
+            </div>
+            <div class="card-body">
+                @php
+                    $nombresArchivos = $producto->getNombresArchivosImagenes();
+                @endphp
+                
+                @if(count($nombresArchivos) > 0)
+                    <div class="alert alert-info d-flex align-items-center">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <div>
+                            <strong>Importante:</strong> Marca las imágenes que deseas eliminar. 
+                            <span class="text-danger">Esta acción no se puede deshacer.</span>
+                        </div>
+                    </div>
+                    
+                    <div class="row" id="imagenes-actuales">
+                        @foreach($nombresArchivos as $imagen)
+                            <div class="col-6 col-md-3 mb-3">
+                                <div class="card h-100 border">
+                                    <div class="card-img-container position-relative">
+                                        <img src="{{ $imagen['url'] }}" 
+                                             class="card-img-top" 
+                                             style="height: 180px; object-fit: contain; background: #f8f9fa;"
+                                             alt="Imagen del producto">
+                                        
+                                        <!-- Checkbox para eliminar -->
+                                        <div class="position-absolute top-0 end-0 m-2">
+                                            <input type="checkbox" 
+                                                   name="imagenes_a_eliminar[]"
+                                                   value="{{ $imagen['nombre'] }}"
+                                                   id="eliminar_{{ $imagen['nombre'] }}"
+                                                   class="form-check-input eliminar-imagen-checkbox"
+                                                   style="transform: scale(1.3);">
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-2 text-center">
+                                        <small class="text-muted d-block" style="font-size: 12px;">
+                                            {{ $imagen['nombre'] }}
+                                        </small>
+                                        <label for="eliminar_{{ $imagen['nombre'] }}" 
+                                               class="small text-danger mt-1 cursor-pointer">
+                                            <i class="fas fa-trash-alt me-1"></i>Eliminar
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="text-center py-4">
+                        <i class="fas fa-images fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No hay imágenes cargadas para este producto</p>
+                    </div>
+                @endif
+
+                <!-- Agregar nuevas imágenes -->
+                <div class="mt-4">
+                    <h6 class="fw-bold mb-3">Agregar nuevas imágenes</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="imagenes" class="form-label fw-bold">
+                                    Seleccionar imágenes
+                                </label>
+                                <input type="file" 
+                                       name="imagenes[]" 
+                                       id="imagenes" 
+                                       class="form-control @error('imagenes') is-invalid @enderror" 
+                                       multiple 
+                                       accept="image/*"
+                                       onchange="previewNewImages(event)">
+                                @error('imagenes')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                @error('imagenes.*')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <div class="form-text text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP, JFIF, SVG. 
+                                    Máximo 5MB por imagen.
+                                    <br>Puedes seleccionar hasta {{ 8 - count($producto->imagenes) }} imágenes más.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <div id="preview-new-container" class="row mt-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- INFORMACIÓN BÁSICA DEL PRODUCTO -->
         <div class="card mb-4">
@@ -20,17 +143,21 @@
                     <div class="col-md-6">
                         <div class="form-group mb-3">
                             <label for="vCodigo_barras" class="form-label fw-bold">
-                                Código de barras <span class="text-danger">*</span>
+                                SKU <span class="text-danger">*</span>
                             </label>
                             <input type="text" name="vCodigo_barras" id="vCodigo_barras" 
                                    class="form-control @error('vCodigo_barras') is-invalid @enderror"
                                    value="{{ old('vCodigo_barras', $producto->vCodigo_barras) }}" 
-                                   maxlength="20" 
+                                   maxlength="15" 
                                    required 
-                                   oninput="soloNumeros(this)">
+                                   oninput="validarSKU(this)"
+                                   pattern="[A-Za-z0-9]+"
+                                   title="Solo letras y números (máximo 15 caracteres)"
+                                   inputmode="text">
                             @error('vCodigo_barras')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                            <small class="form-text text-muted">15 caracteres máximo, solo letras y números</small>
                         </div>
                     </div>
                     
@@ -61,12 +188,17 @@
                                 <span class="input-group-text">$</span>
                                 <input type="text" name="dPrecio_compra" id="dPrecio_compra" 
                                        class="form-control @error('dPrecio_compra') is-invalid @enderror"
-                                       value="{{ old('dPrecio_compra', $producto->dPrecio_compra) }}" 
-                                       oninput="soloNumerosYDecimal(this)">
+                                       value="{{ old('dPrecio_compra', $producto->dPrecio_compra ? number_format($producto->dPrecio_compra, 2, '.', '') : '') }}" 
+                                       oninput="validarPrecio(this)"
+                                       placeholder="0.00"
+                                       title="Máximo: 9,999,999.99 (7 dígitos enteros, 2 decimales)">
                                 @error('dPrecio_compra')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
+                            <small class="form-text text-muted">
+                                Máximo: 9,999,999.99 - Mínimo: 0.00
+                            </small>
                         </div>
                     </div>
                     
@@ -79,13 +211,18 @@
                                 <span class="input-group-text">$</span>
                                 <input type="text" name="dPrecio_venta" id="dPrecio_venta" 
                                        class="form-control @error('dPrecio_venta') is-invalid @enderror"
-                                       value="{{ old('dPrecio_venta', $producto->dPrecio_venta) }}" 
+                                       value="{{ old('dPrecio_venta', number_format($producto->dPrecio_venta, 2, '.', '')) }}" 
                                        required 
-                                       oninput="soloNumerosYDecimal(this)">
+                                       oninput="validarPrecio(this)"
+                                       placeholder="0.00"
+                                       title="Máximo: 9,999,999.99 (7 dígitos enteros, 2 decimales)">
                                 @error('dPrecio_venta')
                                     <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                                @enderror
                             </div>
+                            <small class="form-text text-muted">
+                                Máximo: 9,999,999.99 - Mínimo: 0.00
+                            </small>
                         </div>
                     </div>
                     
@@ -94,14 +231,17 @@
                             <label for="iStock" class="form-label fw-bold">
                                 Stock <span class="text-danger">*</span>
                             </label>
-                            <input type="text" name="iStock" id="iStock" 
+                            <input type="number" name="iStock" id="iStock" 
                                    class="form-control @error('iStock') is-invalid @enderror"
                                    value="{{ old('iStock', $producto->iStock) }}" 
-                                   required 
-                                   oninput="soloNumeros(this)">
+                                   required min="0" max="9999" step="1"
+                                   oninput="validarStock(this)"
+                                   pattern="[0-9]*"
+                                   inputmode="numeric">
                             @error('iStock')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                            <small class="form-text text-muted">Solo números enteros. Rango: 0 - 9,999</small>
                         </div>
                     </div>
                 </div>
@@ -202,7 +342,7 @@
             </div>
         </div>
 
-        <!-- ASIGNAR ATRIBUTOS -->
+        <!-- ATRIBUTOS -->
         <div class="card mb-4">
             <div class="card-header bg-warning text-dark d-flex align-items-center">
                 <i class="fas fa-tags me-2"></i>
@@ -306,66 +446,14 @@
             </div>
         </div>
 
-        <!-- IMÁGENES Y DESCRIPCIÓN -->
+        <!-- DESCRIPCIÓN Y ETIQUETAS -->
         <div class="card mb-4">
-            <div class="card-header bg-secondary text-white d-flex align-items-center">
-                <i class="fas fa-images me-2"></i>
-                <h5 class="mb-0">Imágenes y Descripción</h5>
+            <div class="card-header bg-info text-white d-flex align-items-center">
+                <i class="fas fa-file-alt me-2"></i>
+                <h5 class="mb-0">Descripción y Etiquetas</h5>
             </div>
             <div class="card-body">
-                <!-- Imágenes existentes -->
-                <div class="form-group mb-4">
-                    <label class="form-label fw-bold">Imágenes actuales ({{ count($producto->imagenes) }}/6)</label>
-                    <p class="text-muted small">
-                        <i class="fas fa-folder me-1"></i>
-                        Carpeta: products/{{ $producto->id_producto }}/
-                    </p>
-                    @if(count($producto->imagenes) > 0)
-                        <div class="row">
-                            @foreach($producto->imagenes as $index => $imagen)
-                                <div class="col-4 col-md-3 mb-2">
-                                    <div class="card border">
-                                        <img src="{{ $imagen }}" 
-                                             class="card-img-top" 
-                                             style="height: 100px; object-fit: cover;"
-                                             alt="Imagen {{ $index + 1 }}">
-                                        <div class="card-body p-2 text-center">
-                                            <small class="text-muted">Imagen {{ $index + 1 }}</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <p class="text-muted">No hay imágenes cargadas</p>
-                    @endif
-                </div>
-
-                <!-- Agregar nuevas imágenes -->
                 <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label for="imagenes" class="form-label fw-bold">
-                                Agregar nuevas imágenes
-                            </label>
-                            <input type="file" name="imagenes[]" id="imagenes" 
-                                   class="form-control @error('imagenes') is-invalid @enderror" 
-                                   multiple accept="image/*">
-                            @error('imagenes')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            @error('imagenes.*')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <div class="form-text text-muted">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Formatos: JPG, JPEG, PNG, GIF, WEBP. Máximo 2MB por imagen.
-                                <br>Espacio disponible para {{ 6 - count($producto->imagenes) }} imágenes más.
-                            </div>
-                            <div id="preview-container" class="mt-2 row"></div>
-                        </div>
-                    </div>
-                    
                     <div class="col-md-6">
                         <div class="form-group mb-3">
                             <label for="tDescripcion_corta" class="form-label fw-bold">
@@ -381,18 +469,20 @@
                             <small class="form-text text-muted">Máximo 255 caracteres</small>
                         </div>
                     </div>
-                </div>
-                
-                <div class="form-group mb-3">
-                    <label for="tDescripcion_larga" class="form-label fw-bold">
-                        Descripción detallada
-                    </label>
-                    <textarea name="tDescripcion_larga" id="tDescripcion_larga" 
-                              class="form-control @error('tDescripcion_larga') is-invalid @enderror" 
-                              rows="5">{{ old('tDescripcion_larga', $producto->tDescripcion_larga) }}</textarea>
-                    @error('tDescripcion_larga')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
+                    
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="tDescripcion_larga" class="form-label fw-bold">
+                                Descripción detallada
+                            </label>
+                            <textarea name="tDescripcion_larga" id="tDescripcion_larga" 
+                                      class="form-control @error('tDescripcion_larga') is-invalid @enderror" 
+                                      rows="5">{{ old('tDescripcion_larga', $producto->tDescripcion_larga) }}</textarea>
+                            @error('tDescripcion_larga')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="form-group mb-3">
@@ -451,61 +541,181 @@
 </div>
 
 <script>
-// Solo números (para código de barras y stock)
-function soloNumeros(input) {
+// Objeto para guardar valores originales
+const valoresOriginalesEdit = {};
+
+// Guardar valor original cuando el campo recibe focus
+function guardarValorOriginal(input) {
+    valoresOriginalesEdit[input.id] = input.value;
+}
+
+// Validar precio - SIN COMAS, solo números y punto decimal, limitado a 7 dígitos enteros
+function validarPrecio(input) {
+    let value = input.value;
+    const cursorPos = input.selectionStart;
+    
+    if (value === '') {
+        input.classList.remove('is-invalid');
+        return;
+    }
+    
+    // Eliminar todo excepto números y un punto decimal
+    value = value.replace(/[^0-9.]/g, '');
+    
+    // Verificar que no haya más de un punto decimal
+    const puntos = value.split('.').length - 1;
+    if (puntos > 1) {
+        // Mantener solo el primer punto decimal
+        const partes = value.split('.');
+        value = partes[0] + '.' + partes.slice(1).join('');
+    }
+    
+    // Eliminar múltiples puntos seguidos
+    value = value.replace(/\.{2,}/g, '.');
+    
+    // Si comienza con punto, agregar 0 al inicio
+    if (value.startsWith('.')) {
+        value = '0' + value;
+    }
+    
+    // Limitar a máximo 7 dígitos enteros (9,999,999.99)
+    const partesNumero = value.split('.');
+    const parteEntera = partesNumero[0];
+    
+    if (parteEntera.length > 7) {
+        // Limitar a 7 dígitos enteros
+        value = parteEntera.substring(0, 7) + (partesNumero[1] ? '.' + partesNumero[1] : '');
+    }
+    
+    // Limitar decimales a máximo 2
+    if (value.includes('.')) {
+        const partes = value.split('.');
+        if (partes[1].length > 2) {
+            partes[1] = partes[1].substring(0, 2);
+            value = partes[0] + '.' + partes[1];
+        }
+    }
+    
+    // Solo actualizar si el valor cambió
+    if (input.value !== value) {
+        const oldValue = input.value;
+        input.value = value;
+        
+        const cursorDiff = value.length - oldValue.length;
+        const newCursorPos = Math.max(0, Math.min(value.length, cursorPos + cursorDiff));
+        setTimeout(() => {
+            input.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
+    }
+    
+    input.classList.remove('is-invalid');
+    
+    // Mostrar error si el número es muy grande
+    if (value) {
+        const numero = parseFloat(value);
+        if (!isNaN(numero) && numero > 9999999.99) {
+            input.classList.add('is-invalid');
+            mostrarErrorPrecio(input, 'El precio máximo es 9,999,999.99');
+        }
+    }
+}
+
+// Función para mostrar error de precio
+function mostrarErrorPrecio(input, mensaje) {
+    // Remover error anterior si existe
+    const errorId = `error-${input.id}`;
+    const errorElement = document.getElementById(errorId);
+    if (errorElement) {
+        errorElement.remove();
+    }
+    
+    // Crear elemento de error
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'invalid-feedback d-block precio-error';
+    errorDiv.textContent = mensaje;
+    errorDiv.id = errorId;
+    
+    // Insertar después del input
+    input.parentNode.appendChild(errorDiv);
+}
+
+// Validar stock (solo números enteros con límite)
+function validarStock(input) {
+    // Remover cualquier caracter que no sea número
     input.value = input.value.replace(/[^0-9]/g, '');
+    
+    // Validar que sea mayor o igual a 0 y menor o igual a 9999
+    if (input.value && parseInt(input.value) < 0) {
+        input.value = '0';
+    } else if (input.value && parseInt(input.value) > 9999) {
+        input.value = '9999';
+    }
+    
+    // Remover ceros a la izquierda
+    if (input.value.length > 1 && input.value.startsWith('0')) {
+        input.value = input.value.replace(/^0+/, '');
+    }
+    
+    // Si está vacío, poner 0
+    if (input.value === '') {
+        input.value = '0';
+    }
+    
     input.classList.remove('is-invalid');
 }
 
-// Números y punto decimal (para precios)
-function soloNumerosYDecimal(input) {
-    input.value = input.value.replace(/[^0-9.]/g, '');
+// Función para validar SKU (15 caracteres máximo, solo letras y números)
+function validarSKU(input) {
+    // Permitir solo letras y números
+    input.value = input.value.replace(/[^A-Za-z0-9]/g, '');
     
-    let puntos = input.value.split('.').length - 1;
-    if (puntos > 1) {
-        input.value = input.value.slice(0, -1);
+    // Limitar a 15 caracteres
+    if (input.value.length > 15) {
+        input.value = input.value.substring(0, 15);
     }
     
-    if (input.value.includes('.')) {
-        let partes = input.value.split('.');
-        if (partes[1].length > 2) {
-            partes[1] = partes[1].substring(0, 2);
-            input.value = partes[0] + '.' + partes[1];
-        }
-    }
+    // Convertir a mayúsculas automáticamente
+    input.value = input.value.toUpperCase();
     
     input.classList.remove('is-invalid');
 }
 
 // Preview de nuevas imágenes
-document.getElementById('imagenes').addEventListener('change', function(e) {
-    const previewContainer = document.getElementById('preview-container');
+function previewNewImages(event) {
+    const previewContainer = document.getElementById('preview-new-container');
     previewContainer.innerHTML = '';
     
-    const files = e.target.files;
-    const maxFiles = 6 - {{ count($producto->imagenes) }};
+    const files = event.target.files;
+    const maxFiles = 8 - {{ count($producto->imagenes) }};
+    const imagenesAEliminar = document.querySelectorAll('.eliminar-imagen-checkbox:checked').length;
+    const espacioReal = maxFiles + imagenesAEliminar;
     
-    if (files.length > maxFiles) {
-        alert('Solo puedes seleccionar máximo ' + maxFiles + ' imágenes más.');
-        this.value = '';
+    if (files.length > espacioReal) {
+        alert('Solo puedes seleccionar máximo ' + espacioReal + ' imágenes más.');
+        event.target.value = '';
         return;
     }
     
-    for (let i = 0; i < files.length && i < maxFiles; i++) {
+    for (let i = 0; i < files.length && i < espacioReal; i++) {
         const file = files[i];
         const reader = new FileReader();
         
         reader.onload = function(e) {
             const col = document.createElement('div');
-            col.className = 'col-4 col-md-3 mb-2';
+            col.className = 'col-6 col-md-3 mb-2';
             col.innerHTML = `
                 <div class="card border">
                     <img src="${e.target.result}" 
                          class="card-img-top" 
-                         style="height: 100px; object-fit: cover;"
+                         style="height: 120px; object-fit: cover;"
                          alt="Previsualización">
                     <div class="card-body p-2 text-center">
-                        <small class="text-muted">${file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name}</small>
+                        <small class="text-muted d-block" style="font-size: 11px;">
+                            ${file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name}
+                        </small>
+                        <small class="text-muted d-block">
+                            ${(file.size / 1024).toFixed(2)} KB
+                        </small>
                     </div>
                 </div>
             `;
@@ -514,43 +724,199 @@ document.getElementById('imagenes').addEventListener('change', function(e) {
         
         reader.readAsDataURL(file);
     }
-});
+}
 
-// Mostrar/ocultar valores cuando se selecciona un atributo maestro
+// Mostrar confirmación al marcar imágenes para eliminar
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.atributo-maestro-checkbox').forEach(checkbox => {
+    document.querySelectorAll('.eliminar-imagen-checkbox').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
-            const valoresContainer = document.getElementById(`valores-atributo-${this.dataset.atributoId}`);
+            const card = this.closest('.card');
             if (this.checked) {
-                valoresContainer.style.display = 'block';
-                // Agregar animación
-                valoresContainer.style.opacity = '0';
-                valoresContainer.style.transform = 'translateY(-10px)';
-                setTimeout(() => {
-                    valoresContainer.style.opacity = '1';
-                    valoresContainer.style.transform = 'translateY(0)';
-                    valoresContainer.style.transition = 'all 0.3s ease';
-                }, 10);
+                card.style.borderColor = '#dc3545';
+                card.style.boxShadow = '0 0 0 3px rgba(220, 53, 69, 0.3)';
             } else {
-                valoresContainer.style.display = 'none';
-                // Desmarcar todos los valores de este atributo
-                valoresContainer.querySelectorAll('.atributo-valor-checkbox').forEach(vc => {
-                    vc.checked = false;
-                });
+                card.style.borderColor = '';
+                card.style.boxShadow = '';
             }
+            
+            updateImageCount();
         });
     });
+    
+    // Actualizar contador de imágenes disponibles
+    function updateImageCount() {
+        const imagenesAEliminar = document.querySelectorAll('.eliminar-imagen-checkbox:checked').length;
+        const imagenesActuales = {{ count($producto->imagenes) }};
+        const espacioDisponible = 8 - (imagenesActuales - imagenesAEliminar);
+        
+        const fileInput = document.getElementById('imagenes');
+        if (fileInput) {
+            fileInput.setAttribute('data-max-files', espacioDisponible);
+        }
+    }
+    
+    updateImageCount();
 });
 
-// Remover error cuando se escribe
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('input, select, textarea').forEach(input => {
-        input.addEventListener('input', function() {
-            this.classList.remove('is-invalid');
-        });
+// Validación de formulario SIMPLIFICADA - solo validaciones críticas
+document.getElementById('productoForm').addEventListener('submit', function(e) {
+    let erroresCriticos = false;
+    
+    // 1. Validar campos obligatorios
+    const camposObligatorios = [
+        {id: 'vCodigo_barras', nombre: 'SKU'},
+        {id: 'vNombre', nombre: 'Nombre'},
+        {id: 'dPrecio_venta', nombre: 'Precio de venta'},
+        {id: 'iStock', nombre: 'Stock'},
+        {id: 'id_categoria', nombre: 'Categoría'},
+        {id: 'id_marca', nombre: 'Marca'}
+    ];
+    
+    camposObligatorios.forEach(campo => {
+        const elemento = document.getElementById(campo.id);
+        if (!elemento.value.trim()) {
+            elemento.classList.add('is-invalid');
+            erroresCriticos = true;
+            
+            if (!elemento.nextElementSibling || !elemento.nextElementSibling.classList.contains('invalid-feedback')) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'invalid-feedback';
+                errorDiv.textContent = `El campo "${campo.nombre}" es obligatorio`;
+                elemento.parentNode.appendChild(errorDiv);
+            }
+        }
+    });
+    
+    // 2. Validar stock
+    const stockInput = document.getElementById('iStock');
+    const stockValue = stockInput.value.trim();
+    if (stockValue) {
+        const stockNum = parseInt(stockValue);
+        if (isNaN(stockNum) || stockNum < 0 || stockNum > 9999) {
+            stockInput.classList.add('is-invalid');
+            erroresCriticos = true;
+            
+            if (!stockInput.nextElementSibling || !stockInput.nextElementSibling.classList.contains('invalid-feedback')) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'invalid-feedback';
+                errorDiv.textContent = 'El stock debe ser un número entre 0 y 9999';
+                stockInput.parentNode.appendChild(errorDiv);
+            }
+        }
+    }
+    
+    // 3. Validar precios
+    const precioVenta = document.getElementById('dPrecio_venta');
+    const precioCompra = document.getElementById('dPrecio_compra');
+    const regexPrecio = /^[0-9]*\.?[0-9]*$/;
+    
+    // Validar precio de venta
+    if (precioVenta.value.trim()) {
+        if (!regexPrecio.test(precioVenta.value.trim())) {
+            precioVenta.classList.add('is-invalid');
+            erroresCriticos = true;
+            
+            if (!precioVenta.nextElementSibling || !precioVenta.nextElementSibling.classList.contains('invalid-feedback')) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'invalid-feedback';
+                errorDiv.textContent = 'Solo números y punto decimal permitidos';
+                precioVenta.parentNode.appendChild(errorDiv);
+            }
+        } else {
+            const numero = parseFloat(precioVenta.value.trim());
+            if (!isNaN(numero) && numero > 9999999.99) {
+                precioVenta.classList.add('is-invalid');
+                erroresCriticos = true;
+                
+                if (!precioVenta.nextElementSibling || !precioVenta.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback';
+                    errorDiv.textContent = 'El precio máximo es 9,999,999.99';
+                    precioVenta.parentNode.appendChild(errorDiv);
+                }
+            }
+        }
+    }
+    
+    // Validar precio de compra
+    if (precioCompra.value.trim()) {
+        if (!regexPrecio.test(precioCompra.value.trim())) {
+            precioCompra.classList.add('is-invalid');
+            erroresCriticos = true;
+            
+            if (!precioCompra.nextElementSibling || !precioCompra.nextElementSibling.classList.contains('invalid-feedback')) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'invalid-feedback';
+                errorDiv.textContent = 'Solo números y punto decimal permitidos';
+                precioCompra.parentNode.appendChild(errorDiv);
+            }
+        } else {
+            const numero = parseFloat(precioCompra.value.trim());
+            if (!isNaN(numero) && numero > 9999999.99) {
+                precioCompra.classList.add('is-invalid');
+                erroresCriticos = true;
+                
+                if (!precioCompra.nextElementSibling || !precioCompra.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback';
+                    errorDiv.textContent = 'El precio máximo es 9,999,999.99';
+                    precioCompra.parentNode.appendChild(errorDiv);
+                }
+            }
+        }
+    }
+    
+    // 4. Validar imágenes
+    const imagenesAEliminar = document.querySelectorAll('.eliminar-imagen-checkbox:checked').length;
+    const nuevasImagenes = document.getElementById('imagenes').files.length;
+    const imagenesActuales = {{ count($producto->imagenes) }};
+    const totalImagenes = imagenesActuales - imagenesAEliminar + nuevasImagenes;
+    
+    if (totalImagenes > 8) {
+        e.preventDefault();
+        alert('Error: Excediste el límite de 8 imágenes. Total calculado: ' + totalImagenes + ' imágenes.');
+        return false;
+    }
+    
+    // 5. Si hay errores críticos, prevenir envío
+    if (erroresCriticos) {
+        e.preventDefault();
         
-        input.addEventListener('change', function() {
+        const primerError = document.querySelector('.is-invalid');
+        if (primerError) {
+            primerError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            primerError.focus();
+        }
+        
+        return false;
+    }
+    
+    // 6. Confirmar eliminación de imágenes
+    if (imagenesAEliminar > 0) {
+        if (!confirm(`¿Estás seguro de que deseas eliminar ${imagenesAEliminar} imagen(es)? Esta acción no se puede deshacer.`)) {
+            e.preventDefault();
+            return false;
+        }
+    }
+    
+    return true;
+});
+
+// Estilo para cursor pointer en etiquetas
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('label.cursor-pointer').forEach(label => {
+        label.style.cursor = 'pointer';
+    });
+    
+    // Limpiar errores al escribir
+    document.querySelectorAll('input, select, textarea').forEach(elemento => {
+        elemento.addEventListener('input', function() {
             this.classList.remove('is-invalid');
+            
+            const errorFeedback = this.nextElementSibling;
+            if (errorFeedback && errorFeedback.classList.contains('invalid-feedback')) {
+                errorFeedback.remove();
+            }
         });
     });
 });
@@ -562,128 +928,67 @@ document.addEventListener('DOMContentLoaded', function() {
     border: 1px solid #dee2e6;
 }
 
-.card:hover {
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    transform: translateY(-2px);
-}
-
 .card-header {
     border-bottom: 1px solid rgba(0,0,0,0.125);
 }
 
-.form-check-input:checked {
-    background-color: #198754;
-    border-color: #198754;
+.card-img-container {
+    position: relative;
+    overflow: hidden;
 }
 
-.form-switch .form-check-input:checked {
-    background-color: #198754;
-    border-color: #198754;
-}
-
-#preview-container img {
-    transition: all 0.3s ease;
-}
-
-#preview-container img:hover {
+.card-img-container:hover img {
     transform: scale(1.05);
 }
 
-.valores-container {
-    transition: all 0.3s ease;
+.card-img-container img {
+    transition: transform 0.3s ease;
 }
 
-.input-group-text {
-    background-color: #f8f9fa;
-    border-right: 0;
+.form-check-input:checked {
+    background-color: #dc3545;
+    border-color: #dc3545;
 }
 
-.form-control:focus + .input-group-text {
-    border-color: #86b7fe;
-    background-color: #f8f9fa;
+/* Estilos para etiquetas con cursor */
+.cursor-pointer {
+    cursor: pointer;
 }
 
-/* Estilos para la jerarquía de categorías */
-select option {
-    padding: 8px 12px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+/* Resaltar cuando se marca para eliminar */
+.eliminar-imagen-checkbox:checked + .card-img-container {
+    opacity: 0.7;
 }
 
-select option[value=""] {
-    color: #6c757d;
-    font-style: italic;
-    font-size: 14px;
-}
-
-/* Para Firefox que no soporta bien los espacios HTML */
-@-moz-document url-prefix() {
-    select option {
-        white-space: pre-wrap !important;
-        font-family: 'Consolas', 'Monaco', monospace !important;
+/* Responsive */
+@media (max-width: 768px) {
+    .card-img-top {
+        height: 150px !important;
     }
 }
 
-/* Mejorar el select para mostrar jerarquía */
-.form-select {
-    font-size: 14px;
-    line-height: 1.5;
+/* Estilos para errores de precio */
+.precio-error {
+    margin-top: 5px;
+    font-size: 0.875em;
+    color: #dc3545;
 }
 
-/* Resaltar la opción seleccionada */
-.form-select option:checked {
-    background-color: #007bff;
-    color: white;
-    font-weight: bold;
+.input-group .is-invalid {
+    z-index: 3;
 }
 
-/* Estilos específicos para categorías */
-select option.categoria-raiz {
-    font-weight: bold;
-    color: #2c3e50;
-    background-color: #f8f9fa;
-    padding-left: 10px;
+.input-group .is-invalid ~ .invalid-feedback {
+    display: block;
 }
 
-select option.categoria-hijo {
-    color: #34495e;
-    padding-left: 30px;
-    font-size: 14px;
-}
-
-select option.categoria-subhijo {
-    color: #7f8c8d;
-    padding-left: 50px;
-    font-size: 13px;
-    font-style: italic;
-}
-
-/* Mejorar la visualización de los iconos */
-select option {
-    white-space: pre;
-}
-
-/* Asegurar que el select tenga suficiente altura para mostrar la jerarquía */
-.form-select {
-    min-height: 45px;
-    padding: 10px 12px;
-}
-
-/* Para Chrome/Edge que soportan mejor la jerarquía */
-@supports (-webkit-appearance: none) {
-    select option {
-        padding-left: 20px;
-        text-indent: -20px;
-    }
-    
-    select option.categoria-hijo {
-        padding-left: 40px;
-        text-indent: -20px;
-    }
-    
-    select option.categoria-subhijo {
-        padding-left: 60px;
-        text-indent: -20px;
-    }
+/* Mejorar la experiencia del input de precio */
+input[name="dPrecio_venta"],
+input[name="dPrecio_compra"] {
+    font-family: 'Courier New', monospace;
+    font-size: 1.1em;
+    letter-spacing: 0.5px;
+    text-align: right;
 }
 </style>
 @endsection

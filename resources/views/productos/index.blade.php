@@ -9,6 +9,29 @@
     </a>
 </div>
 
+<!-- BUSCADOR PARA PRODUCTOS -->
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <i class="fas fa-search me-2"></i>Buscar Productos
+    </div>
+    <div class="card-body">
+        <form action="{{ route('productos.index') }}" method="GET" class="row g-3">
+            <div class="col-md-8">
+                <input type="text" 
+                       name="search" 
+                       class="form-control" 
+                       placeholder="Buscar por nombre o SKU..." 
+                       value="{{ request('search') }}">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search me-1"></i> Buscar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card shadow-sm">
     <div class="card-body">
         @if($productos->count() > 0)
@@ -16,7 +39,7 @@
             <table class="table table-striped table-hover">
                 <thead class="table-dark">
                     <tr>
-                        <th>Código Barras</th>
+                        <th>SKU</th>
                         <th>Nombre</th>
                         <th>Precio Venta</th>
                         <th>Stock</th>

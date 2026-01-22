@@ -17,23 +17,35 @@ use Illuminate\Support\Facades\DB;
 
 class ProductoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $productos = Producto::with(['marca', 'categoria', 'etiquetas'])->get();
+        $query = Producto::with(['marca', 'categoria', 'etiquetas']);
+        
+        // Agregar búsqueda por nombre o SKU
+        if ($request->has('search') && !empty($request->search)) {
+            $searchTerm = $request->search;
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('vNombre', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('vCodigo_barras', 'LIKE', "%{$searchTerm}%");
+            });
+        }
+        
+        $productos = $query->get();
+        
         return view('productos.index', compact('productos'));
     }
 
     public function create()
     {
         $categorias = Categoria::with(['hijos' => function($query) {
-        $query->where('bActivo', true)
-              ->with(['hijos' => function($subQuery) {
-                  $subQuery->where('bActivo', true)
-                           ->orderBy('iOrden')
-                           ->orderBy('vNombre');
-              }])
-              ->orderBy('iOrden')
-              ->orderBy('vNombre');
+            $query->where('bActivo', true)
+                  ->with(['hijos' => function($subQuery) {
+                      $subQuery->where('bActivo', true)
+                               ->orderBy('iOrden')
+                               ->orderBy('vNombre');
+                  }])
+                  ->orderBy('iOrden')
+                  ->orderBy('vNombre');
         }])
         ->whereNull('id_categoria_padre')
         ->where('bActivo', true)
@@ -55,9 +67,9 @@ class ProductoController extends Controller
         $validated = $request->validate([
             'vCodigo_barras' => [
                 'required',
-                'max:20',
+                'max:15',
                 'unique:tbl_productos,vCodigo_barras',
-                'regex:/^[0-9]+$/'
+                'regex:/^[A-Za-z0-9]+$/'
             ],
             'vNombre' => [
                 'required',
@@ -68,18 +80,19 @@ class ProductoController extends Controller
             'tDescripcion_larga' => 'nullable',
             'dPrecio_compra' => 'nullable|numeric|min:0',
             'dPrecio_venta' => 'required|numeric|min:0',
-            'iStock' => 'required|integer|min:0',
+            'iStock' => 'required|integer|min:0|max:9999',
             'id_categoria' => 'required|exists:tbl_categorias,id_categoria',
             'id_marca' => 'required|exists:tbl_marcas,id_marca',
             'etiquetas' => 'nullable|array',
             'etiquetas.*' => 'exists:tbl_etiquetas,id_etiqueta',
-            'imagenes' => 'nullable|array|max:6',
-            'imagenes.*' => 'image|mimes:jpg,jpeg,png,gif,webp|max:2048',
+            'imagenes' => 'nullable|array|max:8',
+            'imagenes.*' => 'image|mimes:jpg,jpeg,png,gif,webp,jfif,svg|max:5120',
             'atributos' => 'nullable|array',
         ], [
-            'vCodigo_barras.required' => 'El código de barras es obligatorio',
-            'vCodigo_barras.unique' => 'Ya existe un producto con este código de barras',
-            'vCodigo_barras.regex' => 'El código de barras solo puede contener números',
+            'vCodigo_barras.required' => 'El SKU es obligatorio',
+            'vCodigo_barras.unique' => 'Ya existe un producto con este SKU',
+            'vCodigo_barras.regex' => 'El SKU solo puede contener letras y números',
+            'vCodigo_barras.max' => 'El SKU no puede exceder los 15 caracteres',
             'vNombre.required' => 'El nombre del producto es obligatorio',
             'vNombre.unique' => 'Ya existe un producto con este nombre',
             'dPrecio_venta.required' => 'El precio de venta es obligatorio',
@@ -88,8 +101,13 @@ class ProductoController extends Controller
             'iStock.required' => 'El stock es obligatorio',
             'iStock.integer' => 'El stock debe ser un número entero',
             'iStock.min' => 'El stock no puede ser negativo',
+            'iStock.max' => 'El stock no puede ser mayor a 9,999 unidades',
             'id_categoria.required' => 'La categoría es obligatoria',
             'id_marca.required' => 'La marca es obligatoria',
+            'imagenes.max' => 'No puedes subir más de 8 imágenes',
+            'imagenes.*.image' => 'Solo se permiten archivos de imagen',
+            'imagenes.*.mimes' => 'Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP, JFIF, SVG',
+            'imagenes.*.max' => 'Cada imagen no debe superar los 5MB',
         ]);
 
         try {
@@ -110,6 +128,7 @@ class ProductoController extends Controller
 
             $producto = Producto::create($productoData);
 
+            // Guardar imágenes si se enviaron
             if ($request->hasFile('imagenes')) {
                 $producto->guardarImagenes($request->file('imagenes'));
             }
@@ -181,14 +200,14 @@ class ProductoController extends Controller
     public function edit(Producto $producto)
     {
         $categorias = Categoria::with(['hijos' => function($query) {
-        $query->where('bActivo', true)
-              ->with(['hijos' => function($subQuery) {
-                  $subQuery->where('bActivo', true)
-                           ->orderBy('iOrden')
-                           ->orderBy('vNombre');
-              }])
-              ->orderBy('iOrden')
-              ->orderBy('vNombre');
+            $query->where('bActivo', true)
+                  ->with(['hijos' => function($subQuery) {
+                      $subQuery->where('bActivo', true)
+                               ->orderBy('iOrden')
+                               ->orderBy('vNombre');
+                  }])
+                  ->orderBy('iOrden')
+                  ->orderBy('vNombre');
         }])
         ->whereNull('id_categoria_padre')
         ->where('bActivo', true)
@@ -211,9 +230,9 @@ class ProductoController extends Controller
         $validated = $request->validate([
             'vCodigo_barras' => [
                 'required',
-                'max:20',
+                'max:15',
                 Rule::unique('tbl_productos', 'vCodigo_barras')->ignore($producto->id_producto, 'id_producto'),
-                'regex:/^[0-9]+$/'
+                'regex:/^[A-Za-z0-9]+$/'
             ],
             'vNombre' => [
                 'required',
@@ -224,18 +243,21 @@ class ProductoController extends Controller
             'tDescripcion_larga' => 'nullable',
             'dPrecio_compra' => 'nullable|numeric|min:0',
             'dPrecio_venta' => 'required|numeric|min:0',
-            'iStock' => 'required|integer|min:0',
+            'iStock' => 'required|integer|min:0|max:9999',
             'id_categoria' => 'required|exists:tbl_categorias,id_categoria',
             'id_marca' => 'required|exists:tbl_marcas,id_marca',
             'etiquetas' => 'nullable|array',
             'etiquetas.*' => 'exists:tbl_etiquetas,id_etiqueta',
-            'imagenes' => 'nullable|array',
-            'imagenes.*' => 'image|mimes:jpg,jpeg,png,gif,webp|max:2048',
+            'imagenes' => 'nullable|array|max:8',
+            'imagenes.*' => 'image|mimes:jpg,jpeg,png,gif,webp,jfif,svg|max:5120',
+            'imagenes_a_eliminar' => 'nullable|array',
+            'imagenes_a_eliminar.*' => 'string',
             'atributos' => 'nullable|array',
         ], [
-            'vCodigo_barras.required' => 'El código de barras es obligatorio',
-            'vCodigo_barras.unique' => 'Ya existe un producto con este código de barras',
-            'vCodigo_barras.regex' => 'El código de barras solo puede contener números',
+            'vCodigo_barras.required' => 'El SKU es obligatorio',
+            'vCodigo_barras.unique' => 'Ya existe un producto con este SKU',
+            'vCodigo_barras.regex' => 'El SKU solo puede contener letras y números',
+            'vCodigo_barras.max' => 'El SKU no puede exceder los 15 caracteres',
             'vNombre.required' => 'El nombre del producto es obligatorio',
             'vNombre.unique' => 'Ya existe un producto con este nombre',
             'dPrecio_venta.required' => 'El precio de venta es obligatorio',
@@ -244,20 +266,34 @@ class ProductoController extends Controller
             'iStock.required' => 'El stock es obligatorio',
             'iStock.integer' => 'El stock debe ser un número entero',
             'iStock.min' => 'El stock no puede ser negativo',
+            'iStock.max' => 'El stock no puede ser mayor a 9,999 unidades',
             'id_categoria.required' => 'La categoría es obligatoria',
             'id_marca.required' => 'La marca es obligatoria',
+            'imagenes.max' => 'No puedes subir más de 8 imágenes',
+            'imagenes.*.image' => 'Solo se permiten archivos de imagen',
+            'imagenes.*.mimes' => 'Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP, JFIF, SVG',
+            'imagenes.*.max' => 'Cada imagen no debe superar los 5MB',
         ]);
 
         try {
             DB::beginTransaction();
 
+            // Verificar espacio para nuevas imágenes
             $imagenesActuales = $producto->getNumeroImagenes();
             $nuevasImagenes = $request->hasFile('imagenes') ? count($request->file('imagenes')) : 0;
+            $imagenesAEliminar = $request->imagenes_a_eliminar ? count($request->imagenes_a_eliminar) : 0;
             
-            if (($imagenesActuales + $nuevasImagenes) > 6) {
+            $espacioDisponible = $imagenesActuales - $imagenesAEliminar + $nuevasImagenes;
+            
+            if ($espacioDisponible > 8) {
                 return redirect()->back()
                     ->withInput()
-                    ->withErrors(['imagenes' => 'No puedes tener más de 6 imágenes. Actualmente tienes ' . $imagenesActuales . ' imágenes.']);
+                    ->withErrors(['imagenes' => 'No puedes tener más de 8 imágenes. Actualmente tienes ' . $imagenesActuales . ' imágenes.']);
+            }
+
+            // Eliminar imágenes seleccionadas
+            if ($request->has('imagenes_a_eliminar') && is_array($request->imagenes_a_eliminar)) {
+                $producto->eliminarImagenesEspecificas($request->imagenes_a_eliminar);
             }
 
             $producto->update([
@@ -273,6 +309,7 @@ class ProductoController extends Controller
                 'bActivo' => $request->has('bActivo') ? true : false,
             ]);
             
+            // Agregar nuevas imágenes
             if ($request->hasFile('imagenes')) {
                 $producto->guardarImagenes($request->file('imagenes'));
             }
@@ -321,7 +358,7 @@ class ProductoController extends Controller
         try {
             DB::beginTransaction();
 
-            $producto->eliminarImagenes();
+            $producto->eliminarTodasLasImagenes();
             $producto->etiquetas()->detach();
             DB::table('tbl_producto_atributos')->where('id_producto', $producto->id_producto)->delete();
             $producto->delete();
