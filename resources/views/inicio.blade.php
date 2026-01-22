@@ -7,17 +7,22 @@
 </head>
 <body>
     <header>
-          @auth
-          <p>Hola, {{ Auth::user()->vNombre }}. Tu rol es: {{ Auth::user()->eRol }}</p>
+        <h1>Bienvenido a la página de inicio</h1>
+
+        @auth
+          <p>Hola, {{ Auth::user()->vNombre }}. Tu rol es: {{ Auth::user()->getRoleNames()->first() }}</p>
 
           @role('cliente')
            {{-- Panel de cliente --}}
          <nav class="navbar">
+
     <ul>
         @can('ver_carrito')
             <li><a href="{{ route('carrito.index') }}">🛒 Mi Carrito</a></li>
         @endcan
+        @can('ver_pedidos_propios')
             <li><a href="#">Mis Pedidos</a></li>
+        @endcan
             @can('ver_perfil')
                 <li><a href="{{ route('perfil.index') }}">👤 Mi Perfil</a></li>
             @endcan
@@ -40,6 +45,7 @@
             </ul>
         </nav>
     @endrole
+    
     @role('superadmin')
         {{-- Panel de superadmin --}}
         <nav class="navbar">
@@ -67,10 +73,11 @@
     @endauth
 
         @guest
-            <p>No has iniciado sesión.</p>
             <li><a href="{{ route('login') }}">Ingresar</a></li>
             <li><a href="{{ route('usuarios.create') }}">Crear Cuenta</a></li>
         @endguest
+    </ul>
+</nav>
     </header>
     
     <main>

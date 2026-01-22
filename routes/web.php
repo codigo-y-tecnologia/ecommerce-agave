@@ -31,7 +31,6 @@ use App\Http\Controllers\Perfil\DireccionController;
 use App\Http\Controllers\Admin\AdminPerfilController;
 use App\Http\Controllers\Auth\EmailChangeController;
 
-
 // Route::get('/', function () {
 //     return view('inicio');
 // })->name('home');
@@ -45,6 +44,12 @@ Route::get('/', function () {
 
 // Ruta púlica para el Webhook de Stripe 
 Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook'])->name('webhook.stripe');
+
+// Rutas públicas para el carrito de compras
+Route::get('/carrito', [CarritoController::class, 'index'])->name('carrito.index');
+Route::post('/carrito/{producto}', [CarritoController::class, 'store'])->name('carrito.store');
+Route::put('/carrito/{detalle}', [CarritoController::class, 'update'])->name('carrito.update');
+Route::delete('/carrito/{detalle}', [CarritoController::class, 'destroy'])->name('carrito.destroy');
 
 // Login y registro solo para invitados
 Route::middleware('guest')->group(function () {
@@ -130,17 +135,6 @@ Route::middleware(['auth', 'permission:gestionar_direcciones'])->group(function 
 
         return response()->json(['success' => true, 'direccion' => $direccion]);
     });
-});
-
-Route::middleware(['auth', 'permission:ver_carrito'])->group(function () {
-
-    // --------------------
-    // Rutas de Carrito
-    // --------------------
-    Route::get('/carrito', [CarritoController::class, 'index'])->name('carrito.index');
-    Route::post('/carrito/{producto}', [CarritoController::class, 'store'])->name('carrito.store');
-    Route::put('/carrito/{detalle}', [CarritoController::class, 'update'])->name('carrito.update');
-    Route::delete('/carrito/{detalle}', [CarritoController::class, 'destroy'])->name('carrito.destroy');
 });
 
 Route::middleware(['auth', 'permission:comprar_productos'])->group(function () {
