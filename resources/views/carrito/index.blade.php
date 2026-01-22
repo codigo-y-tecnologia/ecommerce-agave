@@ -19,6 +19,22 @@
     </div>
 @endif
 
+@if(!empty($warning))
+    <div class="alert alert-warning">
+        <ul class="mb-0">
+            @foreach($warning as $mensaje)
+                <li>{{ $mensaje }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
+@if(!empty($carrito_vacio))
+    <div class="alert alert-info">
+        {{ $carrito_vacio }}
+    </div>
+@endif
+
     <!-- Tabla de productos en el carrito -->
     <table class="table table-bordered">
     <thead class="table-light">

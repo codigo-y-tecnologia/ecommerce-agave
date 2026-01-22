@@ -20,27 +20,44 @@ class CarritoController extends Controller
         $carrito = CarritoHelper::carritoActual()
             ->load('detalles.producto');
 
-        // // Buscar carrito activo del usuario
-        // $carrito = Carrito::where('id_usuario', $usuario->id_usuario)
-        //     ->where('eEstado', 'activo')
-        //     ->with('detalles.producto') // eager load para no hacer muchas queries
-        //     ->first();
+        $mensajes = [];
 
-        if ($carrito->detalles->isEmpty()) {
-            return view('carrito.index', [
-                'detalles' => [],
-                'total' => 0
-            ])->with('carrito_vacio', 'Tu carrito está vacío.');
+        foreach ($carrito->detalles as $detalle) {
+            $producto = $detalle->producto;
+
+            // Producto eliminado o desactivado
+            if (!$producto || $producto->iStock <= 0) {
+                $mensajes[] = "El producto {$detalle->producto->vNombre} ya no tiene stock y fue eliminado del carrito.";
+                $detalle->delete();
+                continue;
+            }
+
+            // Ajustar cantidad si excede stock
+            if ($detalle->iCantidad > $producto->iStock) {
+                $detalle->iCantidad = $producto->iStock;
+                $detalle->save();
+
+                $mensajes[] = "La cantidad de {$producto->vNombre} fue ajustada al stock disponible.";
+            }
         }
 
-        // Calcular total
-        $total = $carrito->detalles->sum(function ($d) {
-            return $d->producto->precio_con_impuestos * $d->iCantidad;
-        });
+        $carrito->refresh();
+
+        $detalles = $carrito->detalles;
+
+        // Calcular total actualizado
+        $total = $detalles->sum(
+            fn($d) =>
+            $d->producto->precio_con_impuestos * $d->iCantidad
+        );
 
         return view('carrito.index', [
-            'detalles' => $carrito->detalles,
-            'total' => $total
+            'detalles' => $detalles,
+            'total' => $total,
+            'warning' => $mensajes,
+            'carrito_vacio' => $detalles->isEmpty()
+                ? 'Tu carrito está vacío.'
+                : null,
         ]);
     }
 
