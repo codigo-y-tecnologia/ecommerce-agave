@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Exception;
 use Carbon\Carbon;
+use App\Helpers\CarritoHelper;
 
 class CheckoutController extends Controller
 {
@@ -23,13 +24,7 @@ class CheckoutController extends Controller
             session()->forget('codigo_cupon');
         }
 
-        $usuario = Auth::user();
-
-        $carrito = Carrito::where('id_usuario', $usuario->id_usuario)
-            ->where('eEstado', 'activo')
-            ->orderByDesc('id_carrito')
-            ->with(['detalles.producto.impuestos'])
-            ->first();
+        $carrito = CarritoHelper::carritoCheckout();
 
         if (!$carrito || $carrito->detalles->isEmpty()) {
             return redirect()->route('carrito.index')->with('warning', 'Tu carrito está vacío.');
@@ -54,7 +49,10 @@ class CheckoutController extends Controller
 
         [$subtotal, $totalImpuestos, $total] = $this->calcularTotales($carrito);
 
-        $direcciones = Direccion::where('id_usuario', $usuario->id_usuario)->get();
+        $usuario = Auth::user();
+        $direcciones = $usuario
+            ? Direccion::where('id_usuario', $usuario->id_usuario)->get()
+            : collect();
 
         // seleccionar la dirección principal
         $direccionPrincipal = $direcciones->firstWhere('bDireccion_principal', 1);
@@ -120,11 +118,19 @@ class CheckoutController extends Controller
 
     public function store(Request $request)
     {
+
+        $carrito = CarritoHelper::carritoCheckout();
+
+        if (!$carrito || $carrito->detalles->isEmpty()) {
+            throw new Exception('El carrito está vacío.');
+        }
+
+        $usuario = Auth::user();
+
         $request->validate([
             'id_direccion' => 'required|exists:tbl_direcciones,id_direccion'
         ]);
 
-        $usuario = Auth::user();
         $idDireccion = $request->id_direccion;
 
         DB::transaction(function () use ($usuario, $idDireccion) {
@@ -196,7 +202,7 @@ class CheckoutController extends Controller
 
             // Crear el pedido
             $pedido = Pedido::create([
-                'id_usuario' => $usuario->id_usuario,
+                'id_usuario' => $usuario?->id_usuario,
                 'id_direccion' => $idDireccion,
                 'eEstado' => 'pendiente',
                 'dTotal' => $totalFinal,

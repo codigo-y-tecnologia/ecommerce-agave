@@ -42,14 +42,63 @@ Route::get('/', function () {
     return view('inicio', compact('productos'));
 })->name('home');
 
-// Ruta púlica para el Webhook de Stripe 
-Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook'])->name('webhook.stripe');
-
 // Rutas públicas para el carrito de compras
 Route::get('/carrito', [CarritoController::class, 'index'])->name('carrito.index');
 Route::post('/carrito/{producto}', [CarritoController::class, 'store'])->name('carrito.store');
 Route::put('/carrito/{detalle}', [CarritoController::class, 'update'])->name('carrito.update');
 Route::delete('/carrito/{detalle}', [CarritoController::class, 'destroy'])->name('carrito.destroy');
+
+// Rutas publicas para el checkout
+Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+
+Route::post('/checkout/crear-direccion', [CheckoutController::class, 'crearDireccion'])
+    ->name('checkout.crearDireccion');
+
+Route::put('/checkout/actualizar-direccion/{id}', [CheckoutController::class, 'actualizarDireccion'])
+    ->name('checkout.actualizarDireccion');
+
+
+Route::get('/api/direccion/{id}', function ($id) {
+    $direccion = Direccion::where('id_direccion', $id)
+        ->where('id_usuario', Auth::user()->id_usuario)
+        ->first();
+
+    return response()->json([
+        'success' => (bool) $direccion,
+        'direccion' => $direccion
+    ]);
+});
+
+Route::post('/cupon/aplicar', [CheckoutController::class, 'aplicarCupon'])->name('cupon.aplicar');
+
+// Rutas de pago
+
+// Stripe
+Route::post('/payment/stripe-session', [PaymentController::class, 'createStripeSession'])->name('payment.stripe.session');
+
+// Ruta pública para el Webhook de Stripe 
+Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook'])->name('webhook.stripe');
+
+// Order Received
+Route::get('/order-received/{id}', [OrderReceivedController::class, 'show'])
+    ->name('order.received');
+
+Route::get('/checkout/success', [CheckoutSuccessController::class, 'index'])
+    ->name('checkout.success');
+
+Route::get('/checkout/error', [CheckoutErrorController::class, 'index'])->name('checkout.error');
+
+// PayPal
+Route::post('/payment/paypal-create', [PaymentController::class, 'createPaypalOrder'])->name('payment.paypal.create');
+Route::post('/payment/paypal-capture', [PaymentController::class, 'capturePaypalOrder'])->name('payment.paypal.capture');
+
+Route::get('/paypal/success', [PaypalSuccesController::class, 'index'])
+    ->name('paypal.success');
+
+Route::get('/pago-error', function () {
+    return view('checkout.session-error');
+})->name('session.error');
 
 // Login y registro solo para invitados
 Route::middleware('guest')->group(function () {
@@ -135,60 +184,6 @@ Route::middleware(['auth', 'permission:gestionar_direcciones'])->group(function 
 
         return response()->json(['success' => true, 'direccion' => $direccion]);
     });
-});
-
-Route::middleware(['auth', 'permission:comprar_productos'])->group(function () {
-
-    // --------------------
-    // Rutas de Checkout
-    // --------------------
-    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
-    Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
-
-    Route::post('/checkout/crear-direccion', [CheckoutController::class, 'crearDireccion'])
-        ->name('checkout.crearDireccion');
-
-    Route::put('/checkout/actualizar-direccion/{id}', [CheckoutController::class, 'actualizarDireccion'])
-        ->name('checkout.actualizarDireccion');
-
-
-    Route::get('/api/direccion/{id}', function ($id) {
-        $direccion = Direccion::where('id_direccion', $id)
-            ->where('id_usuario', Auth::user()->id_usuario)
-            ->first();
-
-        return response()->json([
-            'success' => (bool) $direccion,
-            'direccion' => $direccion
-        ]);
-    });
-
-    Route::post('/cupon/aplicar', [CheckoutController::class, 'aplicarCupon'])->name('cupon.aplicar');
-
-    // Rutas de pago
-
-    // Stripe
-    Route::post('/payment/stripe-session', [PaymentController::class, 'createStripeSession'])->name('payment.stripe.session');
-
-    // Order Received
-    Route::get('/order-received/{id}', [OrderReceivedController::class, 'show'])
-        ->name('order.received');
-
-    Route::get('/checkout/success', [CheckoutSuccessController::class, 'index'])
-        ->name('checkout.success');
-
-    Route::get('/checkout/error', [CheckoutErrorController::class, 'index'])->name('checkout.error');
-
-    // PayPal
-    Route::post('/payment/paypal-create', [PaymentController::class, 'createPaypalOrder'])->name('payment.paypal.create');
-    Route::post('/payment/paypal-capture', [PaymentController::class, 'capturePaypalOrder'])->name('payment.paypal.capture');
-
-    Route::get('/paypal/success', [PaypalSuccesController::class, 'index'])
-        ->name('paypal.success');
-
-    Route::get('/pago-error', function () {
-        return view('checkout.session-error');
-    })->name('session.error');
 });
 
 Route::middleware(['auth', 'spatie.role:cliente'])->group(function () {

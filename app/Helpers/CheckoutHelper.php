@@ -1,46 +1,32 @@
 <?php
 
+namespace App\Helpers;
+
 use App\Models\Carrito;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Session;
 
-if (!function_exists('carritoActual')) {
-    function carritoActual(): Carrito
+class CheckoutHelper
+{
+    /**
+     * Obtiene el carrito SOLO si existe
+     * (USAR EN CHECKOUT, PAGOS, NOTIFICACIONES)
+     */
+    public static function carritoCheckout(): ?Carrito
     {
-        // Usuario autenticado
         if (Auth::check()) {
-            return Carrito::firstOrCreate([
-                'id_usuario' => Auth::user()->id_usuario,
-                'eEstado' => 'activo'
-            ]);
+            return Carrito::where('id_usuario', Auth::id())
+                ->where('eEstado', 'activo')
+                ->with(['detalles.producto.impuestos'])
+                ->first();
         }
 
-        // Invitado con carrito en sesión
-        if (Session::has('carrito_id')) {
-            $carrito = Carrito::find(Session::get('carrito_id'));
-            if ($carrito) {
-                return $carrito;
-            }
+        if (!session()->has('guest_token')) {
+            return null;
         }
 
-        // Crear carrito invitado
-        $carrito = Carrito::create([
-            'id_usuario' => null,
-            'eEstado' => 'activo'
-        ]);
-
-        Session::put('carrito_id', $carrito->id_carrito);
-
-        return $carrito;
-    }
-}
-
-if (!function_exists('autoRegistrarEnCheckout')) {
-    function autoRegistrarEnCheckout(): bool
-    {
-        return (bool) DB::table('tbl_configuracion')
-            ->where('clave', 'checkout_auto_register')
-            ->value('valor');
+        return Carrito::where('vGuest_token', session('guest_token'))
+            ->where('eEstado', 'activo')
+            ->with(['detalles.producto.impuestos'])
+            ->first();
     }
 }
