@@ -16,15 +16,8 @@
         });
     </script>
 @endif
-    @if(session('error'))
-        <div class="alert alert-danger">{{ session('error') }}</div>
-    @endif
-    @if(session('warning'))
-        <div class="alert alert-warning">{{ session('warning') }}</div>
-    @endif
-    @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
+    
+@include('superadmin.partials.alerts')
 
     <form action="{{ route('checkout.store') }}" method="POST" id="checkout-form">
         @csrf
@@ -347,12 +340,6 @@
                             <select name="codigo_pais" id="codigo_pais" class="form-select" style="max-width: 140px;" required>
                                 <option value="+52">🇲🇽 +52</option>
                                 <option value="+1">🇺🇸 +1</option>
-                                <option value="+34">🇪🇸 +34</option>
-                                <option value="+51">🇵🇪 +51</option>
-                                <option value="+56">🇨🇱 +56</option>
-                                <option value="+54">🇦🇷 +54</option>
-                                <option value="+55">🇧🇷 +55</option>
-                                <option value="+57">🇨🇴 +57</option>
                             </select>
                             <input type="text" name="vTelefono_contacto" id="vTelefono_contacto" class="form-control" 
                                    maxlength="15" pattern="[0-9]*" placeholder="Ej: 5512345678" required

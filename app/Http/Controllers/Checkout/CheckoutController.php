@@ -50,6 +50,7 @@ class CheckoutController extends Controller
         [$subtotal, $totalImpuestos, $total] = $this->calcularTotales($carrito);
 
         $usuario = Auth::user();
+        
         $direcciones = $usuario
             ? Direccion::where('id_usuario', $usuario->id_usuario)->get()
             : collect();
@@ -203,6 +204,7 @@ class CheckoutController extends Controller
             // Crear el pedido
             $pedido = Pedido::create([
                 'id_usuario' => $usuario?->id_usuario,
+                'vEmail_invitado' => $usuario ? null : $carrito->vEmail_invitado,
                 'id_direccion' => $idDireccion,
                 'eEstado' => 'pendiente',
                 'dTotal' => $totalFinal,
