@@ -23,6 +23,13 @@ return new class extends Migration
             $table->foreignId('id_marca')->nullable()->constrained('tbl_marcas')->onDelete('set null');
             $table->foreignId('id_categoria')->nullable()->constrained('tbl_categorias')->onDelete('set null');
             $table->boolean('bActivo')->default(true);
+
+            $table->decimal('dPeso', 8, 2)->nullable()->comment('Peso en kilogramos');
+            $table->decimal('dLargo_cm', 6, 2)->nullable()->comment('Largo en centímetros');
+            $table->decimal('dAncho_cm', 6, 2)->nullable()->comment('Ancho en centímetros');
+            $table->decimal('dAlto_cm', 6, 2)->nullable()->comment('Alto en centímetros');
+            $table->string('vClase_envio', 50)->nullable()->comment('Clase de envío: estandar, express, fragil, grandes_dimensiones');
+            
             $table->timestamps();
         });
     }

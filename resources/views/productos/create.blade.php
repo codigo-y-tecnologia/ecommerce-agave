@@ -225,6 +225,141 @@
             </div>
         </div>
 
+        <!-- DIMENSIONES Y PESO - NUEVA SECCIÓN -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-ruler-combined me-2"></i>Dimensiones y Peso (Opcional)</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group mb-3">
+                            <label for="dPeso" class="form-label fw-bold">
+                                Peso (kg)
+                            </label>
+                            <div class="input-group">
+                                <input type="text" 
+                                       name="dPeso" 
+                                       id="dPeso" 
+                                       class="form-control @error('dPeso') is-invalid @enderror"
+                                       value="{{ old('dPeso') }}" 
+                                       oninput="validarPeso(this)"
+                                       placeholder="0.000"
+                                       title="Peso en kilogramos (ej: 1.250)">
+                                <span class="input-group-text">kg</span>
+                            </div>
+                            @error('dPeso')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">Ej: 1.250 (máximo 999.999 kg)</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="form-group mb-3">
+                            <label for="dLargo_cm" class="form-label fw-bold">
+                                Largo (cm)
+                            </label>
+                            <div class="input-group">
+                                <input type="text" 
+                                       name="dLargo_cm" 
+                                       id="dLargo_cm" 
+                                       class="form-control @error('dLargo_cm') is-invalid @enderror"
+                                       value="{{ old('dLargo_cm') }}" 
+                                       oninput="validarDimension(this)"
+                                       placeholder="0.00"
+                                       title="Largo en centímetros">
+                                <span class="input-group-text">cm</span>
+                            </div>
+                            @error('dLargo_cm')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">Ej: 30.50 cm</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="form-group mb-3">
+                            <label for="dAncho_cm" class="form-label fw-bold">
+                                Ancho (cm)
+                            </label>
+                            <div class="input-group">
+                                <input type="text" 
+                                       name="dAncho_cm" 
+                                       id="dAncho_cm" 
+                                       class="form-control @error('dAncho_cm') is-invalid @enderror"
+                                       value="{{ old('dAncho_cm') }}" 
+                                       oninput="validarDimension(this)"
+                                       placeholder="0.00"
+                                       title="Ancho en centímetros">
+                                <span class="input-group-text">cm</span>
+                            </div>
+                            @error('dAncho_cm')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">Ej: 20.30 cm</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="form-group mb-3">
+                            <label for="dAlto_cm" class="form-label fw-bold">
+                                Alto (cm)
+                            </label>
+                            <div class="input-group">
+                                <input type="text" 
+                                       name="dAlto_cm" 
+                                       id="dAlto_cm" 
+                                       class="form-control @error('dAlto_cm') is-invalid @enderror"
+                                       value="{{ old('dAlto_cm') }}" 
+                                       oninput="validarDimension(this)"
+                                       placeholder="0.00"
+                                       title="Alto en centímetros">
+                                <span class="input-group-text">cm</span>
+                            </div>
+                            @error('dAlto_cm')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">Ej: 15.25 cm</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="vClase_envio" class="form-label fw-bold">
+                                Clase de envío
+                            </label>
+                            <select name="vClase_envio" id="vClase_envio" 
+                                    class="form-select @error('vClase_envio') is-invalid @enderror">
+                                <option value="">Seleccionar clase...</option>
+                                <option value="estandar" {{ old('vClase_envio') == 'estandar' ? 'selected' : '' }}>Estándar</option>
+                                <option value="express" {{ old('vClase_envio') == 'express' ? 'selected' : '' }}>Express</option>
+                                <option value="fragil" {{ old('vClase_envio') == 'fragil' ? 'selected' : '' }}>Frágil</option>
+                                <option value="grandes_dimensiones" {{ old('vClase_envio') == 'grandes_dimensiones' ? 'selected' : '' }}>Grandes dimensiones</option>
+                            </select>
+                            @error('vClase_envio')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">Define la categoría de envío del producto</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="alert alert-secondary mt-4">
+                            <h6 class="fw-bold mb-2"><i class="fas fa-info-circle me-2"></i>Información de cálculo:</h6>
+                            <div id="volumen-info" class="small">
+                                <div>Volumen: <span id="volumen-calculado">0.00</span> cm³</div>
+                                <div>Peso volumétrico: <span id="peso-volumetrico">0.000</span> kg</div>
+                                <div>Peso facturable: <span id="peso-facturable">0.000</span> kg</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- ATRIBUTOS (OPCIONAL) -->
         @if($atributos && $atributos->count() > 0)
         <div class="card mb-4">
@@ -664,71 +799,189 @@ function updateFileInput() {
     fileInput.files = dataTransfer.files;
 }
 
-// Validación de precio en el submit - SIN COMAS
-function validarPrecioEnSubmit(input, esRequerido = false) {
-    const valorActual = input.value.trim();
+// ==================== FUNCIONES NUEVAS PARA DIMENSIONES Y PESO ====================
+
+// Validar peso (kg con 3 decimales)
+function validarPeso(input) {
+    let value = input.value;
+    const cursorPos = input.selectionStart;
     
-    if (esRequerido && valorActual === '') {
-        return { 
-            esValido: false, 
-            mensaje: 'Este campo es obligatorio' 
-        };
+    if (value === '') {
+        input.classList.remove('is-invalid');
+        calcularVolumen();
+        return;
     }
     
-    if (valorActual === '') {
-        return { esValido: true };
+    // Solo números y punto decimal
+    value = value.replace(/[^0-9.]/g, '');
+    
+    // Un solo punto decimal
+    const puntos = value.split('.').length - 1;
+    if (puntos > 1) {
+        const partes = value.split('.');
+        value = partes[0] + '.' + partes.slice(1).join('');
     }
     
-    // Verificar que solo tenga números y punto decimal
-    const regexValido = /^[0-9]*\.?[0-9]*$/;
-    if (!regexValido.test(valorActual)) {
-        return { 
-            esValido: false, 
-            mensaje: 'Solo números y punto decimal permitidos' 
-        };
+    // Eliminar múltiples puntos
+    value = value.replace(/\.{2,}/g, '.');
+    
+    // Agregar 0 si empieza con punto
+    if (value.startsWith('.')) {
+        value = '0' + value;
     }
     
-    const numero = parseFloat(valorActual);
+    // Limitar enteros a 3 dígitos (999.999)
+    const partesNumero = value.split('.');
+    const parteEntera = partesNumero[0];
     
-    // Verificar si es un número válido
-    if (isNaN(numero)) {
-        return { 
-            esValido: false, 
-            mensaje: 'Ingresa un precio válido' 
-        };
+    if (parteEntera.length > 3) {
+        value = parteEntera.substring(0, 3) + (partesNumero[1] ? '.' + partesNumero[1] : '');
     }
     
-    // Validar que no sea negativo
-    if (numero < 0) {
-        return { 
-            esValido: false, 
-            mensaje: 'El precio no puede ser negativo' 
-        };
+    // Limitar decimales a máximo 3
+    if (value.includes('.')) {
+        const partes = value.split('.');
+        if (partes[1].length > 3) {
+            partes[1] = partes[1].substring(0, 3);
+            value = partes[0] + '.' + partes[1];
+        }
     }
     
-    // Validar límite máximo - 7 dígitos enteros (9,999,999.99)
-    if (numero > 9999999.99) {
-        return { 
-            esValido: false, 
-            mensaje: 'El precio máximo es 9,999,999.99' 
-        };
+    if (input.value !== value) {
+        const oldValue = input.value;
+        input.value = value;
+        
+        const cursorDiff = value.length - oldValue.length;
+        const newCursorPos = Math.max(0, Math.min(value.length, cursorPos + cursorDiff));
+        setTimeout(() => {
+            input.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
     }
     
-    // Validar formato - no permitir múltiples puntos decimales
-    const puntosDecimales = valorActual.split('.').length - 1;
-    if (puntosDecimales > 1) {
-        return { 
-            esValido: false, 
-            mensaje: 'Formato de precio inválido (solo un punto decimal permitido)' 
-        };
+    input.classList.remove('is-invalid');
+    
+    // Validar límite
+    if (value) {
+        const numero = parseFloat(value);
+        if (!isNaN(numero) && numero > 999.999) {
+            input.classList.add('is-invalid');
+            mostrarErrorGeneral(input, 'El peso máximo es 999.999 kg');
+        }
     }
     
-    return { esValido: true };
+    calcularVolumen();
 }
 
-// =====================================================
-// VALIDACIÓN SIMPLIFICADA - SOLO PARA MEJORAR UX
-// =====================================================
+// Validar dimensiones (cm con 2 decimales)
+function validarDimension(input) {
+    let value = input.value;
+    const cursorPos = input.selectionStart;
+    
+    if (value === '') {
+        input.classList.remove('is-invalid');
+        calcularVolumen();
+        return;
+    }
+    
+    // Solo números y punto decimal
+    value = value.replace(/[^0-9.]/g, '');
+    
+    // Un solo punto decimal
+    const puntos = value.split('.').length - 1;
+    if (puntos > 1) {
+        const partes = value.split('.');
+        value = partes[0] + '.' + partes.slice(1).join('');
+    }
+    
+    // Eliminar múltiples puntos
+    value = value.replace(/\.{2,}/g, '.');
+    
+    // Agregar 0 si empieza con punto
+    if (value.startsWith('.')) {
+        value = '0' + value;
+    }
+    
+    // Limitar enteros a 3 dígitos (999.99)
+    const partesNumero = value.split('.');
+    const parteEntera = partesNumero[0];
+    
+    if (parteEntera.length > 3) {
+        value = parteEntera.substring(0, 3) + (partesNumero[1] ? '.' + partesNumero[1] : '');
+    }
+    
+    // Limitar decimales a máximo 2
+    if (value.includes('.')) {
+        const partes = value.split('.');
+        if (partes[1].length > 2) {
+            partes[1] = partes[1].substring(0, 2);
+            value = partes[0] + '.' + partes[1];
+        }
+    }
+    
+    if (input.value !== value) {
+        const oldValue = input.value;
+        input.value = value;
+        
+        const cursorDiff = value.length - oldValue.length;
+        const newCursorPos = Math.max(0, Math.min(value.length, cursorPos + cursorDiff));
+        setTimeout(() => {
+            input.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
+    }
+    
+    input.classList.remove('is-invalid');
+    
+    // Validar límite
+    if (value) {
+        const numero = parseFloat(value);
+        if (!isNaN(numero) && numero > 999.99) {
+            input.classList.add('is-invalid');
+            mostrarErrorGeneral(input, 'La dimensión máxima es 999.99 cm');
+        }
+    }
+    
+    calcularVolumen();
+}
+
+// Función auxiliar para mostrar errores generales
+function mostrarErrorGeneral(input, mensaje) {
+    const errorId = `error-${input.id}`;
+    const errorElement = document.getElementById(errorId);
+    
+    if (errorElement) {
+        errorElement.remove();
+    }
+    
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'invalid-feedback d-block';
+    errorDiv.textContent = mensaje;
+    errorDiv.id = errorId;
+    
+    input.parentNode.appendChild(errorDiv);
+}
+
+// Calcular volumen y peso volumétrico
+function calcularVolumen() {
+    const largo = parseFloat(document.getElementById('dLargo_cm').value) || 0;
+    const ancho = parseFloat(document.getElementById('dAncho_cm').value) || 0;
+    const alto = parseFloat(document.getElementById('dAlto_cm').value) || 0;
+    const peso = parseFloat(document.getElementById('dPeso').value) || 0;
+    
+    // Volumen en cm³
+    const volumen = largo * ancho * alto;
+    document.getElementById('volumen-calculado').textContent = volumen.toFixed(2);
+    
+    // Peso volumétrico (volumen / 5000)
+    const pesoVolumetrico = volumen / 5000;
+    document.getElementById('peso-volumetrico').textContent = pesoVolumetrico.toFixed(3);
+    
+    // Peso facturable (el mayor entre peso real y volumétrico)
+    const pesoFacturable = Math.max(peso, pesoVolumetrico);
+    document.getElementById('peso-facturable').textContent = pesoFacturable.toFixed(3);
+}
+
+// ==================== VALIDACIÓN DEL FORMULARIO ====================
+
 document.getElementById('productoForm').addEventListener('submit', function(e) {
     // Solo hacer validaciones básicas en tiempo real
     // Las validaciones reales las hará Laravel en el servidor
@@ -850,10 +1103,30 @@ document.getElementById('productoForm').addEventListener('submit', function(e) {
         return false;
     }
     
-    // 5. Actualizar el input file antes de enviar
+    // 5. Validar dimensiones si tienen valor
+    const camposDimensiones = ['dPeso', 'dLargo_cm', 'dAncho_cm', 'dAlto_cm'];
+    camposDimensiones.forEach(campoId => {
+        const input = document.getElementById(campoId);
+        if (input && input.value.trim()) {
+            const regexDimension = /^[0-9]*\.?[0-9]*$/;
+            if (!regexDimension.test(input.value.trim())) {
+                input.classList.add('is-invalid');
+                erroresCriticos = true;
+                
+                if (!input.nextElementSibling || !input.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback';
+                    errorDiv.textContent = 'Solo números y punto decimal permitidos';
+                    input.parentNode.appendChild(errorDiv);
+                }
+            }
+        }
+    });
+    
+    // 6. Actualizar el input file antes de enviar
     updateFileInput();
     
-    // 6. Si hay errores críticos, prevenir envío
+    // 7. Si hay errores críticos, prevenir envío
     if (erroresCriticos) {
         e.preventDefault();
         
@@ -886,6 +1159,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 errorFeedback.remove();
             }
         });
+    });
+    
+    // Inicializar cálculo de volumen
+    calcularVolumen();
+    
+    // Event listeners para calcular automáticamente
+    ['dPeso', 'dLargo_cm', 'dAncho_cm', 'dAlto_cm'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.addEventListener('input', calcularVolumen);
+        }
     });
 });
 </script>
@@ -941,7 +1225,11 @@ select option[value=""] {
 
 /* Mejorar la experiencia del input de precio */
 input[name="dPrecio_venta"],
-input[name="dPrecio_compra"] {
+input[name="dPrecio_compra"],
+input[name="dPeso"],
+input[name="dLargo_cm"],
+input[name="dAncho_cm"],
+input[name="dAlto_cm"] {
     font-family: 'Courier New', monospace;
     font-size: 1.1em;
     letter-spacing: 0.5px;
@@ -953,6 +1241,29 @@ input[name="dPrecio_compra"] {
     margin-top: 5px;
     font-size: 0.875em;
     color: #dc3545;
+}
+
+/* Estilos para inputs de dimensiones */
+.input-group-text {
+    background-color: #f8f9fa;
+    border: 1px solid #ced4da;
+}
+
+#volumen-info {
+    background: rgba(0,0,0,0.03);
+    padding: 10px;
+    border-radius: 5px;
+    border-left: 4px solid #17a2b8;
+}
+
+#volumen-info div {
+    margin-bottom: 5px;
+    font-family: 'Courier New', monospace;
+}
+
+#volumen-info span {
+    font-weight: bold;
+    color: #17a2b8;
 }
 </style>
 @endsection

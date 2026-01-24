@@ -78,8 +78,8 @@ class ProductoController extends Controller
             ],
             'tDescripcion_corta' => 'nullable|max:255',
             'tDescripcion_larga' => 'nullable',
-            'dPrecio_compra' => 'nullable|numeric|min:0',
-            'dPrecio_venta' => 'required|numeric|min:0',
+            'dPrecio_compra' => 'nullable|numeric|min:0|max:9999999.99',
+            'dPrecio_venta' => 'required|numeric|min:0|max:9999999.99',
             'iStock' => 'required|integer|min:0|max:9999',
             'id_categoria' => 'required|exists:tbl_categorias,id_categoria',
             'id_marca' => 'required|exists:tbl_marcas,id_marca',
@@ -88,6 +88,14 @@ class ProductoController extends Controller
             'imagenes' => 'nullable|array|max:8',
             'imagenes.*' => 'image|mimes:jpg,jpeg,png,gif,webp,jfif,svg|max:5120',
             'atributos' => 'nullable|array',
+            // NUEVAS VALIDACIONES PARA DIMENSIONES Y PESO
+            'dPeso' => 'nullable|numeric|min:0|max:999.999',
+            'dLargo_cm' => 'nullable|numeric|min:0|max:999.99',
+            'dAncho_cm' => 'nullable|numeric|min:0|max:999.99',
+            'dAlto_cm' => 'nullable|numeric|min:0|max:999.99',
+            'vClase_envio' => 'nullable|in:estandar,express,fragil,grandes_dimensiones',
+            'etiquetas_especiales' => 'nullable|array',
+            'etiquetas_especiales.*' => 'in:nuevo,popular,oferta,destacado',
         ], [
             'vCodigo_barras.required' => 'El SKU es obligatorio',
             'vCodigo_barras.unique' => 'Ya existe un producto con este SKU',
@@ -98,6 +106,7 @@ class ProductoController extends Controller
             'dPrecio_venta.required' => 'El precio de venta es obligatorio',
             'dPrecio_venta.numeric' => 'El precio de venta debe ser un número válido',
             'dPrecio_venta.min' => 'El precio de venta no puede ser negativo',
+            'dPrecio_venta.max' => 'El precio de venta máximo es 9,999,999.99',
             'iStock.required' => 'El stock es obligatorio',
             'iStock.integer' => 'El stock debe ser un número entero',
             'iStock.min' => 'El stock no puede ser negativo',
@@ -108,13 +117,27 @@ class ProductoController extends Controller
             'imagenes.*.image' => 'Solo se permiten archivos de imagen',
             'imagenes.*.mimes' => 'Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP, JFIF, SVG',
             'imagenes.*.max' => 'Cada imagen no debe superar los 5MB',
+            // NUEVOS MENSAJES DE ERROR
+            'dPeso.numeric' => 'El peso debe ser un número válido',
+            'dPeso.min' => 'El peso no puede ser negativo',
+            'dPeso.max' => 'El peso máximo es 999.999 kg',
+            'dLargo_cm.numeric' => 'El largo debe ser un número válido',
+            'dLargo_cm.min' => 'El largo no puede ser negativo',
+            'dLargo_cm.max' => 'El largo máximo es 999.99 cm',
+            'dAncho_cm.numeric' => 'El ancho debe ser un número válido',
+            'dAncho_cm.min' => 'El ancho no puede ser negativo',
+            'dAncho_cm.max' => 'El ancho máximo es 999.99 cm',
+            'dAlto_cm.numeric' => 'El alto debe ser un número válido',
+            'dAlto_cm.min' => 'El alto no puede ser negativo',
+            'dAlto_cm.max' => 'El alto máximo es 999.99 cm',
+            'vClase_envio.in' => 'La clase de envío seleccionada no es válida',
         ]);
 
         try {
             DB::beginTransaction();
 
             $productoData = [
-                'vCodigo_barras' => $request->vCodigo_barras,
+                'vCodigo_barras' => strtoupper($request->vCodigo_barras),
                 'vNombre' => $request->vNombre,
                 'tDescripcion_corta' => $request->tDescripcion_corta,
                 'tDescripcion_larga' => $request->tDescripcion_larga,
@@ -124,6 +147,12 @@ class ProductoController extends Controller
                 'id_categoria' => $request->id_categoria,
                 'id_marca' => $request->id_marca,
                 'bActivo' => $request->has('bActivo') ? true : false,
+                // NUEVOS CAMPOS
+                'dPeso' => $request->dPeso ?: null,
+                'dLargo_cm' => $request->dLargo_cm ?: null,
+                'dAncho_cm' => $request->dAncho_cm ?: null,
+                'dAlto_cm' => $request->dAlto_cm ?: null,
+                'vClase_envio' => $request->vClase_envio ?: null,
             ];
 
             $producto = Producto::create($productoData);
@@ -156,6 +185,14 @@ class ProductoController extends Controller
                         }
                     }
                 }
+            }
+
+            // Guardar etiquetas especiales (en un campo JSON o similar)
+            // Por ahora las guardamos en sesión o log para demostración
+            if ($request->has('etiquetas_especiales')) {
+                // Aquí podrías guardar en una tabla separada o en un campo JSON
+                // Por simplicidad, lo guardamos en el log
+                \Log::info('Etiquetas especiales para producto ' . $producto->id_producto . ': ', $request->etiquetas_especiales);
             }
 
             DB::commit();
@@ -241,8 +278,8 @@ class ProductoController extends Controller
             ],
             'tDescripcion_corta' => 'nullable|max:255',
             'tDescripcion_larga' => 'nullable',
-            'dPrecio_compra' => 'nullable|numeric|min:0',
-            'dPrecio_venta' => 'required|numeric|min:0',
+            'dPrecio_compra' => 'nullable|numeric|min:0|max:9999999.99',
+            'dPrecio_venta' => 'required|numeric|min:0|max:9999999.99',
             'iStock' => 'required|integer|min:0|max:9999',
             'id_categoria' => 'required|exists:tbl_categorias,id_categoria',
             'id_marca' => 'required|exists:tbl_marcas,id_marca',
@@ -253,6 +290,14 @@ class ProductoController extends Controller
             'imagenes_a_eliminar' => 'nullable|array',
             'imagenes_a_eliminar.*' => 'string',
             'atributos' => 'nullable|array',
+            // NUEVAS VALIDACIONES PARA DIMENSIONES Y PESO
+            'dPeso' => 'nullable|numeric|min:0|max:999.999',
+            'dLargo_cm' => 'nullable|numeric|min:0|max:999.99',
+            'dAncho_cm' => 'nullable|numeric|min:0|max:999.99',
+            'dAlto_cm' => 'nullable|numeric|min:0|max:999.99',
+            'vClase_envio' => 'nullable|in:estandar,express,fragil,grandes_dimensiones',
+            'etiquetas_especiales' => 'nullable|array',
+            'etiquetas_especiales.*' => 'in:nuevo,popular,oferta,destacado',
         ], [
             'vCodigo_barras.required' => 'El SKU es obligatorio',
             'vCodigo_barras.unique' => 'Ya existe un producto con este SKU',
@@ -263,6 +308,7 @@ class ProductoController extends Controller
             'dPrecio_venta.required' => 'El precio de venta es obligatorio',
             'dPrecio_venta.numeric' => 'El precio de venta debe ser un número válido',
             'dPrecio_venta.min' => 'El precio de venta no puede ser negativo',
+            'dPrecio_venta.max' => 'El precio de venta máximo es 9,999,999.99',
             'iStock.required' => 'El stock es obligatorio',
             'iStock.integer' => 'El stock debe ser un número entero',
             'iStock.min' => 'El stock no puede ser negativo',
@@ -273,6 +319,20 @@ class ProductoController extends Controller
             'imagenes.*.image' => 'Solo se permiten archivos de imagen',
             'imagenes.*.mimes' => 'Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP, JFIF, SVG',
             'imagenes.*.max' => 'Cada imagen no debe superar los 5MB',
+            // NUEVOS MENSAJES DE ERROR
+            'dPeso.numeric' => 'El peso debe ser un número válido',
+            'dPeso.min' => 'El peso no puede ser negativo',
+            'dPeso.max' => 'El peso máximo es 999.999 kg',
+            'dLargo_cm.numeric' => 'El largo debe ser un número válido',
+            'dLargo_cm.min' => 'El largo no puede ser negativo',
+            'dLargo_cm.max' => 'El largo máximo es 999.99 cm',
+            'dAncho_cm.numeric' => 'El ancho debe ser un número válido',
+            'dAncho_cm.min' => 'El ancho no puede ser negativo',
+            'dAncho_cm.max' => 'El ancho máximo es 999.99 cm',
+            'dAlto_cm.numeric' => 'El alto debe ser un número válido',
+            'dAlto_cm.min' => 'El alto no puede ser negativo',
+            'dAlto_cm.max' => 'El alto máximo es 999.99 cm',
+            'vClase_envio.in' => 'La clase de envío seleccionada no es válida',
         ]);
 
         try {
@@ -297,7 +357,7 @@ class ProductoController extends Controller
             }
 
             $producto->update([
-                'vCodigo_barras' => $request->vCodigo_barras,
+                'vCodigo_barras' => strtoupper($request->vCodigo_barras),
                 'vNombre' => $request->vNombre,
                 'tDescripcion_corta' => $request->tDescripcion_corta,
                 'tDescripcion_larga' => $request->tDescripcion_larga,
@@ -307,6 +367,12 @@ class ProductoController extends Controller
                 'id_categoria' => $request->id_categoria,
                 'id_marca' => $request->id_marca,
                 'bActivo' => $request->has('bActivo') ? true : false,
+                // NUEVOS CAMPOS
+                'dPeso' => $request->dPeso ?: null,
+                'dLargo_cm' => $request->dLargo_cm ?: null,
+                'dAncho_cm' => $request->dAncho_cm ?: null,
+                'dAlto_cm' => $request->dAlto_cm ?: null,
+                'vClase_envio' => $request->vClase_envio ?: null,
             ]);
             
             // Agregar nuevas imágenes
@@ -337,6 +403,11 @@ class ProductoController extends Controller
                         }
                     }
                 }
+            }
+
+            // Guardar etiquetas especiales en actualización
+            if ($request->has('etiquetas_especiales')) {
+                \Log::info('Etiquetas especiales actualizadas para producto ' . $producto->id_producto . ': ', $request->etiquetas_especiales);
             }
 
             DB::commit();

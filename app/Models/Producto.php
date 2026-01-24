@@ -28,14 +28,25 @@ class Producto extends Model
         'iStock',
         'id_marca',
         'id_categoria',
-        'bActivo'
+        'bActivo',
+        // NUEVOS CAMPOS
+        'dPeso',
+        'dLargo_cm',
+        'dAncho_cm',
+        'dAlto_cm',
+        'vClase_envio'
     ];
 
     protected $casts = [
         'bActivo' => 'boolean',
         'dPrecio_compra' => 'decimal:2',
         'dPrecio_venta' => 'decimal:2',
-        'iStock' => 'integer'
+        'iStock' => 'integer',
+        // NUEVOS CAMPOS
+        'dPeso' => 'decimal:2',
+        'dLargo_cm' => 'decimal:2',
+        'dAncho_cm' => 'decimal:2',
+        'dAlto_cm' => 'decimal:2'
     ];
 
     // Accesor para imágenes
@@ -353,163 +364,110 @@ class Producto extends Model
         return $this->attributes['dPrecio_venta'];
     }
 
-    // NUEVO: Método para obtener dimensiones promedio de las variaciones
-    public function getDimensionesPromedio()
+    // NUEVO: Accesor para dimensiones
+    public function getDimensionesFormateadasAttribute()
     {
-        if ($this->variaciones->count() > 0) {
-            $variacionesConDimensiones = $this->variaciones->filter(function($variacion) {
-                return $variacion->dLargo_cm && $variacion->dAncho_cm && $variacion->dAlto_cm;
-            });
-            
-            if ($variacionesConDimensiones->count() > 0) {
-                $largo = $variacionesConDimensiones->avg('dLargo_cm');
-                $ancho = $variacionesConDimensiones->avg('dAncho_cm');
-                $alto = $variacionesConDimensiones->avg('dAlto_cm');
-                
-                return [
-                    'largo' => $largo ? floatval($largo) : null,
-                    'ancho' => $ancho ? floatval($ancho) : null,
-                    'alto' => $alto ? floatval($alto) : null,
-                    'volumen' => $largo && $ancho && $alto ? $largo * $ancho * $alto : null
-                ];
-            }
+        if ($this->dLargo_cm && $this->dAncho_cm && $this->dAlto_cm) {
+            return number_format($this->dLargo_cm, 2) . ' × ' . 
+                   number_format($this->dAncho_cm, 2) . ' × ' . 
+                   number_format($this->dAlto_cm, 2) . ' cm';
         }
-        
-        return ['largo' => null, 'ancho' => null, 'alto' => null, 'volumen' => null];
-    }
-
-    // NUEVO: Accesor para dimensiones promedio formateadas
-    public function getDimensionesPromedioFormateadasAttribute()
-    {
-        $dimensiones = $this->getDimensionesPromedio();
-        
-        if ($dimensiones['largo'] && $dimensiones['ancho'] && $dimensiones['alto']) {
-            return number_format($dimensiones['largo'], 1) . ' × ' . 
-                   number_format($dimensiones['ancho'], 1) . ' × ' . 
-                   number_format($dimensiones['alto'], 1) . ' cm';
-        }
-        
         return 'No especificado';
     }
 
-    // NUEVO: Método para verificar si alguna variación tiene dimensiones
-    public function tieneDimensiones()
+    // NUEVO: Accesor para peso formateado
+    public function getPesoFormateadoAttribute()
     {
-        return $this->variaciones()
-            ->whereNotNull('dLargo_cm')
-            ->whereNotNull('dAncho_cm')
-            ->whereNotNull('dAlto_cm')
-            ->exists();
+        if ($this->dPeso) {
+            return number_format($this->dPeso, 3) . ' kg';
+        }
+        return 'No especificado';
     }
 
-    // NUEVO: Método para obtener las dimensiones más comunes
-    public function getDimensionesMasComunes()
+    // NUEVO: Accesor para volumen (largo × ancho × alto)
+    public function getVolumenAttribute()
     {
-        $dimensionesFrecuentes = [];
-        
-        foreach ($this->variaciones as $variacion) {
-            if ($variacion->dLargo_cm && $variacion->dAncho_cm && $variacion->dAlto_cm) {
-                $key = $variacion->dLargo_cm . '|' . $variacion->dAncho_cm . '|' . $variacion->dAlto_cm;
-                
-                if (!isset($dimensionesFrecuentes[$key])) {
-                    $dimensionesFrecuentes[$key] = [
-                        'largo' => $variacion->dLargo_cm,
-                        'ancho' => $variacion->dAncho_cm,
-                        'alto' => $variacion->dAlto_cm,
-                        'count' => 0,
-                        'variaciones' => []
-                    ];
-                }
-                
-                $dimensionesFrecuentes[$key]['count']++;
-                $dimensionesFrecuentes[$key]['variaciones'][] = $variacion->vSKU;
-            }
+        if ($this->dLargo_cm && $this->dAncho_cm && $this->dAlto_cm) {
+            return $this->dLargo_cm * $this->dAncho_cm * $this->dAlto_cm;
         }
-        
-        // Ordenar por frecuencia descendente
-        usort($dimensionesFrecuentes, function($a, $b) {
-            return $b['count'] - $a['count'];
-        });
-        
-        return $dimensionesFrecuentes;
+        return null;
     }
 
-    // NUEVO: Accesor para el volumen total estimado de inventario
-    public function getVolumenTotalInventarioAttribute()
+    // NUEVO: Accesor para volumen formateado
+    public function getVolumenFormateadoAttribute()
     {
-        $volumenTotal = 0;
-        
-        foreach ($this->variaciones as $variacion) {
-            if ($variacion->dLargo_cm && $variacion->dAncho_cm && $variacion->dAlto_cm) {
-                $volumenUnidad = $variacion->dLargo_cm * $variacion->dAncho_cm * $variacion->dAlto_cm;
-                $volumenTotal += $volumenUnidad * $variacion->iStock;
-            }
+        if ($this->volumen) {
+            return number_format($this->volumen, 2) . ' cm³';
         }
-        
-        return $volumenTotal;
+        return 'No calculable';
     }
 
-    // NUEVO: Accesor para el peso total estimado de inventario
-    public function getPesoTotalInventarioAttribute()
+    // NUEVO: Método para verificar si tiene dimensiones completas
+    public function tieneDimensionesCompletas()
     {
-        $pesoTotal = 0;
-        
-        foreach ($this->variaciones as $variacion) {
-            if ($variacion->dPeso) {
-                $pesoTotal += $variacion->dPeso * $variacion->iStock;
-            }
-        }
-        
-        return $pesoTotal;
+        return $this->dLargo_cm && $this->dAncho_cm && $this->dAlto_cm;
     }
 
-    // NUEVO: Método para obtener estadísticas de dimensiones
-    public function getEstadisticasDimensiones()
+    // NUEVO: Accesor para clase de envío formateada
+    public function getClaseEnvioFormateadaAttribute()
     {
-        $variacionesConDimensiones = $this->variaciones->filter(function($variacion) {
-            return $variacion->dLargo_cm && $variacion->dAncho_cm && $variacion->dAlto_cm;
-        });
-        
-        $totalVariaciones = $variacionesConDimensiones->count();
-        
-        if ($totalVariaciones === 0) {
-            return [
-                'total_variaciones' => 0,
-                'con_dimensiones' => 0,
-                'porcentaje_con_dimensiones' => 0,
-                'largo_min' => null,
-                'largo_max' => null,
-                'ancho_min' => null,
-                'ancho_max' => null,
-                'alto_min' => null,
-                'alto_max' => null,
-                'volumen_promedio' => null
-            ];
+        switch ($this->vClase_envio) {
+            case 'estandar':
+                return 'Estándar';
+            case 'express':
+                return 'Express';
+            case 'fragil':
+                return 'Frágil';
+            case 'grandes_dimensiones':
+                return 'Grandes dimensiones';
+            default:
+                return $this->vClase_envio ?: 'No especificada';
         }
+    }
+
+    // NUEVO: Accesor para badge de clase de envío
+    public function getClaseEnvioBadgeAttribute()
+    {
+        switch ($this->vClase_envio) {
+            case 'estandar':
+                return '<span class="badge bg-primary">Estándar</span>';
+            case 'express':
+                return '<span class="badge bg-success">Express</span>';
+            case 'fragil':
+                return '<span class="badge bg-warning">Frágil</span>';
+            case 'grandes_dimensiones':
+                return '<span class="badge bg-danger">Grandes dimensiones</span>';
+            default:
+                return '<span class="badge bg-secondary">No especificada</span>';
+        }
+    }
+
+    // NUEVO: Método para calcular peso volumétrico
+    public function getPesoVolumetricoAttribute()
+    {
+        if ($this->volumen) {
+            // Fórmula estándar: volumen (cm³) / 5000 = peso volumétrico (kg)
+            return $this->volumen / 5000;
+        }
+        return null;
+    }
+
+    // NUEVO: Accesor para peso volumétrico formateado
+    public function getPesoVolumetricoFormateadoAttribute()
+    {
+        if ($this->peso_volumetrico) {
+            return number_format($this->peso_volumetrico, 3) . ' kg';
+        }
+        return 'No calculable';
+    }
+
+    // NUEVO: Método para determinar el peso facturable (el mayor entre peso real y volumétrico)
+    public function getPesoFacturableAttribute()
+    {
+        $pesoReal = $this->dPeso ?: 0;
+        $pesoVolumetrico = $this->peso_volumetrico ?: 0;
         
-        $largoMin = $variacionesConDimensiones->min('dLargo_cm');
-        $largoMax = $variacionesConDimensiones->max('dLargo_cm');
-        $anchoMin = $variacionesConDimensiones->min('dAncho_cm');
-        $anchoMax = $variacionesConDimensiones->max('dAncho_cm');
-        $altoMin = $variacionesConDimensiones->min('dAlto_cm');
-        $altoMax = $variacionesConDimensiones->max('dAlto_cm');
-        
-        $volumenPromedio = $variacionesConDimensiones->avg(function($variacion) {
-            return $variacion->dLargo_cm * $variacion->dAncho_cm * $variacion->dAlto_cm;
-        });
-        
-        return [
-            'total_variaciones' => $this->variaciones->count(),
-            'con_dimensiones' => $totalVariaciones,
-            'porcentaje_con_dimensiones' => round(($totalVariaciones / $this->variaciones->count()) * 100, 1),
-            'largo_min' => floatval($largoMin),
-            'largo_max' => floatval($largoMax),
-            'ancho_min' => floatval($anchoMin),
-            'ancho_max' => floatval($anchoMax),
-            'alto_min' => floatval($altoMin),
-            'alto_max' => floatval($altoMax),
-            'volumen_promedio' => $volumenPromedio ? floatval($volumenPromedio) : null
-        ];
+        return max($pesoReal, $pesoVolumetrico);
     }
 
     // NUEVO: Método para buscar productos por nombre o SKU
@@ -519,6 +477,27 @@ class Producto extends Model
             $query->where('vNombre', 'LIKE', '%' . $busqueda . '%')
                   ->orWhere('vCodigo_barras', 'LIKE', '%' . $busqueda . '%');
         })->where('bActivo', true);
+    }
+
+    // NUEVO: Método para productos con dimensiones
+    public function scopeConDimensiones($query)
+    {
+        return $query->whereNotNull('dLargo_cm')
+                     ->whereNotNull('dAncho_cm')
+                     ->whereNotNull('dAlto_cm');
+    }
+
+    // NUEVO: Método para productos con peso
+    public function scopeConPeso($query)
+    {
+        return $query->whereNotNull('dPeso')
+                     ->where('dPeso', '>', 0);
+    }
+
+    // NUEVO: Método para productos por clase de envío
+    public function scopePorClaseEnvio($query, $clase)
+    {
+        return $query->where('vClase_envio', $clase);
     }
 
     protected static function boot()
