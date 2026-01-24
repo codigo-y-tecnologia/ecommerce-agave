@@ -50,7 +50,7 @@ class CheckoutController extends Controller
         [$subtotal, $totalImpuestos, $total] = $this->calcularTotales($carrito);
 
         $usuario = Auth::user();
-        
+
         $direcciones = $usuario
             ? Direccion::where('id_usuario', $usuario->id_usuario)->get()
             : collect();
