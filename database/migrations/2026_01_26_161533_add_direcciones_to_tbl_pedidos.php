@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::table('tbl_pedidos', function (Blueprint $table) {
 
+            $table->unsignedBigInteger('id_usuario')->nullable()->change();
+
             /*
             |--------------------------------------------------------------------------
             | Datos del cliente
@@ -72,7 +74,38 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('tbl_pedidos', function (Blueprint $table) {
-            //
+            $table->dropColumn([
+                'vNombre',
+                'vApaterno',
+                'vAmaterno',
+                'vEmail',
+                'env_telefono_contacto',
+                'env_calle',
+                'env_numero_exterior',
+                'env_numero_interior',
+                'env_colonia',
+                'env_codigo_postal',
+                'env_ciudad',
+                'env_estado',
+                'env_entre_calle_1',
+                'env_entre_calle_2',
+                'env_referencias',
+                'fac_telefono_contacto',
+                'fac_calle',
+                'fac_numero_exterior',
+                'fac_numero_interior',
+                'fac_colonia',
+                'fac_codigo_postal',
+                'fac_ciudad',
+                'fac_estado',
+                'fac_entre_calle_1',
+                'fac_entre_calle_2',
+                'fac_referencias',
+                'vRFC',
+                'vGuest_token'
+            ]);
+
+            $table->unsignedBigInteger('id_usuario')->nullable(false)->change();
         });
     }
 };

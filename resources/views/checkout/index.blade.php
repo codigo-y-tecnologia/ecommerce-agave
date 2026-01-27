@@ -90,7 +90,34 @@
         </div>
 
         {{-- ========================================= --}}
-        {{-- 3. MÉTODO DE PAGO --}}
+        {{-- 3. INFORMACIÓN DE CONTACTO (USUARIOS NO REGISTRADOS) --}}
+        {{-- ========================================= --}}
+        @guest
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-light">
+        <h5 class="card-title mb-0">📧 Información de contacto</h5>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">
+            Utilizaremos este correo electrónico para enviarte detalles y actualizaciones sobre tu pedido.
+        </p>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold">Correo electrónico <span class="text-danger">*</span></label>
+            <input type="email"
+                   name="vEmail"
+                   id="vEmail"
+                   class="form-control"
+                   placeholder="ejemplo@correo.com"
+                   maxlength="100"
+                   required>
+        </div>
+    </div>
+</div>
+@endguest
+
+        {{-- ========================================= --}}
+        {{-- 4. MÉTODO DE PAGO --}}
         {{-- ========================================= --}}
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-light">
@@ -121,7 +148,7 @@
         </div>
 
         {{-- ========================================= --}}
-        {{-- 4. NOTA DEL PEDIDO --}}
+        {{-- 5. NOTA DEL PEDIDO --}}
         {{-- ========================================= --}}
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-light">
@@ -144,7 +171,7 @@
         </div>
 
         {{-- ========================================= --}}
-        {{-- 5. RESUMEN DEL PEDIDO --}}
+        {{-- 6. RESUMEN DEL PEDIDO --}}
         {{-- ========================================= --}}
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-light">
@@ -293,7 +320,7 @@
         </div>
 
         {{-- ========================================= --}}
-        {{-- 6. BOTONES DE PAGO --}}
+        {{-- 7. BOTONES DE PAGO --}}
         {{-- ========================================= --}}
         <div class="card shadow-sm mb-4">
             <div class="card-body text-center">
@@ -331,13 +358,32 @@
             <div class="modal-body">
                 {{-- Mensajes de error --}}
                 <div id="modal-errors" class="alert alert-danger d-none"></div>
-                
+
+                {{-- Campos del formulario --}}
+
+                {{-- Nombre y apellidos (solo para usuarios no registrados) --}}
+                @guest
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <label class="form-label fw-bold">Nombre <span class="text-danger">*</span></label>
+        <input type="text" name="vNombre" id="vNombre" class="form-control" maxlength="60" required>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label fw-bold">Apellido paterno<span class="text-danger">*</span></label>
+        <input type="text" name="vApaterno" id="vApaterno" class="form-control" maxlength="50" required>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label fw-bold">Apellido materno<span class="text-danger">*</span></label>
+        <input type="text" name="vAmaterno" id="vAmaterno" class="form-control" maxlength="50" required>
+    </div>
+</div>
+@endguest
                 <div class="row g-3">
                     {{-- Teléfono con código de país --}}
-                    <div class="col-md-12">
+                    <div class="col-md-6">
                         <label class="form-label fw-bold">📞 Teléfono de contacto <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <select name="codigo_pais" id="codigo_pais" class="form-select" style="max-width: 140px;" required>
+                            <select name="codigo_pais" id="codigo_pais" class="form-select" style="max-width: 120px;" required>
                                 <option value="+52">🇲🇽 +52</option>
                                 <option value="+1">🇺🇸 +1</option>
                             </select>
@@ -348,6 +394,20 @@
                         </div>
                         <div class="form-text">Solo números, máximo 15 dígitos (sin código de país)</div>
                     </div>
+
+                    {{-- RFC (opcional) --}}
+    <div class="col-md-6">
+        <label class="form-label fw-bold">RFC</label>
+        <input type="text"
+               name="vRFC"
+               id="vRFC"
+               class="form-control"
+               maxlength="13"
+               placeholder="XAXX010101000"
+               style="text-transform: uppercase;"
+               oninput="this.value = this.value.toUpperCase()">
+        <div class="form-text">Opcional para facturación</div>
+    </div>
 
                     {{-- Calle --}}
                     <div class="col-md-8">
