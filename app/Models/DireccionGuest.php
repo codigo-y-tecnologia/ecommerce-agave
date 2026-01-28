@@ -35,10 +35,6 @@ class DireccionGuest extends Model
         'bDireccion_principal',
     ];
 
-    protected $casts = [
-        'bDireccion_principal' => 'boolean',
-    ];
-
     /**
      * Scope: obtener direcciones por guest token
      */

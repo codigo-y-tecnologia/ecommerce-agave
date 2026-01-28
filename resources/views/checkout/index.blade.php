@@ -1169,6 +1169,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     let erroresBackend = [];
                     for (const campo in data.errors) {
                         const nombreCampo = {
+                            'vNombre': 'Nombre',
+                            'vApaterno': 'Apellido paterno',
+                            'vAmaterno': 'Apellido materno',
                             'vTelefono_contacto': 'Teléfono de contacto',
                             'vRFC': 'RFC',
                             'vCalle': 'Calle',
@@ -1352,6 +1355,5 @@ label .text-danger {
 }
 
 </style>
-
 
 @endsection

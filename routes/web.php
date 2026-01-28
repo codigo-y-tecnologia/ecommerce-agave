@@ -58,7 +58,6 @@ Route::post('/checkout/crear-direccion', [CheckoutController::class, 'crearDirec
 Route::put('/checkout/actualizar-direccion/{id}', [CheckoutController::class, 'actualizarDireccion'])
     ->name('checkout.actualizarDireccion');
 
-
 Route::get('/api/direccion/{id}', function ($id) {
     $direccion = Direccion::where('id_direccion', $id)
         ->where('id_usuario', Auth::user()->id_usuario)

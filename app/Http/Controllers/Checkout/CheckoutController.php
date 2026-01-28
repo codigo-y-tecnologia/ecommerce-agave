@@ -60,9 +60,9 @@ class CheckoutController extends Controller
         }
 
         // seleccionar la dirección principal
-        $direccionPrincipal = $usuario
-            ? $direcciones->firstWhere('bDireccion_principal', 1)
-            : $direcciones->first();
+        $direccionPrincipal = $direcciones
+            ->where('bDireccion_principal', 1)
+            ->first() ?? $direcciones->first();
 
         $codigoCupon = session('codigo_cupon');
         $descuento = 0;
@@ -134,9 +134,15 @@ class CheckoutController extends Controller
 
         $usuario = Auth::user();
 
-        $request->validate([
-            'id_direccion' => 'required|exists:tbl_direcciones,id_direccion'
-        ]);
+        if ($usuario) {
+            $request->validate([
+                'id_direccion' => 'required|exists:tbl_direcciones,id_direccion'
+            ]);
+        } else {
+            $request->validate([
+                'id_direccion' => 'required|exists:tbl_direcciones_guest,id_direccion_guest'
+            ]);
+        }
 
         $idDireccion = $request->id_direccion;
 
@@ -215,6 +221,7 @@ class CheckoutController extends Controller
                 'eEstado' => 'pendiente',
                 'dTotal' => $totalFinal,
                 'tFecha_pedido' => now(),
+                'vGuest_token'      => $usuario ? null : session('guest_token'),
             ]);
 
             foreach ($carrito->detalles as $detalle) {
@@ -245,7 +252,7 @@ class CheckoutController extends Controller
                 'vNombre' => 'required|string|max:60',
                 'vApaterno' => 'required|string|max:50',
                 'vAmaterno' => 'nullable|string|max:50',
-                'vEmail' => 'required|email|max:100',
+                //'vEmail' => 'required|email|max:100',
                 'vTelefono_contacto' => 'required|string|max:20',
                 'vRFC' => 'nullable|string|max:13',
                 'vCalle' => 'required|string|max:150',
@@ -275,11 +282,11 @@ class CheckoutController extends Controller
                         ->update(['bDireccion_principal' => 0]);
                 }
 
-                $direccion = DB::table('tbl_direcciones_guest')->insertGetId($data);
+                $direccion = DireccionGuest::create($data);
 
                 return response()->json([
                     'success' => true,
-                    'id_direccion' => $direccion,
+                    'id_direccion' => $direccion->id_direccion_guest,
                     'tipo' => 'guest'
                 ]);
             }
@@ -319,10 +326,6 @@ class CheckoutController extends Controller
 
             $isGuest = !Auth::check();
 
-            $direccion = Direccion::where('id_direccion', $id)
-                ->where('id_usuario', Auth::user()->id_usuario)
-                ->firstOrFail();
-
             $data = $request->validate([
                 'vTelefono_contacto' => 'required|string|max:20',
                 'vRFC' => 'nullable|string|max:13',
@@ -347,22 +350,54 @@ class CheckoutController extends Controller
 
                 $guestToken = session('guest_token');
 
+                if (!$guestToken) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Sesión de invitado no válida'
+                    ], 401);
+                }
+
+                /** @var DireccionGuest $direccion */
+                $direccion = DireccionGuest::where('id_direccion_guest', $id)
+                    ->where('vGuest_token', $guestToken)
+                    ->first();
+
+                if (!$direccion) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Dirección no encontrada'
+                    ], 404);
+                }
+
+                // Si se marca como principal, desmarcar las demás del mismo guest
                 if ($data['bDireccion_principal']) {
-                    DB::table('tbl_direcciones_guest')
-                        ->where('vGuest_token', $guestToken)
+                    DireccionGuest::where('vGuest_token', $guestToken)
                         ->where('id_direccion_guest', '!=', $id)
                         ->update(['bDireccion_principal' => 0]);
                 }
 
-                DB::table('tbl_direcciones_guest')
-                    ->where('id_direccion_guest', $id)
-                    ->where('vGuest_token', $guestToken)
-                    ->update($data);
+                $direccion->update($data);
 
-                return response()->json(['success' => true, 'tipo' => 'guest']);
+                return response()->json([
+                    'success' => true,
+                    'direccion' => $direccion,
+                    'tipo' => 'guest'
+                ]);
             }
 
             // === Usuario autenticado ===
+
+            /** @var Direccion $direccion */
+            $direccion = Direccion::where('id_direccion', $id)
+                ->where('id_usuario', Auth::user()->id_usuario)
+                ->firstOrFail();
+
+            if (!$direccion) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Dirección no encontrada'
+                ], 404);
+            }
 
             // Si el usuario marca esta como principal, desmarcamos todas las demás
             if (!empty($data['bDireccion_principal']) && $data['bDireccion_principal'] == 1) {
@@ -373,7 +408,11 @@ class CheckoutController extends Controller
 
             $direccion->update($data);
 
-            return response()->json(['success' => true, 'direccion' => $direccion, 'tipo' => 'user']);
+            return response()->json([
+                'success' => true,
+                'direccion' => $direccion,
+                'tipo' => 'user'
+            ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -383,7 +422,8 @@ class CheckoutController extends Controller
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error interno: ' . $e->getMessage(),
+                'message' => 'Error interno al actualizar la dirección',
+                'error' => $e->getMessage()
             ], 500);
         }
     }
