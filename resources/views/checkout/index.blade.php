@@ -758,6 +758,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const idDireccion = document.getElementById('id_direccion').value;
         const mismaDireccion = document.getElementById('misma_direccion_facturacion').checked;
         const idDireccionFacturacion = mismaDireccion ? idDireccion : document.getElementById('id_direccion_facturacion').value;
+        const emailInvitado = document.getElementById('vEmail')?.value.trim() ?? null;
         const nota = document.getElementById('agregar_nota').checked 
     ? document.getElementById('nota_pedido').value 
     : null;
@@ -773,6 +774,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     id_direccion: idDireccion,
                     id_direccion_facturacion: idDireccionFacturacion,
+                    email_invitado: emailInvitado,
                     nota: nota
                 })
             });
@@ -809,6 +811,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const idDireccion = document.getElementById('id_direccion').value;
                 const mismaDireccion = document.getElementById('misma_direccion_facturacion').checked;
                 const idDireccionFacturacion = mismaDireccion ? idDireccion : document.getElementById('id_direccion_facturacion').value;
+                const emailInvitado = document.getElementById('vEmail')?.value.trim() ?? null;
                 const nota = document.getElementById('agregar_nota').checked 
                 ? document.getElementById('nota_pedido').value 
                 : null;
@@ -822,6 +825,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({
                         id_direccion: idDireccion,
                         id_direccion_facturacion: idDireccionFacturacion,
+                        email_invitado: emailInvitado,
                         nota: nota
                     })
                 })
@@ -1166,6 +1170,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     for (const campo in data.errors) {
                         const nombreCampo = {
                             'vTelefono_contacto': 'Teléfono de contacto',
+                            'vRFC': 'RFC',
                             'vCalle': 'Calle',
                             'vNumero_exterior': 'Número exterior',
                             'vColonia': 'Colonia',

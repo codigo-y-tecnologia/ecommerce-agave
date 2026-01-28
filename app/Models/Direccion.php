@@ -16,6 +16,7 @@ class Direccion extends Model
     protected $fillable = [
         'id_usuario',
         'vTelefono_contacto',
+        'vRFC',
         'vCalle',
         'vNumero_exterior',
         'vNumero_interior',

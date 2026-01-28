@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Checkout;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\Models\{Carrito, Pedido, PedidoDetalle, Direccion, Cupon, CuponUso, Pago, Venta, DetalleVenta};
+use App\Models\{Carrito, Pedido, PedidoDetalle, Direccion, DireccionGuest, Cupon, CuponUso, Pago, Venta, DetalleVenta};
 use App\Traits\InputSanitizer;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -51,12 +51,18 @@ class CheckoutController extends Controller
 
         $usuario = Auth::user();
 
-        $direcciones = $usuario
-            ? Direccion::where('id_usuario', $usuario->id_usuario)->get()
-            : collect();
+        if ($usuario) {
+            // Direcciones de usuario logueado
+            $direcciones = Direccion::where('id_usuario', $usuario->id_usuario)->get();
+        } else {
+            // Direcciones de invitado (por guest_token)
+            $direcciones = DireccionGuest::byGuestToken(session('guest_token'))->get();
+        }
 
         // seleccionar la dirección principal
-        $direccionPrincipal = $direcciones->firstWhere('bDireccion_principal', 1);
+        $direccionPrincipal = $usuario
+            ? $direcciones->firstWhere('bDireccion_principal', 1)
+            : $direcciones->first();
 
         $codigoCupon = session('codigo_cupon');
         $descuento = 0;
@@ -233,8 +239,15 @@ class CheckoutController extends Controller
     {
         try {
 
+            $isGuest = !Auth::check();
+
             $data = $request->validate([
+                'vNombre' => 'required|string|max:60',
+                'vApaterno' => 'required|string|max:50',
+                'vAmaterno' => 'nullable|string|max:50',
+                'vEmail' => 'required|email|max:100',
                 'vTelefono_contacto' => 'required|string|max:20',
+                'vRFC' => 'nullable|string|max:13',
                 'vCalle' => 'required|string|max:150',
                 'vNumero_exterior' => 'required|string|max:20',
                 'vNumero_interior' => 'nullable|string|max:20',
@@ -251,6 +264,26 @@ class CheckoutController extends Controller
             $this->verificarYLimpiar($data, config('security.sql_keywords'));
 
             $data['bDireccion_principal'] = $request->has('bDireccion_principal') ? 1 : 0;
+
+            if ($isGuest) {
+
+                $data['vGuest_token'] = session('guest_token');
+
+                if ($data['bDireccion_principal']) {
+                    DB::table('tbl_direcciones_guest')
+                        ->where('vGuest_token', $data['vGuest_token'])
+                        ->update(['bDireccion_principal' => 0]);
+                }
+
+                $direccion = DB::table('tbl_direcciones_guest')->insertGetId($data);
+
+                return response()->json([
+                    'success' => true,
+                    'id_direccion' => $direccion,
+                    'tipo' => 'guest'
+                ]);
+            }
+
             $data['id_usuario'] = Auth::user()->id_usuario;
 
             // Si marca esta nueva como principal, desmarcamos las demás
@@ -261,7 +294,7 @@ class CheckoutController extends Controller
 
             $direccion = Direccion::create($data);
 
-            return response()->json(['success' => true, 'direccion' => $direccion]);
+            return response()->json(['success' => true, 'direccion' => $direccion, 'tipo' => 'user']);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
@@ -283,12 +316,16 @@ class CheckoutController extends Controller
     public function actualizarDireccion(Request $request, $id)
     {
         try {
+
+            $isGuest = !Auth::check();
+
             $direccion = Direccion::where('id_direccion', $id)
                 ->where('id_usuario', Auth::user()->id_usuario)
                 ->firstOrFail();
 
             $data = $request->validate([
                 'vTelefono_contacto' => 'required|string|max:20',
+                'vRFC' => 'nullable|string|max:13',
                 'vCalle' => 'required|string|max:150',
                 'vNumero_exterior' => 'required|string|max:20',
                 'vNumero_interior' => 'nullable|string|max:20',
@@ -306,6 +343,27 @@ class CheckoutController extends Controller
 
             $data['bDireccion_principal'] = $request->has('bDireccion_principal') ? 1 : 0;
 
+            if ($isGuest) {
+
+                $guestToken = session('guest_token');
+
+                if ($data['bDireccion_principal']) {
+                    DB::table('tbl_direcciones_guest')
+                        ->where('vGuest_token', $guestToken)
+                        ->where('id_direccion_guest', '!=', $id)
+                        ->update(['bDireccion_principal' => 0]);
+                }
+
+                DB::table('tbl_direcciones_guest')
+                    ->where('id_direccion_guest', $id)
+                    ->where('vGuest_token', $guestToken)
+                    ->update($data);
+
+                return response()->json(['success' => true, 'tipo' => 'guest']);
+            }
+
+            // === Usuario autenticado ===
+
             // Si el usuario marca esta como principal, desmarcamos todas las demás
             if (!empty($data['bDireccion_principal']) && $data['bDireccion_principal'] == 1) {
                 Direccion::where('id_usuario', Auth::user()->id_usuario)
@@ -315,7 +373,7 @@ class CheckoutController extends Controller
 
             $direccion->update($data);
 
-            return response()->json(['success' => true, 'direccion' => $direccion]);
+            return response()->json(['success' => true, 'direccion' => $direccion, 'tipo' => 'user']);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
