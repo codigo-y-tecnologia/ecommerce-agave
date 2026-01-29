@@ -248,11 +248,8 @@ class CheckoutController extends Controller
 
             $isGuest = !Auth::check();
 
-            $data = $request->validate([
-                'vNombre' => 'required|string|max:60',
-                'vApaterno' => 'required|string|max:50',
-                'vAmaterno' => 'nullable|string|max:50',
-                //'vEmail' => 'required|email|max:100',
+            // Reglas base (para invitados y usuarios logueados)
+            $rules = [
                 'vTelefono_contacto' => 'required|string|max:20',
                 'vRFC' => 'nullable|string|max:13',
                 'vCalle' => 'required|string|max:150',
@@ -266,19 +263,34 @@ class CheckoutController extends Controller
                 'vEntre_calle_2' => 'nullable|string|max:150',
                 'tReferencias' => 'nullable|string',
                 'bDireccion_principal' => 'nullable|boolean',
-            ]);
+            ];
 
+            // Reglas SOLO para invitados
+            if ($isGuest) {
+                $rules['vNombre']   = 'required|string|max:60';
+                $rules['vApaterno'] = 'required|string|max:50';
+                $rules['vAmaterno'] = 'nullable|string|max:50';
+            }
+
+            // Validar request
+            $data = $request->validate($rules);
+
+            // Limpieza de seguridad
             $this->verificarYLimpiar($data, config('security.sql_keywords'));
 
             $data['bDireccion_principal'] = $request->has('bDireccion_principal') ? 1 : 0;
 
+            /**
+             * =====================
+             * INVITADO
+             * =====================
+             */
             if ($isGuest) {
 
                 $data['vGuest_token'] = session('guest_token');
 
                 if ($data['bDireccion_principal']) {
-                    DB::table('tbl_direcciones_guest')
-                        ->where('vGuest_token', $data['vGuest_token'])
+                    DireccionGuest::byGuestToken($data['vGuest_token'])
                         ->update(['bDireccion_principal' => 0]);
                 }
 
@@ -290,6 +302,19 @@ class CheckoutController extends Controller
                     'tipo' => 'guest'
                 ]);
             }
+
+            /**
+             * =====================
+             * USUARIO LOGUEADO
+             * =====================
+             */
+
+            // Asegurar que no se guarden campos de invitado
+            unset(
+                $data['vNombre'],
+                $data['vApaterno'],
+                $data['vAmaterno']
+            );
 
             $data['id_usuario'] = Auth::user()->id_usuario;
 
@@ -326,7 +351,8 @@ class CheckoutController extends Controller
 
             $isGuest = !Auth::check();
 
-            $data = $request->validate([
+            // Reglas base (guest + user)
+            $rules = [
                 'vTelefono_contacto' => 'required|string|max:20',
                 'vRFC' => 'nullable|string|max:13',
                 'vCalle' => 'required|string|max:150',
@@ -340,12 +366,26 @@ class CheckoutController extends Controller
                 'vEntre_calle_2' => 'nullable|string|max:150',
                 'tReferencias' => 'nullable|string',
                 'bDireccion_principal' => 'nullable|boolean',
-            ]);
+            ];
+
+            // Reglas SOLO para invitado
+            if ($isGuest) {
+                $rules['vNombre']   = 'required|string|max:60';
+                $rules['vApaterno'] = 'required|string|max:50';
+                $rules['vAmaterno'] = 'nullable|string|max:50';
+            }
+
+            $data = $request->validate($rules);
 
             $this->verificarYLimpiar($data, config('security.sql_keywords'));
 
             $data['bDireccion_principal'] = $request->has('bDireccion_principal') ? 1 : 0;
 
+            /**
+             * =====================
+             * INVITADO
+             * =====================
+             */
             if ($isGuest) {
 
                 $guestToken = session('guest_token');
@@ -385,12 +425,23 @@ class CheckoutController extends Controller
                 ]);
             }
 
-            // === Usuario autenticado ===
+            /**
+             * =====================
+             * USUARIO LOGUEADO
+             * =====================
+             */
+
+            // Limpiar campos exclusivos de invitado
+            unset(
+                $data['vNombre'],
+                $data['vApaterno'],
+                $data['vAmaterno']
+            );
 
             /** @var Direccion $direccion */
             $direccion = Direccion::where('id_direccion', $id)
                 ->where('id_usuario', Auth::user()->id_usuario)
-                ->firstOrFail();
+                ->first();
 
             if (!$direccion) {
                 return response()->json([

@@ -19,7 +19,6 @@ class DireccionGuest extends Model
         'vNombre',
         'vApaterno',
         'vAmaterno',
-        'vEmail',
         'vTelefono_contacto',
         'vRFC',
         'vCalle',
