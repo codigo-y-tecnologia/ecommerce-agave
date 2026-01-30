@@ -85,10 +85,14 @@
                     <select name="id_direccion_facturacion" id="id_direccion_facturacion" class="form-select">
                         <option value="">-- Selecciona una dirección de facturación --</option>
                         @foreach($direcciones as $dir)
-                            <option value="{{ $dir->id_direccion }}">
-                                {{ $dir->vCalle }} {{ $dir->vNumero_exterior }}, {{ $dir->vColonia }}, {{ $dir->vCiudad }}
-                            </option>
-                        @endforeach
+            @php
+                // Usar el mismo ID que en el select de envío
+                $idValue = Auth::check() ? $dir->id_direccion : $dir->id_direccion_guest;
+            @endphp
+            <option value="{{ $idValue }}">
+                {{ $dir->vCalle }} {{ $dir->vNumero_exterior }}, {{ $dir->vColonia }}, {{ $dir->vCiudad }}
+            </option>
+        @endforeach
                     </select>
                 </div>
             </div>
