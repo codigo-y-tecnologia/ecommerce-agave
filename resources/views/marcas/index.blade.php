@@ -2,187 +2,194 @@
 
 @section('title', 'Marcas de Agave')
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="fas fa-industry me-2"></i>Marcas de Agave</h1>
-    <a href="{{ route('marcas.create') }}" class="btn btn-primary">
-        <i class="fas fa-plus me-1"></i> Nueva Marca
-    </a>
-</div>
-
-<!-- Agregar mensajes de éxito/error -->
-@if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-@endif
-
-@if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        {{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-@endif
-
-<!-- Card del buscador simplificado -->
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-light">
-        <h5 class="mb-0"><i class="fas fa-search me-2"></i>Buscar Marcas</h5>
-    </div>
-    <div class="card-body">
-        <form action="{{ route('marcas.index') }}" method="GET">
-            <div class="input-group">
-                <input type="text" 
-                       class="form-control" 
-                       id="search" 
-                       name="search" 
-                       value="{{ request('search') }}"
-                       placeholder="Buscar por nombre de marca o ID..."
-                       aria-label="Buscar marcas">
-                <button class="btn btn-outline-primary" type="submit">
-                    <i class="fas fa-search"></i> Buscar
-                </button>
-                @if(request('search'))
-                <a href="{{ route('marcas.index') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-times"></i> Limpiar
-                </a>
-                @endif
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>Marcas</h2>
+                <a href="{{ route('marcas.create') }}" class="btn btn-primary">+ Nueva</a>
             </div>
-            <small class="form-text text-muted mt-2 d-block">
-                <i class="fas fa-info-circle me-1"></i> Puedes buscar por nombre de marca (ej: "Patrón") o por ID (ej: "5")
-            </small>
-        </form>
-    </div>
-</div>
-
-<div class="card shadow-sm">
-    <div class="card-body">
-        @if($marcas->count() > 0)
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <span class="text-muted">
-                    Mostrando {{ $marcas->firstItem() ?? 0 }} - {{ $marcas->lastItem() ?? 0 }} de {{ $marcas->total() }} marcas
-                </span>
-                @if(request('search'))
-                    <span class="badge bg-info ms-2">Búsqueda: "{{ request('search') }}"</span>
-                @endif
-            </div>
-            <div>
-                @if($marcas->total() > 0)
-                    <span class="text-muted">Total: {{ $marcas->total() }} marcas</span>
-                @endif
-            </div>
+            
+            <!-- Formulario de búsqueda -->
+            <form method="GET" action="{{ route('marcas.index') }}" class="mt-3">
+                <div class="row">
+                    <div class="col-md-8">
+                        <input type="text" name="search" class="form-control" 
+                               placeholder="Buscar por ID o nombre de marca..." 
+                               value="{{ request('search') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">Buscar</button>
+                    </div>
+                    <div class="col-md-2">
+                        <a href="{{ route('marcas.index') }}" class="btn btn-secondary w-100">Limpiar</a>
+                    </div>
+                </div>
+            </form>
         </div>
-        
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead class="table-dark">
-                    <tr>
-                        <th>
-                            <a href="{{ request()->fullUrlWithQuery(['sort' => 'id_marca', 'order' => request('order', 'asc') == 'asc' ? 'desc' : 'asc']) }}" 
-                               class="text-white text-decoration-none">
-                                # 
-                                @if(request('sort') == 'id_marca')
-                                    <i class="fas fa-sort-{{ request('order', 'asc') == 'asc' ? 'up' : 'down' }} ms-1"></i>
+
+        <div class="card-body">
+            @if(session('success'))
+                <div class="alert alert-success">
+                    {{ session('success') }}
+                </div>
+            @endif
+
+            @if(session('error'))
+                <div class="alert alert-danger">
+                    {{ session('error') }}
+                </div>
+            @endif
+
+            @if(request('search') && request('search') != '')
+                <div class="alert alert-info mb-3">
+                    Resultados para: "{{ request('search') }}"
+                </div>
+            @endif
+
+            @if($marcas->count() > 0)
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Descripción</th>
+                            <th>Productos</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($marcas as $marca)
+                        <tr>
+                            <td>#{{ $marca->id_marca }}</td>
+                            <td>
+                                <strong>{{ $marca->vNombre }}</strong>
+                            </td>
+                            <td>
+                                @if($marca->tDescripcion)
+                                    {{ Str::limit($marca->tDescripcion, 50) }}
                                 @else
-                                    <i class="fas fa-sort ms-1"></i>
+                                    <span class="text-muted">Sin descripción</span>
                                 @endif
-                            </a>
-                        </th>
-                        <th>
-                            <a href="{{ request()->fullUrlWithQuery(['sort' => 'vNombre', 'order' => request('order', 'asc') == 'asc' ? 'desc' : 'asc']) }}" 
-                               class="text-white text-decoration-none">
-                                Nombre 
-                                @if(request('sort') == 'vNombre')
-                                    <i class="fas fa-sort-{{ request('order', 'asc') == 'asc' ? 'up' : 'down' }} ms-1"></i>
-                                @else
-                                    <i class="fas fa-sort ms-1"></i>
-                                @endif
-                            </a>
-                        </th>
-                        <th>Descripción</th>
-                        <th>Productos</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($marcas as $marca)
-                    <tr>
-                        <td>{{ $marca->id_marca }}</td>
-                        <td>
-                            <strong>{{ $marca->vNombre }}</strong>
-                        </td>
-                        <td>
-                            @if($marca->tDescripcion)
-                                {{ Str::limit($marca->tDescripcion, 50) }}
-                            @else
-                                <span class="text-muted">Sin descripción</span>
-                            @endif
-                        </td>
-                        <td>
-                            <span class="badge bg-info">
-                                {{ $marca->productos->count() }} productos
-                            </span>
-                        </td>
-                        <td>
-                            <div class="btn-group btn-group-sm">
-                                <a href="{{ route('marcas.edit', $marca) }}" class="btn btn-warning">
-                                    <i class="fas fa-edit"></i> Editar
-                                </a>
-                                <form action="{{ route('marcas.destroy', $marca) }}" method="POST" 
-                                      class="d-inline" onsubmit="return confirm('¿Eliminar marca?')">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="btn btn-danger">
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ $marca->productos->count() }} productos</span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ route('marcas.edit', $marca) }}" class="btn btn-warning">
+                                        <i class="fas fa-edit"></i> Editar
+                                    </a>
+                                    <button type="button" class="btn btn-danger" 
+                                            onclick="confirmarEliminacion({{ $marca->id_marca }}, '{{ addslashes($marca->vNombre) }}', {{ $marca->productos->count() }})">
                                         <i class="fas fa-trash"></i> Eliminar
                                     </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-        
-        <!-- Paginación -->
-        @if($marcas->hasPages())
-        <div class="d-flex justify-content-center mt-4">
-            {{ $marcas->appends(request()->query())->links() }}
-        </div>
-        @endif
-        
-        @else
-        <div class="text-center py-5">
-            <i class="fas fa-industry fa-4x text-muted mb-3"></i>
-            <h4 class="text-muted">
+                                    <form id="delete-form-{{ $marca->id_marca }}" 
+                                          action="{{ route('marcas.destroy', $marca) }}" 
+                                          method="POST" class="d-none">
+                                        @csrf @method('DELETE')
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Paginación -->
+            @if($marcas->hasPages())
+            <div class="d-flex justify-content-center mt-4">
+                {{ $marcas->appends(request()->query())->links() }}
+            </div>
+            @endif
+            
+            <div class="mt-3 p-3 bg-light rounded">
+                <strong>Total:</strong> {{ $marcas->total() }} marcas
                 @if(request('search'))
-                    No se encontraron marcas con "{{ request('search') }}"
-                @else
-                    No hay marcas registradas
+                    <span class="ms-3">(filtradas)</span>
                 @endif
-            </h4>
-            <p class="text-muted">Comienza agregando marcas de bebidas de agave</p>
-            <a href="{{ route('marcas.create') }}" class="btn btn-primary">
-                <i class="fas fa-plus me-1"></i> Crear Primera Marca
-            </a>
-            @if(request('search'))
-                <a href="{{ route('marcas.index') }}" class="btn btn-outline-secondary ms-2">
-                    <i class="fas fa-list me-1"></i> Ver todas las marcas
-                </a>
+            </div>
+            
+            @else
+            <div class="text-center py-5">
+                @if(request('search'))
+                    <h4 class="text-muted">No se encontraron resultados</h4>
+                    <p class="text-muted">No hay marcas que coincidan con "{{ request('search') }}"</p>
+                    <a href="{{ route('marcas.index') }}" class="btn btn-primary">
+                        Ver todas las marcas
+                    </a>
+                @else
+                    <h4 class="text-muted">No hay marcas registradas</h4>
+                    <p class="text-muted">Comienza agregando marcas de bebidas de agave</p>
+                    <a href="{{ route('marcas.create') }}" class="btn btn-primary">
+                        + Crear Primera Marca
+                    </a>
+                @endif
+            </div>
             @endif
         </div>
-        @endif
     </div>
 </div>
+@endsection
+
+@push('styles')
+<!-- SweetAlert2 CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+@endpush
+
+@push('scripts')
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-// Auto-enfocar el campo de búsqueda al cargar la página
-document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('search');
-    if (searchInput) {
-        searchInput.focus();
-        searchInput.select();
+function confirmarEliminacion(id, nombre, productosCount) {
+    let mensaje = "¿Estás seguro de que deseas eliminar la marca \"" + nombre + "\"?";
+    
+    if (productosCount > 0) {
+        mensaje = "¡ADVERTENCIA!\n\nLa marca \"" + nombre + "\" tiene " + productosCount + " producto(s) asociado(s).\n\n" +
+                  "Si eliminas esta marca, los productos quedarán sin marca asignada.\n\n" +
+                  "¿Estás seguro de que deseas continuar?";
     }
+    
+    Swal.fire({
+        title: "¿Estás seguro?",
+        text: mensaje,
+        icon: productosCount > 0 ? "warning" : "question",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Sí, eliminar",
+        cancelButtonText: "Cancelar"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Enviar el formulario de eliminación
+            document.getElementById('delete-form-' + id).submit();
+        }
+    });
+}
+
+// Mostrar mensaje de éxito después de eliminar
+@if(session('success'))
+Swal.fire({
+    title: "¡Éxito!",
+    text: "{{ session('success') }}",
+    icon: "success",
+    timer: 3000,
+    showConfirmButton: false
 });
+@endif
+
+// Mostrar mensaje de error si hubo un problema
+@if(session('error'))
+Swal.fire({
+    title: "¡Error!",
+    text: "{{ session('error') }}",
+    icon: "error",
+    timer: 3000,
+    showConfirmButton: false
+});
+@endif
 </script>
-@endsection
+@endpush

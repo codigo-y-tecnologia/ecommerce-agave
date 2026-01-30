@@ -10,9 +10,8 @@ class EtiquetaController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request) // Agregar Request $request
+    public function index(Request $request)
     {
-        //
         $search = $request->get('search');
         
         if ($search) {
@@ -32,7 +31,6 @@ class EtiquetaController extends Controller
      */
     public function create()
     {
-        //
         return view('etiquetas.create');
     }
 
@@ -41,7 +39,6 @@ class EtiquetaController extends Controller
      */
     public function store(Request $request)
     {
-        //
         $request->validate([
             'vNombre' => 'required|max:100|unique:tbl_etiquetas,vNombre',
             'tDescripcion' => 'nullable|max:500'
@@ -70,7 +67,6 @@ class EtiquetaController extends Controller
      */
     public function edit(Etiqueta $etiqueta)
     {
-        //
         return view('etiquetas.edit', compact('etiqueta'));
     }
 
@@ -79,7 +75,6 @@ class EtiquetaController extends Controller
      */
     public function update(Request $request, Etiqueta $etiqueta)
     {
-        //
         $request->validate([
             'vNombre' => 'required|max:100|unique:tbl_etiquetas,vNombre,' . $etiqueta->id_etiqueta . ',id_etiqueta',
             'tDescripcion' => 'nullable|max:500'
@@ -111,7 +106,6 @@ class EtiquetaController extends Controller
      */
     public function destroy(Etiqueta $etiqueta)
     {
-        //
         $etiqueta->delete();
         
         return redirect()->route('etiquetas.index')

@@ -14,13 +14,16 @@ class MarcaController extends Controller
     {
         $query = Marca::withCount('productos');
         
-        // Búsqueda por nombre o ID
+        // Búsqueda por nombre, ID o descripción
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
             
             $query->where(function($q) use ($search) {
                 // Búsqueda por nombre (LIKE para búsqueda parcial)
                 $q->orWhere('vNombre', 'LIKE', "%{$search}%");
+                
+                // Búsqueda por descripción (LIKE para búsqueda parcial)
+                $q->orWhere('tDescripcion', 'LIKE', "%{$search}%");
                 
                 // Búsqueda por ID (si es numérico)
                 if (is_numeric($search)) {
