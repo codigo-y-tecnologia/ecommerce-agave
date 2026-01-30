@@ -69,6 +69,10 @@ Route::get('/api/direccion/{id}', function ($id) {
     ]);
 });
 
+// Para usuarios invitados (guest)
+Route::get('/checkout/direccion-guest/{id}', [CheckoutController::class, 'getDireccionGuest'])
+    ->name('checkout.direccion-guest');
+
 Route::post('/cupon/aplicar', [CheckoutController::class, 'aplicarCupon'])->name('cupon.aplicar');
 
 // Rutas de pago

@@ -36,11 +36,16 @@
                         <select name="id_direccion" id="id_direccion" class="form-select" required>
                             <option value="">-- Selecciona una dirección --</option>
                             @foreach($direcciones as $dir)
-                                <option value="{{ $dir->id_direccion }}"
-                                    @if(isset($direccionPrincipal) && $direccionPrincipal->id_direccion === $dir->id_direccion)
-                                        selected
-                                    @endif
-                                >
+                            @php
+            // Para usuarios invitados, usar id_direccion_guest
+            $idValue = Auth::check() ? $dir->id_direccion : $dir->id_direccion_guest;
+        @endphp
+                                <option value="{{ $idValue }}"
+                                    @if(isset($direccionPrincipal) && 
+                (Auth::check() && $direccionPrincipal->id_direccion === $dir->id_direccion) ||
+                (!Auth::check() && $direccionPrincipal->id_direccion_guest === $dir->id_direccion_guest))
+                selected
+            @endif>
                                     {{ $dir->vCalle }} {{ $dir->vNumero_exterior }}, {{ $dir->vColonia }}, {{ $dir->vCiudad }}
                                 </option>
                             @endforeach
@@ -977,7 +982,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const res = await fetch(`/api/direccion/${id}`);
+
+            // Determinar si es usuario invitado (guest)
+            const isGuest = {{ Auth::guest() ? 'true' : 'false' }};
+
+            // Construir la URL de la API según el tipo de usuario
+            let apiUrl;
+        if (isGuest) {
+            // Usuario invitado: usar endpoint para direcciones guest
+            apiUrl = `/checkout/direccion-guest/${id}`;
+        } else {
+            // Usuario logueado: usar endpoint normal
+            apiUrl = `/api/direccion/${id}`;
+        }
+            const res = await fetch(apiUrl);
+            //const res = await fetch(`/api/direccion/${id}`);
             const data = await res.json();
 
             if (data.success) {
@@ -1032,12 +1051,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'No se pudo cargar la dirección.',
+                    text: data.message || 'No se pudo cargar la dirección',
                     confirmButtonText: 'Entendido'
                 });
             }
         } catch (err) {
-            console.error(err);
+            console.error('Error al obtener la dirección:', error);
             Swal.fire({
                 icon: 'error',
                 title: 'Error',

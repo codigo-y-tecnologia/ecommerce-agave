@@ -298,7 +298,16 @@ class CheckoutController extends Controller
 
                 return response()->json([
                     'success' => true,
-                    'id_direccion' => $direccion->id_direccion_guest,
+                    'direccion' => [
+                        // 🔑 NORMALIZAMOS EL ID
+                        'id_direccion' => $direccion->id_direccion_guest,
+
+                        // Campos que el frontend usa para mostrar el texto
+                        'vCalle' => $direccion->vCalle,
+                        'vNumero_exterior' => $direccion->vNumero_exterior,
+                        'vColonia' => $direccion->vColonia,
+                        'vCiudad' => $direccion->vCiudad,
+                    ],
                     'tipo' => 'guest'
                 ]);
             }
@@ -599,5 +608,44 @@ class CheckoutController extends Controller
             'totalFinal' => $totalFinal,
             'message' => $mensaje
         ]);
+    }
+
+    /**
+     * Obtener dirección guest (AJAX)
+     */
+    public function getDireccionGuest($id)
+    {
+        try {
+            $guestToken = session('guest_token');
+
+            if (!$guestToken) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Sesión de invitado no válida'
+                ], 401);
+            }
+
+            $direccion = DireccionGuest::where('id_direccion_guest', $id)
+                ->where('vGuest_token', $guestToken)
+                ->first();
+
+            if (!$direccion) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Dirección no encontrada'
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'direccion' => $direccion
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener la dirección',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }
