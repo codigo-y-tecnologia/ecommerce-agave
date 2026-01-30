@@ -34,7 +34,16 @@ class Producto extends Model
         'dLargo_cm',
         'dAncho_cm',
         'dAlto_cm',
-        'vClase_envio'
+        'vClase_envio',
+        // CAMPOS DE OFERTA (NUEVOS)
+        'bTiene_oferta',
+        'dPrecio_oferta',
+        'dFecha_inicio_oferta',
+        'dFecha_fin_oferta',
+        'vMotivo_oferta',
+        // CAMPOS DE FECHA
+        'tFecha_registro',
+        'tFecha_actualizacion'
     ];
 
     protected $casts = [
@@ -43,11 +52,52 @@ class Producto extends Model
         'dPrecio_venta' => 'decimal:2',
         'iStock' => 'integer',
         // NUEVOS CAMPOS
-        'dPeso' => 'decimal:2',
+        'dPeso' => 'decimal:3',
         'dLargo_cm' => 'decimal:2',
         'dAncho_cm' => 'decimal:2',
-        'dAlto_cm' => 'decimal:2'
+        'dAlto_cm' => 'decimal:2',
+        // CAMPOS DE OFERTA (NUEVOS)
+        'bTiene_oferta' => 'boolean',
+        'dPrecio_oferta' => 'decimal:2',
+        // CAMPOS DE FECHA
+        'tFecha_registro' => 'datetime',
+        'tFecha_actualizacion' => 'datetime',
+        'dFecha_inicio_oferta' => 'date',
+        'dFecha_fin_oferta' => 'date'
     ];
+
+    // Mutador para bTiene_oferta (CORREGIDO)
+    public function setBTieneOfertaAttribute($value)
+    {
+        if ($value === '1' || $value === 1 || $value === true || $value === 'on') {
+            $this->attributes['bTiene_oferta'] = true;
+        } else {
+            $this->attributes['bTiene_oferta'] = false;
+        }
+    }
+
+    // Boot method para manejar eventos
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Al crear un producto, establecer fecha de registro si no existe
+        static::creating(function ($producto) {
+            if (empty($producto->tFecha_registro)) {
+                $producto->tFecha_registro = now();
+            }
+        });
+
+        // Al actualizar un producto, establecer fecha de actualización
+        static::updating(function ($producto) {
+            $producto->tFecha_actualizacion = now();
+        });
+
+        static::deleting(function ($producto) {
+            $producto->favoritos()->delete();
+            $producto->eliminarTodasLasImagenes();
+        });
+    }
 
     // Accesor para imágenes
     public function getImagenesAttribute()
@@ -267,8 +317,60 @@ class Producto extends Model
         return $this->iStock > 0 && $this->iStock <= 5;
     }
 
+    // NUEVO: Método para verificar si la oferta está vigente
+    public function ofertaVigente()
+    {
+        if (!$this->bTiene_oferta || !$this->dPrecio_oferta) {
+            return false;
+        }
+        
+        $fechaActual = now()->toDateString();
+        
+        if ($this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
+            return $fechaActual >= $this->dFecha_inicio_oferta && 
+                   $fechaActual <= $this->dFecha_fin_oferta;
+        }
+        
+        // Si no hay fechas definidas, solo verifica si tiene oferta
+        return $this->bTiene_oferta;
+    }
+
+    // NUEVO: Método para obtener el precio de oferta si está vigente
+    public function getPrecioOfertaVigenteAttribute()
+    {
+        if ($this->ofertaVigente()) {
+            return $this->dPrecio_oferta;
+        }
+        return $this->dPrecio_venta;
+    }
+
+    // NUEVO: Método para obtener porcentaje de descuento
+    public function getPorcentajeDescuentoAttribute()
+    {
+        if ($this->ofertaVigente() && $this->dPrecio_oferta < $this->dPrecio_venta) {
+            $descuento = (($this->dPrecio_venta - $this->dPrecio_oferta) / $this->dPrecio_venta) * 100;
+            return round($descuento);
+        }
+        return 0;
+    }
+
+    // NUEVO: Badge para oferta
+    public function getOfertaBadgeAttribute()
+    {
+        if ($this->ofertaVigente()) {
+            return '<span class="badge bg-danger">-' . $this->porcentajeDescuento . '%</span>';
+        }
+        return '';
+    }
+
     public function tieneDescuento()
     {
+        // Si hay oferta vigente
+        if ($this->ofertaVigente() && $this->dPrecio_oferta < $this->dPrecio_venta) {
+            return true;
+        }
+        
+        // Descuento normal por precio de compra
         if (!$this->dPrecio_compra || $this->dPrecio_compra <= 0) {
             return false;
         }
@@ -278,6 +380,13 @@ class Producto extends Model
 
     public function porcentajeDescuento()
     {
+        // Prioridad a la oferta vigente
+        if ($this->ofertaVigente() && $this->dPrecio_oferta < $this->dPrecio_venta) {
+            $descuento = (($this->dPrecio_venta - $this->dPrecio_oferta) / $this->dPrecio_venta) * 100;
+            return max(0, min(100, round($descuento)));
+        }
+        
+        // Descuento normal
         if (!$this->tieneDescuento()) {
             return 0;
         }
@@ -498,15 +607,5 @@ class Producto extends Model
     public function scopePorClaseEnvio($query, $clase)
     {
         return $query->where('vClase_envio', $clase);
-    }
-
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::deleting(function ($producto) {
-            $producto->favoritos()->delete();
-            $producto->eliminarTodasLasImagenes();
-        });
     }
 }

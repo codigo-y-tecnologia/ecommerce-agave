@@ -360,6 +360,123 @@
             </div>
         </div>
 
+        <!-- OFERTA ESPECIAL - SECCIÓN CORREGIDA -->
+        <div class="card mb-4">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-percentage me-2"></i>Oferta Especial (Opcional)</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Configura una oferta temporal con precio especial y fechas específicas.
+                </div>
+                
+                <div class="form-group mb-3">
+                    <div class="form-check form-switch">
+                        <!-- CORRECCIÓN APLICADA AQUÍ -->
+                        <input type="hidden" name="bTiene_oferta" value="0">
+                        <input type="checkbox" name="bTiene_oferta" id="bTiene_oferta" 
+                               class="form-check-input"
+                               onchange="toggleOfertaForm()"
+                               value="1"
+                               {{ old('bTiene_oferta') ? 'checked' : '' }}>
+                        <label for="bTiene_oferta" class="form-check-label fw-bold">
+                            Activar oferta especial
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="oferta-form" style="display: {{ old('bTiene_oferta') ? 'block' : 'none' }};">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="dPrecio_oferta" class="form-label fw-bold">
+                                    Precio de oferta <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="text" 
+                                           name="dPrecio_oferta" 
+                                           id="dPrecio_oferta" 
+                                           class="form-control @error('dPrecio_oferta') is-invalid @enderror"
+                                           value="{{ old('dPrecio_oferta') }}" 
+                                           oninput="validarPrecioOferta()"
+                                           placeholder="0.00"
+                                           title="Precio de oferta especial (debe ser menor que el precio de venta)">
+                                    @error('dPrecio_oferta')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <small class="form-text text-muted">
+                                    Precio especial durante el periodo de oferta (debe ser menor que el precio de venta)
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="vMotivo_oferta" class="form-label fw-bold">
+                                    Motivo de la oferta
+                                </label>
+                                <input type="text" 
+                                       name="vMotivo_oferta" 
+                                       id="vMotivo_oferta" 
+                                       class="form-control @error('vMotivo_oferta') is-invalid @enderror"
+                                       value="{{ old('vMotivo_oferta') }}" 
+                                       maxlength="255"
+                                       placeholder="Ej: Temporada navideña, Liquidación, etc.">
+                                @error('vMotivo_oferta')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="dFecha_inicio_oferta" class="form-label fw-bold">
+                                    Fecha de inicio <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" 
+                                       name="dFecha_inicio_oferta" 
+                                       id="dFecha_inicio_oferta" 
+                                       class="form-control @error('dFecha_inicio_oferta') is-invalid @enderror"
+                                       value="{{ old('dFecha_inicio_oferta') }}"
+                                       min="{{ date('Y-m-d') }}">
+                                @error('dFecha_inicio_oferta')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="dFecha_fin_oferta" class="form-label fw-bold">
+                                    Fecha de fin <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" 
+                                       name="dFecha_fin_oferta" 
+                                       id="dFecha_fin_oferta" 
+                                       class="form-control @error('dFecha_fin_oferta') is-invalid @enderror"
+                                       value="{{ old('dFecha_fin_oferta') }}"
+                                       min="{{ date('Y-m-d') }}">
+                                @error('dFecha_fin_oferta')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        La oferta solo estará activa durante el periodo especificado.
+                        Después de la fecha de fin, el producto volverá a su precio normal.
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- ATRIBUTOS (OPCIONAL) -->
         @if($atributos && $atributos->count() > 0)
         <div class="card mb-4">
@@ -605,6 +722,11 @@ function validarPrecio(input) {
             input.classList.add('is-invalid');
             mostrarErrorPrecio(input, 'El precio máximo es 9,999,999.99');
         }
+    }
+    
+    // Si estamos validando precio de venta, también validar precio de oferta
+    if (input.id === 'dPrecio_venta') {
+        validarPrecioOferta();
     }
 }
 
@@ -980,6 +1102,107 @@ function calcularVolumen() {
     document.getElementById('peso-facturable').textContent = pesoFacturable.toFixed(3);
 }
 
+// ==================== FUNCIONES PARA OFERTA ====================
+
+// Mostrar/ocultar formulario de oferta - CORREGIDA
+function toggleOfertaForm() {
+    const ofertaCheckbox = document.getElementById('bTiene_oferta');
+    const ofertaForm = document.getElementById('oferta-form');
+    
+    if (ofertaCheckbox.checked) {
+        ofertaForm.style.display = 'block';
+        // El valor se maneja automáticamente con el input hidden
+    } else {
+        ofertaForm.style.display = 'none';
+    }
+    
+    // Validar precio de oferta al cambiar
+    validarPrecioOferta();
+}
+
+// ==================== VALIDACIÓN DE PRECIO DE OFERTA ====================
+
+// Validar precio de oferta en tiempo real
+function validarPrecioOferta() {
+    const precioVentaInput = document.getElementById('dPrecio_venta');
+    const precioOfertaInput = document.getElementById('dPrecio_oferta');
+    const tieneOfertaCheckbox = document.getElementById('bTiene_oferta');
+    
+    if (!precioVentaInput || !precioOfertaInput || !tieneOfertaCheckbox) {
+        return true;
+    }
+    
+    const precioVenta = parseFloat(precioVentaInput.value) || 0;
+    const precioOferta = parseFloat(precioOfertaInput.value) || 0;
+    const tieneOferta = tieneOfertaCheckbox.checked;
+    
+    if (tieneOferta && precioOferta > 0) {
+        if (precioOferta >= precioVenta) {
+            mostrarErrorOferta('El precio de oferta debe ser menor que el precio de venta.');
+            return false;
+        } else {
+            limpiarErrorOferta();
+            return true;
+        }
+    }
+    
+    limpiarErrorOferta();
+    return true;
+}
+
+function mostrarErrorOferta(mensaje) {
+    const inputOferta = document.getElementById('dPrecio_oferta');
+    const errorId = 'error-precio-oferta';
+    
+    // Remover error anterior si existe
+    const errorElement = document.getElementById(errorId);
+    if (errorElement) {
+        errorElement.remove();
+    }
+    
+    // Crear elemento de error
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'invalid-feedback d-block text-danger mt-1';
+    errorDiv.id = errorId;
+    errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i> ${mensaje}`;
+    
+    // Insertar después del input
+    const inputGroup = inputOferta.closest('.input-group') || inputOferta.parentNode;
+    inputGroup.appendChild(errorDiv);
+    inputOferta.classList.add('is-invalid');
+}
+
+function limpiarErrorOferta() {
+    const inputOferta = document.getElementById('dPrecio_oferta');
+    const errorId = 'error-precio-oferta';
+    
+    const errorElement = document.getElementById(errorId);
+    if (errorElement) {
+        errorElement.remove();
+    }
+    
+    inputOferta.classList.remove('is-invalid');
+}
+
+// Validación de fechas de oferta
+function validarFechasOferta() {
+    const fechaInicio = document.getElementById('dFecha_inicio_oferta');
+    const fechaFin = document.getElementById('dFecha_fin_oferta');
+    
+    if (fechaInicio.value && fechaFin.value) {
+        const inicio = new Date(fechaInicio.value);
+        const fin = new Date(fechaFin.value);
+        
+        if (fin < inicio) {
+            fechaFin.setCustomValidity('La fecha de fin debe ser posterior a la fecha de inicio');
+            return false;
+        }
+    }
+    
+    fechaFin.setCustomValidity('');
+    return true;
+}
+
 // ==================== VALIDACIÓN DEL FORMULARIO ====================
 
 document.getElementById('productoForm').addEventListener('submit', function(e) {
@@ -1096,14 +1319,54 @@ document.getElementById('productoForm').addEventListener('submit', function(e) {
         }
     }
     
-    // 4. Verificar imágenes (máximo 8)
+    // 4. Validar precio de oferta si está activa
+    const tieneOfertaCheckbox = document.getElementById('bTiene_oferta');
+    const precioOfertaInput = document.getElementById('dPrecio_oferta');
+    const precioVentaInput = document.getElementById('dPrecio_venta');
+    
+    if (tieneOfertaCheckbox && precioOfertaInput && precioVentaInput) {
+        const tieneOferta = tieneOfertaCheckbox.checked;
+        const precioOferta = parseFloat(precioOfertaInput.value) || 0;
+        const precioVenta = parseFloat(precioVentaInput.value) || 0;
+        
+        if (tieneOferta) {
+            // Validar que precio de oferta tenga valor
+            if (precioOferta <= 0) {
+                precioOfertaInput.classList.add('is-invalid');
+                erroresCriticos = true;
+                
+                if (!precioOfertaInput.nextElementSibling || !precioOfertaInput.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback';
+                    errorDiv.textContent = 'El precio de oferta es obligatorio cuando se activa la oferta';
+                    precioOfertaInput.parentNode.appendChild(errorDiv);
+                }
+            }
+            
+            // Validar que precio de oferta sea menor que precio de venta
+            if (precioOferta > 0 && precioOferta >= precioVenta) {
+                precioOfertaInput.classList.add('is-invalid');
+                erroresCriticos = true;
+                
+                if (!document.getElementById('error-precio-oferta')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback d-block text-danger mt-1';
+                    errorDiv.id = 'error-precio-oferta';
+                    errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i> El precio de oferta debe ser menor que el precio de venta`;
+                    precioOfertaInput.parentNode.appendChild(errorDiv);
+                }
+            }
+        }
+    }
+    
+    // 5. Verificar imágenes (máximo 8)
     if (selectedImages.length > 8) {
         alert('Solo puedes subir máximo 8 imágenes.');
         e.preventDefault();
         return false;
     }
     
-    // 5. Validar dimensiones si tienen valor
+    // 6. Validar dimensiones si tienen valor
     const camposDimensiones = ['dPeso', 'dLargo_cm', 'dAncho_cm', 'dAlto_cm'];
     camposDimensiones.forEach(campoId => {
         const input = document.getElementById(campoId);
@@ -1123,10 +1386,58 @@ document.getElementById('productoForm').addEventListener('submit', function(e) {
         }
     });
     
-    // 6. Actualizar el input file antes de enviar
+    // 7. Validar fechas de oferta
+    if (document.getElementById('bTiene_oferta') && document.getElementById('bTiene_oferta').checked) {
+        const fechaInicio = document.getElementById('dFecha_inicio_oferta');
+        const fechaFin = document.getElementById('dFecha_fin_oferta');
+        
+        // Validar que las fechas tengan valor
+        if (!fechaInicio.value) {
+            fechaInicio.classList.add('is-invalid');
+            erroresCriticos = true;
+            
+            if (!fechaInicio.nextElementSibling || !fechaInicio.nextElementSibling.classList.contains('invalid-feedback')) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'invalid-feedback';
+                errorDiv.textContent = 'La fecha de inicio es obligatoria cuando se activa la oferta';
+                fechaInicio.parentNode.appendChild(errorDiv);
+            }
+        }
+        
+        if (!fechaFin.value) {
+            fechaFin.classList.add('is-invalid');
+            erroresCriticos = true;
+            
+            if (!fechaFin.nextElementSibling || !fechaFin.nextElementSibling.classList.contains('invalid-feedback')) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'invalid-feedback';
+                errorDiv.textContent = 'La fecha de fin es obligatoria cuando se activa la oferta';
+                fechaFin.parentNode.appendChild(errorDiv);
+            }
+        }
+        
+        if (fechaInicio.value && fechaFin.value) {
+            const inicio = new Date(fechaInicio.value);
+            const fin = new Date(fechaFin.value);
+            
+            if (fin < inicio) {
+                fechaFin.classList.add('is-invalid');
+                erroresCriticos = true;
+                
+                if (!fechaFin.nextElementSibling || !fechaFin.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback';
+                    errorDiv.textContent = 'La fecha de fin debe ser posterior a la fecha de inicio';
+                    fechaFin.parentNode.appendChild(errorDiv);
+                }
+            }
+        }
+    }
+    
+    // 8. Actualizar el input file antes de enviar
     updateFileInput();
     
-    // 7. Si hay errores críticos, prevenir envío
+    // 9. Si hay errores críticos, prevenir envío
     if (erroresCriticos) {
         e.preventDefault();
         
@@ -1158,6 +1469,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (errorFeedback && errorFeedback.classList.contains('invalid-feedback')) {
                 errorFeedback.remove();
             }
+            
+            // Si es precio de venta, validar precio de oferta
+            if (this.id === 'dPrecio_venta') {
+                validarPrecioOferta();
+            }
         });
     });
     
@@ -1171,6 +1487,42 @@ document.addEventListener('DOMContentLoaded', function() {
             input.addEventListener('input', calcularVolumen);
         }
     });
+    
+    // Event listeners para validar precio de oferta en tiempo real
+    const precioVentaInput = document.getElementById('dPrecio_venta');
+    const precioOfertaInput = document.getElementById('dPrecio_oferta');
+    const tieneOfertaCheckbox = document.getElementById('bTiene_oferta');
+    
+    if (precioVentaInput && precioOfertaInput && tieneOfertaCheckbox) {
+        precioVentaInput.addEventListener('input', validarPrecioOferta);
+        precioOfertaInput.addEventListener('input', validarPrecioOferta);
+        tieneOfertaCheckbox.addEventListener('change', validarPrecioOferta);
+    }
+    
+    // Event listeners para validar fechas de oferta
+    const fechaInicio = document.getElementById('dFecha_inicio_oferta');
+    const fechaFin = document.getElementById('dFecha_fin_oferta');
+    
+    if (fechaInicio) {
+        fechaInicio.addEventListener('change', function() {
+            if (fechaFin.value && new Date(fechaFin.value) < new Date(this.value)) {
+                fechaFin.value = this.value;
+            }
+            validarFechasOferta();
+        });
+    }
+    
+    if (fechaFin) {
+        fechaFin.addEventListener('change', validarFechasOferta);
+    }
+    
+    // Establecer fecha mínima como hoy
+    const hoy = new Date().toISOString().split('T')[0];
+    if (fechaInicio) fechaInicio.min = hoy;
+    if (fechaFin) fechaFin.min = hoy;
+    
+    // Inicializar toggle de oferta
+    toggleOfertaForm();
 });
 </script>
 
@@ -1229,7 +1581,8 @@ input[name="dPrecio_compra"],
 input[name="dPeso"],
 input[name="dLargo_cm"],
 input[name="dAncho_cm"],
-input[name="dAlto_cm"] {
+input[name="dAlto_cm"],
+input[name="dPrecio_oferta"] {
     font-family: 'Courier New', monospace;
     font-size: 1.1em;
     letter-spacing: 0.5px;
@@ -1241,6 +1594,12 @@ input[name="dAlto_cm"] {
     margin-top: 5px;
     font-size: 0.875em;
     color: #dc3545;
+}
+
+/* Estilos para errores de oferta */
+#error-precio-oferta {
+    font-size: 0.875em;
+    margin-top: 5px;
 }
 
 /* Estilos para inputs de dimensiones */
@@ -1264,6 +1623,20 @@ input[name="dAlto_cm"] {
 #volumen-info span {
     font-weight: bold;
     color: #17a2b8;
+}
+
+/* Estilos para sección de oferta */
+#oferta-form {
+    transition: all 0.3s ease;
+}
+
+.card-header.bg-danger {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+}
+
+/* Estilos para campos obligatorios en oferta */
+#oferta-form .form-label span.text-danger {
+    font-size: 1.1em;
 }
 </style>
 @endsection

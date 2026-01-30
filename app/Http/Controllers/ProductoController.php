@@ -14,6 +14,8 @@ use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class ProductoController extends Controller
 {
@@ -64,7 +66,8 @@ class ProductoController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        // Validación personalizada para precio de oferta
+        $validator = Validator::make($request->all(), [
             'vCodigo_barras' => [
                 'required',
                 'max:15',
@@ -96,6 +99,26 @@ class ProductoController extends Controller
             'vClase_envio' => 'nullable|in:estandar,express,fragil,grandes_dimensiones',
             'etiquetas_especiales' => 'nullable|array',
             'etiquetas_especiales.*' => 'in:nuevo,popular,oferta,destacado',
+            // NUEVAS VALIDACIONES PARA OFERTA (CORREGIDAS)
+            'bTiene_oferta' => 'nullable|in:0,1',
+            'dPrecio_oferta' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'max:9999999.99',
+                // Validación condicional: si tiene oferta activa, precio debe ser menor que precio de venta
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->input('bTiene_oferta') == 1 && $value !== null) {
+                        $precioVenta = $request->dPrecio_venta;
+                        if ($value >= $precioVenta) {
+                            $fail('El precio de oferta debe ser menor que el precio de venta.');
+                        }
+                    }
+                }
+            ],
+            'dFecha_inicio_oferta' => 'nullable|date',
+            'dFecha_fin_oferta' => 'nullable|date|after_or_equal:dFecha_inicio_oferta',
+            'vMotivo_oferta' => 'nullable|string|max:255',
         ], [
             'vCodigo_barras.required' => 'El SKU es obligatorio',
             'vCodigo_barras.unique' => 'Ya existe un producto con este SKU',
@@ -131,7 +154,39 @@ class ProductoController extends Controller
             'dAlto_cm.min' => 'El alto no puede ser negativo',
             'dAlto_cm.max' => 'El alto máximo es 999.99 cm',
             'vClase_envio.in' => 'La clase de envío seleccionada no es válida',
+            // MENSAJES PARA OFERTA (CORREGIDOS)
+            'bTiene_oferta.in' => 'El valor de oferta debe ser 0 o 1',
+            'dPrecio_oferta.numeric' => 'El precio de oferta debe ser un número válido',
+            'dPrecio_oferta.min' => 'El precio de oferta no puede ser negativo',
+            'dPrecio_oferta.max' => 'El precio de oferta máximo es 9,999,999.99',
+            'dFecha_inicio_oferta.date' => 'La fecha de inicio de oferta debe ser una fecha válida',
+            'dFecha_fin_oferta.date' => 'La fecha de fin de oferta debe ser una fecha válida',
+            'dFecha_fin_oferta.after_or_equal' => 'La fecha de fin debe ser igual o posterior a la fecha de inicio',
+            'vMotivo_oferta.max' => 'El motivo de la oferta no puede exceder los 255 caracteres',
         ]);
+
+        // Validación adicional: si bTiene_oferta es 1, entonces dPrecio_oferta es requerido
+        $validator->sometimes('dPrecio_oferta', 'required', function ($input) {
+            return $input->bTiene_oferta == 1;
+        });
+
+        // Validación adicional: si bTiene_oferta es 1, entonces fechas son requeridas
+        $validator->sometimes('dFecha_inicio_oferta', 'required', function ($input) {
+            return $input->bTiene_oferta == 1;
+        });
+
+        $validator->sometimes('dFecha_fin_oferta', 'required', function ($input) {
+            return $input->bTiene_oferta == 1;
+        });
+
+        // Verificar si hay errores de validación
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $validated = $validator->validated();
 
         try {
             DB::beginTransaction();
@@ -153,6 +208,12 @@ class ProductoController extends Controller
                 'dAncho_cm' => $request->dAncho_cm ?: null,
                 'dAlto_cm' => $request->dAlto_cm ?: null,
                 'vClase_envio' => $request->vClase_envio ?: null,
+                // CAMPOS DE OFERTA (CORREGIDOS)
+                'bTiene_oferta' => $request->input('bTiene_oferta', 0) == 1 ? true : false,
+                'dPrecio_oferta' => $request->dPrecio_oferta ?: null,
+                'dFecha_inicio_oferta' => $request->dFecha_inicio_oferta ?: null,
+                'dFecha_fin_oferta' => $request->dFecha_fin_oferta ?: null,
+                'vMotivo_oferta' => $request->vMotivo_oferta ?: null,
             ];
 
             $producto = Producto::create($productoData);
@@ -187,12 +248,9 @@ class ProductoController extends Controller
                 }
             }
 
-            // Guardar etiquetas especiales (en un campo JSON o similar)
-            // Por ahora las guardamos en sesión o log para demostración
+            // Guardar etiquetas especiales
             if ($request->has('etiquetas_especiales')) {
-                // Aquí podrías guardar en una tabla separada o en un campo JSON
-                // Por simplicidad, lo guardamos en el log
-                \Log::info('Etiquetas especiales para producto ' . $producto->id_producto . ': ', $request->etiquetas_especiales);
+                Log::info('Etiquetas especiales para producto ' . $producto->id_producto . ': ', $request->etiquetas_especiales);
             }
 
             DB::commit();
@@ -264,7 +322,8 @@ class ProductoController extends Controller
 
     public function update(Request $request, Producto $producto)
     {
-        $validated = $request->validate([
+        // Validación personalizada para precio de oferta
+        $validator = Validator::make($request->all(), [
             'vCodigo_barras' => [
                 'required',
                 'max:15',
@@ -298,6 +357,26 @@ class ProductoController extends Controller
             'vClase_envio' => 'nullable|in:estandar,express,fragil,grandes_dimensiones',
             'etiquetas_especiales' => 'nullable|array',
             'etiquetas_especiales.*' => 'in:nuevo,popular,oferta,destacado',
+            // NUEVAS VALIDACIONES PARA OFERTA (CORREGIDAS)
+            'bTiene_oferta' => 'nullable|in:0,1',
+            'dPrecio_oferta' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'max:9999999.99',
+                // Validación condicional: si tiene oferta activa, precio debe ser menor que precio de venta
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->input('bTiene_oferta') == 1 && $value !== null) {
+                        $precioVenta = $request->dPrecio_venta;
+                        if ($value >= $precioVenta) {
+                            $fail('El precio de oferta debe ser menor que el precio de venta.');
+                        }
+                    }
+                }
+            ],
+            'dFecha_inicio_oferta' => 'nullable|date',
+            'dFecha_fin_oferta' => 'nullable|date|after_or_equal:dFecha_inicio_oferta',
+            'vMotivo_oferta' => 'nullable|string|max:255',
         ], [
             'vCodigo_barras.required' => 'El SKU es obligatorio',
             'vCodigo_barras.unique' => 'Ya existe un producto con este SKU',
@@ -333,7 +412,39 @@ class ProductoController extends Controller
             'dAlto_cm.min' => 'El alto no puede ser negativo',
             'dAlto_cm.max' => 'El alto máximo es 999.99 cm',
             'vClase_envio.in' => 'La clase de envío seleccionada no es válida',
+            // MENSAJES PARA OFERTA (CORREGIDOS)
+            'bTiene_oferta.in' => 'El valor de oferta debe ser 0 o 1',
+            'dPrecio_oferta.numeric' => 'El precio de oferta debe ser un número válido',
+            'dPrecio_oferta.min' => 'El precio de oferta no puede ser negativo',
+            'dPrecio_oferta.max' => 'El precio de oferta máximo es 9,999,999.99',
+            'dFecha_inicio_oferta.date' => 'La fecha de inicio de oferta debe ser una fecha válida',
+            'dFecha_fin_oferta.date' => 'La fecha de fin de oferta debe ser una fecha válida',
+            'dFecha_fin_oferta.after_or_equal' => 'La fecha de fin debe ser igual o posterior a la fecha de inicio',
+            'vMotivo_oferta.max' => 'El motivo de la oferta no puede exceder los 255 caracteres',
         ]);
+
+        // Validación adicional: si bTiene_oferta es 1, entonces dPrecio_oferta es requerido
+        $validator->sometimes('dPrecio_oferta', 'required', function ($input) {
+            return $input->bTiene_oferta == 1;
+        });
+
+        // Validación adicional: si bTiene_oferta es 1, entonces fechas son requeridas
+        $validator->sometimes('dFecha_inicio_oferta', 'required', function ($input) {
+            return $input->bTiene_oferta == 1;
+        });
+
+        $validator->sometimes('dFecha_fin_oferta', 'required', function ($input) {
+            return $input->bTiene_oferta == 1;
+        });
+
+        // Verificar si hay errores de validación
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $validated = $validator->validated();
 
         try {
             DB::beginTransaction();
@@ -373,6 +484,12 @@ class ProductoController extends Controller
                 'dAncho_cm' => $request->dAncho_cm ?: null,
                 'dAlto_cm' => $request->dAlto_cm ?: null,
                 'vClase_envio' => $request->vClase_envio ?: null,
+                // CAMPOS DE OFERTA (CORREGIDOS)
+                'bTiene_oferta' => $request->input('bTiene_oferta', 0) == 1 ? true : false,
+                'dPrecio_oferta' => $request->dPrecio_oferta ?: null,
+                'dFecha_inicio_oferta' => $request->dFecha_inicio_oferta ?: null,
+                'dFecha_fin_oferta' => $request->dFecha_fin_oferta ?: null,
+                'vMotivo_oferta' => $request->vMotivo_oferta ?: null,
             ]);
             
             // Agregar nuevas imágenes
@@ -407,7 +524,7 @@ class ProductoController extends Controller
 
             // Guardar etiquetas especiales en actualización
             if ($request->has('etiquetas_especiales')) {
-                \Log::info('Etiquetas especiales actualizadas para producto ' . $producto->id_producto . ': ', $request->etiquetas_especiales);
+                Log::info('Etiquetas especiales actualizadas para producto ' . $producto->id_producto . ': ', $request->etiquetas_especiales);
             }
 
             DB::commit();

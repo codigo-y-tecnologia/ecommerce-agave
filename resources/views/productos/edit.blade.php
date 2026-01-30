@@ -22,70 +22,140 @@
         </div>
     @endif
 
+    <!-- Modal de confirmación para eliminar imágenes -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Eliminación
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-trash-alt fa-2x text-danger"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="text-danger mb-1">¿Eliminar imagen?</h5>
+                            <p class="mb-0" id="modalMessage">Esta acción no se puede deshacer.</p>
+                        </div>
+                    </div>
+                    <div class="text-center" id="imagePreviewContainer">
+                        <!-- Vista previa de la imagen a eliminar -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                        <i class="fas fa-trash me-1"></i> Sí, Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <form action="{{ route('productos.update', $producto->id_producto) }}" method="POST" enctype="multipart/form-data" id="productoForm">
         @csrf
         @method('PUT')
 
-        <!-- IMÁGENES DEL PRODUCTO -->
+        <!-- IMÁGENES DEL PRODUCTO - CORREGIDO -->
         <div class="card mb-4">
             <div class="card-header bg-secondary text-white">
                 <div>
                     <i class="fas fa-images me-2"></i>
-                    <h5 class="mb-0">Imágenes del Producto</h5>
+                    <h5 class="mb-0">Imágenes del Producto (Máximo 8)</h5>
                 </div>
             </div>
             <div class="card-body">
                 @php
                     $nombresArchivos = $producto->getNombresArchivosImagenes();
+                    $imagenesExistentes = count($nombresArchivos);
                 @endphp
                 
-                <!-- CONTENEDOR DE TODAS LAS IMÁGENES (EXISTENTES + NUEVAS) -->
-                <div class="row mb-4" id="all-images-container">
-                    <!-- Imágenes existentes -->
-                    @foreach($nombresArchivos as $index => $imagen)
-                        <div class="col-6 col-md-4 col-lg-3 mb-3" id="image-container-{{ $imagen['nombre'] }}">
-                            <div class="card h-100 border position-relative">
-                                <!-- Imagen -->
-                                <img src="{{ $imagen['url'] }}" 
-                                     class="card-img-top" 
-                                     style="height: 180px; object-fit: contain; background: #f8f9fa; padding: 10px;"
-                                     alt="Imagen {{ $index + 1 }}">
-                                
-                                <!-- Botón para eliminar -->
-                                <button type="button" 
-                                        class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2 eliminar-imagen-btn"
-                                        data-image-name="{{ $imagen['nombre'] }}"
-                                        style="width: 32px; height: 32px; padding: 0; border-radius: 50%; z-index: 10;"
-                                        onclick="eliminarImagenExistente('{{ $imagen['nombre'] }}', this)"
-                                        title="Eliminar esta imagen">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                                
-                                <!-- Input oculto para eliminar -->
-                                <input type="hidden" 
-                                       name="imagenes_a_eliminar[]"
-                                       value="{{ $imagen['nombre'] }}"
-                                       id="eliminar_{{ $imagen['nombre'] }}"
-                                       class="d-none">
-                                
-                                <div class="card-body p-2 text-center">
-                                    <small class="text-muted d-block" style="font-size: 12px;">
-                                        {{ $imagen['nombre'] }}
-                                    </small>
-                                    <span class="badge bg-primary mt-1">
-                                        Imagen {{ $index + 1 }}
-                                    </span>
+                <!-- CONTENEDOR DE IMÁGENES EXISTENTES - CORREGIDO -->
+                <div class="row mb-4" id="imagenes-existentes-container">
+                    @if($imagenesExistentes > 0)
+                        <div class="col-12 mb-3">
+                            <h6 class="fw-bold">
+                                <i class="fas fa-images me-2"></i>Imágenes actuales
+                                <span class="badge bg-primary">{{ $imagenesExistentes }} / 8</span>
+                            </h6>
+                        </div>
+                        
+                        @foreach($nombresArchivos as $index => $imagen)
+                            <div class="col-6 col-md-4 col-lg-3 mb-3 image-item" id="image-container-{{ $imagen['nombre'] }}">
+                                <div class="card h-100 border position-relative">
+                                    <img src="{{ $imagen['url'] }}" 
+                                         class="card-img-top existing-image" 
+                                         style="height: 180px; object-fit: contain; background: #f8f9fa; padding: 10px;"
+                                         alt="Imagen {{ $index + 1 }}"
+                                         data-image-name="{{ $imagen['nombre'] }}"
+                                         data-image-url="{{ $imagen['url'] }}">
+                                    
+                                    <!-- Botón para eliminar -->
+                                    <button type="button" 
+                                            class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2 delete-existing-btn"
+                                            style="width: 32px; height: 32px; padding: 0; border-radius: 50%; z-index: 10;"
+                                            data-image-name="{{ $imagen['nombre'] }}"
+                                            data-image-url="{{ $imagen['url'] }}"
+                                            title="Eliminar esta imagen">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    
+                                    <!-- Campo oculto para marcar la imagen a eliminar -->
+                                    <input type="hidden" 
+                                           name="imagenes_a_eliminar[]" 
+                                           value="{{ $imagen['nombre'] }}"
+                                           id="hidden-eliminar-{{ $imagen['nombre'] }}"
+                                           class="hidden-eliminar-input"
+                                           disabled>
+                                    
+                                    <!-- Badge de número -->
+                                    <div class="position-absolute top-0 start-0 m-2">
+                                        <span class="badge bg-primary">#{{ $index + 1 }}</span>
+                                    </div>
+                                    
+                                    <div class="card-body p-2 text-center">
+                                        <small class="text-muted d-block" style="font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                            {{ $imagen['nombre'] }}
+                                        </small>
+                                        <span class="badge bg-success mt-1" id="badge-{{ $imagen['nombre'] }}">
+                                            <i class="fas fa-check-circle me-1"></i> Actual
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
+                        @endforeach
+                    @else
+                        <div class="col-12 text-center py-4">
+                            <i class="fas fa-image fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No hay imágenes disponibles</p>
                         </div>
-                    @endforeach
-                    
-                    <!-- Aquí se agregarán las imágenes nuevas -->
+                    @endif
+                </div>
+                
+                <!-- CONTADOR DE IMÁGENES -->
+                <div class="alert alert-info mb-4" id="contador-imagenes">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <span id="contador-texto">
+                        @if($imagenesExistentes > 0)
+                            Tienes <strong>{{ $imagenesExistentes }}</strong> imágenes. Puedes eliminar imágenes existentes y agregar nuevas manteniendo un máximo de 8 imágenes en total.
+                        @else
+                            No tienes imágenes. Puedes agregar hasta 8 imágenes.
+                        @endif
+                    </span>
                 </div>
                 
                 <!-- AGREGAR NUEVAS IMÁGENES -->
                 <div class="mt-4">
-                    <h6 class="fw-bold mb-3"><i class="fas fa-plus-circle me-2"></i>Agregar nuevas imágenes</h6>
+                    <h6 class="fw-bold mb-3">
+                        <i class="fas fa-plus-circle me-2"></i>Agregar nuevas imágenes
+                        <span id="contador-nuevas" class="badge bg-success ms-2">0 nuevas</span>
+                    </h6>
                     <div class="row">
                         <div class="col-md-12">
                             <div class="form-group mb-3">
@@ -98,19 +168,21 @@
                                        class="form-control @error('imagenes') is-invalid @enderror" 
                                        multiple 
                                        accept="image/*"
-                                       onchange="agregarNuevasImagenes(event)">
+                                       onchange="manejarNuevasImagenes(event)">
                                 @error('imagenes')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                @error('imagenes.*')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                                 <small class="form-text text-muted">
                                     Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP, JFIF, SVG. 
-                                    Máximo 5MB por imagen.
+                                    Máximo 5MB por imagen. Puedes seleccionar múltiples imágenes.
                                 </small>
                             </div>
                         </div>
+                    </div>
+                    
+                    <!-- CONTENEDOR PARA PREVISUALIZAR NUEVAS IMÁGENES -->
+                    <div class="row mb-4" id="nuevas-imagenes-container">
+                        <!-- Las nuevas imágenes seleccionadas aparecerán aquí -->
                     </div>
                 </div>
             </div>
@@ -136,8 +208,7 @@
                                    required 
                                    oninput="validarSKU(this)"
                                    pattern="[A-Za-z0-9]+"
-                                   title="Solo letras y números (máximo 15 caracteres)"
-                                   inputmode="text">
+                                   title="Solo letras y números (máximo 15 caracteres)">
                             @error('vCodigo_barras')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -202,7 +273,7 @@
                                        title="Máximo: 9,999,999.99 (7 dígitos enteros, 2 decimales)">
                                 @error('dPrecio_venta')
                                     <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                            @enderror
                             </div>
                             <small class="form-text text-muted">
                                 Máximo: 9,999,999.99 - Mínimo: 0.00
@@ -330,7 +401,7 @@
             </div>
         </div>
 
-        <!-- DIMENSIONES Y PESO -->
+        <!-- DIMENSIONES Y PESO - SECCIÓN NUEVA -->
         <div class="card mb-4">
             <div class="card-header bg-info text-white">
                 <h5 class="mb-0"><i class="fas fa-ruler-combined me-2"></i>Dimensiones y Peso (Opcional)</h5>
@@ -450,16 +521,125 @@
                             <small class="form-text text-muted">Define la categoría de envío del producto</small>
                         </div>
                     </div>
-                    
-                    <div class="col-md-6">
-                        <div class="alert alert-secondary mt-4">
-                            <h6 class="fw-bold mb-2"><i class="fas fa-info-circle me-2"></i>Información de cálculo:</h6>
-                            <div id="volumen-info" class="small">
-                                <div>Volumen: <span id="volumen-calculado">0.00</span> cm³</div>
-                                <div>Peso volumétrico: <span id="peso-volumetrico">0.000</span> kg</div>
-                                <div>Peso facturable: <span id="peso-facturable">0.000</span> kg</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- OFERTA ESPECIAL - SECCIÓN CORREGIDA (CON FORMATO DE FECHA CORRECTO) -->
+        <div class="card mb-4">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-percentage me-2"></i>Oferta Especial (Opcional)</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Configura una oferta temporal con precio especial y fechas específicas.
+                </div>
+                
+                <div class="form-group mb-3">
+                    <div class="form-check form-switch">
+                        <input type="hidden" name="bTiene_oferta" value="0">
+                        <input type="checkbox" name="bTiene_oferta" id="bTiene_oferta" 
+                               class="form-check-input"
+                               onchange="toggleOfertaForm()"
+                               value="1"
+                               {{ old('bTiene_oferta', $producto->bTiene_oferta ? '1' : '0') == '1' ? 'checked' : '' }}>
+                        <label for="bTiene_oferta" class="form-check-label fw-bold">
+                            Activar oferta especial
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="oferta-form" style="display: {{ old('bTiene_oferta', $producto->bTiene_oferta ? '1' : '0') == '1' ? 'block' : 'none' }};">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="dPrecio_oferta" class="form-label fw-bold">
+                                    Precio de oferta <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="text" 
+                                           name="dPrecio_oferta" 
+                                           id="dPrecio_oferta" 
+                                           class="form-control @error('dPrecio_oferta') is-invalid @enderror"
+                                           value="{{ old('dPrecio_oferta', $producto->dPrecio_oferta ? number_format($producto->dPrecio_oferta, 2, '.', '') : '') }}" 
+                                           oninput="validarPrecioOferta()"
+                                           placeholder="0.00"
+                                           title="Precio de oferta especial (debe ser menor que el precio de venta)">
+                                    @error('dPrecio_oferta')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <small class="form-text text-muted">
+                                    Precio especial durante el periodo de oferta (debe ser menor que el precio de venta)
+                                </small>
                             </div>
                         </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="vMotivo_oferta" class="form-label fw-bold">
+                                    Motivo de la oferta
+                                </label>
+                                <input type="text" 
+                                       name="vMotivo_oferta" 
+                                       id="vMotivo_oferta" 
+                                       class="form-control @error('vMotivo_oferta') is-invalid @enderror"
+                                       value="{{ old('vMotivo_oferta', $producto->vMotivo_oferta) }}" 
+                                       maxlength="255"
+                                       placeholder="Ej: Temporada navideña, Liquidación, etc.">
+                                @error('vMotivo_oferta')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="dFecha_inicio_oferta" class="form-label fw-bold">
+                                    Fecha de inicio <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" 
+                                       name="dFecha_inicio_oferta" 
+                                       id="dFecha_inicio_oferta" 
+                                       class="form-control @error('dFecha_inicio_oferta') is-invalid @enderror"
+                                       value="{{ old('dFecha_inicio_oferta', $producto->dFecha_inicio_oferta ? \Carbon\Carbon::parse($producto->dFecha_inicio_oferta)->format('Y-m-d') : '') }}">
+                                @error('dFecha_inicio_oferta')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <small class="form-text text-muted">
+                                    Fecha de inicio de la oferta
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="dFecha_fin_oferta" class="form-label fw-bold">
+                                    Fecha de fin <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" 
+                                       name="dFecha_fin_oferta" 
+                                       id="dFecha_fin_oferta" 
+                                       class="form-control @error('dFecha_fin_oferta') is-invalid @enderror"
+                                       value="{{ old('dFecha_fin_oferta', $producto->dFecha_fin_oferta ? \Carbon\Carbon::parse($producto->dFecha_fin_oferta)->format('Y-m-d') : '') }}">
+                                @error('dFecha_fin_oferta')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <small class="form-text text-muted">
+                                    Fecha de finalización de la oferta
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        La oferta solo estará activa durante el periodo especificado.
+                        Después de la fecha de fin, el producto volverá a su precio normal.
                     </div>
                 </div>
             </div>
@@ -623,133 +803,274 @@
 </div>
 
 <script>
-// ==================== FUNCIONES PARA IMÁGENES ====================
+// ==================== VARIABLES GLOBALES PARA IMÁGENES ====================
 
-// Array para almacenar imágenes nuevas
+// Array para almacenar imágenes nuevas seleccionadas
 let nuevasImagenes = [];
+let nuevasImagenesCounter = 0;
+let imagenesAEliminar = []; // Array para almacenar nombres de imágenes a eliminar
+let currentImageToDelete = null; // Variable para almacenar la imagen a eliminar
 
-// Agregar nuevas imágenes
-function agregarNuevasImagenes(event) {
+// ==================== FUNCIONES PARA MANEJAR IMÁGENES ====================
+
+// Manejar la selección de nuevas imágenes
+function manejarNuevasImagenes(event) {
     const files = event.target.files;
-    const contenedor = document.getElementById('all-images-container');
+    const contenedor = document.getElementById('nuevas-imagenes-container');
     
-    // Verificar límite de 8 imágenes en total
-    const totalImagenesActuales = nuevasImagenes.length + 
-                                 document.querySelectorAll('#all-images-container .card:not(.nueva-imagen)').length;
+    // Calcular imágenes totales después de cambios
+    const imagenesActuales = {{ $imagenesExistentes }} - imagenesAEliminar.length;
+    const espacioDisponible = 8 - (imagenesActuales + nuevasImagenes.length);
     
-    if (totalImagenesActuales + files.length > 8) {
-        alert('Máximo 8 imágenes permitidas.');
+    if (files.length > espacioDisponible) {
+        alert(`Solo puedes agregar ${espacioDisponible} imágenes más. Ya tienes ${imagenesActuales} imágenes existentes y ${nuevasImagenes.length} nuevas seleccionadas.`);
         event.target.value = '';
         return;
     }
     
+    // Agregar nuevas imágenes
+    let imagenesAgregadas = 0;
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const reader = new FileReader();
         
-        reader.onload = function(e) {
-            const imageId = 'nueva_img_' + Date.now() + '_' + i;
+        // Verificar si ya fue seleccionada entre las nuevas imágenes
+        if (!esImagenDuplicada(file)) {
+            // Verificar si el archivo ya existe entre las imágenes actuales del producto
+            if (imagenYaExisteEnProducto(file)) {
+                alert(`La imagen "${file.name}" ya existe en este producto.`);
+                continue;
+            }
             
-            // Agregar al array
-            nuevasImagenes.push({
-                id: imageId,
-                file: file,
-                preview: e.target.result
-            });
+            const reader = new FileReader();
+            const imageId = 'nueva_img_' + Date.now() + '_' + nuevasImagenesCounter++;
             
-            // Crear elemento HTML
-            const col = document.createElement('div');
-            col.className = 'col-6 col-md-4 col-lg-3 mb-3';
-            col.id = `image-container-${imageId}`;
-            col.innerHTML = `
-                <div class="card h-100 border position-relative nueva-imagen">
-                    <!-- Imagen -->
-                    <img src="${e.target.result}" 
-                         class="card-img-top" 
-                         style="height: 180px; object-fit: contain; background: #f8f9fa; padding: 10px;"
-                         alt="Nueva imagen">
-                    
-                    <!-- Botón para eliminar -->
-                    <button type="button" 
-                            class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2 eliminar-imagen-btn"
-                            data-image-id="${imageId}"
-                            style="width: 32px; height: 32px; padding: 0; border-radius: 50%; z-index: 10;"
-                            onclick="eliminarNuevaImagen('${imageId}', this)"
-                            title="Eliminar esta imagen">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                    
-                    <div class="card-body p-2 text-center">
-                        <small class="text-muted d-block" style="font-size: 12px;">
-                            ${file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name}
-                        </small>
-                        <small class="text-muted d-block">
-                            ${(file.size / 1024).toFixed(2)} KB
-                        </small>
-                        <span class="badge bg-success mt-1">
-                            Nueva imagen
-                        </span>
+            reader.onload = function(e) {
+                // Agregar al array
+                nuevasImagenes.push({
+                    id: imageId,
+                    file: file,
+                    preview: e.target.result,
+                    nombre: file.name,
+                    size: file.size,
+                    lastModified: file.lastModified
+                });
+                
+                // Crear elemento para mostrar
+                const col = document.createElement('div');
+                col.className = 'col-6 col-md-4 col-lg-3 mb-3';
+                col.id = `nueva-container-${imageId}`;
+                col.innerHTML = `
+                    <div class="card h-100 border position-relative nueva-imagen">
+                        <!-- Imagen -->
+                        <img src="${e.target.result}" 
+                             class="card-img-top" 
+                             style="height: 180px; object-fit: contain; background: #f8f9fa; padding: 10px;"
+                             alt="Nueva imagen">
+                        
+                        <!-- Botón para eliminar -->
+                        <button type="button" 
+                                class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2"
+                                style="width: 32px; height: 32px; padding: 0; border-radius: 50%; z-index: 10;"
+                                onclick="mostrarConfirmacionEliminarNueva('${imageId}', '${file.name}')"
+                                title="Eliminar esta imagen">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        
+                        <div class="card-body p-2 text-center">
+                            <small class="text-muted d-block" style="font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                ${file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name}
+                            </small>
+                            <small class="text-muted d-block">
+                                ${(file.size / 1024).toFixed(2)} KB
+                            </small>
+                            <span class="badge bg-success mt-1">
+                                Nueva
+                            </span>
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+                
+                // Agregar al contenedor
+                contenedor.appendChild(col);
+                imagenesAgregadas++;
+            };
             
-            // Agregar al final del contenedor
-            contenedor.appendChild(col);
-            
-            // Actualizar DataTransfer
-            actualizarDataTransfer();
+            reader.readAsDataURL(file);
+        } else {
+            alert(`La imagen "${file.name}" ya fue seleccionada.`);
         }
-        
-        reader.readAsDataURL(file);
     }
     
-    // Limpiar input
+    if (imagenesAgregadas > 0) {
+        // Actualizar contador
+        actualizarContadorImagenes();
+        
+        // Actualizar DataTransfer
+        actualizarDataTransfer();
+    }
+    
+    // Limpiar input para permitir nuevas selecciones
     event.target.value = '';
 }
 
-// Eliminar imagen existente - DEFINITIVAMENTE
-function eliminarImagenExistente(imageName, button) {
-    if (!confirm('¿Estás seguro de que deseas eliminar esta imagen? Esta acción no se puede deshacer.')) {
-        return;
+// Verificar si la imagen ya fue seleccionada entre las nuevas imágenes
+function esImagenDuplicada(newFile) {
+    return nuevasImagenes.some(img => 
+        img.file.name === newFile.name && 
+        img.file.size === newFile.size && 
+        img.file.lastModified === newFile.lastModified
+    );
+}
+
+// Verificar si la imagen ya existe en el producto actual (imágenes existentes no marcadas para eliminar)
+function imagenYaExisteEnProducto(file) {
+    // Obtener todos los nombres de imágenes existentes que NO están marcadas para eliminar
+    const nombresImagenesExistentes = [];
+    
+    // Obtener nombres de imágenes existentes desde los datos PHP
+    @foreach($nombresArchivos as $imagen)
+        if (!imagenesAEliminar.includes('{{ $imagen['nombre'] }}')) {
+            nombresImagenesExistentes.push('{{ $imagen['nombre'] }}');
+        }
+    @endforeach
+    
+    // Verificar si el nombre del archivo ya existe
+    return nombresImagenesExistentes.some(nombreExistente => {
+        // Comparamos solo el nombre del archivo
+        return nombreExistente.toLowerCase() === file.name.toLowerCase();
+    });
+}
+
+// Mostrar modal de confirmación para eliminar imagen existente
+function mostrarConfirmacionEliminarExistente(imageName, imageUrl) {
+    currentImageToDelete = {
+        type: 'existing',
+        name: imageName,
+        url: imageUrl
+    };
+    
+    // Actualizar mensaje del modal
+    document.getElementById('modalMessage').textContent = `¿Estás seguro de que deseas eliminar la imagen "${imageName}"? Esta acción no se puede deshacer.`;
+    
+    // Mostrar vista previa de la imagen
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    previewContainer.innerHTML = `
+        <div class="text-center mt-3">
+            <img src="${imageUrl}" 
+                 alt="Vista previa" 
+                 class="img-fluid rounded" 
+                 style="max-height: 150px; max-width: 100%;">
+            <p class="mt-2 text-muted"><small>${imageName}</small></p>
+        </div>
+    `;
+    
+    // Mostrar el modal
+    const modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+    modal.show();
+}
+
+// Mostrar modal de confirmación para eliminar imagen nueva
+function mostrarConfirmacionEliminarNueva(imageId, fileName) {
+    // Buscar la imagen en el array de nuevas imágenes
+    const imagen = nuevasImagenes.find(img => img.id === imageId);
+    if (!imagen) return;
+    
+    currentImageToDelete = {
+        type: 'new',
+        id: imageId,
+        name: fileName,
+        preview: imagen.preview
+    };
+    
+    // Actualizar mensaje del modal
+    document.getElementById('modalMessage').textContent = `¿Estás seguro de que deseas eliminar la imagen "${fileName}"? Esta acción no se puede deshacer.`;
+    
+    // Mostrar vista previa de la imagen
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    previewContainer.innerHTML = `
+        <div class="text-center mt-3">
+            <img src="${imagen.preview}" 
+                 alt="Vista previa" 
+                 class="img-fluid rounded" 
+                 style="max-height: 150px; max-width: 100%;">
+            <p class="mt-2 text-muted"><small>${fileName}</small></p>
+        </div>
+    `;
+    
+    // Mostrar el modal
+    const modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+    modal.show();
+}
+
+// Función para manejar la eliminación confirmada
+function confirmarEliminacion() {
+    if (!currentImageToDelete) return;
+    
+    if (currentImageToDelete.type === 'existing') {
+        // Eliminar imagen existente
+        eliminarImagenExistenteConfirmada(currentImageToDelete.name);
+    } else if (currentImageToDelete.type === 'new') {
+        // Eliminar imagen nueva
+        eliminarNuevaImagenConfirmada(currentImageToDelete.id);
     }
     
-    const container = document.getElementById(`image-container-${imageName}`);
+    // Cerrar el modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal'));
+    modal.hide();
+    
+    // Limpiar la variable
+    currentImageToDelete = null;
+}
+
+// Eliminar una imagen existente (después de confirmación)
+function eliminarImagenExistenteConfirmada(nombreImagen) {
+    // Agregar a la lista de imágenes a eliminar
+    if (!imagenesAEliminar.includes(nombreImagen)) {
+        imagenesAEliminar.push(nombreImagen);
+    }
+    
+    const hiddenInput = document.getElementById(`hidden-eliminar-${nombreImagen}`);
+    const container = document.getElementById(`image-container-${nombreImagen}`);
+    
+    if (hiddenInput) {
+        hiddenInput.disabled = false;
+    }
+    
     if (container) {
-        // Activar el input hidden para eliminación
-        const input = document.getElementById(`eliminar_${imageName}`);
-        if (input) {
-            input.type = 'hidden';
-            input.name = 'imagenes_a_eliminar[]';
-            input.value = imageName;
-        }
-        
-        // Animación de eliminación
+        // Aplicar animación de eliminación
         container.style.opacity = '0.5';
         container.style.transform = 'scale(0.95)';
+        container.style.transition = 'all 0.3s ease';
         
+        // Después de la animación, remover del DOM
         setTimeout(() => {
             container.style.display = 'none';
+            
+            // Actualizar contador
+            actualizarContadorImagenes();
         }, 300);
     }
 }
 
-// Eliminar nueva imagen - DEFINITIVAMENTE
-function eliminarNuevaImagen(imageId, button) {
-    if (!confirm('¿Estás seguro de que deseas eliminar esta imagen nueva?')) {
-        return;
-    }
-    
+// Eliminar una imagen nueva seleccionada (después de confirmación)
+function eliminarNuevaImagenConfirmada(imageId) {
     // Remover del array
     nuevasImagenes = nuevasImagenes.filter(img => img.id !== imageId);
     
     // Remover del DOM
-    const container = document.getElementById(`image-container-${imageId}`);
+    const container = document.getElementById(`nueva-container-${imageId}`);
     if (container) {
-        container.style.opacity = '0';
-        container.style.transform = 'scale(0.8)';
+        // Aplicar animación de eliminación
+        container.style.opacity = '0.5';
+        container.style.transform = 'scale(0.95)';
+        container.style.transition = 'all 0.3s ease';
         
+        // Después de la animación, remover del DOM
         setTimeout(() => {
             container.remove();
+            
+            // Actualizar contador
+            actualizarContadorImagenes();
             
             // Actualizar DataTransfer
             actualizarDataTransfer();
@@ -769,6 +1090,33 @@ function actualizarDataTransfer() {
     // Actualizar input file
     const fileInput = document.getElementById('imagenes');
     fileInput.files = dataTransfer.files;
+}
+
+// Actualizar contador de imágenes
+function actualizarContadorImagenes() {
+    const imagenesActuales = {{ $imagenesExistentes }} - imagenesAEliminar.length;
+    const totalImagenes = imagenesActuales + nuevasImagenes.length;
+    
+    // Actualizar contador de nuevas imágenes
+    const contadorNuevas = document.getElementById('contador-nuevas');
+    if (contadorNuevas) {
+        contadorNuevas.textContent = `${nuevasImagenes.length} nuevas`;
+    }
+    
+    // Actualizar texto informativo
+    const contadorTexto = document.getElementById('contador-texto');
+    if (contadorTexto) {
+        if (totalImagenes > 8) {
+            contadorTexto.innerHTML = `<span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Excedes el límite de 8 imágenes. Tienes ${totalImagenes} imágenes (${imagenesActuales} existentes + ${nuevasImagenes.length} nuevas).</span>`;
+        } else {
+            contadorTexto.innerHTML = `
+                Tienes <strong>${totalImagenes} de 8</strong> imágenes: 
+                <span class="text-primary">${imagenesActuales} existentes</span> 
+                <span class="text-success">${nuevasImagenes.length} nuevas</span>.
+                ${imagenesAEliminar.length > 0 ? `<span class="text-danger">(${imagenesAEliminar.length} marcadas para eliminar)</span>` : ''}
+            `;
+        }
+    }
 }
 
 // ==================== FUNCIONES DE VALIDACIÓN ====================
@@ -892,7 +1240,6 @@ function validarPeso(input) {
     
     if (value === '') {
         input.classList.remove('is-invalid');
-        calcularVolumen();
         return;
     }
     
@@ -945,8 +1292,6 @@ function validarPeso(input) {
             mostrarErrorGeneral(input, 'El peso máximo es 999.999 kg');
         }
     }
-    
-    calcularVolumen();
 }
 
 // Validar dimensiones
@@ -956,7 +1301,6 @@ function validarDimension(input) {
     
     if (value === '') {
         input.classList.remove('is-invalid');
-        calcularVolumen();
         return;
     }
     
@@ -1009,8 +1353,6 @@ function validarDimension(input) {
             mostrarErrorGeneral(input, 'La dimensión máxima es 999.99 cm');
         }
     }
-    
-    calcularVolumen();
 }
 
 function mostrarErrorGeneral(input, mensaje) {
@@ -1029,21 +1371,104 @@ function mostrarErrorGeneral(input, mensaje) {
     input.parentNode.appendChild(errorDiv);
 }
 
-// Calcular volumen
-function calcularVolumen() {
-    const largo = parseFloat(document.getElementById('dLargo_cm').value) || 0;
-    const ancho = parseFloat(document.getElementById('dAncho_cm').value) || 0;
-    const alto = parseFloat(document.getElementById('dAlto_cm').value) || 0;
-    const peso = parseFloat(document.getElementById('dPeso').value) || 0;
+// ==================== FUNCIONES PARA OFERTA ====================
+
+// Mostrar/ocultar formulario de oferta
+function toggleOfertaForm() {
+    const ofertaCheckbox = document.getElementById('bTiene_oferta');
+    const ofertaForm = document.getElementById('oferta-form');
     
-    const volumen = largo * ancho * alto;
-    document.getElementById('volumen-calculado').textContent = volumen.toFixed(2);
+    if (ofertaCheckbox.checked) {
+        ofertaForm.style.display = 'block';
+    } else {
+        ofertaForm.style.display = 'none';
+    }
     
-    const pesoVolumetrico = volumen / 5000;
-    document.getElementById('peso-volumetrico').textContent = pesoVolumetrico.toFixed(3);
+    // Validar precio de oferta al cambiar
+    validarPrecioOferta();
+}
+
+// ==================== VALIDACIÓN DE PRECIO DE OFERTA ====================
+
+// Validar precio de oferta en tiempo real
+function validarPrecioOferta() {
+    const precioVentaInput = document.getElementById('dPrecio_venta');
+    const precioOfertaInput = document.getElementById('dPrecio_oferta');
+    const tieneOfertaCheckbox = document.getElementById('bTiene_oferta');
     
-    const pesoFacturable = Math.max(peso, pesoVolumetrico);
-    document.getElementById('peso-facturable').textContent = pesoFacturable.toFixed(3);
+    if (!precioVentaInput || !precioOfertaInput || !tieneOfertaCheckbox) {
+        return true;
+    }
+    
+    const precioVenta = parseFloat(precioVentaInput.value) || 0;
+    const precioOferta = parseFloat(precioOfertaInput.value) || 0;
+    const tieneOferta = tieneOfertaCheckbox.checked;
+    
+    if (tieneOferta && precioOferta > 0) {
+        if (precioOferta >= precioVenta) {
+            mostrarErrorOferta('El precio de oferta debe ser menor que el precio de venta.');
+            return false;
+        } else {
+            limpiarErrorOferta();
+            return true;
+        }
+    }
+    
+    limpiarErrorOferta();
+    return true;
+}
+
+function mostrarErrorOferta(mensaje) {
+    const inputOferta = document.getElementById('dPrecio_oferta');
+    const errorId = 'error-precio-oferta';
+    
+    // Remover error anterior si existe
+    const errorElement = document.getElementById(errorId);
+    if (errorElement) {
+        errorElement.remove();
+    }
+    
+    // Crear elemento de error
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'invalid-feedback d-block text-danger mt-1';
+    errorDiv.id = errorId;
+    errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i> ${mensaje}`;
+    
+    // Insertar después del input
+    const inputGroup = inputOferta.closest('.input-group') || inputOferta.parentNode;
+    inputGroup.appendChild(errorDiv);
+    inputOferta.classList.add('is-invalid');
+}
+
+function limpiarErrorOferta() {
+    const inputOferta = document.getElementById('dPrecio_oferta');
+    const errorId = 'error-precio-oferta';
+    
+    const errorElement = document.getElementById(errorId);
+    if (errorElement) {
+        errorElement.remove();
+    }
+    
+    inputOferta.classList.remove('is-invalid');
+}
+
+// Validación de fechas de oferta
+function validarFechasOferta() {
+    const fechaInicio = document.getElementById('dFecha_inicio_oferta');
+    const fechaFin = document.getElementById('dFecha_fin_oferta');
+    
+    if (fechaInicio.value && fechaFin.value) {
+        const inicio = new Date(fechaInicio.value);
+        const fin = new Date(fechaFin.value);
+        
+        if (fin < inicio) {
+            fechaFin.setCustomValidity('La fecha de fin debe ser posterior a la fecha de inicio');
+            return false;
+        }
+    }
+    
+    fechaFin.setCustomValidity('');
+    return true;
 }
 
 // ==================== VALIDACIÓN DEL FORMULARIO ====================
@@ -1095,16 +1520,104 @@ document.getElementById('productoForm').addEventListener('submit', function(e) {
     }
     
     // Validar imágenes (máximo 8)
-    const imagenesAEliminar = document.querySelectorAll('input[name="imagenes_a_eliminar[]"]').length;
-    const nuevasImagenesCount = nuevasImagenes.length;
-    const imagenesExistentes = {{ count($producto->imagenes) }};
-    const totalImagenes = imagenesExistentes - imagenesAEliminar + nuevasImagenesCount;
+    const imagenesActuales = {{ $imagenesExistentes }} - imagenesAEliminar.length;
+    const totalImagenes = imagenesActuales + nuevasImagenes.length;
     
     if (totalImagenes > 8) {
         e.preventDefault();
-        alert('Máximo 8 imágenes permitidas.');
+        alert(`Máximo 8 imágenes permitidas. Tienes ${totalImagenes} imágenes (${imagenesActuales} existentes + ${nuevasImagenes.length} nuevas).`);
         return false;
     }
+    
+    // Validar precio de oferta si está activa
+    const tieneOfertaCheckbox = document.getElementById('bTiene_oferta');
+    const precioOfertaInput = document.getElementById('dPrecio_oferta');
+    const precioVentaInput = document.getElementById('dPrecio_venta');
+    
+    if (tieneOfertaCheckbox && precioOfertaInput && precioVentaInput) {
+        const tieneOferta = tieneOfertaCheckbox.checked;
+        const precioOferta = parseFloat(precioOfertaInput.value) || 0;
+        const precioVenta = parseFloat(precioVentaInput.value) || 0;
+        
+        if (tieneOferta) {
+            // Validar que precio de oferta tenga valor
+            if (precioOferta <= 0) {
+                precioOfertaInput.classList.add('is-invalid');
+                erroresCriticos = true;
+                
+                if (!precioOfertaInput.nextElementSibling || !precioOfertaInput.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback';
+                    errorDiv.textContent = 'El precio de oferta es obligatorio cuando se activa la oferta';
+                    precioOfertaInput.parentNode.appendChild(errorDiv);
+                }
+            }
+            
+            // Validar que precio de oferta sea menor que precio de venta
+            if (precioOferta > 0 && precioOferta >= precioVenta) {
+                precioOfertaInput.classList.add('is-invalid');
+                erroresCriticos = true;
+                
+                if (!document.getElementById('error-precio-oferta')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback d-block text-danger mt-1';
+                    errorDiv.id = 'error-precio-oferta';
+                    errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i> El precio de oferta debe ser menor que el precio de venta`;
+                    precioOfertaInput.parentNode.appendChild(errorDiv);
+                }
+            }
+            
+            // Validar fechas de oferta
+            const fechaInicio = document.getElementById('dFecha_inicio_oferta');
+            const fechaFin = document.getElementById('dFecha_fin_oferta');
+            
+            // Validar que las fechas tengan valor
+            if (!fechaInicio.value) {
+                fechaInicio.classList.add('is-invalid');
+                erroresCriticos = true;
+                
+                if (!fechaInicio.nextElementSibling || !fechaInicio.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback';
+                    errorDiv.textContent = 'La fecha de inicio es obligatoria cuando se activa la oferta';
+                    fechaInicio.parentNode.appendChild(errorDiv);
+                }
+            }
+            
+            if (!fechaFin.value) {
+                fechaFin.classList.add('is-invalid');
+                erroresCriticos = true;
+                
+                if (!fechaFin.nextElementSibling || !fechaFin.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback';
+                    errorDiv.textContent = 'La fecha de fin es obligatoria cuando se activa la oferta';
+                    fechaFin.parentNode.appendChild(errorDiv);
+                }
+            }
+            
+            if (fechaInicio.value && fechaFin.value) {
+                const inicio = new Date(fechaInicio.value);
+                const fin = new Date(fechaFin.value);
+                
+                // Permitir fechas pasadas, solo validar que fin sea mayor que inicio
+                if (fin < inicio) {
+                    fechaFin.classList.add('is-invalid');
+                    erroresCriticos = true;
+                    
+                    if (!fechaFin.nextElementSibling || !fechaFin.nextElementSibling.classList.contains('invalid-feedback')) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'invalid-feedback';
+                        errorDiv.textContent = 'La fecha de fin debe ser posterior a la fecha de inicio';
+                        fechaFin.parentNode.appendChild(errorDiv);
+                    }
+                }
+            }
+        }
+    }
+    
+    // Actualizar DataTransfer antes de enviar
+    actualizarDataTransfer();
     
     if (erroresCriticos) {
         e.preventDefault();
@@ -1124,15 +1637,17 @@ document.getElementById('productoForm').addEventListener('submit', function(e) {
 // ==================== INICIALIZACIÓN ====================
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar cálculo de volumen
-    calcularVolumen();
+    // Configurar botón de confirmación del modal
+    document.getElementById('confirmDeleteBtn').addEventListener('click', confirmarEliminacion);
     
-    // Event listeners para calcular automáticamente
-    ['dPeso', 'dLargo_cm', 'dAncho_cm', 'dAlto_cm'].forEach(id => {
-        const input = document.getElementById(id);
-        if (input) {
-            input.addEventListener('input', calcularVolumen);
-        }
+    // Configurar botones de eliminar imágenes existentes para usar el modal
+    document.querySelectorAll('.delete-existing-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const imageName = this.getAttribute('data-image-name');
+            const imageUrl = this.getAttribute('data-image-url');
+            mostrarConfirmacionEliminarExistente(imageName, imageUrl);
+        });
     });
     
     // Limpiar errores al escribir
@@ -1144,8 +1659,50 @@ document.addEventListener('DOMContentLoaded', function() {
             if (errorFeedback && errorFeedback.classList.contains('invalid-feedback')) {
                 errorFeedback.remove();
             }
+            
+            // Si es precio de venta, validar precio de oferta
+            if (this.id === 'dPrecio_venta') {
+                validarPrecioOferta();
+            }
         });
     });
+    
+    // Inicializar contador de imágenes
+    actualizarContadorImagenes();
+    
+    // Inicializar toggle de oferta
+    toggleOfertaForm();
+    
+    // Event listeners para validar precio de oferta en tiempo real
+    const precioVentaInput = document.getElementById('dPrecio_venta');
+    const precioOfertaInput = document.getElementById('dPrecio_oferta');
+    const tieneOfertaCheckbox = document.getElementById('bTiene_oferta');
+    
+    if (precioVentaInput && precioOfertaInput && tieneOfertaCheckbox) {
+        precioVentaInput.addEventListener('input', validarPrecioOferta);
+        precioOfertaInput.addEventListener('input', validarPrecioOferta);
+        tieneOfertaCheckbox.addEventListener('change', validarPrecioOferta);
+    }
+    
+    // Event listeners para validar fechas de oferta
+    const fechaInicio = document.getElementById('dFecha_inicio_oferta');
+    const fechaFin = document.getElementById('dFecha_fin_oferta');
+    
+    if (fechaInicio) {
+        fechaInicio.addEventListener('change', function() {
+            if (fechaFin.value && new Date(fechaFin.value) < new Date(this.value)) {
+                fechaFin.value = this.value;
+            }
+            validarFechasOferta();
+        });
+    }
+    
+    if (fechaFin) {
+        fechaFin.addEventListener('change', validarFechasOferta);
+    }
+    
+    // **IMPORTANTE: NO se establece fecha mínima para permitir fechas pasadas**
+    // Esto permite mantener las fechas originales de la oferta
 });
 </script>
 
@@ -1179,6 +1736,17 @@ document.addEventListener('DOMContentLoaded', function() {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
+/* Estilos para botones de eliminar */
+.btn-danger.btn-sm {
+    transition: all 0.3s ease;
+}
+
+.btn-danger.btn-sm:hover {
+    transform: scale(1.1);
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
 /* Estilos para errores */
 .precio-error {
     margin-top: 5px;
@@ -1200,7 +1768,8 @@ input[name="dPrecio_compra"],
 input[name="dPeso"],
 input[name="dLargo_cm"],
 input[name="dAncho_cm"],
-input[name="dAlto_cm"] {
+input[name="dAlto_cm"],
+input[name="dPrecio_oferta"] {
     font-family: 'Courier New', monospace;
     font-size: 1.1em;
     letter-spacing: 0.5px;
@@ -1212,21 +1781,23 @@ input[name="dAlto_cm"] {
     border: 1px solid #ced4da;
 }
 
-#volumen-info {
-    background: rgba(0,0,0,0.03);
-    padding: 10px;
-    border-radius: 5px;
-    border-left: 4px solid #17a2b8;
+/* Estilos para sección de oferta */
+#oferta-form {
+    transition: all 0.3s ease;
 }
 
-#volumen-info div {
-    margin-bottom: 5px;
-    font-family: 'Courier New', monospace;
+.card-header.bg-danger {
+    background: linear-gradient(135deg, #dc3545, #c82333);
 }
 
-#volumen-info span {
-    font-weight: bold;
-    color: #17a2b8;
+/* Animaciones para imágenes eliminadas */
+@keyframes fadeOut {
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0; transform: scale(0.95); }
+}
+
+.image-item.eliminando {
+    animation: fadeOut 0.3s ease forwards;
 }
 
 /* Responsive */
@@ -1240,6 +1811,26 @@ input[name="dAlto_cm"] {
     .card-img-top {
         height: 130px !important;
     }
+}
+
+/* Estilos para imágenes marcadas para eliminar */
+[id^="image-container-"] {
+    transition: all 0.3s ease;
+}
+
+/* Estilos para el badge de imágenes */
+.badge {
+    font-size: 12px;
+    padding: 4px 8px;
+}
+
+/* Estilos para el modal de confirmación */
+#confirmDeleteModal .modal-header {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+}
+
+#confirmDeleteModal .modal-body {
+    padding: 25px;
 }
 </style>
 @endsection

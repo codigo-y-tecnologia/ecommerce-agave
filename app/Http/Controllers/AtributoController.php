@@ -8,12 +8,55 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
+
 class AtributoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $atributos = Atributo::withCount('valores')->orderBy('vNombre')->get();
-        return view('atributos.index', compact('atributos'));
+           $query = Atributo::withCount('valores');
+    
+    // Búsqueda por ID o nombre - NUEVO
+    if ($request->has('search') && !empty($request->search)) {
+        $searchTerm = $request->search;
+        $query->where(function($q) use ($searchTerm) {
+            $q->where('vNombre', 'LIKE', '%' . $searchTerm . '%')
+              ->orWhere('id_atributo', $searchTerm);
+        });
+    }
+    
+    // Ordenamiento - NUEVO (pero mantiene el orden por defecto que ya tenías)
+    if ($request->has('orden')) {
+        switch ($request->orden) {
+            case 'nombre':
+                $query->orderBy('vNombre', 'asc');
+                break;
+            case 'nombre_desc':
+                $query->orderBy('vNombre', 'desc');
+                break;
+            case 'id':
+                $query->orderBy('id_atributo', 'asc');
+                break;
+            case 'id_desc':
+                $query->orderBy('id_atributo', 'desc');
+                break;
+            case 'valores':
+                $query->orderBy('valores_count', 'desc');
+                break;
+            case 'valores_desc':
+                $query->orderBy('valores_count', 'asc');
+                break;
+            default:
+                $query->orderBy('vNombre'); // Mantiene el orden que ya tenías
+                break;
+        }
+    } else {
+        $query->orderBy('vNombre'); // Orden por defecto original
+    }
+    
+    $atributos = $query->get(); // Mantiene el get() original
+    
+    return view('atributos.index', compact('atributos'));
+
     }
 
     public function create()

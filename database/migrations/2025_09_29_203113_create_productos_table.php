@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('tbl_productos', function (Blueprint $table) {
-           $table->id('id_producto');
+            $table->id('id_producto');
             $table->string('vCodigo_barras', 20)->unique();
             $table->string('vNombre', 100);
             $table->text('tDescripcion_corta')->nullable();
@@ -23,14 +23,23 @@ return new class extends Migration
             $table->foreignId('id_marca')->nullable()->constrained('tbl_marcas')->onDelete('set null');
             $table->foreignId('id_categoria')->nullable()->constrained('tbl_categorias')->onDelete('set null');
             $table->boolean('bActivo')->default(true);
-
-            $table->decimal('dPeso', 8, 2)->nullable()->comment('Peso en kilogramos');
+            
+            $table->decimal('dPeso', 8, 3)->nullable()->comment('Peso en kilogramos (3 decimales)');
             $table->decimal('dLargo_cm', 6, 2)->nullable()->comment('Largo en centímetros');
             $table->decimal('dAncho_cm', 6, 2)->nullable()->comment('Ancho en centímetros');
             $table->decimal('dAlto_cm', 6, 2)->nullable()->comment('Alto en centímetros');
             $table->string('vClase_envio', 50)->nullable()->comment('Clase de envío: estandar, express, fragil, grandes_dimensiones');
             
-            $table->timestamps();
+            // Campos de oferta
+            $table->boolean('bTiene_oferta')->default(false);
+            $table->decimal('dPrecio_oferta', 10, 2)->nullable();
+            $table->date('dFecha_inicio_oferta')->nullable();
+            $table->date('dFecha_fin_oferta')->nullable();
+            $table->string('vMotivo_oferta', 255)->nullable();
+            
+            // Campos de fecha
+            $table->timestamp('tFecha_registro')->useCurrent();
+            $table->timestamp('tFecha_actualizacion')->useCurrent()->onUpdate(DB::raw('CURRENT_TIMESTAMP'));
         });
     }
 
