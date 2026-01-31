@@ -126,66 +126,42 @@ class CheckoutController extends Controller
     public function store(Request $request)
     {
 
-        $carrito = CarritoHelper::carritoCheckout();
+        DB::beginTransaction();
 
-        if (!$carrito || $carrito->detalles->isEmpty()) {
-            throw new Exception('El carrito está vacío.');
-        }
+        try {
 
-        $usuario = Auth::user();
+            $usuario = Auth::user();
+            $guestToken = session('guest_token');
 
-        if ($usuario) {
-            $request->validate([
-                'id_direccion' => 'required|exists:tbl_direcciones,id_direccion'
-            ]);
-        } else {
-            $request->validate([
-                'id_direccion' => 'required|exists:tbl_direcciones_guest,id_direccion_guest'
-            ]);
-        }
+            // 🛒 Carrito (guest o user)
+            $carrito = CarritoHelper::carritoCheckout();
 
-        $idDireccion = $request->id_direccion;
-
-        DB::transaction(function () use ($usuario, $idDireccion) {
-            $carrito = Carrito::where('id_usuario', $usuario->id_usuario)
-                ->where('eEstado', 'activo')
-                ->with(['detalles.producto.impuestos'])
-                ->firstOrFail();
-
-            [$subtotal, $totalImpuestos, $total] = $this->calcularTotales($carrito);
-
-            $descuento = 0;
-            $codigoCupon = session('codigo_cupon');
-            $cupon = null;
-
-            if ($codigoCupon) {
-                $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])
-                    ->where('bActivo', 1)
-                    ->first();
-                if ($cupon) {
-                    $descuento = $cupon->eTipo === 'porcentaje'
-                        ? $total * ($cupon->dDescuento / 100)
-                        : $cupon->dDescuento;
-                }
+            if (!$carrito || $carrito->detalles->isEmpty()) {
+                throw new Exception('El carrito está vacío.');
             }
 
-            $totalFinal = max(0, $total - $descuento);
+            // 🧮 Totales
+            [$subtotal, $totalImpuestos, $total] = $this->calcularTotales($carrito);
 
             // Definir reglas de envío
             $montoEnvioGratis = 1500; // Envío gratis si el total >= 1500
             $costoEnvioFijo = 150;   // Costo de envío si no alcanza
             $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
 
-            // === Aplicar cupón ===
+            // 🎟️ Cupón
+            $codigoCupon = session('codigo_cupon');
             $descuento = 0;
+            $cupon = null;
 
-            if (!empty($codigoCupon) && isset($cupon)) {
-                if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
-                    // Cupón especial: solo elimina el costo de envío
-                    $envio = 0;
-                } else {
-                    // Cupones normales (porcentaje o monto)
-                    if ($cupon->eTipo === 'porcentaje') {
+            if ($codigoCupon) {
+                $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])
+                    ->where('bActivo', 1)
+                    ->first();
+
+                if ($cupon) {
+                    if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
+                        $envio = 0;
+                    } elseif ($cupon->eTipo === 'porcentaje') {
                         $descuento = $total * ($cupon->dDescuento / 100);
                     } elseif ($cupon->eTipo === 'monto') {
                         $descuento = $cupon->dDescuento;
@@ -193,11 +169,19 @@ class CheckoutController extends Controller
                 }
             }
 
-            // Recalcular total final
             $totalFinal = max(0, $total - $descuento + $envio);
 
-            if ($totalFinal <= 0) {
-                throw new Exception('El total del pedido no puede ser cero o negativo.');
+            // 📍 DIRECCIONES
+            if ($usuario) {
+                $direccionEnvio = Direccion::findOrFail($request->id_direccion_envio);
+                $direccionFacturacion = $request->id_direccion_facturacion
+                    ? Direccion::findOrFail($request->id_direccion_facturacion)
+                    : $direccionEnvio;
+            } else {
+                $direccionEnvio = DireccionGuest::findOrFail($request->id_direccion_envio);
+                $direccionFacturacion = $request->id_direccion_facturacion
+                    ? DireccionGuest::findOrFail($request->id_direccion_facturacion)
+                    : $direccionEnvio;
             }
 
             // VALIDACIÓN DE STOCK FINAL ANTES DE CREAR EL PEDIDO
@@ -216,27 +200,76 @@ class CheckoutController extends Controller
             // Crear el pedido
             $pedido = Pedido::create([
                 'id_usuario' => $usuario?->id_usuario,
-                'vEmail_invitado' => $usuario ? null : $carrito->vEmail_invitado,
-                'id_direccion' => $idDireccion,
-                'eEstado' => 'pendiente',
+                'vGuest_token' => $usuario ? null : $guestToken,
+
+                'vNombre' => $direccionEnvio->vNombre ?? $usuario->vNombre,
+                'vApaterno' => $direccionEnvio->vApaterno ?? null,
+                'vAmaterno' => $direccionEnvio->vAmaterno ?? null,
+                'vEmail' => $usuario?->email ?? $request->email,
+
+                // ENVÍO
+                'env_telefono_contacto' => $direccionEnvio->vTelefono_contacto,
+                'env_calle' => $direccionEnvio->vCalle,
+                'env_numero_exterior' => $direccionEnvio->vNumero_exterior,
+                'env_numero_interior' => $direccionEnvio->vNumero_interior,
+                'env_colonia' => $direccionEnvio->vColonia,
+                'env_codigo_postal' => $direccionEnvio->vCodigo_postal,
+                'env_ciudad' => $direccionEnvio->vCiudad,
+                'env_estado' => $direccionEnvio->vEstado,
+                'env_entre_calle_1' => $direccionEnvio->vEntre_calle_1,
+                'env_entre_calle_2' => $direccionEnvio->vEntre_calle_2,
+                'env_referencias' => $direccionEnvio->tReferencias,
+
+                // FACTURACIÓN
+                'fac_telefono_contacto' => $direccionFacturacion->vTelefono_contacto,
+                'fac_calle' => $direccionFacturacion->vCalle,
+                'fac_numero_exterior' => $direccionFacturacion->vNumero_exterior,
+                'fac_numero_interior' => $direccionFacturacion->vNumero_interior,
+                'fac_colonia' => $direccionFacturacion->vColonia,
+                'fac_codigo_postal' => $direccionFacturacion->vCodigo_postal,
+                'fac_ciudad' => $direccionFacturacion->vCiudad,
+                'fac_estado' => $direccionFacturacion->vEstado,
+                'fac_entre_calle_1' => $direccionFacturacion->vEntre_calle_1,
+                'fac_entre_calle_2' => $direccionFacturacion->vEntre_calle_2,
+                'fac_referencias' => $direccionFacturacion->tReferencias,
+
+                'vRFC' => $direccionFacturacion->vRFC ?? null,
                 'dTotal' => $totalFinal,
-                'tFecha_pedido' => now(),
-                'vGuest_token'      => $usuario ? null : session('guest_token'),
+                'eEstado' => 'pendiente',
             ]);
 
+            // 📦 DETALLES
             foreach ($carrito->detalles as $detalle) {
                 PedidoDetalle::create([
                     'id_pedido' => $pedido->id_pedido,
                     'id_producto' => $detalle->id_producto,
-                    'iCantidad' => $detalle->cantidad,
-                    'dPrecio_unitario' => $detalle->precio_unitario,
+                    'iCantidad' => $detalle->iCantidad,
+                    'dPrecio_unitario' => $detalle->dPrecio_unitario,
                 ]);
             }
-        });
 
-        session()->forget('codigo_cupon');
+            // 🎟️ REGISTRAR USO DE CUPÓN
+            if ($cupon) {
+                CuponUso::create([
+                    'id_cupon' => $cupon->id_cupon,
+                    'id_venta' => '2',
+                ]);
+            }
 
-        return redirect()->route('home')->with('success', '✅ Pedido confirmado correctamente.');
+            // 🧹 LIMPIAR CARRITO
+            $carrito->detalles()->delete();
+            $carrito->delete();
+
+            session()->forget('codigo_cupon');
+
+            DB::commit();
+
+            return redirect()->route('home')->with('success', '✅ Pedido confirmado correctamente.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return back()->with('error', 'Error al procesar el pedido: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -538,76 +571,99 @@ class CheckoutController extends Controller
 
     public function aplicarCupon(Request $request)
     {
-        $codigo = $request->codigo;
-        $usuario = Auth::user();
 
-        $carrito = Carrito::where('id_usuario', $usuario->id_usuario)
-            ->where('eEstado', 'activo')
-            ->with(['detalles.producto.impuestos'])
-            ->first();
+        try {
 
-        if (!$carrito) {
-            return response()->json(['success' => false, 'message' => 'Carrito vacío.']);
-        }
+            $request->validate([
+                'codigo' => 'required|string|max:50'
+            ]);
 
-        [$subtotal, $totalImpuestos, $total] = $this->calcularTotales($carrito);
+            $codigo = $request->codigo;
+            $usuario = Auth::user();
 
-        $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigo])
-            ->where('bActivo', 1)
-            ->whereDate('dValido_desde', '<=', now())
-            ->whereDate('dValido_hasta', '>=', now())
-            ->first();
+            $carrito = CarritoHelper::carritoCheckout();
 
-        if (!$cupon) {
-            return response()->json(['success' => false, 'message' => 'Cupón inválido o expirado.']);
-        }
+            if (!$carrito || $carrito->detalles->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Carrito vacío.'
+                ]);
+            }
 
-        // Validar uso máximo
-        $usosActuales = CuponUso::where('id_cupon', $cupon->id_cupon)->count();
+            [$subtotal, $totalImpuestos, $total] = $this->calcularTotales($carrito);
 
-        if ($usosActuales >= $cupon->iUso_maximo) {
+            $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigo])
+                ->where('bActivo', 1)
+                ->whereDate('dValido_desde', '<=', now())
+                ->whereDate('dValido_hasta', '>=', now())
+                ->first();
+
+            if (!$cupon) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cupón inválido o expirado.'
+                ]);
+            }
+
+            // Validar uso máximo
+            $usosActuales = CuponUso::where('id_cupon', $cupon->id_cupon)->count();
+
+            if ($usosActuales >= $cupon->iUso_maximo) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Este cupón ya alcanzó su límite de usos.'
+                ]);
+            }
+
+            // 🚚 Cálculo de envío
+            $montoEnvioGratis = 1500;
+            $costoEnvioFijo = 150;
+            $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
+
+            // 💸 Cálculo de descuento
+            $descuento = 0;
+            $mensaje = "Cupón aplicado correctamente: {$cupon->vCodigo_cupon}";
+
+            if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
+                // Solo quitar el envío
+                $envio = 0;
+                $mensaje .= " — Envío gratis activado 🚚";
+            } else {
+                if ($cupon->eTipo === 'porcentaje') {
+                    $descuento = $total * ($cupon->dDescuento / 100);
+                } elseif ($cupon->eTipo === 'monto') {
+                    $descuento = $cupon->dDescuento;
+                }
+                $mensaje .= " — Descuento: $" . number_format($descuento, 2, '.', ',');
+            }
+
+            // 🧮 Recalcular total
+            $totalFinal = max(0, $total - $descuento + $envio);
+
+            // 🔹 Guardar el cupón en la sesión (guest o user)
+            session(['codigo_cupon' => $codigo]);
+
+            return response()->json([
+                'success' => true,
+                'codigo' => $cupon->vCodigo_cupon,
+                'descuento' => $descuento,
+                'envio' => $envio,
+                'totalFinal' => $totalFinal,
+                'message' => $mensaje
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Este cupón ya alcanzó su límite de usos.'
-            ]);
+                'message' => 'Datos inválidos',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al aplicar el cupón',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        // 🚚 Cálculo de envío
-        $montoEnvioGratis = 1500;
-        $costoEnvioFijo = 150;
-        $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
-
-        // 💸 Cálculo de descuento
-        $descuento = 0;
-        $mensaje = "Cupón aplicado correctamente: {$cupon->vCodigo_cupon}";
-
-        if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
-            // Solo quitar el envío
-            $envio = 0;
-            $mensaje .= " — Envío gratis activado 🚚";
-        } else {
-            if ($cupon->eTipo === 'porcentaje') {
-                $descuento = $total * ($cupon->dDescuento / 100);
-            } elseif ($cupon->eTipo === 'monto') {
-                $descuento = $cupon->dDescuento;
-            }
-            $mensaje .= " — Descuento: $" . number_format($descuento, 2, '.', ',');
-        }
-
-        // 🧮 Recalcular total
-        $totalFinal = max(0, $total - $descuento + $envio);
-
-        // 🔹 Guardar el cupón en la sesión
-        session(['codigo_cupon' => $codigo]);
-
-        return response()->json([
-            'success' => true,
-            'codigo' => $cupon->vCodigo_cupon,
-            'descuento' => $descuento,
-            'envio' => $envio,
-            'totalFinal' => $totalFinal,
-            'message' => $mensaje
-        ]);
     }
 
     /**

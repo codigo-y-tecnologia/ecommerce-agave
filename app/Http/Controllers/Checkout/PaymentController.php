@@ -617,9 +617,14 @@ class PaymentController extends Controller
             'id_usuario' => $userId,
             'id_direccion' => $idDireccion,
             'id_direccion_facturacion' => $idDireccionFact,
+            //'vNombre' => 'Alex', // Borrar (es solo de prueba)
             'eEstado' => 'pagado',
             'dTotal' => $totalFinal,
             'tNota' => $notaPedido,
+            //'vApaterno' => 'Lopez', // Borrar (es solo de prueba)
+            //'vEmail' => 'alex@ejemplo.com', // Borrar (es solo de prueba)
+            //'env_telefono_contacto' => '5551234567', // Borrar (es solo de prueba)
+            //'fac_telefono_contacto' => '5551234567', // Borrar (es solo de prueba)
         ]);
 
         foreach ($carrito->detalles as $detalle) {
