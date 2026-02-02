@@ -10,12 +10,15 @@ use Exception;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use App\Helpers\CarritoHelper;
 
 use App\Models\{
+    Usuario,
     Carrito,
     Pedido,
     PedidoDetalle,
     Direccion,
+    DireccionGuest,
     Cupon,
     CuponUso,
     Pago,
@@ -44,6 +47,16 @@ class PaymentController extends Controller
         try {
             $user = Auth::user();
 
+            // VALIDAR EMAIL (INVITADO)
+            if ($user) {
+                if (!$request->email_invitado) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Debes ingresar un correo para continuar.'
+                    ], 400);
+                }
+            }
+
             // VALIDAR DIRECCION
             if (!$request->id_direccion) {
                 return response()->json([
@@ -66,17 +79,15 @@ class PaymentController extends Controller
             // Guardar en sesión
             session([
                 'id_direccion' => $request->id_direccion,
+                'email_invitado' => $request->email_invitado ?? null,
                 'id_direccion_facturacion' => $usarMisma
                     ? $request->id_direccion
                     : $request->id_direccion_facturacion,
                 'nota_pedido' => $request->nota ?? null
             ]);
 
-            // Cargar carrito
-            $carrito = Carrito::where('id_usuario', $user->id_usuario)
-                ->where('eEstado', 'activo')
-                ->with(['detalles.producto.impuestos'])
-                ->first();
+            // Cargar carrito (usuario invitado y logueado)
+            $carrito = CarritoHelper::carritoCheckout();
 
             if (!$carrito || $carrito->detalles->isEmpty()) {
                 return response()->json([
@@ -141,9 +152,11 @@ class PaymentController extends Controller
 
             // Metadata COMPLETA
             $metadata = [
-                'user_id' => $user->id_usuario,
+                'user_id' => Auth::check() ? Auth::id() : null,
+                'guest_token'  => session('guest_token'),
                 'carrito_id' => $carrito->id_carrito,
                 'id_direccion' => $request->id_direccion,
+                'email_invitado' => session('email_invitado') ?? null,
                 'id_direccion_facturacion' => session('id_direccion_facturacion'),
                 'nota_pedido' => session('nota_pedido') ?? '',
                 'codigo_cupon' => $codigoCupon ?? ''
@@ -239,6 +252,8 @@ class PaymentController extends Controller
 
                     DB::transaction(function () use ($session, $metadata, $reference) {
                         $userId = $metadata->user_id ?? null;
+                        $guestToken = $metadata->guest_token ?? null;
+                        $emailGuest = $metadata->email_invitado ?? null;
                         $carritoId = $metadata->carrito_id ?? null;
                         $codigoCupon = $metadata->codigo_cupon ?? null;
                         $idDireccion = $metadata->id_direccion ?? null;
@@ -266,6 +281,8 @@ class PaymentController extends Controller
 
                         $this->finalizeOrderFromCart(
                             $userId,
+                            $guestToken,
+                            $emailGuest,
                             $carritoId,
                             'stripe',
                             $reference,
@@ -551,10 +568,12 @@ class PaymentController extends Controller
         }
     }
 
-    private function finalizeOrderFromCart($userId, $carritoId, $method, $reference, $codigoCupon = null, $idDireccion = null, $idDireccionFact = null, $notaPedido = null, $sessionId = null)
+    private function finalizeOrderFromCart($userId, $guestToken, $emailGuest, $carritoId, $method, $reference, $codigoCupon = null, $idDireccion = null, $idDireccionFact = null, $notaPedido = null, $sessionId = null)
     {
         Log::info('Iniciando finalizeOrderFromCart', [
             'userId' => $userId,
+            'guestToken' => $guestToken,
+            'emailGuest' => $emailGuest,
             'carritoId' => $carritoId,
             'method' => $method,
             'reference' => $reference,
@@ -566,10 +585,21 @@ class PaymentController extends Controller
 
         // Buscar usuario y carrito
         $carrito = Carrito::where('id_carrito', $carritoId)
+            ->where(function ($q) use ($userId, $guestToken) {
+                if ($userId) {
+                    $q->where('id_usuario', $userId);
+                } else {
+                    $q->where('vGuest_token', $guestToken);
+                }
+            })
+            ->where('eEstado', 'activo')
             ->with(['detalles.producto.impuestos'])
             ->firstOrFail();
+        // $carrito = Carrito::where('id_carrito', $carritoId)
+        //     ->with(['detalles.producto.impuestos'])
+        //     ->firstOrFail();
 
-        $userId = $userId ?? $carrito->id_usuario;
+        //$userId = $userId ?? $carrito->id_usuario;
 
         // REVALIDAR STOCK ANTES DE CREAR PEDIDO (defensa en profundidad)
         $this->validateCartStock($carrito);
@@ -612,19 +642,69 @@ class PaymentController extends Controller
 
         $totalFinal = max(0, $total - $descuento + $envio);
 
+        if ($userId) {
+            $usuario = Usuario::findOrFail($userId);
+
+            $nombre    = $usuario->vNombre;
+            $apaterno  = $usuario->vApaterno;
+            $amaterno  = $usuario->vAmaterno;
+            $email     = $usuario->vEmail;
+
+            $direccionEnvio = Direccion::where('id_direccion', $idDireccion)
+                ->where('id_usuario', $userId)
+                ->firstOrFail();
+
+            $telefonoEnvio = $direccionEnvio->vTelefono_contacto;
+            $rfc = $direccionEnvio->vRFC;
+            $calleEnvio = $direccionEnvio->vCalle;
+            $numeroExteriorEnvio = $direccionEnvio->vNumero_exterior;
+            $numeroInteriorEnvio = $direccionEnvio->vNumero_interior;
+            $coloniaEnvio = $direccionEnvio->vColonia;
+            $codigoPostalEnvio = $direccionEnvio->vCodigo_postal;
+            $ciudadEnvio = $direccionEnvio->vCiudad;
+            $estadoEnvio = $direccionEnvio->vEstado;
+            $entreCalleUnoEnvio = $direccionEnvio->vEntre_calle_1;
+            $entreCalleDosEnvio = $direccionEnvio->vEntre_calle_2;
+            $referenciasEnvio = $direccionEnvio->tReferencias;
+        } else {
+            $email = $emailGuest;
+
+            $direccionEnvio = DireccionGuest::where('id_direccion_guest', $idDireccion)
+                ->where('vGuest_token', $guestToken)
+                ->firstOrFail();
+
+            $nombre    = $direccionEnvio->vNombre;
+            $apaterno  = $direccionEnvio->vApaterno;
+            $amaterno  = $direccionEnvio->vAmaterno;
+            $rfc = $direccionEnvio->vRFC;
+        }
+
+        if ($idDireccionFact) {
+            if ($userId) {
+                $direccionFact = Direccion::where('id_direccion', $idDireccionFact)
+                    ->where('id_usuario', $userId)
+                    ->first();
+            } else {
+                $direccionFact = DireccionGuest::where('id_direccion_guest', $idDireccionFact)
+                    ->where('vGuest_token', $guestToken)
+                    ->first();
+            }
+        }
+
         // Crear pedido
         $pedido = Pedido::create([
             'id_usuario' => $userId,
             'id_direccion' => $idDireccion,
             'id_direccion_facturacion' => $idDireccionFact,
-            //'vNombre' => 'Alex', // Borrar (es solo de prueba)
+            'vNombre' => $nombre,
             'eEstado' => 'pagado',
             'dTotal' => $totalFinal,
             'tNota' => $notaPedido,
-            //'vApaterno' => 'Lopez', // Borrar (es solo de prueba)
-            //'vEmail' => 'alex@ejemplo.com', // Borrar (es solo de prueba)
-            //'env_telefono_contacto' => '5551234567', // Borrar (es solo de prueba)
-            //'fac_telefono_contacto' => '5551234567', // Borrar (es solo de prueba)
+            'vApaterno' => $apaterno,
+            'vAmaterno' => $amaterno,
+            'vEmail' => $email,
+            'env_telefono_contacto' => '5551234567', // Borrar (es solo de prueba)
+            'fac_telefono_contacto' => '5551234567', // Borrar (es solo de prueba)
         ]);
 
         foreach ($carrito->detalles as $detalle) {

@@ -692,6 +692,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // VALIDAR EMAIL
+    function validarEmail() {
+        const emailInvitado = document.getElementById('vEmail')?.value.trim() ?? null;
+        if (!emailInvitado) {
+        Swal.fire('Correo requerido', 'Ingresa tu correo para continuar', 'warning');
+        return false;
+    }
+        return true;
+    }
+
     // =========================================
     // 5. VALIDACIÓN DE DIRECCIÓN MEJORADA
     // =========================================
@@ -742,6 +752,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        if (!validarEmail()) {
+            return;
+        }
+
         // Validar dirección de facturación
     const usarMisma = document.getElementById('misma_direccion_facturacion').checked;
     const selectFact = document.getElementById('id_direccion_facturacion');
@@ -771,7 +785,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const nota = document.getElementById('agregar_nota').checked 
     ? document.getElementById('nota_pedido').value 
     : null;
-
 
         try {
             const res = await fetch("{{ route('payment.stripe.session') }}", {
@@ -806,6 +819,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================
     // 7. PAYPAL
     // =========================================
+    
     if (typeof paypal !== 'undefined') {
         paypal.Buttons({
             onClick: function(data, actions) {
@@ -868,7 +882,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         window.location.href = json.redirect_url;
                     } else {
                         window.location.href = window.checkoutErrorUrl + 
-        '?msg=' + encodeURIComponent(res.message ?? 'No se pudo completar el pago con PayPal.');
+        '?msg=' + encodeURIComponent(json.message ?? 'No se pudo completar el pago con PayPal.');
                     }
                 });
             },
