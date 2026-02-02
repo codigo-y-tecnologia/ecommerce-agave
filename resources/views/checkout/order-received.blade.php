@@ -19,6 +19,9 @@
             <p><strong>Fecha:</strong> {{ $pedido->tFecha_pedido->format('d/m/Y H:i') }}</p>
             <p><strong>Método de pago:</strong> {{ strtoupper($payment_method) }}</p>
             <p><strong>Total:</strong>${{ number_format($totalFinal, 2) }}</p>
+            @if ($pedido->tNota)
+                <p><strong>Nota:</strong>{{ $pedido->tNota }}</p>
+            @endif
         </div>
     </div>
 
@@ -29,21 +32,48 @@
         <div class="card-body">
             <h4 class="fw-bold mb-3">Datos del cliente</h4>
 
-            <p><strong>Nombre:</strong> {{ $pedido->usuario->vNombre }} {{ $pedido->usuario->vApellido }}</p>
-            <p><strong>Correo:</strong> {{ $pedido->usuario->vEmail }}</p>
+            <p><strong>Nombre:</strong> {{ $pedido->vNombre }} {{ $pedido->vApaterno }} {{ $pedido->vAmaterno }}</p>
+            <p><strong>Correo:</strong> {{ $pedido->vEmail }}</p>
 
             <h5 class="fw-bold mt-4 mb-2">Dirección de envío</h5>
             <p>
-                {{ $direccion->vCalle }} {{ $direccion->vNumero_exterior }}
-                @if ($direccion->vNumero_interior)
-                    Int. {{ $direccion->vNumero_interior }}<br>
+                {{ $pedido->env_calle }} {{ $pedido->env_numero_exterior }}
+                @if ($pedido->env_numero_interior)
+                    Int. {{ $pedido->env_numero_interior }}
                 @endif
-                {{ $direccion->vColonia }}, {{ $direccion->vCiudad }}, {{ $direccion->vEstado }}<br>
-                CP {{ $direccion->vCodigo_postal }}<br>
-                <strong>Tel:</strong> {{ $direccion->vTelefono_contacto }}
+                <br>
+                {{ $pedido->env_colonia }}, {{ $pedido->env_ciudad }}, {{ $pedido->env_estado }}<br>
+                CP {{ $pedido->env_codigo_postal }}<br>
+                <strong>Tel:</strong> {{ $pedido->env_telefono_contacto }}
             </p>
         </div>
     </div>
+
+    @if($pedido->vRFC)
+    <div class="card mb-4">
+        <div class="card-body">
+            <h4 class="fw-bold mb-3">Datos de facturación</h4>
+
+            <p><strong>RFC:</strong> {{ $pedido->vRFC }}</p>
+
+            <p>
+                {{ $pedido->fac_calle }} {{ $pedido->fac_numero_exterior }}
+                @if($pedido->fac_numero_interior)
+                    Int. {{ $pedido->fac_numero_interior }}
+                @endif
+                <br>
+
+                {{ $pedido->fac_colonia }},
+                {{ $pedido->fac_ciudad }},
+                {{ $pedido->fac_estado }}<br>
+
+                CP {{ $pedido->fac_codigo_postal }}<br>
+
+                <strong>Tel:</strong> {{ $pedido->fac_telefono_contacto }}
+            </p>
+        </div>
+    </div>
+@endif
 
     <!-- ======================= -->
     <!-- PRODUCTOS -->

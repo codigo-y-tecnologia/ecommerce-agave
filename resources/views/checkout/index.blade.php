@@ -692,16 +692,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // VALIDAR EMAIL
-    function validarEmail() {
-        const emailInvitado = document.getElementById('vEmail')?.value.trim() ?? null;
-        if (!emailInvitado) {
-        Swal.fire('Correo requerido', 'Ingresa tu correo para continuar', 'warning');
-        return false;
-    }
-        return true;
-    }
-
     // =========================================
     // 5. VALIDACIÓN DE DIRECCIÓN MEJORADA
     // =========================================
@@ -752,9 +742,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (!validarEmail()) {
-            return;
-        }
+        // Validar email
+        if (document.getElementById('vEmail')) {
+    const email = document.getElementById('vEmail').value.trim();
+    if (!email) {
+        Swal.fire('Correo requerido', 'Ingresa tu correo para continuar', 'warning');
+        return;
+    }
+}
 
         // Validar dirección de facturación
     const usarMisma = document.getElementById('misma_direccion_facturacion').checked;

@@ -23,7 +23,8 @@ use App\Models\{
     CuponUso,
     Pago,
     Venta,
-    DetalleVenta
+    DetalleVenta,
+    Envio
 };
 
 use Stripe\Stripe;
@@ -48,7 +49,7 @@ class PaymentController extends Controller
             $user = Auth::user();
 
             // VALIDAR EMAIL (INVITADO)
-            if ($user) {
+            if (!$user) {
                 if (!$request->email_invitado) {
                     return response()->json([
                         'success' => false,
@@ -676,7 +677,18 @@ class PaymentController extends Controller
             $nombre    = $direccionEnvio->vNombre;
             $apaterno  = $direccionEnvio->vApaterno;
             $amaterno  = $direccionEnvio->vAmaterno;
+            $telefonoEnvio = $direccionEnvio->vTelefono_contacto;
             $rfc = $direccionEnvio->vRFC;
+            $calleEnvio = $direccionEnvio->vCalle;
+            $numeroExteriorEnvio = $direccionEnvio->vNumero_exterior;
+            $numeroInteriorEnvio = $direccionEnvio->vNumero_interior;
+            $coloniaEnvio = $direccionEnvio->vColonia;
+            $codigoPostalEnvio = $direccionEnvio->vCodigo_postal;
+            $ciudadEnvio = $direccionEnvio->vCiudad;
+            $estadoEnvio = $direccionEnvio->vEstado;
+            $entreCalleUnoEnvio = $direccionEnvio->vEntre_calle_1;
+            $entreCalleDosEnvio = $direccionEnvio->vEntre_calle_2;
+            $referenciasEnvio = $direccionEnvio->tReferencias;
         }
 
         if ($idDireccionFact) {
@@ -684,10 +696,36 @@ class PaymentController extends Controller
                 $direccionFact = Direccion::where('id_direccion', $idDireccionFact)
                     ->where('id_usuario', $userId)
                     ->first();
+
+                $telefonoFacturacion = $direccionFact->vTelefono_contacto;
+                $rfc = $direccionFact->vRFC;
+                $calleFacturacion = $direccionFact->vCalle;
+                $numeroExteriorFacturacion = $direccionFact->vNumero_exterior;
+                $numeroInteriorFacturacion = $direccionFact->vNumero_interior;
+                $coloniaFacturacion = $direccionFact->vColonia;
+                $codigoPostalFacturacion = $direccionFact->vCodigo_postal;
+                $ciudadFacturacion = $direccionFact->vCiudad;
+                $estadoFacturacion = $direccionFact->vEstado;
+                $entreCalleUnoFacturacion = $direccionFact->vEntre_calle_1;
+                $entreCalleDosFacturacion = $direccionFact->vEntre_calle_2;
+                $referenciasFacturacion = $direccionFact->tReferencias;
             } else {
                 $direccionFact = DireccionGuest::where('id_direccion_guest', $idDireccionFact)
                     ->where('vGuest_token', $guestToken)
                     ->first();
+
+                $telefonoFacturacion = $direccionFact->vTelefono_contacto;
+                $rfc = $direccionFact->vRFC;
+                $calleFacturacion = $direccionFact->vCalle;
+                $numeroExteriorFacturacion = $direccionFact->vNumero_exterior;
+                $numeroInteriorFacturacion = $direccionFact->vNumero_interior;
+                $coloniaFacturacion = $direccionFact->vColonia;
+                $codigoPostalFacturacion = $direccionFact->vCodigo_postal;
+                $ciudadFacturacion = $direccionFact->vCiudad;
+                $estadoFacturacion = $direccionFact->vEstado;
+                $entreCalleUnoFacturacion = $direccionFact->vEntre_calle_1;
+                $entreCalleDosFacturacion = $direccionFact->vEntre_calle_2;
+                $referenciasFacturacion = $direccionFact->tReferencias;
             }
         }
 
@@ -703,8 +741,30 @@ class PaymentController extends Controller
             'vApaterno' => $apaterno,
             'vAmaterno' => $amaterno,
             'vEmail' => $email,
-            'env_telefono_contacto' => '5551234567', // Borrar (es solo de prueba)
-            'fac_telefono_contacto' => '5551234567', // Borrar (es solo de prueba)
+            'env_telefono_contacto' => $telefonoEnvio,
+            'env_calle' => $calleEnvio,
+            'env_numero_exterior' => $numeroExteriorEnvio,
+            'env_numero_interior' => $numeroInteriorEnvio,
+            'env_colonia' => $coloniaEnvio,
+            'env_codigo_postal' => $codigoPostalEnvio,
+            'env_ciudad' => $ciudadEnvio,
+            'env_estado' => $estadoEnvio,
+            'env_entre_calle_1' => $entreCalleUnoEnvio,
+            'env_entre_calle_2' => $entreCalleDosEnvio,
+            'env_referencias' => $referenciasEnvio,
+            'fac_telefono_contacto' => $telefonoFacturacion,
+            'fac_calle' => $calleFacturacion,
+            'fac_numero_exterior' => $numeroExteriorFacturacion,
+            'fac_numero_interior' => $numeroInteriorFacturacion,
+            'fac_colonia' => $coloniaFacturacion,
+            'fac_codigo_postal' => $codigoPostalFacturacion,
+            'fac_ciudad' => $ciudadFacturacion,
+            'fac_estado' => $estadoFacturacion,
+            'fac_entre_calle_1' => $entreCalleUnoFacturacion,
+            'fac_entre_calle_2' => $entreCalleDosFacturacion,
+            'fac_referencias' => $referenciasFacturacion,
+            'vRFC' => $rfc,
+            'vGuest_token' => $guestToken
         ]);
 
         foreach ($carrito->detalles as $detalle) {
@@ -773,6 +833,12 @@ class PaymentController extends Controller
             'referencia' => $pago->vReferencia
         ]);
 
+        //Registrar envío
+        Envio::create([
+            'id_pedido' => $pedido->id_pedido,
+            'eEstado' => Envio::ESTADO_PENDIENTE,
+        ]);
+
         // Cupón uso
         if ($cupon) {
 
@@ -808,17 +874,23 @@ class PaymentController extends Controller
         session()->forget('nota_pedido');
 
         // Email cliente
-        Mail::to($pedido->usuario->vEmail)->send(
+        Mail::to($email)->send(
             new \App\Mail\PedidoRealizadoCliente($pedido, $subtotal, $envio, $descuento, $totalFinal, $cupon)
         );
 
         // Email admin
-        $adminEmail = \App\Models\Usuario::whereIn('eRol', ['admin', 'superadmin'])
-            ->value('vEmail');
+        $adminEmails = Usuario::role('admin')->pluck('vEmail');
 
-        if ($adminEmail) {
-            Mail::to($adminEmail)->send(
-                new \App\Mail\PedidoNuevoAdmin($pedido, $subtotal, $envio, $descuento, $totalFinal, $cupon)
+        if ($adminEmails->isNotEmpty()) {
+            Mail::to($adminEmails)->send(
+                new \App\Mail\PedidoNuevoAdmin(
+                    $pedido,
+                    $subtotal,
+                    $envio,
+                    $descuento,
+                    $totalFinal,
+                    $cupon
+                )
             );
         }
 

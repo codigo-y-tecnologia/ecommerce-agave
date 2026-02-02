@@ -11,9 +11,9 @@ class CheckoutSuccessController extends Controller
 {
     public function index(Request $request)
     {
-         $session_id = $request->query('session_id');
+        $session_id = $request->query('session_id');
 
-         Log::info('🎯 Llegó a checkout.success', [
+        Log::info('🎯 Llegó a checkout.success', [
             'session_id' => $session_id,
             'all_params' => $request->all()
         ]);
@@ -28,16 +28,16 @@ class CheckoutSuccessController extends Controller
 
         for ($i = 0; $i < 10; $i++) {
 
-        $pago = Pago::where('vSessionID', $session_id)->first();
+            $pago = Pago::where('vSessionID', $session_id)->first();
 
-        if ($pago) {
-            Log::info("✅ Pago encontrado después de $i segundo(s)", [
+            if ($pago) {
+                Log::info("✅ Pago encontrado después de $i segundo(s)", [
                     'pago_id' => $pago->id_pago,
                     'pedido_id' => $pago->id_pedido
                 ]);
-            break;
-        }
-        sleep(1);
+                break;
+            }
+            sleep(1);
         }
 
         if (!$pago) {

@@ -35,26 +35,6 @@ class PedidoNuevoAdmin extends Mailable
     }
 
     /**
-     * Get the message envelope.
-     */
-    // public function envelope(): Envelope
-    // {
-    //     return new Envelope(
-    //         subject: 'Pedido Nuevo Admin',
-    //     );
-    // }
-
-    /**
-     * Get the message content definition.
-     */
-    // public function content(): Content
-    // {
-    //     return new Content(
-    //         view: 'emails.pedido_admin',
-    //     );
-    // }
-
-    /**
      * Get the attachments for the message.
      *
      * @return array<int, \Illuminate\Mail\Mailables\Attachment>
@@ -65,9 +45,8 @@ class PedidoNuevoAdmin extends Mailable
     }
 
     public function build()
-{
-    return $this->subject('Nuevo pedido recibido #' . $this->pedido->id_pedido)
-        ->view('emails.pedido_admin');
-}
-
+    {
+        return $this->subject('Nuevo pedido recibido #' . $this->pedido->id_pedido)
+            ->view('emails.pedido_admin');
+    }
 }
