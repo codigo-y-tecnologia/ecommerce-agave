@@ -324,6 +324,16 @@ class PaymentController extends Controller
     {
         $user = Auth::user();
 
+        // VALIDAR EMAIL (INVITADO)
+        if (!$user) {
+            if (!$request->email_invitado) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Debes ingresar un correo para continuar.'
+                ], 400);
+            }
+        }
+
         // VALIDAR DIRECCION
         if (!$request->id_direccion) {
             return response()->json([
@@ -340,11 +350,8 @@ class PaymentController extends Controller
             }
         }
 
-        $carrito = Carrito::where('id_usuario', $user->id_usuario)
-            ->where('eEstado', 'activo')
-            ->with(['detalles.producto.impuestos'])
-            ->first();
-
+        // Cargar carrito (usuario invitado y logueado)
+        $carrito = CarritoHelper::carritoCheckout();
 
         if (!$carrito || $carrito->detalles->isEmpty()) {
             return response()->json(['success' => false, 'message' => 'Carrito vacío.'], 400);
@@ -363,6 +370,7 @@ class PaymentController extends Controller
         // Guardar en sesión
         session([
             'id_direccion' => $request->id_direccion,
+            'email_invitado' => $request->email_invitado ?? null,
             'id_direccion_facturacion' => $usarMisma
                 ? $request->id_direccion
                 : $request->id_direccion_facturacion,
@@ -526,10 +534,7 @@ class PaymentController extends Controller
             DB::transaction(function () use ($user, $orderId, $captureId) {
 
                 // buscamos carrito id por user
-                $carrito = Carrito::where('id_usuario', $user->id_usuario)
-                    ->where('eEstado', 'activo')
-                    ->with(['detalles.producto.impuestos'])
-                    ->firstOrFail();
+                $carrito = CarritoHelper::carritoCheckout();
 
                 // VALIDAR STOCK ANTES DE FINALIZAR ORDEN
                 $this->validateCartStock($carrito);
@@ -730,11 +735,17 @@ class PaymentController extends Controller
             }
         }
 
+        if (!$userId && $idDireccion) {
+            Log::info('Pedido invitado: id_direccion ignorado para evitar FK inválida', [
+                'id_direccion' => $idDireccion
+            ]);
+        }
+
         // Crear pedido
         $pedido = Pedido::create([
             'id_usuario' => $userId,
-            'id_direccion' => $idDireccion,
-            'id_direccion_facturacion' => $idDireccionFact,
+            'id_direccion' => $userId ? $idDireccion : null,
+            'id_direccion_facturacion' => $userId ? $idDireccionFact : null,
             'vNombre' => $nombre,
             'eEstado' => 'pagado',
             'dTotal' => $totalFinal,

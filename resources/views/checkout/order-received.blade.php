@@ -25,9 +25,9 @@
             <p><strong>Número de pedido:</strong> #{{ $pedido->id_pedido }}</p>
             <p><strong>Fecha:</strong> {{ $pedido->tFecha_pedido->format('d/m/Y H:i') }}</p>
             <p><strong>Método de pago:</strong> {{ strtoupper($payment_method) }}</p>
-            <p><strong>Total:</strong>${{ number_format($totalFinal, 2) }}</p>
+            <p><strong>Total:</strong> ${{ number_format($totalFinal, 2) }}</p>
             @if ($pedido->tNota)
-                <p><strong>Nota:</strong>{{ $pedido->tNota }}</p>
+                <p><strong>Nota:</strong> {{ $pedido->tNota }}</p>
             @endif
         </div>
     </div>
