@@ -580,6 +580,7 @@ class PaymentController extends Controller
             'reference' => $reference,
             'codigoCupon' => $codigoCupon,
             'idDireccion' => $idDireccion,
+            'idDireccionFacturacion' => $idDireccionFact,
             'notaPedido' => $notaPedido,
             'sessionId' => $sessionId
         ]);

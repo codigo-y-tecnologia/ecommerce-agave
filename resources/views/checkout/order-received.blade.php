@@ -13,7 +13,14 @@
     <!-- ======================= -->
     <div class="card mb-4">
         <div class="card-body">
-            <h4 class="fw-bold mb-3">Detalles del pedido</h4>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold mb-0">Detalles del pedido</h4>
+
+        <a href="{{ route('pedido.pdf', $pedido->id_pedido) }}"
+           class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-file-earmark-pdf"></i> Descargar recibo
+        </a>
+    </div>
 
             <p><strong>Número de pedido:</strong> #{{ $pedido->id_pedido }}</p>
             <p><strong>Fecha:</strong> {{ $pedido->tFecha_pedido->format('d/m/Y H:i') }}</p>
@@ -182,4 +189,5 @@
     </div>
 
 </div>
+
 @endsection

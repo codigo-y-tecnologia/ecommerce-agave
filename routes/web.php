@@ -87,6 +87,9 @@ Route::post('/stripe/webhook', [PaymentController::class, 'stripeWebhook'])->nam
 Route::get('/order-received/{id}', [OrderReceivedController::class, 'show'])
     ->name('order.received');
 
+Route::get('/pedido/{id}/pdf', [OrderReceivedController::class, 'pdf'])
+    ->name('pedido.pdf');
+
 Route::get('/checkout/success', [CheckoutSuccessController::class, 'index'])
     ->name('checkout.success');
 
