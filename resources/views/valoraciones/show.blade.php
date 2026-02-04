@@ -84,20 +84,23 @@
 
         <div class="card-body">
             @if(session('success'))
-                <div class="alert alert-success">
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
                     {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
 
             @if(session('error'))
-                <div class="alert alert-danger">
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
                     {{ session('error') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
 
             @if(request('search') && request('search') != '')
-                <div class="alert alert-info mb-3">
+                <div class="alert alert-info alert-dismissible fade show mb-3" role="alert">
                     Resultados para: "{{ request('search') }}"
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
 
@@ -118,15 +121,17 @@
                 
                 @if($variaciones->count() > 0)
                 <div class="table-responsive">
-                    <table class="table table-striped table-hover">
+                    <table class="table table-striped table-hover mb-2">
                         <thead class="table-dark">
                             <tr>
                                 <th>Imagen</th>
                                 <th>SKU</th>
                                 <th>Precio</th>
                                 <th>Stock</th>
-                                <th>Dimensiones</th>
-                                <th>Peso</th>
+                                <th>Largo (cm)</th>
+                                <th>Ancho (cm)</th>
+                                <th>Alto (cm)</th>
+                                <th>Peso (kg)</th>
                                 <th>Clase Envío</th>
                                 <th>Estado</th>
                                 <th>Acciones</th>
@@ -145,12 +150,14 @@
                                     $ancho = $variacion->dAncho_cm ? floatval($variacion->dAncho_cm) : null;
                                     $alto = $variacion->dAlto_cm ? floatval($variacion->dAlto_cm) : null;
                                     
-                                    // Calcular dimensiones concatenadas para mostrar
-                                    $dimensiones = [];
-                                    if($largo) $dimensiones[] = 'L: ' . number_format($largo, 1) . 'cm';
-                                    if($ancho) $dimensiones[] = 'A: ' . number_format($ancho, 1) . 'cm';
-                                    if($alto) $dimensiones[] = 'H: ' . number_format($alto, 1) . 'cm';
-                                    $dimensionesStr = implode('<br>', $dimensiones);
+                                    // Información de oferta especial
+                                    $tieneOferta = $variacion->bTiene_oferta ?? false;
+                                    $motivoOferta = $variacion->vMotivo_oferta ?? null;
+                                    $fechaInicioOferta = $variacion->dFecha_inicio_oferta ?? null;
+                                    $fechaFinOferta = $variacion->dFecha_fin_oferta ?? null;
+                                    
+                                    // Atributos de la variación
+                                    $atributosVariacion = $variacion->atributosValores ?? [];
                                 @endphp
                                 <tr>
                                     <td>
@@ -166,14 +173,35 @@
                                     </td>
                                     <td>
                                         <code>{{ $variacion->vSKU ?? 'N/A' }}</code>
+                                        @if(!empty($atributosVariacion))
+                                            <br>
+                                            <small class="text-muted">
+                                                @foreach($atributosVariacion as $atributo)
+                                                    <span class="badge bg-secondary">{{ $atributo }}</span>
+                                                @endforeach
+                                            </small>
+                                        @endif
                                     </td>
                                     <td>
-                                        <strong>${{ number_format($precioVariacion, 2) }}</strong>
-                                        @if($precioOferta && $precioOferta > 0)
-                                            <br>
-                                            <small class="text-success">
-                                                Oferta: ${{ number_format($precioOferta, 2) }}
-                                            </small>
+                                        <div class="text-primary fw-bold">
+                                            ${{ number_format($precioVariacion, 2) }}
+                                        </div>
+                                        @if($tieneOferta && $precioOferta && $precioOferta > 0)
+                                            <div class="text-success">
+                                                <small class="d-block">
+                                                    <strong>Oferta: ${{ number_format($precioOferta, 2) }}</strong>
+                                                </small>
+                                                @if($motivoOferta)
+                                                    <small class="d-block text-muted">
+                                                        {{ Str::limit($motivoOferta, 20) }}
+                                                    </small>
+                                                @endif
+                                                @if($fechaInicioOferta && $fechaFinOferta)
+                                                    <small class="d-block text-muted">
+                                                        {{ date('d/m/Y', strtotime($fechaInicioOferta)) }} - {{ date('d/m/Y', strtotime($fechaFinOferta)) }}
+                                                    </small>
+                                                @endif
+                                            </div>
                                         @endif
                                     </td>
                                     <td>
@@ -182,14 +210,32 @@
                                         </span>
                                     </td>
                                     <td>
-                                        @if($dimensionesStr)
-                                            <small>{!! $dimensionesStr !!}</small>
+                                        @if($largo)
+                                            <span class="text-primary">{{ number_format($largo, 2) }}</span>
                                         @else
                                             <span class="text-muted">-</span>
                                         @endif
                                     </td>
                                     <td>
-                                        {{ $pesoVariacion ? number_format($pesoVariacion, 2) . ' kg' : '-' }}
+                                        @if($ancho)
+                                            <span class="text-primary">{{ number_format($ancho, 2) }}</span>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($alto)
+                                            <span class="text-primary">{{ number_format($alto, 2) }}</span>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($pesoVariacion)
+                                            <span class="text-primary">{{ number_format($pesoVariacion, 3) }}</span>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
                                     </td>
                                     <td>
                                         <span class="badge bg-secondary">{{ $variacion->vClase_envio ?: 'Estándar' }}</span>
@@ -220,31 +266,27 @@
                                 </tr>
                             @endforeach
                         </tbody>
-                        <tfoot>
-                            @php
-                                // Calcular SOLO precio total y stock total
-                                $stockTotal = $variaciones->sum('iStock');
-                                $precioTotal = $variaciones->sum('dPrecio');
-                            @endphp
-                            <tr class="table-info">
-                                <td colspan="3" class="text-end fw-bold">TOTALES:</td>
-                                <td class="fw-bold">
-                                    {{ $stockTotal }} unidades
-                                </td>
-                                <td colspan="2" class="fw-bold">
-                                    ${{ number_format($precioTotal, 2) }}
-                                </td>
-                                <td colspan="3"></td>
-                            </tr>
-                        </tfoot>
                     </table>
                 </div>
                 
-                <div class="mt-3 p-3 bg-light rounded">
-                    <strong>Total:</strong> {{ $variaciones->count() }} valoraciones
-                    @if(request('search'))
-                        <span class="ms-3">(filtradas)</span>
-                    @endif
+                <!-- Footer azul delgado alineado a la derecha -->
+                <div class="table-footer bg-primary text-white p-2 rounded">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="text-start">
+                            <strong>Total valoraciones:</strong> {{ $variaciones->count() }}
+                            @if(request('search'))
+                                <span class="ms-2">(filtradas)</span>
+                            @endif
+                        </div>
+                        <div class="text-end">
+                            @php
+                                $stockTotal = $variaciones->sum('iStock');
+                                $precioPromedio = $variaciones->avg('dPrecio');
+                            @endphp
+                            <strong>Stock total:</strong> {{ number_format($stockTotal) }} unidades | 
+                            <strong>Precio promedio:</strong> ${{ number_format($precioPromedio, 2) }}
+                        </div>
+                    </div>
                 </div>
                 
                 @else
@@ -273,53 +315,95 @@
 @endsection
 
 @push('styles')
-<!-- SweetAlert2 CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<style>
+    .table th {
+        background-color: #2E8B57;
+        color: white;
+        vertical-align: middle;
+        white-space: nowrap;
+        font-size: 14px;
+        padding: 10px 8px;
+    }
+    
+    .table td {
+        vertical-align: middle;
+        padding: 8px;
+        font-size: 13px;
+    }
+    
+    .badge {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 8px;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.03);
+    }
+    
+    .table-striped tbody tr:nth-of-type(odd) {
+        background-color: rgba(0, 0, 0, 0.01);
+    }
+    
+    .btn-group-sm .btn {
+        padding: 0.2rem 0.4rem;
+        font-size: 11px;
+        border-radius: 3px;
+    }
+    
+    .btn-group-sm .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .text-primary {
+        font-weight: 500;
+        color: #0d6efd !important;
+    }
+    
+    .table-footer {
+        background-color: #0d6efd;
+        color: white;
+        font-size: 13px;
+        padding: 8px 12px;
+        border-radius: 4px;
+        margin-top: 0;
+    }
+    
+    .table-footer strong {
+        color: white;
+    }
+    
+    .alert {
+        font-size: 14px;
+        padding: 10px 15px;
+        margin-bottom: 15px;
+    }
+    
+    .alert .btn-close {
+        padding: 12px;
+    }
+    
+    code {
+        font-size: 12px;
+        background: #f8f9fa;
+        padding: 2px 5px;
+        border-radius: 3px;
+        color: #d63384;
+    }
+    
+    .text-muted {
+        font-size: 12px;
+    }
+</style>
 @endpush
 
 @push('scripts')
-<!-- SweetAlert2 JS -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 <script>
 function confirmarEliminacion(sku, id) {
-    Swal.fire({
-        title: "¿Estás seguro?",
-        text: "¡La valoración con SKU \"" + sku + "\" será eliminada!",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#3085d6",
-        cancelButtonColor: "#d33",
-        confirmButtonText: "Sí, eliminar",
-        cancelButtonText: "Cancelar"
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Enviar el formulario de eliminación
-            document.getElementById('delete-form-' + id).submit();
-        }
-    });
+    if (confirm("¿Estás seguro de eliminar la valoración con SKU \"" + sku + "\"? Esta acción no se puede deshacer.")) {
+        document.getElementById('delete-form-' + id).submit();
+    }
 }
-
-// Mostrar mensaje de éxito después de eliminar
-@if(session('success'))
-Swal.fire({
-    title: "¡Éxito!",
-    text: "{{ session('success') }}",
-    icon: "success",
-    timer: 3000,
-    showConfirmButton: false
-});
-@endif
-
-// Mostrar mensaje de error si hubo un problema
-@if(session('error'))
-Swal.fire({
-    title: "¡Error!",
-    text: "{{ session('error') }}",
-    icon: "error",
-    timer: 3000,
-    showConfirmButton: false
-});
-@endif
 </script>
 @endpush
