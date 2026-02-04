@@ -252,6 +252,29 @@ class PaymentController extends Controller
                     }
 
                     DB::transaction(function () use ($session, $metadata, $reference) {
+
+                        // try {
+                        //     // 🔒 Intentamos registrar el pago PRIMERO
+                        //     $pago = Pago::create([
+                        //         'eMetodo_pago' => 'stripe',
+                        //         'dMonto'       => $session->amount_total / 100,
+                        //         'eEstado'      => 'exitoso',
+                        //         'vReferencia'  => $reference,
+                        //         'vSessionID'   => $session->id,
+                        //     ]);
+                        // } catch (\Illuminate\Database\QueryException $e) {
+
+                        //     // Código MySQL de violación UNIQUE
+                        //     if ($e->getCode() === '23000') {
+                        //         Log::warning('⚠️ Stripe webhook duplicado ignorado (DB UNIQUE)', [
+                        //             'reference' => $reference
+                        //         ]);
+                        //         return; // salir limpio
+                        //     }
+
+                        //     throw $e;
+                        // }
+
                         $userId = $metadata->user_id ?? null;
                         $guestToken = $metadata->guest_token ?? null;
                         $emailGuest = $metadata->email_invitado ?? null;
@@ -369,12 +392,16 @@ class PaymentController extends Controller
 
         // Guardar en sesión
         session([
-            'id_direccion' => $request->id_direccion,
-            'email_invitado' => $request->email_invitado ?? null,
-            'id_direccion_facturacion' => $usarMisma
-                ? $request->id_direccion
-                : $request->id_direccion_facturacion,
-            'nota_pedido' => $request->nota ?? null
+            'paypal_context' => [
+                'id_direccion' => $request->id_direccion,
+                'email_invitado' => $request->email_invitado ?? null,
+                'id_direccion_facturacion' => $usarMisma
+                    ? $request->id_direccion
+                    : $request->id_direccion_facturacion,
+                'nota_pedido' => $request->nota ?? null,
+                'guest_token' => session('guest_token'),
+                'user_id' => Auth::id(),
+            ]
         ]);
 
         // Recalcular totales (misma lógica)
@@ -458,7 +485,15 @@ class PaymentController extends Controller
     public function capturePaypalOrder(Request $request)
     {
         $orderId = $request->orderID;
-        $user = Auth::user();
+
+        $context = session('paypal_context');
+
+        $idDireccion = $context['id_direccion'] ?? null;
+        $idDireccionFact = $context['id_direccion_facturacion'] ?? null;
+        $userId = $context['user_id'] ?? null;
+        $guestToken = $context['guest_token'] ?? null;
+        $emailGuest = $context['email_invitado'] ?? null;
+        $notaPedido = $context['nota_pedido'] ?? null;
 
         if (!$orderId) {
             return response()->json(['success' => false, 'message' => 'orderID requerido'], 400);
@@ -531,26 +566,41 @@ class PaymentController extends Controller
             }
 
             // Finalizar pedido localmente (crear Pedido, Venta, Pago, etc.)
-            DB::transaction(function () use ($user, $orderId, $captureId) {
+            DB::transaction(function () use ($userId, $guestToken, $emailGuest, $idDireccion, $idDireccionFact, $notaPedido, $orderId, $captureId) {
 
-                // buscamos carrito id por user
+                // buscamos carrito 
                 $carrito = CarritoHelper::carritoCheckout();
+
+                if (!$carrito) {
+                    throw new \Exception('Carrito no encontrado');
+                }
+
+                // 🔒 LOCK del carrito
+                $carrito = Carrito::where('id_carrito', $carrito->id_carrito)
+                    ->lockForUpdate()
+                    ->first();
 
                 // VALIDAR STOCK ANTES DE FINALIZAR ORDEN
                 $this->validateCartStock($carrito);
 
-                // Obtener id_direccion de la sesión
-                $idDireccion = session('id_direccion');
-                $idDireccionFact = session('id_direccion_facturacion');
-                $notaPedido = session('nota_pedido') ?? null;
-
-                $this->finalizeOrderFromCart($user->id_usuario, $carrito->id_carrito, 'paypal', $captureId, session('codigo_cupon') ?? null, $idDireccion, $idDireccionFact, $notaPedido, null);
+                $this->finalizeOrderFromCart(
+                    $userId,
+                    $guestToken,
+                    $emailGuest,
+                    $carrito->id_carrito,
+                    'paypal',
+                    $captureId,
+                    session('codigo_cupon') ?? null,
+                    $idDireccion,
+                    $idDireccionFact,
+                    $notaPedido,
+                    null
+                );
             });
 
             // OBTENER EL ID DEL PEDIDO RECIÉN CREADO
-            $pedido = Pedido::where('id_usuario', $user->id_usuario)
-                ->latest('id_pedido')
-                ->first();
+            $pago = Pago::where('vReferencia', $captureId)->firstOrFail();
+            $pedido = Pedido::findOrFail($pago->id_pedido);
 
             // Generar la URL de redirección
             $redirectUrl = route('order.received', $pedido->id_pedido);
@@ -602,11 +652,6 @@ class PaymentController extends Controller
             ->where('eEstado', 'activo')
             ->with(['detalles.producto.impuestos'])
             ->firstOrFail();
-        // $carrito = Carrito::where('id_carrito', $carritoId)
-        //     ->with(['detalles.producto.impuestos'])
-        //     ->firstOrFail();
-
-        //$userId = $userId ?? $carrito->id_usuario;
 
         // REVALIDAR STOCK ANTES DE CREAR PEDIDO (defensa en profundidad)
         $this->validateCartStock($carrito);
@@ -882,8 +927,13 @@ class PaymentController extends Controller
         $carrito->eEstado = 'convertido';
         $carrito->save();
 
-        session()->forget('codigo_cupon');
-        session()->forget('nota_pedido');
+        session()->forget([
+            'paypal_context',
+            'codigo_cupon',
+            'id_direccion',
+            'id_direccion_facturacion',
+            'nota_pedido'
+        ]);
 
         // Email cliente
         Mail::to($email)->send(
