@@ -16,6 +16,12 @@
         });
     </script>
 @endif
+
+@if ($errors->has('stock'))
+    <div class="alert alert-warning">
+        {{ $errors->first('stock') }}
+    </div>
+@endif
     
 @include('superadmin.partials.alerts')
 

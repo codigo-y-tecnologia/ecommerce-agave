@@ -253,28 +253,6 @@ class PaymentController extends Controller
 
                     DB::transaction(function () use ($session, $metadata, $reference) {
 
-                        // try {
-                        //     // 🔒 Intentamos registrar el pago PRIMERO
-                        //     $pago = Pago::create([
-                        //         'eMetodo_pago' => 'stripe',
-                        //         'dMonto'       => $session->amount_total / 100,
-                        //         'eEstado'      => 'exitoso',
-                        //         'vReferencia'  => $reference,
-                        //         'vSessionID'   => $session->id,
-                        //     ]);
-                        // } catch (\Illuminate\Database\QueryException $e) {
-
-                        //     // Código MySQL de violación UNIQUE
-                        //     if ($e->getCode() === '23000') {
-                        //         Log::warning('⚠️ Stripe webhook duplicado ignorado (DB UNIQUE)', [
-                        //             'reference' => $reference
-                        //         ]);
-                        //         return; // salir limpio
-                        //     }
-
-                        //     throw $e;
-                        // }
-
                         $userId = $metadata->user_id ?? null;
                         $guestToken = $metadata->guest_token ?? null;
                         $emailGuest = $metadata->email_invitado ?? null;
@@ -835,16 +813,21 @@ class PaymentController extends Controller
 
         // Descontar stock
         foreach ($carrito->detalles as $detalle) {
-            $producto = \App\Models\Producto::find($detalle->id_producto);
 
-            if ($producto) {
-                if ($producto->iStock < $detalle->cantidad) {
-                    throw new Exception("Inventario insuficiente para el producto: {$producto->vNombre}");
-                }
+            $producto = \App\Models\Producto::where('id_producto', $detalle->id_producto)
+                ->lockForUpdate()
+                ->first();
 
-                $producto->iStock -= $detalle->cantidad;
-                $producto->save();
+            if (!$producto) {
+                throw new Exception("Producto no encontrado (ID {$detalle->id_producto})");
             }
+
+            if ($producto->iStock < $detalle->cantidad) {
+                throw new Exception("Inventario insuficiente para el producto: {$producto->vNombre}");
+            }
+
+            $producto->iStock -= $detalle->cantidad;
+            $producto->save();
         }
 
         // Crear venta
@@ -971,7 +954,9 @@ class PaymentController extends Controller
 
         foreach ($carrito->detalles as $detalle) {
 
-            $producto = $detalle->producto;
+            $producto = \App\Models\Producto::select('id_producto', 'vNombre', 'iStock')
+                ->where('id_producto', $detalle->id_producto)
+                ->first();
 
             if (!$producto) {
                 throw new Exception("Uno de los productos del carrito ya no existe.");
