@@ -18,6 +18,7 @@ class ProductoVariacion extends Model
     protected $fillable = [
         'id_producto',
         'vSKU',
+        'vNombre_variacion',
         'dPrecio',
         'dPrecio_oferta',
         'iStock',
@@ -28,11 +29,16 @@ class ProductoVariacion extends Model
         'vClase_envio',
         'tDescripcion',
         'vImagen',
-        'bActivo'
+        'bActivo',
+        'bTiene_oferta', // Agregado
+        'dFecha_inicio_oferta',
+        'dFecha_fin_oferta',
+        'vMotivo_oferta'
     ];
 
     protected $casts = [
-        'bActivo' => 'boolean',
+       'bActivo' => 'boolean',
+        'bTiene_oferta' => 'boolean', // Agregado
         'dPrecio' => 'decimal:2',
         'dPrecio_oferta' => 'decimal:2',
         'iStock' => 'integer',
@@ -41,6 +47,39 @@ class ProductoVariacion extends Model
         'dAncho_cm' => 'decimal:2',
         'dAlto_cm' => 'decimal:2'
     ];
+
+    // Mutadores para campos de oferta
+    public function setBTieneOfertaAttribute($value)
+    {
+        $this->attributes['bTiene_oferta'] = $value ? 1 : 0;
+    }
+
+    public function setDPrecioOfertaAttribute($value)
+    {
+        if (empty($value) || $value == 0) {
+            $this->attributes['dPrecio_oferta'] = null;
+        } else {
+            $this->attributes['dPrecio_oferta'] = $value;
+        }
+    }
+
+    public function setDFechaInicioOfertaAttribute($value)
+    {
+        if (empty($value)) {
+            $this->attributes['dFecha_inicio_oferta'] = null;
+        } else {
+            $this->attributes['dFecha_inicio_oferta'] = $value;
+        }
+    }
+
+    public function setDFechaFinOfertaAttribute($value)
+    {
+        if (empty($value)) {
+            $this->attributes['dFecha_fin_oferta'] = null;
+        } else {
+            $this->attributes['dFecha_fin_oferta'] = $value;
+        }
+    }
 
     public function producto()
     {
@@ -82,10 +121,25 @@ class ProductoVariacion extends Model
         return 'No especificado';
     }
 
-    // Accesor para verificar si tiene oferta
+    // Accesor para verificar si tiene oferta (usando bTiene_oferta como fuente de verdad)
     public function getTieneOfertaAttribute()
     {
-        return $this->dPrecio_oferta && $this->dPrecio_oferta > 0 && $this->dPrecio_oferta < $this->dPrecio;
+        return $this->bTiene_oferta == 1 && 
+               $this->dPrecio_oferta && 
+               $this->dPrecio_oferta > 0 && 
+               $this->dPrecio_oferta < $this->dPrecio &&
+               $this->esOfertaVigente();
+    }
+
+    // Verificar si la oferta está vigente (entre fechas)
+    public function esOfertaVigente()
+    {
+        if (!$this->bTiene_oferta || !$this->dFecha_inicio_oferta || !$this->dFecha_fin_oferta) {
+            return false;
+        }
+        
+        $hoy = now()->toDateString();
+        return $hoy >= $this->dFecha_inicio_oferta && $hoy <= $this->dFecha_fin_oferta;
     }
 
     // Método para compatibilidad con llamadas antiguas
@@ -215,9 +269,13 @@ class ProductoVariacion extends Model
     // Scope para variaciones en oferta
     public function scopeEnOferta($query)
     {
-        return $query->whereNotNull('dPrecio_oferta')
+        $hoy = now()->toDateString();
+        return $query->where('bTiene_oferta', 1)
+                     ->whereNotNull('dPrecio_oferta')
                      ->where('dPrecio_oferta', '>', 0)
-                     ->whereRaw('dPrecio_oferta < dPrecio');
+                     ->whereRaw('dPrecio_oferta < dPrecio')
+                     ->where('dFecha_inicio_oferta', '<=', $hoy)
+                     ->where('dFecha_fin_oferta', '>=', $hoy);
     }
 
     // Método para verificar si es la variación predeterminada
@@ -268,6 +326,9 @@ class ProductoVariacion extends Model
         static::creating(function ($variacion) {
             if (!isset($variacion->bActivo)) {
                 $variacion->bActivo = true;
+            }
+            if (!isset($variacion->bTiene_oferta)) {
+                $variacion->bTiene_oferta = false;
             }
         });
 

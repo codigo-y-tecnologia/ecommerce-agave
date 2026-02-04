@@ -8,6 +8,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         body {
             background-color: #f8f9fa;
@@ -78,24 +80,39 @@
             <h1><i class="fas fa-plus-circle me-2"></i>Crear Nuevo Atributo</h1>
         </div>
 
-        <!-- Alert Messages -->
-        @if($errors->any())
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <h5 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Errores en el formulario</h5>
-                <ul class="mb-0">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
+        <!-- Alert Messages con SweetAlert2 -->
+        @if(session('success'))
+            <script>
+                Swal.fire({
+                    title: "¡Registrado!",
+                    text: "{{ session('success') }}",
+                    icon: "success",
+                    draggable: true,
+                    confirmButtonText: "Aceptar"
+                }).then(() => {
+                    window.location.href = "{{ route('atributos.index') }}";
+                });
+            </script>
         @endif
 
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
+        @if($errors->any())
+            <script>
+                let errorMessages = '';
+                @foreach($errors->all() as $error)
+                    errorMessages += '• {{ addslashes($error) }}\\n';
+                @endforeach
+                
+                Swal.fire({
+                    icon: "error",
+                    title: "Oops...",
+                    text: "¡Algo salió mal!",
+                    html: '<div class="text-start">' +
+                          '<p>Se encontraron los siguientes errores:</p>' +
+                          '<pre style="white-space: pre-wrap; text-align: left;">' + errorMessages + '</pre>' +
+                          '</div>',
+                    confirmButtonText: "Entendido"
+                });
+            </script>
         @endif
 
         <form action="{{ route('atributos.store') }}" method="POST" id="formAtributo">
@@ -180,7 +197,7 @@
             </div>
 
             <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-success btn-lg px-4">
+                <button type="submit" class="btn btn-success btn-lg px-4" id="btnSubmit">
                     <i class="fas fa-save me-2"></i> Guardar Atributo
                 </button>
                 <a href="{{ route('atributos.index') }}" class="btn btn-secondary btn-lg px-4">
@@ -351,16 +368,24 @@
         }
     });
     
-    // Validación del formulario
+    // Validación del formulario con SweetAlert2
     document.getElementById('formAtributo').addEventListener('submit', function(e) {
+        e.preventDefault(); // Prevenir envío normal
+        
         const nombreInput = document.getElementById('vNombre');
         const slugInput = document.getElementById('vSlug');
+        const btnSubmit = document.getElementById('btnSubmit');
         
-        // Si el nombre está vacío
+        // Validar nombre
         if (!nombreInput.value.trim()) {
-            e.preventDefault();
-            nombreInput.focus();
-            nombreInput.classList.add('is-invalid');
+            Swal.fire({
+                icon: "warning",
+                title: "Campo requerido",
+                text: "El nombre del atributo es obligatorio",
+                confirmButtonText: "Entendido"
+            }).then(() => {
+                nombreInput.focus();
+            });
             return false;
         }
         
@@ -370,7 +395,12 @@
             slugInput.value = generatedSlug;
         }
         
-        return true;
+        // Cambiar estado del botón
+        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Guardando...';
+        btnSubmit.disabled = true;
+        
+        // Enviar formulario
+        this.submit();
     });
     
     // Remover clase de error cuando el usuario escribe

@@ -85,6 +85,7 @@ Route::prefix('atributos/{atributo}')->name('atributos.')->group(function () {
     Route::get('/valores/{valor}/edit', [AtributoController::class, 'editValor'])->name('valores.edit');
     Route::put('/valores/{valor}', [AtributoController::class, 'updateValor'])->name('valores.update');
     Route::delete('/valores/{valor}', [AtributoController::class, 'destroyValor'])->name('valores.destroy');
+     Route::delete('/producto/{producto_id}/{variacion_id}', [ValoracionController::class, 'destroy'])->name('destroy');
 });
 
 // =====================================================================

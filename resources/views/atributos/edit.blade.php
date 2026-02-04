@@ -8,6 +8,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         body {
             background-color: #f8f9fa;
@@ -82,24 +84,38 @@
             <h1><i class="fas fa-edit me-2"></i>Editar Atributo: {{ $atributo->vNombre }}</h1>
         </div>
 
-        <!-- Alert Messages -->
-        @if($errors->any())
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <h5 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Errores en el formulario</h5>
-                <ul class="mb-0">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
+        <!-- SweetAlert2 para mensajes de sesión -->
+        @if(session('success'))
+            <script>
+                Swal.fire({
+                    title: "¡Guardado!",
+                    text: "{{ session('success') }}",
+                    icon: "success",
+                    confirmButtonText: "Aceptar"
+                }).then(() => {
+                    window.location.href = "{{ route('atributos.index') }}";
+                });
+            </script>
         @endif
 
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
+        @if($errors->any())
+            <script>
+                let errorMessages = '';
+                @foreach($errors->all() as $error)
+                    errorMessages += '• {{ addslashes($error) }}\\n';
+                @endforeach
+                
+                Swal.fire({
+                    icon: "error",
+                    title: "Oops...",
+                    text: "¡Algo salió mal!",
+                    html: '<div class="text-start">' +
+                          '<p>Se encontraron los siguientes errores:</p>' +
+                          '<pre style="white-space: pre-wrap; text-align: left;">' + errorMessages + '</pre>' +
+                          '</div>',
+                    confirmButtonText: "Entendido"
+                });
+            </script>
         @endif
 
         <form action="{{ route('atributos.update', $atributo) }}" method="POST" id="formAtributo">
@@ -203,7 +219,7 @@
             </div>
 
             <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary btn-lg px-4">
+                <button type="button" class="btn btn-primary btn-lg px-4" id="btnGuardar">
                     <i class="fas fa-save me-2"></i> Actualizar Atributo
                 </button>
                 <a href="{{ route('atributos.index') }}" class="btn btn-secondary btn-lg px-4">
@@ -351,6 +367,82 @@
         }
     });
     
+    // SweetAlert2 para confirmación de guardado
+    document.getElementById('btnGuardar').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        const nombreInput = document.getElementById('vNombre');
+        const slugInput = document.getElementById('vSlug');
+        const btnGuardar = document.getElementById('btnGuardar');
+        const nuevoNombre = nombreInput.value.trim();
+        
+        // Validar nombre
+        if (!nuevoNombre) {
+            Swal.fire({
+                icon: "warning",
+                title: "Campo requerido",
+                text: "El nombre del atributo es obligatorio",
+                confirmButtonText: "Entendido"
+            }).then(() => {
+                nombreInput.focus();
+            });
+            return;
+        }
+        
+        // Si el slug está vacío, generarlo automáticamente
+        if (!slugInput.value.trim()) {
+            const generatedSlug = generateSlug(nuevoNombre);
+            slugInput.value = generatedSlug;
+        }
+        
+        // Confirmar si el nombre ha cambiado significativamente
+        if (nuevoNombre !== originalNombre && nuevoNombre.toLowerCase() !== originalNombre.toLowerCase()) {
+            if (!confirm('¿Estás seguro de que quieres cambiar el nombre del atributo? Esto podría afectar a los productos que ya usan este atributo.')) {
+                return;
+            }
+        }
+        
+        // Mostrar SweetAlert2 de confirmación
+        Swal.fire({
+            title: "¿Deseas guardar los cambios?",
+            text: "Confirma si quieres guardar los cambios realizados en el atributo.",
+            icon: "question",
+            showDenyButton: true,
+            showCancelButton: true,
+            confirmButtonText: "Guardar",
+            denyButtonText: "No guardar",
+            cancelButtonText: "Cancelar",
+            confirmButtonColor: "#2E8B57",
+            denyButtonColor: "#6c757d",
+            cancelButtonColor: "#d33"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Cambiar estado del botón
+                btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Guardando...';
+                btnGuardar.disabled = true;
+                
+                // Enviar formulario
+                document.getElementById('formAtributo').submit();
+                
+                // Mostrar mensaje de éxito
+                Swal.fire({
+                    title: "¡Guardado!",
+                    text: "Los cambios se han guardado correctamente.",
+                    icon: "success",
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else if (result.isDenied) {
+                Swal.fire({
+                    title: "Cambios no guardados",
+                    text: "Los cambios no se han guardado",
+                    icon: "info",
+                    confirmButtonText: "Continuar"
+                });
+            }
+        });
+    });
+    
     // Inicializar cuando el DOM esté listo
     document.addEventListener('DOMContentLoaded', function() {
         // Crear botón para regenerar slug
@@ -416,49 +508,11 @@
         }
     });
     
-    // Validación del formulario
-    document.getElementById('formAtributo').addEventListener('submit', function(e) {
-        const nombreInput = document.getElementById('vNombre');
-        const slugInput = document.getElementById('vSlug');
-        
-        // Si el nombre está vacío
-        if (!nombreInput.value.trim()) {
-            e.preventDefault();
-            nombreInput.focus();
-            nombreInput.classList.add('is-invalid');
-            return false;
-        }
-        
-        // Si el slug está vacío, generarlo automáticamente
-        if (!slugInput.value.trim()) {
-            const generatedSlug = generateSlug(nombreInput.value.trim());
-            slugInput.value = generatedSlug;
-        }
-        
-        return true;
-    });
-    
     // Remover clase de error cuando el usuario escribe
     document.querySelectorAll('input, textarea').forEach(input => {
         input.addEventListener('input', function() {
             this.classList.remove('is-invalid');
         });
-    });
-    
-    // Confirmación si el nombre ha cambiado significativamente
-    document.getElementById('formAtributo').addEventListener('submit', function(e) {
-        const nombreInput = document.getElementById('vNombre');
-        const nuevoNombre = nombreInput.value.trim();
-        
-        // Si el nombre ha cambiado significativamente (más que solo espacios)
-        if (nuevoNombre !== originalNombre && nuevoNombre.toLowerCase() !== originalNombre.toLowerCase()) {
-            if (!confirm('¿Estás seguro de que quieres cambiar el nombre del atributo? Esto podría afectar a los productos que ya usan este atributo.')) {
-                e.preventDefault();
-                return false;
-            }
-        }
-        
-        return true;
     });
     </script>
 </body>

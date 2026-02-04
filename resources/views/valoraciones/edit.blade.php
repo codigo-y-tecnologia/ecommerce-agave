@@ -41,7 +41,8 @@
                                            value="{{ old('vSKU', $variacion->vSKU) }}" required
                                            maxlength="50"
                                            oninput="validarSKU(this)"
-                                           placeholder="Ej: MEZ-750ML-REP-01">
+                                           placeholder="Ej: MEZ-750ML-REP-01"
+                                           autocomplete="off">
                                     @error('vSKU')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -62,7 +63,8 @@
                                                required 
                                                oninput="validarPrecio(this)"
                                                placeholder="0.00"
-                                               title="Máximo: 9,999,999.99">
+                                               title="Máximo: 9,999,999.99"
+                                               autocomplete="off">
                                     </div>
                                     @error('dPrecio')
                                         <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -74,30 +76,125 @@
                             </div>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6">
+                        <!-- SECCIÓN: OFERTA ESPECIAL CORREGIDA -->
+                        <div class="card mb-4 border">
+                            <div class="card-header bg-danger text-white">
+                                <h5 class="mb-0"><i class="fas fa-percentage me-2"></i>Oferta Especial (Opcional)</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Configura una oferta temporal con precio especial y fechas específicas.
+                                </div>
+                                
                                 <div class="form-group mb-3">
-                                    <label for="dPrecio_oferta" class="form-label fw-bold">
-                                        Precio de Oferta
-                                    </label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">$</span>
-                                        <input type="text" name="dPrecio_oferta" id="dPrecio_oferta" 
-                                               class="form-control @error('dPrecio_oferta') is-invalid @enderror"
-                                               value="{{ old('dPrecio_oferta', $variacion->dPrecio_oferta) }}" 
-                                               oninput="validarPrecio(this)"
-                                               placeholder="0.00"
-                                               title="Máximo: 9,999,999.99">
+                                    <div class="form-check form-switch">
+                                        <input type="checkbox" name="bTiene_oferta" id="bTiene_oferta" 
+                                               class="form-check-input"
+                                               onchange="toggleOfertaForm()"
+                                               value="1"
+                                               {{ (old('bTiene_oferta', $variacion->bTiene_oferta) == 1) ? 'checked' : '' }}
+                                               autocomplete="off">
+                                        <label for="bTiene_oferta" class="form-check-label fw-bold">
+                                            Activar oferta especial
+                                        </label>
                                     </div>
-                                    @error('dPrecio_oferta')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
-                                    <small class="form-text text-muted">
-                                        Máximo: 9,999,999.99 (7 dígitos enteros)
-                                    </small>
+                                </div>
+                                
+                                <div id="oferta-form" style="display: {{ (old('bTiene_oferta', $variacion->bTiene_oferta) == 1) ? 'block' : 'none' }};">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group mb-3">
+                                                <label for="dPrecio_oferta" class="form-label fw-bold">
+                                                    Precio de oferta <span class="text-danger">*</span>
+                                                </label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text">$</span>
+                                                    <input type="text" 
+                                                           name="dPrecio_oferta" 
+                                                           id="dPrecio_oferta" 
+                                                           class="form-control @error('dPrecio_oferta') is-invalid @enderror"
+                                                           value="{{ old('dPrecio_oferta', $variacion->dPrecio_oferta) }}" 
+                                                           oninput="validarPrecioOferta()"
+                                                           placeholder="0.00"
+                                                           title="Precio de oferta especial (debe ser menor que el precio de venta)"
+                                                           autocomplete="off">
+                                                    @error('dPrecio_oferta')
+                                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                                <small class="form-text text-muted">
+                                                    Precio especial durante el periodo de oferta (debe ser menor que el precio de venta)
+                                                </small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <div class="form-group mb-3">
+                                                <label for="vMotivo_oferta" class="form-label fw-bold">
+                                                    Motivo de la oferta
+                                                </label>
+                                                <input type="text" 
+                                                       name="vMotivo_oferta" 
+                                                       id="vMotivo_oferta" 
+                                                       class="form-control @error('vMotivo_oferta') is-invalid @enderror"
+                                                       value="{{ old('vMotivo_oferta', $variacion->vMotivo_oferta) }}" 
+                                                       maxlength="255"
+                                                       placeholder="Ej: Temporada navideña, Liquidación, etc."
+                                                       autocomplete="off">
+                                                @error('vMotivo_oferta')
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group mb-3">
+                                                <label for="dFecha_inicio_oferta" class="form-label fw-bold">
+                                                    Fecha de inicio <span class="text-danger">*</span>
+                                                </label>
+                                                <input type="date" 
+                                                       name="dFecha_inicio_oferta" 
+                                                       id="dFecha_inicio_oferta" 
+                                                       class="form-control @error('dFecha_inicio_oferta') is-invalid @enderror"
+                                                       value="{{ old('dFecha_inicio_oferta', $variacion->dFecha_inicio_oferta ? \Carbon\Carbon::parse($variacion->dFecha_inicio_oferta)->format('Y-m-d') : '') }}"
+                                                       autocomplete="off">
+                                                @error('dFecha_inicio_oferta')
+                                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <div class="form-group mb-3">
+                                                <label for="dFecha_fin_oferta" class="form-label fw-bold">
+                                                    Fecha de fin <span class="text-danger">*</span>
+                                                </label>
+                                                <input type="date" 
+                                                       name="dFecha_fin_oferta" 
+                                                       id="dFecha_fin_oferta" 
+                                                       class="form-control @error('dFecha_fin_oferta') is-invalid @enderror"
+                                                       value="{{ old('dFecha_fin_oferta', $variacion->dFecha_fin_oferta ? \Carbon\Carbon::parse($variacion->dFecha_fin_oferta)->format('Y-m-d') : '') }}"
+                                                       autocomplete="off">
+                                                @error('dFecha_fin_oferta')
+                                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        La oferta solo estará activa durante el periodo especificado.
+                                        Después de la fecha de fin, el producto volverá a su precio normal.
+                                    </div>
                                 </div>
                             </div>
-                            
+                        </div>
+
+                        <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label for="iStock" class="form-label fw-bold">
@@ -112,11 +209,42 @@
                                            title="Máximo 6 dígitos (0-999999)"
                                            inputmode="numeric"
                                            min="0"
-                                           max="999999">
+                                           max="999999"
+                                           autocomplete="off">
                                     @error('iStock')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                     <small class="form-text text-muted">Máximo 6 dígitos (0-999999)</small>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="vClase_envio" class="form-label fw-bold">
+                                        Clase de Envío
+                                    </label>
+                                    <select name="vClase_envio" id="vClase_envio" 
+                                            class="form-control @error('vClase_envio') is-invalid @enderror"
+                                            autocomplete="off">
+                                        <option value="">Igual que el producto padre</option>
+                                        <option value="Estandar" {{ old('vClase_envio', $variacion->vClase_envio) == 'Estandar' ? 'selected' : '' }}>Estándar</option>
+                                        <option value="Fragil" {{ old('vClase_envio', $variacion->vClase_envio) == 'Fragil' ? 'selected' : '' }}>Frágil</option>
+                                        <option value="Pesado" {{ old('vClase_envio', $variacion->vClase_envio) == 'Pesado' ? 'selected' : '' }}>Pesado</option>
+                                        <option value="Otro" {{ old('vClase_envio', $variacion->vClase_envio) == 'Otro' ? 'selected' : '' }}>Otro</option>
+                                    </select>
+                                    @error('vClase_envio')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <small class="form-text text-muted">
+                                        @if($producto->vClase_envio)
+                                            Producto padre: <strong>{{ $producto->vClase_envio }}</strong>
+                                        @else
+                                            Producto padre: <strong>Sin clase de envío definida</strong>
+                                        @endif
+                                        @if($variacion->vClase_envio && $variacion->vClase_envio != $producto->vClase_envio)
+                                            <br>Actual: <strong>{{ $variacion->vClase_envio }}</strong>
+                                        @endif
+                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -135,7 +263,8 @@
                                                value="{{ old('dPeso', $variacion->dPeso) }}" 
                                                oninput="validarPeso(this)"
                                                placeholder="0.000"
-                                               title="Peso en kilogramos (ej: 1.250)">
+                                               title="Peso en kilogramos (ej: 1.250)"
+                                               autocomplete="off">
                                         <span class="input-group-text">kg</span>
                                     </div>
                                     @error('dPeso')
@@ -147,28 +276,17 @@
                             
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="vClase_envio" class="form-label fw-bold">
-                                        Clase de Envío
-                                    </label>
-                                    <select name="vClase_envio" id="vClase_envio" 
-                                            class="form-control @error('vClase_envio') is-invalid @enderror">
-                                        <option value="">Igual que el producto padre</option>
-                                        <option value="Estandar" {{ old('vClase_envio', $variacion->vClase_envio) == 'Estandar' ? 'selected' : '' }}>Estándar</option>
-                                        <option value="Fragil" {{ old('vClase_envio', $variacion->vClase_envio) == 'Fragil' ? 'selected' : '' }}>Frágil</option>
-                                        <option value="Pesado" {{ old('vClase_envio', $variacion->vClase_envio) == 'Pesado' ? 'selected' : '' }}>Pesado</option>
-                                    </select>
-                                    @error('vClase_envio')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
+                                    <div class="form-check form-switch mt-4">
+                                        <input type="checkbox" name="bActivo" id="bActivo" 
+                                               class="form-check-input" value="1" 
+                                               {{ old('bActivo', $variacion->bActivo) ? 'checked' : '' }}
+                                               autocomplete="off">
+                                        <label for="bActivo" class="form-check-label fw-bold">
+                                            Valoración activa
+                                        </label>
+                                    </div>
                                     <small class="form-text text-muted">
-                                        @if($producto->vClase_envio)
-                                            Producto padre: <strong>{{ $producto->vClase_envio }}</strong>
-                                        @else
-                                            Producto padre: <strong>Sin clase de envío definida</strong>
-                                        @endif
-                                        @if($variacion->vClase_envio && $variacion->vClase_envio != $producto->vClase_envio)
-                                            <br>Actual: <strong>{{ $variacion->vClase_envio }}</strong>
-                                        @endif
+                                        Si está desactivada, no estará disponible para venta
                                     </small>
                                 </div>
                             </div>
@@ -193,7 +311,8 @@
                                                            value="{{ old('dLargo_cm', $variacion->dLargo_cm) }}" 
                                                            oninput="validarDimension(this)"
                                                            placeholder="0.00"
-                                                           title="Largo en centímetros">
+                                                           title="Largo en centímetros"
+                                                           autocomplete="off">
                                                     <span class="input-group-text">cm</span>
                                                 </div>
                                                 @error('dLargo_cm')
@@ -216,7 +335,8 @@
                                                            value="{{ old('dAncho_cm', $variacion->dAncho_cm) }}" 
                                                            oninput="validarDimension(this)"
                                                            placeholder="0.00"
-                                                           title="Ancho en centímetros">
+                                                           title="Ancho en centímetros"
+                                                           autocomplete="off">
                                                     <span class="input-group-text">cm</span>
                                                 </div>
                                                 @error('dAncho_cm')
@@ -239,7 +359,8 @@
                                                            value="{{ old('dAlto_cm', $variacion->dAlto_cm) }}" 
                                                            oninput="validarDimension(this)"
                                                            placeholder="0.00"
-                                                           title="Alto en centímetros">
+                                                           title="Alto en centímetros"
+                                                           autocomplete="off">
                                                     <span class="input-group-text">cm</span>
                                                 </div>
                                                 @error('dAlto_cm')
@@ -261,33 +382,46 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="imagen" class="form-label fw-bold">
-                                        Imagen de la Valoración <small class="text-muted">(Formatos: JPG, PNG, GIF, WebP, BMP, SVG)</small>
+                                    <label class="form-label fw-bold">
+                                        Imagen de la Valoración
                                     </label>
+                                    
                                     <input type="file" name="imagen" id="imagen" 
-                                        class="form-control @error('imagen') is-invalid @enderror"
-                                        accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.tiff,.ico,.heic,.heif">
+                                        class="form-control @error('imagen') is-invalid @enderror d-none"
+                                        accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.svg"
+                                        onchange="handleImageSelection(event)"
+                                        autocomplete="off">
+                                    
+                                    <!-- Botón personalizado para seleccionar imagen -->
+                                    <button type="button" class="btn btn-outline-primary mb-2" onclick="abrirSelectorImagen()">
+                                        <i class="fas fa-folder-open me-1"></i> Seleccionar Imagen
+                                    </button>
+                                    
                                     @error('imagen')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
                                     @enderror
+                                    <small class="form-text text-muted">
+                                        Imagen específica para esta valoración (opcional, máximo 5MB)
+                                    </small>
                                     
                                     <!-- Vista previa de la imagen actual -->
                                     @if($variacion->vImagen)
-                                        <div class="mt-2">
+                                        <div class="mt-2" id="current-image-container">
                                             <img src="{{ asset($variacion->vImagen) }}" 
                                                 alt="Imagen actual"
                                                 style="max-width: 150px; max-height: 150px; object-fit: cover; border-radius: 4px; margin-top: 10px;"
                                                 id="current-image-preview">
                                             <div class="form-check mt-2">
-                                                <input type="checkbox" name="usar_imagen_actual" id="usar_imagen_actual" 
-                                                    class="form-check-input" value="1" checked>
-                                                <label for="usar_imagen_actual" class="form-check-label">
+                                                <input type="checkbox" name="mantener_imagen" id="mantener_imagen" 
+                                                    class="form-check-input" value="1" checked
+                                                    onchange="toggleMantenerImagen()">
+                                                <label for="mantener_imagen" class="form-check-label">
                                                     <i class="fas fa-check-circle text-success me-1"></i> Mantener imagen actual
                                                 </label>
                                             </div>
                                         </div>
                                     @else
-                                        <div class="mt-2 text-muted">
+                                        <div class="mt-2 text-muted" id="no-image-message">
                                             <i class="fas fa-image me-1"></i> No hay imagen asignada a esta valoración
                                         </div>
                                     @endif
@@ -308,28 +442,18 @@
                             
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <div class="form-check form-switch mt-4">
-                                        <input type="checkbox" name="bActivo" id="bActivo" 
-                                               class="form-check-input" value="1" 
-                                               {{ old('bActivo', $variacion->bActivo) ? 'checked' : '' }}>
-                                        <label for="bActivo" class="form-check-label fw-bold">
-                                            Valoración activa
-                                        </label>
-                                    </div>
+                                    <label for="tDescripcion" class="form-label fw-bold">
+                                        Descripción (Opcional)
+                                    </label>
+                                    <textarea name="tDescripcion" id="tDescripcion" 
+                                              class="form-control @error('tDescripcion') is-invalid @enderror"
+                                              rows="3" placeholder="Descripción específica de esta valoración"
+                                              autocomplete="off">{{ old('tDescripcion', $variacion->tDescripcion) }}</textarea>
+                                    @error('tDescripcion')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="form-group mb-3">
-                            <label for="tDescripcion" class="form-label fw-bold">
-                                Descripción (Opcional)
-                            </label>
-                            <textarea name="tDescripcion" id="tDescripcion" 
-                                      class="form-control @error('tDescripcion') is-invalid @enderror"
-                                      rows="3" placeholder="Descripción específica de esta valoración">{{ old('tDescripcion', $variacion->tDescripcion) }}</textarea>
-                            @error('tDescripcion')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
                         </div>
                     </div>
                 </div>
@@ -363,7 +487,8 @@
                                                        data-atributo-id="{{ $valor->atributo->id_atributo }}"
                                                        {{ isset($atributosSeleccionados[$valor->atributo->id_atributo]) && 
                                                           $atributosSeleccionados[$valor->atributo->id_atributo] == $valor->id_atributo_valor ? 'checked' : '' }}
-                                                       required>
+                                                       required
+                                                       autocomplete="off">
                                                 <label class="form-check-label" for="atributo_{{ $valor->atributo->id_atributo }}_{{ $valor->id_atributo_valor }}">
                                                     {{ $valor->vValor }}
                                                     @if($valor->pivot && $valor->pivot->dPrecio_extra > 0)
@@ -408,13 +533,12 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-// Objeto para guardar valores originales
-const valoresOriginales = {};
+// Variables globales para manejar la imagen
+let imagenSeleccionada = null;
+let imagenPreviewUrl = null;
+let imagenEliminada = false;
 
-// Guardar valor original cuando el campo recibe focus
-function guardarValorOriginal(input) {
-    valoresOriginales[input.id] = input.value;
-}
+// ==================== VALIDACIONES ====================
 
 // Validar SKU (letras, números, guiones)
 function validarSKU(input) {
@@ -491,16 +615,147 @@ function validarPrecio(input) {
         }, 0);
     }
     
-    input.classList.remove('is-invalid');
+    // Limpiar error específico del input
+    limpiarErrorPrecio(input);
     
     // Mostrar error si el número es muy grande
     if (value) {
         const numero = parseFloat(value);
         if (!isNaN(numero) && numero > 9999999.99) {
             input.classList.add('is-invalid');
-            mostrarErrorGeneral(input, 'El precio máximo es 9,999,999.99');
+            mostrarErrorPrecio(input, 'El precio máximo es 9,999,999.99');
         }
     }
+    
+    // Si es precio normal, validar precio de oferta
+    if (input.id === 'dPrecio') {
+        validarPrecioContraPrecioVenta();
+    }
+}
+
+// Validar precio de oferta
+function validarPrecioOferta() {
+    const precioVentaInput = document.getElementById('dPrecio');
+    const precioOfertaInput = document.getElementById('dPrecio_oferta');
+    const tieneOfertaCheckbox = document.getElementById('bTiene_oferta');
+    
+    if (!precioVentaInput || !precioOfertaInput || !tieneOfertaCheckbox) {
+        return;
+    }
+    
+    // Solo validar si la oferta está activada
+    if (!tieneOfertaCheckbox.checked) {
+        limpiarErrorOferta();
+        return;
+    }
+    
+    const precioVenta = parseFloat(precioVentaInput.value) || 0;
+    const precioOferta = parseFloat(precioOfertaInput.value) || 0;
+    
+    // Limpiar error anterior
+    limpiarErrorOferta();
+    
+    // Si está vacío pero la oferta está activada
+    if (precioOfertaInput.value.trim() === '') {
+        mostrarErrorOferta('El precio de oferta es obligatorio cuando se activa la oferta');
+        return;
+    }
+    
+    // Validar que sea menor que el precio de venta
+    if (precioOferta > 0 && precioOferta >= precioVenta) {
+        mostrarErrorOferta('El precio de oferta debe ser menor que el precio de venta');
+    }
+}
+
+// Función para mostrar error de precio
+function mostrarErrorPrecio(input, mensaje) {
+    // Remover error anterior si existe
+    const errorId = `error-${input.id}-limite`;
+    const errorElement = document.getElementById(errorId);
+    if (errorElement) {
+        errorElement.remove();
+    }
+    
+    // Crear elemento de error
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'invalid-feedback d-block precio-error';
+    errorDiv.textContent = mensaje;
+    errorDiv.id = errorId;
+    
+    // Insertar después del input
+    input.parentNode.appendChild(errorDiv);
+}
+
+// Función para limpiar error de precio
+function limpiarErrorPrecio(input) {
+    const errorId = `error-${input.id}-limite`;
+    const errorElement = document.getElementById(errorId);
+    if (errorElement) {
+        errorElement.remove();
+    }
+    input.classList.remove('is-invalid');
+}
+
+// Función para validar que el precio de oferta sea menor que el precio normal
+function validarPrecioContraPrecioVenta() {
+    const precioVentaInput = document.getElementById('dPrecio');
+    const precioOfertaInput = document.getElementById('dPrecio_oferta');
+    const tieneOfertaCheckbox = document.getElementById('bTiene_oferta');
+    
+    if (!precioVentaInput || !precioOfertaInput || !tieneOfertaCheckbox) {
+        return;
+    }
+    
+    // Solo validar si la oferta está activada
+    if (!tieneOfertaCheckbox.checked) {
+        limpiarErrorOferta();
+        return;
+    }
+    
+    const precioVenta = parseFloat(precioVentaInput.value) || 0;
+    const precioOferta = parseFloat(precioOfertaInput.value) || 0;
+    
+    // Limpiar error anterior
+    limpiarErrorOferta();
+    
+    // Validar que sea menor que el precio de venta
+    if (precioOferta > 0 && precioOferta >= precioVenta) {
+        mostrarErrorOferta('El precio de oferta debe ser menor que el precio de venta');
+    }
+}
+
+function mostrarErrorOferta(mensaje) {
+    const inputOferta = document.getElementById('dPrecio_oferta');
+    const errorId = 'error-precio-oferta';
+    
+    // Remover error anterior si existe
+    const errorElement = document.getElementById(errorId);
+    if (errorElement) {
+        errorElement.remove();
+    }
+    
+    // Crear elemento de error
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'invalid-feedback d-block text-danger mt-1';
+    errorDiv.id = errorId;
+    errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i> ${mensaje}`;
+    
+    // Insertar después del input
+    const inputGroup = inputOferta.closest('.input-group') || inputOferta.parentNode;
+    inputGroup.appendChild(errorDiv);
+    inputOferta.classList.add('is-invalid');
+}
+
+function limpiarErrorOferta() {
+    const inputOferta = document.getElementById('dPrecio_oferta');
+    const errorId = 'error-precio-oferta';
+    
+    const errorElement = document.getElementById(errorId);
+    if (errorElement) {
+        errorElement.remove();
+    }
+    
+    inputOferta.classList.remove('is-invalid');
 }
 
 // Validar stock (máximo 6 dígitos)
@@ -531,13 +786,13 @@ function validarStock(input) {
     input.classList.remove('is-invalid');
 }
 
-// Validar peso (kg con 3 decimales, máximo 1000.000)
+// Validar peso (kg con 3 decimales)
 function validarPeso(input) {
     let value = input.value;
     const cursorPos = input.selectionStart;
     
     if (value === '') {
-        input.classList.remove('is-invalid');
+        limpiarErrorDimension(input);
         calcularVolumen();
         return;
     }
@@ -558,14 +813,6 @@ function validarPeso(input) {
     // Agregar 0 si empieza con punto
     if (value.startsWith('.')) {
         value = '0' + value;
-    }
-    
-    // Limitar enteros a 4 dígitos (1000.000)
-    const partesNumero = value.split('.');
-    const parteEntera = partesNumero[0];
-    
-    if (parteEntera.length > 4) {
-        value = parteEntera.substring(0, 4) + (partesNumero[1] ? '.' + partesNumero[1] : '');
     }
     
     // Limitar decimales a máximo 3
@@ -577,6 +824,11 @@ function validarPeso(input) {
         }
     }
     
+    // Limitar longitud total a 10 caracteres
+    if (value.length > 10) {
+        value = value.substring(0, 10);
+    }
+    
     if (input.value !== value) {
         const oldValue = input.value;
         input.value = value;
@@ -588,27 +840,28 @@ function validarPeso(input) {
         }, 0);
     }
     
-    input.classList.remove('is-invalid');
+    // Limpiar error primero
+    limpiarErrorDimension(input);
     
-    // Validar límite
+    // Validar que no exceda 1000 kg
     if (value) {
         const numero = parseFloat(value);
-        if (!isNaN(numero) && numero > 1000.000) {
+        if (!isNaN(numero) && numero > 1000) {
             input.classList.add('is-invalid');
-            mostrarErrorGeneral(input, 'El peso máximo es 1000.000 kg');
+            mostrarErrorDimension(input, 'El peso máximo es 1000 kg');
         }
     }
     
     calcularVolumen();
 }
 
-// Validar dimensiones (cm con 2 decimales, máximo 500.00)
+// Validar dimensiones (cm con 2 decimales)
 function validarDimension(input) {
     let value = input.value;
     const cursorPos = input.selectionStart;
     
     if (value === '') {
-        input.classList.remove('is-invalid');
+        limpiarErrorDimension(input);
         calcularVolumen();
         return;
     }
@@ -631,14 +884,6 @@ function validarDimension(input) {
         value = '0' + value;
     }
     
-    // Limitar enteros a 3 dígitos (500.00)
-    const partesNumero = value.split('.');
-    const parteEntera = partesNumero[0];
-    
-    if (parteEntera.length > 3) {
-        value = parteEntera.substring(0, 3) + (partesNumero[1] ? '.' + partesNumero[1] : '');
-    }
-    
     // Limitar decimales a máximo 2
     if (value.includes('.')) {
         const partes = value.split('.');
@@ -646,6 +891,11 @@ function validarDimension(input) {
             partes[1] = partes[1].substring(0, 2);
             value = partes[0] + '.' + partes[1];
         }
+    }
+    
+    // Limitar longitud total a 10 caracteres
+    if (value.length > 10) {
+        value = value.substring(0, 10);
     }
     
     if (input.value !== value) {
@@ -659,35 +909,257 @@ function validarDimension(input) {
         }, 0);
     }
     
-    input.classList.remove('is-invalid');
+    // Limpiar error primero
+    limpiarErrorDimension(input);
     
-    // Validar límite
+    // Validar que no exceda 500 cm
     if (value) {
         const numero = parseFloat(value);
-        if (!isNaN(numero) && numero > 500.00) {
+        if (!isNaN(numero) && numero > 500) {
             input.classList.add('is-invalid');
-            mostrarErrorGeneral(input, 'La dimensión máxima es 500.00 cm');
+            mostrarErrorDimension(input, 'La dimensión máxima es 500 cm');
         }
     }
     
     calcularVolumen();
 }
 
-// Función auxiliar para mostrar errores generales
-function mostrarErrorGeneral(input, mensaje) {
-    const errorId = `error-${input.id}`;
-    const errorElement = document.getElementById(errorId);
-    
+// Función para mostrar error de dimensiones
+function mostrarErrorDimension(input, mensaje) {
+    const errorElement = document.getElementById(`error-${input.id}`);
     if (errorElement) {
-        errorElement.remove();
+        errorElement.textContent = mensaje;
+    } else {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'invalid-feedback d-block';
+        errorDiv.id = `error-${input.id}`;
+        errorDiv.textContent = mensaje;
+        input.parentNode.appendChild(errorDiv);
+    }
+}
+
+// Función para limpiar error de dimensiones
+function limpiarErrorDimension(input) {
+    const errorElement = document.getElementById(`error-${input.id}`);
+    if (errorElement) {
+        errorElement.textContent = '';
+    }
+    input.classList.remove('is-invalid');
+}
+
+// ==================== FUNCIONES PARA OFERTA ====================
+
+// Mostrar/ocultar formulario de oferta
+function toggleOfertaForm() {
+    const ofertaCheckbox = document.getElementById('bTiene_oferta');
+    const ofertaForm = document.getElementById('oferta-form');
+    
+    if (ofertaCheckbox.checked) {
+        ofertaForm.style.display = 'block';
+        // Validar precio de oferta al activar
+        setTimeout(() => {
+            validarPrecioContraPrecioVenta();
+        }, 100);
+    } else {
+        ofertaForm.style.display = 'none';
+        // Limpiar errores al desactivar
+        limpiarErrorOferta();
+    }
+}
+
+// ==================== FUNCIONES PARA IMAGEN ====================
+
+// Abrir selector de imagen
+function abrirSelectorImagen() {
+    document.getElementById('imagen').click();
+}
+
+// Manejar selección de imagen
+function handleImageSelection(event) {
+    const file = event.target.files[0];
+    const container = document.getElementById('nueva-imagen-container');
+    const mantenerImagenCheckbox = document.getElementById('mantener_imagen');
+    const mantenerImagenHidden = document.getElementById('mantener_imagen_hidden');
+    
+    if (file) {
+        // Validar tamaño máximo (5MB)
+        const maxSize = 5 * 1024 * 1024; // 5MB en bytes
+        if (file.size > maxSize) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Archivo demasiado grande',
+                text: 'La imagen no debe pesar más de 5MB',
+                position: 'center'
+            });
+            event.target.value = '';
+            return;
+        }
+        
+        // Guardar la imagen seleccionada
+        imagenSeleccionada = file;
+        
+        // Crear URL para vista previa
+        if (imagenPreviewUrl) {
+            URL.revokeObjectURL(imagenPreviewUrl);
+        }
+        imagenPreviewUrl = URL.createObjectURL(file);
+        
+        // Desmarcar checkbox de mantener imagen
+        if (mantenerImagenCheckbox) {
+            mantenerImagenCheckbox.checked = false;
+            mantenerImagenHidden.value = '0';
+        }
+        
+        // Ocultar imagen actual si existe
+        const currentImageContainer = document.getElementById('current-image-container');
+        const noImageMessage = document.getElementById('no-image-message');
+        if (currentImageContainer) currentImageContainer.style.display = 'none';
+        if (noImageMessage) noImageMessage.style.display = 'none';
+        
+        // Mostrar vista previa de nueva imagen
+        container.innerHTML = `
+            <div class="card border position-relative" style="max-width: 200px;">
+                <button type="button" 
+                        class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1"
+                        onclick="cancelarNuevaImagen()"
+                        style="width: 28px; height: 28px; padding: 0; border-radius: 50%; z-index: 10;">
+                    <i class="fas fa-times"></i>
+                </button>
+                <img src="${imagenPreviewUrl}" 
+                     class="card-img-top" 
+                     style="height: 120px; object-fit: contain; background: #f8f9fa; padding: 8px;"
+                     alt="Nueva imagen seleccionada">
+                <div class="card-body p-2 text-center">
+                    <small class="text-muted d-block" style="font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        ${file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name}
+                    </small>
+                    <small class="text-muted d-block">
+                        ${(file.size / 1024).toFixed(2)} KB
+                    </small>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Cancelar nueva imagen y restaurar imagen actual
+function cancelarNuevaImagen() {
+    const imagenInput = document.getElementById('imagen');
+    const nuevaImagenContainer = document.getElementById('nueva-imagen-container');
+    const mantenerImagenCheckbox = document.getElementById('mantener_imagen');
+    const mantenerImagenHidden = document.getElementById('mantener_imagen_hidden');
+    const currentImageContainer = document.getElementById('current-image-container');
+    const noImageMessage = document.getElementById('no-image-message');
+    
+    // Limpiar el input de archivo
+    imagenInput.value = '';
+    
+    // Liberar la URL de la vista previa
+    if (imagenPreviewUrl) {
+        URL.revokeObjectURL(imagenPreviewUrl);
+        imagenPreviewUrl = null;
     }
     
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'invalid-feedback d-block';
-    errorDiv.textContent = mensaje;
-    errorDiv.id = errorId;
+    // Limpiar la imagen seleccionada
+    imagenSeleccionada = null;
     
-    input.parentNode.appendChild(errorDiv);
+    // Limpiar contenedor de nueva imagen
+    nuevaImagenContainer.innerHTML = '';
+    
+    // Si hay imagen actual, mostrarla y marcar checkbox
+    if (currentImageContainer) {
+        currentImageContainer.style.display = 'block';
+        if (mantenerImagenCheckbox) {
+            mantenerImagenCheckbox.checked = true;
+            mantenerImagenHidden.value = '1';
+        }
+    } else if (noImageMessage) {
+        noImageMessage.style.display = 'block';
+    }
+}
+
+// Eliminar imagen actual
+function eliminarImagenActual() {
+    const mantenerImagenHidden = document.getElementById('mantener_imagen_hidden');
+    const mantenerImagenCheckbox = document.getElementById('mantener_imagen');
+    const currentImageContainer = document.getElementById('current-image-container');
+    const noImageMessage = document.getElementById('no-image-message');
+    const nuevaImagenContainer = document.getElementById('nueva-imagen-container');
+    const eliminarImagenBtn = document.getElementById('eliminar-imagen-btn');
+    
+    Swal.fire({
+        title: "¿Estás seguro?",
+        text: "La imagen actual será eliminada permanentemente.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Sí, eliminar",
+        cancelButtonText: "Cancelar",
+        position: "center"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            imagenEliminada = true;
+            mantenerImagenHidden.value = '0';
+            
+            if (mantenerImagenCheckbox) {
+                mantenerImagenCheckbox.checked = false;
+            }
+            
+            // Ocultar imagen actual
+            if (currentImageContainer) {
+                currentImageContainer.style.display = 'none';
+            }
+            
+            // Mostrar mensaje de no hay imagen
+            if (noImageMessage) {
+                noImageMessage.style.display = 'block';
+                noImageMessage.innerHTML = '<i class="fas fa-image me-1"></i> Imagen marcada para eliminación';
+            }
+            
+            // Limpiar nueva imagen si existe
+            if (nuevaImagenContainer) {
+                nuevaImagenContainer.innerHTML = '';
+            }
+            
+            // Ocultar botón de eliminar
+            if (eliminarImagenBtn) {
+                eliminarImagenBtn.style.display = 'none';
+            }
+            
+            Swal.fire({
+                title: "Imagen marcada para eliminación",
+                text: "La imagen será removida al guardar los cambios.",
+                icon: "info",
+                timer: 2000,
+                showConfirmButton: false
+            });
+        }
+    });
+}
+
+// Toggle mantener imagen
+function toggleMantenerImagen() {
+    const mantenerImagenCheckbox = document.getElementById('mantener_imagen');
+    const mantenerImagenHidden = document.getElementById('mantener_imagen_hidden');
+    const nuevaImagenContainer = document.getElementById('nueva-imagen-container');
+    const imagenInput = document.getElementById('imagen');
+    
+    if (mantenerImagenCheckbox.checked) {
+        mantenerImagenHidden.value = '1';
+        // Limpiar nueva imagen si existe
+        if (nuevaImagenContainer) {
+            nuevaImagenContainer.innerHTML = '';
+        }
+        if (imagenInput) {
+            imagenInput.value = '';
+        }
+        if (imagenPreviewUrl) {
+            URL.revokeObjectURL(imagenPreviewUrl);
+            imagenPreviewUrl = null;
+        }
+        imagenSeleccionada = null;
+    } else {
+        mantenerImagenHidden.value = '0';
+    }
 }
 
 // Calcular volumen y peso volumétrico
@@ -705,24 +1177,25 @@ function calcularVolumen() {
         const pesoVolumetrico = volumen / 5000;
         const pesoFacturable = Math.max(peso, pesoVolumetrico);
         
-        volumenElement.innerHTML = `
-            <strong>Dimensiones:</strong> ${largo.toFixed(2)} × ${ancho.toFixed(2)} × ${alto.toFixed(2)} cm<br>
-            <strong>Volumen:</strong> ${volumen.toFixed(2)} cm³<br>
-            <strong>Peso volumétrico (estimado):</strong> ${pesoVolumetrico.toFixed(3)} kg<br>
-            <strong>Peso facturable (estimado):</strong> ${pesoFacturable.toFixed(3)} kg
-        `;
+        if (largo > 0 && ancho > 0 && alto > 0) {
+            volumenElement.innerHTML = `
+                <strong>Dimensiones:</strong> ${largo.toFixed(2)} × ${ancho.toFixed(2)} × ${alto.toFixed(2)} cm<br>
+                <strong>Volumen:</strong> ${volumen.toFixed(2)} cm³<br>
+                <strong>Peso volumétrico (estimado):</strong> ${pesoVolumetrico.toFixed(3)} kg<br>
+                <strong>Peso facturable (estimado):</strong> ${pesoFacturable.toFixed(3)} kg
+            `;
+        } else {
+            volumenElement.innerHTML = 'Ingresa las tres dimensiones para calcular el volumen.';
+        }
     }
 }
 
-// Validación del formulario al enviar
+// ==================== VALIDACIÓN DEL FORMULARIO ====================
+
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('valoracionForm');
     const imagenInput = document.getElementById('imagen');
-    const usarImagenActualCheckbox = document.getElementById('usar_imagen_actual');
-    const mantenerImagenHidden = document.getElementById('mantener_imagen_hidden');
-    const nuevaImagenContainer = document.getElementById('nueva-imagen-container');
     const eliminarImagenBtn = document.getElementById('eliminar-imagen-btn');
-    const currentImagePreview = document.getElementById('current-image-preview');
     
     // Inicializar cálculo de volumen
     calcularVolumen();
@@ -735,211 +1208,34 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Variables para controlar el estado de la imagen
-    let archivoOriginal = null;
-    let archivoNuevo = null;
-    let imagenEliminada = false;
+    // Event listeners para validar precio de oferta en tiempo real
+    const precioVentaInput = document.getElementById('dPrecio');
+    const precioOfertaInput = document.getElementById('dPrecio_oferta');
+    const tieneOfertaCheckbox = document.getElementById('bTiene_oferta');
     
-    // Inicializar estado de la imagen
-    // Por defecto, mantener imagen actual está activado
-    if (usarImagenActualCheckbox) {
-        usarImagenActualCheckbox.checked = true;
-        mantenerImagenHidden.value = '1';
-    }
-    
-    // Guardar el estado original de la imagen
-    if (imagenInput && imagenInput.files && imagenInput.files[0]) {
-        archivoOriginal = imagenInput.files[0];
-    }
-    
-    // Manejar cambio en el input de archivo
-    if (imagenInput) {
-        imagenInput.addEventListener('change', function(e) {
-            if (this.files && this.files[0]) {
-                const file = this.files[0];
-                archivoNuevo = file;
-                
-                // Desmarcar checkbox de mantener imagen automáticamente
-                if (usarImagenActualCheckbox) {
-                    usarImagenActualCheckbox.checked = false;
-                    mantenerImagenHidden.value = '0';
-                }
-                
-                // Mostrar vista previa de nueva imagen
-                mostrarNuevaImagenPreview(file);
-            } else {
-                // Si se cancela la selección y había archivo nuevo
-                if (archivoNuevo) {
-                    // Restaurar el archivo nuevo
-                    restaurarArchivoEnInput(archivoNuevo);
-                    mostrarNuevaImagenPreview(archivoNuevo);
-                    
-                    // Mantener checkbox desmarcado
-                    if (usarImagenActualCheckbox) {
-                        usarImagenActualCheckbox.checked = false;
-                        mantenerImagenHidden.value = '0';
-                    }
-                } else if (archivoOriginal && !imagenEliminada) {
-                    // Si había archivo original y no se eliminó, restaurarlo
-                    restaurarArchivoEnInput(archivoOriginal);
-                    
-                    // Marcar checkbox de mantener imagen
-                    if (usarImagenActualCheckbox) {
-                        usarImagenActualCheckbox.checked = true;
-                        mantenerImagenHidden.value = '1';
-                    }
-                    
-                    // Limpiar vista previa de nueva imagen
-                    if (nuevaImagenContainer) {
-                        nuevaImagenContainer.innerHTML = '';
-                    }
-                }
-            }
+    if (precioVentaInput && precioOfertaInput && tieneOfertaCheckbox) {
+        // Validar cuando cambia el precio de venta
+        precioVentaInput.addEventListener('input', function() {
+            setTimeout(() => {
+                validarPrecioContraPrecioVenta();
+            }, 100);
         });
-    }
-    
-    // Manejar el checkbox de mantener imagen
-    if (usarImagenActualCheckbox) {
-        usarImagenActualCheckbox.addEventListener('change', function() {
-            if (this.checked) {
-                mantenerImagenHidden.value = '1';
-                archivoNuevo = null;
-                
-                // Limpiar input de archivo
-                if (imagenInput) {
-                    imagenInput.value = '';
-                }
-                
-                // Limpiar vista previa de nueva imagen
-                if (nuevaImagenContainer) {
-                    nuevaImagenContainer.innerHTML = '';
-                }
-            } else {
-                mantenerImagenHidden.value = '0';
-                // Si hay archivo nuevo, restaurarlo
-                if (archivoNuevo) {
-                    restaurarArchivoEnInput(archivoNuevo);
-                    mostrarNuevaImagenPreview(archivoNuevo);
-                }
-            }
-        });
-    }
-    
-    // Manejar el botón de eliminar imagen
-    if (eliminarImagenBtn) {
-        eliminarImagenBtn.addEventListener('click', function() {
-            Swal.fire({
-                title: "¿Estás seguro?",
-                text: "La imagen actual será eliminada permanentemente.",
-                icon: "warning",
-                showCancelButton: true,
-                confirmButtonText: "Sí, eliminar",
-                cancelButtonText: "Cancelar",
-                position: "center"
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    imagenEliminada = true;
-                    mantenerImagenHidden.value = '0';
-                    archivoNuevo = null;
-                    archivoOriginal = null;
-                    
-                    // Limpiar input de archivo
-                    if (imagenInput) {
-                        imagenInput.value = '';
-                    }
-                    
-                    // Ocultar imagen actual
-                    if (currentImagePreview) {
-                        currentImagePreview.style.display = 'none';
-                    }
-                    
-                    // Desmarcar checkbox de mantener imagen
-                    if (usarImagenActualCheckbox) {
-                        usarImagenActualCheckbox.checked = false;
-                    }
-                    
-                    // Limpiar vista previa de nueva imagen
-                    if (nuevaImagenContainer) {
-                        nuevaImagenContainer.innerHTML = '';
-                    }
-                    
-                    // Mostrar mensaje de eliminación
-                    Swal.fire({
-                        title: "Imagen eliminada",
-                        text: "La imagen será removida al guardar los cambios.",
-                        icon: "info",
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                    
-                    // Ocultar botón de eliminar
-                    eliminarImagenBtn.style.display = 'none';
-                }
-            });
-        });
-    }
-    
-    // Función para mostrar vista previa de nueva imagen
-    function mostrarNuevaImagenPreview(file) {
-        if (!nuevaImagenContainer) return;
         
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-            nuevaImagenContainer.innerHTML = `
-                <div class="mt-2">
-                    <strong><i class="fas fa-image me-1"></i> Nueva imagen seleccionada:</strong>
-                    <div class="mt-2">
-                        <img src="${e.target.result}" 
-                             style="max-width: 150px; max-height: 150px; object-fit: cover; border-radius: 4px; margin-top: 10px;"
-                             alt="Nueva imagen">
-                        <button type="button" class="btn btn-sm btn-outline-danger mt-2" onclick="cancelarNuevaImagen()">
-                            <i class="fas fa-times me-1"></i> Cancelar cambio
-                        </button>
-                    </div>
-                </div>
-            `;
-        };
-        
-        reader.readAsDataURL(file);
-    }
-    
-    // Función para restaurar archivo en input
-    function restaurarArchivoEnInput(file) {
-        if (!imagenInput) return;
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(file);
-        imagenInput.files = dataTransfer.files;
-    }
-    
-    // Función global para cancelar nueva imagen
-    window.cancelarNuevaImagen = function() {
-        if (!imagenEliminada && archivoOriginal) {
-            // Restaurar archivo original
-            restaurarArchivoEnInput(archivoOriginal);
-            
-            // Marcar checkbox de mantener imagen
-            if (usarImagenActualCheckbox) {
-                usarImagenActualCheckbox.checked = true;
-                mantenerImagenHidden.value = '1';
-            }
-            
-            // Limpiar vista previa de nueva imagen
-            if (nuevaImagenContainer) {
-                nuevaImagenContainer.innerHTML = '';
-            }
-            
-            archivoNuevo = null;
-        } else if (imagenEliminada) {
-            // Si se eliminó la imagen, solo limpiar
-            if (imagenInput) {
-                imagenInput.value = '';
-            }
-            if (nuevaImagenContainer) {
-                nuevaImagenContainer.innerHTML = '';
-            }
+        // Validar cuando cambia el precio de oferta
+        if (precioOfertaInput) {
+            precioOfertaInput.addEventListener('input', validarPrecioContraPrecioVenta);
         }
-    };
+        
+        // Validar cuando cambia el checkbox de oferta
+        tieneOfertaCheckbox.addEventListener('change', function() {
+            setTimeout(() => {
+                validarPrecioContraPrecioVenta();
+            }, 100);
+        });
+    }
+    
+    // Inicializar toggle de oferta
+    toggleOfertaForm();
     
     // Validación en tiempo real de atributos
     document.querySelectorAll('.atributo-radio').forEach(radio => {
@@ -953,6 +1249,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
+    });
+    
+    // Botón para eliminar imagen actual
+    if (eliminarImagenBtn) {
+        eliminarImagenBtn.addEventListener('click', eliminarImagenActual);
+    }
+    
+    // Prevenir que el navegador guarde valores del autocomplete
+    document.querySelectorAll('input, select, textarea').forEach(element => {
+        element.setAttribute('autocomplete', 'off');
     });
     
     // Validación del formulario al enviar
@@ -1004,7 +1310,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const precioInput = document.getElementById('dPrecio');
             const precioOfertaInput = document.getElementById('dPrecio_oferta');
             
-            // Validar precio
+            // Validar precio normal
             if (precioInput.value.trim()) {
                 const regexPrecio = /^[0-9]*\.?[0-9]*$/;
                 if (!regexPrecio.test(precioInput.value.trim())) {
@@ -1034,7 +1340,53 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             
-            // 4. Validar dimensiones si tienen valor
+            // 4. Validar precio de oferta si está activa
+            const tieneOfertaCheckbox = document.getElementById('bTiene_oferta');
+            
+            if (tieneOfertaCheckbox && tieneOfertaCheckbox.checked) {
+                // Validar que precio de oferta tenga valor
+                if (!precioOfertaInput.value.trim()) {
+                    precioOfertaInput.classList.add('is-invalid');
+                    erroresCriticos = true;
+                }
+                
+                // Validar que precio de oferta sea menor que precio de venta
+                if (precioOfertaInput.value.trim() && precioInput.value.trim()) {
+                    const precioOferta = parseFloat(precioOfertaInput.value.trim());
+                    const precioVenta = parseFloat(precioInput.value.trim());
+                    
+                    if (precioOferta >= precioVenta) {
+                        precioOfertaInput.classList.add('is-invalid');
+                        erroresCriticos = true;
+                    }
+                }
+                
+                // Validar fechas de oferta
+                const fechaInicioInput = document.getElementById('dFecha_inicio_oferta');
+                const fechaFinInput = document.getElementById('dFecha_fin_oferta');
+                
+                if (!fechaInicioInput.value) {
+                    fechaInicioInput.classList.add('is-invalid');
+                    erroresCriticos = true;
+                }
+                
+                if (!fechaFinInput.value) {
+                    fechaFinInput.classList.add('is-invalid');
+                    erroresCriticos = true;
+                }
+                
+                if (fechaInicioInput.value && fechaFinInput.value) {
+                    const inicio = new Date(fechaInicioInput.value);
+                    const fin = new Date(fechaFinInput.value);
+                    
+                    if (fin < inicio) {
+                        fechaFinInput.classList.add('is-invalid');
+                        erroresCriticos = true;
+                    }
+                }
+            }
+            
+            // 5. Validar dimensiones si tienen valor
             const camposDimensiones = ['dPeso', 'dLargo_cm', 'dAncho_cm', 'dAlto_cm'];
             camposDimensiones.forEach(campoId => {
                 const input = document.getElementById(campoId);
@@ -1047,7 +1399,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
             
-            // 5. Validar atributos
+            // 6. Validar atributos
             let atributosValidos = true;
             const atributosContainers = document.querySelectorAll('.atributo-container');
             
@@ -1085,6 +1437,14 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (!atributosValidos) {
                 erroresCriticos = true;
+            }
+            
+            // 7. Asegurar que la imagen seleccionada se envíe
+            if (imagenSeleccionada && (!imagenInput.files || imagenInput.files.length === 0)) {
+                // Si hay una imagen en memoria pero no en el input, agregarla
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(imagenSeleccionada);
+                imagenInput.files = dataTransfer.files;
             }
             
             // Si hay errores críticos, prevenir envío
@@ -1154,14 +1514,21 @@ Swal.fire({
     box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
 
-#nueva-imagen-container img,
-#current-image-preview {
+#nueva-imagen-container .card:hover,
+#current-image-preview:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     transition: all 0.3s ease;
 }
 
-#nueva-imagen-container img:hover,
-#current-image-preview:hover {
-    transform: scale(1.05);
+#nueva-imagen-container .btn-danger {
+    transition: all 0.3s ease;
+}
+
+#nueva-imagen-container .btn-danger:hover {
+    transform: scale(1.1);
+    background-color: #c82333;
+    border-color: #bd2130;
 }
 
 .form-control:focus {
@@ -1225,6 +1592,32 @@ Swal.fire({
 
 #volumen-info strong {
     color: #17a2b8;
+}
+
+/* Estilos para sección de oferta */
+#oferta-form {
+    transition: all 0.3s ease;
+}
+
+.card-header.bg-danger {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+}
+
+/* Estilos para campos obligatorios en oferta */
+#oferta-form .form-label span.text-danger {
+    font-size: 1.1em;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    #nueva-imagen-container .card-img-top {
+        height: 100px !important;
+    }
+    
+    #current-image-preview {
+        max-width: 120px !important;
+        max-height: 120px !important;
+    }
 }
 </style>
 @endsection
