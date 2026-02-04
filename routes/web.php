@@ -1,5 +1,4 @@
 <?php
-
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\AuthController;
@@ -85,7 +84,6 @@ Route::prefix('atributos/{atributo}')->name('atributos.')->group(function () {
     Route::get('/valores/{valor}/edit', [AtributoController::class, 'editValor'])->name('valores.edit');
     Route::put('/valores/{valor}', [AtributoController::class, 'updateValor'])->name('valores.update');
     Route::delete('/valores/{valor}', [AtributoController::class, 'destroyValor'])->name('valores.destroy');
-     Route::delete('/producto/{producto_id}/{variacion_id}', [ValoracionController::class, 'destroy'])->name('destroy');
 });
 
 // =====================================================================
@@ -95,7 +93,7 @@ Route::get('/productos/{id}/asignar-atributos', [ProductoController::class, 'asi
 Route::post('/productos/{id}/guardar-atributos', [ProductoController::class, 'guardarAtributos'])->name('productos.guardar-atributos');
 
 // =====================================================================
-// RUTAS PARA VALORACIONES (VARIACIONES)
+// RUTAS PARA VALORACIONES (VARIACIONES) - CAMBIÉ EL NOMBRE A 'valoraciones' EN VEZ DE 'atributos'
 // =====================================================================
 Route::prefix('valoraciones')->name('valoraciones.')->group(function () {
     // Listado de productos con valoraciones
@@ -112,8 +110,8 @@ Route::prefix('valoraciones')->name('valoraciones.')->group(function () {
     Route::get('/producto/{producto_id}/editar/{variacion_id}', [ValoracionController::class, 'edit'])->name('edit');
     Route::put('/producto/{producto_id}/{variacion_id}', [ValoracionController::class, 'update'])->name('update');
     
-    // Eliminar valoración
-    Route::delete('/producto/{producto_id}/{variacion_id}', [ValoracionController::class, 'destroy'])->name('destroy');
+    // Eliminar valoración - CAMBIÉ EL NOMBRE A 'destroyValoracion' para evitar conflicto
+    Route::delete('/producto/{producto_id}/{variacion_id}', [ValoracionController::class, 'destroy'])->name('destroyValoracion');
 });
 
 // Ruta alternativa para el sidebar (desde la navegación principal)
