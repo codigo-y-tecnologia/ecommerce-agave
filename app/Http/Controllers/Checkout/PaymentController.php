@@ -314,8 +314,59 @@ class PaymentController extends Controller
             Log::error('Invalid signature en webhook', ['error' => $e->getMessage()]);
             return response('Invalid signature', 400);
         } catch (\Exception $e) {
-            Log::error('Error general en webhook', ['error' => $e->getMessage()]);
-            return response('Error', 500);
+
+            Log::error('Error en webhook Stripe', [
+                'error' => $e->getMessage(),
+                'payment_intent' => $reference ?? null,
+            ]);
+
+            // 🔥 SI ES ERROR DE INVENTARIO → REEMBOLSAR
+            if (str_contains($e->getMessage(), 'Inventario insuficiente')) {
+
+                if (!empty($reference)) {
+
+                    try {
+
+                        Stripe::setApiKey(config('services.stripe.secret'));
+
+                        $existing = Pago::where('vReferencia', $reference)->first();
+
+                        if ($existing && $existing->eEstado === 'reembolsado') {
+                            return response()->json(['status' => 'already_refunded'], 200);
+                        }
+
+                        $paymentIntent = \Stripe\PaymentIntent::retrieve($reference);
+
+                        $monto = $paymentIntent->amount_received / 100;
+
+                        \Stripe\Refund::create([
+                            'payment_intent' => $reference,
+                        ]);
+
+                        Pago::create([
+                            'eMetodo_pago' => 'stripe',
+                            'dMonto' => $monto,
+                            'eEstado' => 'reembolsado',
+                            'vReferencia' => $reference,
+                            'vSessionID' => $session->id,
+                        ]);
+
+                        Log::warning('💸 Pago reembolsado automáticamente por falta de stock', [
+                            'payment_intent' => $reference,
+                        ]);
+                    } catch (\Exception $refundError) {
+                        Log::critical('❌ Error al reembolsar', [
+                            'payment_intent' => $reference,
+                            'error' => $refundError->getMessage(),
+                        ]);
+                    }
+                }
+
+                // Stripe DEBE recibir 200
+                return response()->json(['status' => 'refunded_out_of_stock'], 200);
+            }
+
+            return response()->json(['error' => 'internal_error'], 200);
         }
     }
 
