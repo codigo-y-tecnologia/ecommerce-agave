@@ -147,33 +147,81 @@
 @endforeach
 @endsection
 
-@section('scripts')
+@push('styles')
+<!-- SweetAlert2 CSS (opcional) -->
+<style>
+.swal2-popup {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+.swal2-confirm {
+    background-color: #d33 !important;
+}
+</style>
+@endpush
+
+@push('scripts')
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Confirmación de eliminación con SweetAlert2
-    document.querySelectorAll('.btn-eliminar').forEach(button => {
-        button.addEventListener('click', function() {
-            const id = this.getAttribute('data-id');
-            const nombre = this.getAttribute('data-nombre');
-            
-            Swal.fire({
-                title: "¿Estás seguro?",
-                html: `Vas a eliminar el atributo: <strong>"${nombre}"</strong><br>
-                       <span class="text-danger">¡No podrás revertir esta acción! Todos los valores asociados también serán eliminados.</span>`,
-                icon: "warning",
-                showCancelButton: true,
-                confirmButtonColor: "#3085d6",
-                cancelButtonColor: "#d33",
-                confirmButtonText: "Sí, eliminar",
-                cancelButtonText: "Cancelar"
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Enviar formulario
-                    document.getElementById(`delete-form-${id}`).submit();
-                }
+    // Verificar si SweetAlert2 está cargado
+    if (typeof Swal === 'undefined') {
+        console.error('SweetAlert2 no está cargado. Cargando desde CDN...');
+        // Cargar SweetAlert2 dinámicamente si no está disponible
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+        script.onload = initDeleteButtons;
+        document.head.appendChild(script);
+    } else {
+        initDeleteButtons();
+    }
+
+    function initDeleteButtons() {
+        // Confirmación de eliminación con SweetAlert2
+        document.querySelectorAll('.btn-eliminar').forEach(button => {
+            button.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const nombre = this.getAttribute('data-nombre');
+                
+                Swal.fire({
+                    title: "¿Estás seguro?",
+                    html: `Vas a eliminar el atributo: <strong>"${nombre}"</strong><br>
+                           <span class="text-danger">¡No podrás revertir esta acción! Todos los valores asociados también serán eliminados.</span>`,
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#d33",
+                    cancelButtonColor: "#3085d6",
+                    confirmButtonText: "Sí, eliminar",
+                    cancelButtonText: "Cancelar",
+                    customClass: {
+                        popup: 'animated fadeIn'
+                    },
+                    showClass: {
+                        popup: 'animate__animated animate__fadeIn'
+                    },
+                    hideClass: {
+                        popup: 'animate__animated animate__fadeOut'
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Mostrar mensaje de eliminando
+                        Swal.fire({
+                            title: "Eliminando...",
+                            text: "Por favor espera",
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+                        
+                        // Enviar formulario
+                        document.getElementById(`delete-form-${id}`).submit();
+                    }
+                });
             });
         });
-    });
+    }
 });
 </script>
-@endsection
+@endpush

@@ -113,4 +113,28 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Mostrar alertas si hay mensajes de sesión
+    document.addEventListener('DOMContentLoaded', function() {
+        @if(session('success'))
+        Swal.fire({
+            title: "¡Éxito!",
+            text: "{{ session('success') }}",
+            icon: "success",
+            timer: 3000,
+            showConfirmButton: false
+        });
+        @endif
+        
+        @if(session('error'))
+        Swal.fire({
+            icon: "error",
+            title: "Oops...",
+            text: "{{ session('error') }}",
+            footer: 'Por favor, verifica la información'
+        });
+        @endif
+    });
+</script>
 @endsection

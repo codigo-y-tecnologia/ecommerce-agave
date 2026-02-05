@@ -11,7 +11,7 @@
             </div>
             
             <!-- Formulario de búsqueda -->
-            <form method="GET" action="{{ route('etiquetas.index') }}" class="mt-3">
+            <form method="GET" action="{{ route('etiquetas.index') }}" class="mt-3" id="searchForm">
                 <div class="row">
                     <div class="col-md-8">
                         <input type="text" name="search" class="form-control" 
@@ -29,18 +29,6 @@
         </div>
 
         <div class="card-body">
-            @if(session('success'))
-                <div class="alert alert-success">
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            @if(session('error'))
-                <div class="alert alert-danger">
-                    {{ session('error') }}
-                </div>
-            @endif
-
             @if(request('search') && request('search') != '')
                 <div class="alert alert-info mb-3">
                     Resultados para: "{{ request('search') }}"
@@ -122,7 +110,91 @@
         </div>
     </div>
 </div>
-@endsection
+
+<script>
+function confirmarEliminacion(id, nombre) {
+    Swal.fire({
+        title: "¿Estás seguro?",
+        text: "¡La etiqueta \"" + nombre + "\" será eliminada permanentemente!",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Sí, eliminar",
+        cancelButtonText: "Cancelar"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Mostrar loader
+            Swal.fire({
+                title: "Eliminando...",
+                text: "Por favor espera",
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Enviar el formulario de eliminación
+            setTimeout(() => {
+                document.getElementById('delete-form-' + id).submit();
+            }, 500);
+        }
+    });
+}
+
+// Mostrar mensaje de éxito después de operaciones
+@if(session('success'))
+document.addEventListener('DOMContentLoaded', function() {
+    const successMessage = "{{ session('success') }}";
+    
+    if (successMessage.includes('eliminada')) {
+        Swal.fire({
+            title: "¡Eliminado!",
+            text: successMessage,
+            icon: "success",
+            timer: 3000,
+            showConfirmButton: false
+        });
+    } else if (successMessage.includes('creada')) {
+        Swal.fire({
+            title: "¡Éxito!",
+            text: successMessage,
+            icon: "success",
+            draggable: true,
+            timer: 3000,
+            timerProgressBar: true
+        });
+    } else if (successMessage.includes('actualizada')) {
+        Swal.fire({
+            title: "¡Actualizado!",
+            text: successMessage,
+            icon: "success",
+            timer: 3000,
+            showConfirmButton: false
+        });
+    } else {
+        Swal.fire({
+            title: "¡Éxito!",
+            text: successMessage,
+            icon: "success",
+            timer: 3000
+        });
+    }
+});
+@endif
+
+// Mostrar mensaje de error
+@if(session('error'))
+document.addEventListener('DOMContentLoaded', function() {
+    Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "{{ session('error') }}",
+        footer: 'Por favor, verifica la información'
+    });
+});
+@endif
+</script>
 
 @push('styles')
 <!-- SweetAlert2 CSS -->
@@ -132,46 +204,5 @@
 @push('scripts')
 <!-- SweetAlert2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-<script>
-function confirmarEliminacion(id, nombre) {
-    Swal.fire({
-        title: "¿Estás seguro?",
-        text: "¡La etiqueta \"" + nombre + "\" será eliminada!",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#3085d6",
-        cancelButtonColor: "#d33",
-        confirmButtonText: "Sí, eliminar",
-        cancelButtonText: "Cancelar"
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Enviar el formulario de eliminación
-            document.getElementById('delete-form-' + id).submit();
-        }
-    });
-}
-
-// Mostrar mensaje de éxito después de eliminar
-@if(session('success'))
-Swal.fire({
-    title: "¡Eliminado!",
-    text: "{{ session('success') }}",
-    icon: "success",
-    timer: 3000,
-    showConfirmButton: false
-});
-@endif
-
-// Mostrar mensaje de error si hubo un problema
-@if(session('error'))
-Swal.fire({
-    title: "¡Error!",
-    text: "{{ session('error') }}",
-    icon: "error",
-    timer: 3000,
-    showConfirmButton: false
-});
-@endif
-</script>
 @endpush
+@endsection

@@ -37,7 +37,8 @@ class ValoracionController extends Controller
         
         if ($producto->valoresAtributos->count() === 0) {
             return redirect()->route('valoraciones.show', $producto->id_producto)
-                ->with('warning', 'Primero debes asignar atributos al producto desde la página de edición.');
+                ->with('warning', 'Primero debes asignar atributos al producto desde la página de edición.')
+                ->with('swal_error', true);
         }
         
         $atributos = [];
@@ -202,7 +203,8 @@ class ValoracionController extends Controller
         if ($validator->fails()) {
             return redirect()->back()
                 ->withErrors($validator)
-                ->withInput();
+                ->withInput()
+                ->with('swal_error', true);
         }
 
         $validated = $validator->validated();
@@ -286,7 +288,8 @@ class ValoracionController extends Controller
             DB::commit();
 
             return redirect()->route('valoraciones.show', $producto_id)
-                ->with('success', 'Valoración creada exitosamente');
+                ->with('success', 'Valoración creada exitosamente')
+                ->with('swal_success', true);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -296,7 +299,8 @@ class ValoracionController extends Controller
             
             return redirect()->back()
                 ->withInput()
-                ->withErrors(['error' => 'Error al crear valoración: ' . $e->getMessage()]);
+                ->withErrors(['error' => 'Error al crear valoración: ' . $e->getMessage()])
+                ->with('swal_error', true);
         }
     }
 
@@ -308,7 +312,8 @@ class ValoracionController extends Controller
         
         if ($variacion->id_producto != $producto_id) {
             return redirect()->route('valoraciones.index')
-                ->with('error', 'La variación no pertenece a este producto');
+                ->with('error', 'La variación no pertenece a este producto')
+                ->with('swal_error', true);
         }
         
         $atributos = [];
@@ -337,7 +342,8 @@ class ValoracionController extends Controller
         // Verificar que la variación pertenece al producto
         if ($variacion->id_producto != $producto_id) {
             return redirect()->route('valoraciones.index')
-                ->with('error', 'La variación no pertenece a este producto');
+                ->with('error', 'La variación no pertenece a este producto')
+                ->with('swal_error', true);
         }
         
         // Validación de campos
@@ -485,7 +491,8 @@ class ValoracionController extends Controller
         if ($validator->fails()) {
             return redirect()->back()
                 ->withErrors($validator)
-                ->withInput();
+                ->withInput()
+                ->with('swal_error', true);
         }
 
         $validated = $validator->validated();
@@ -574,7 +581,8 @@ class ValoracionController extends Controller
             DB::commit();
 
             return redirect()->route('valoraciones.show', $producto_id)
-                ->with('success', 'Valoración actualizada exitosamente');
+                ->with('success', 'Valoración actualizada exitosamente')
+                ->with('swal_save', true);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -584,7 +592,8 @@ class ValoracionController extends Controller
             
             return redirect()->back()
                 ->withInput()
-                ->withErrors(['error' => 'Error al actualizar valoración: ' . $e->getMessage()]);
+                ->withErrors(['error' => 'Error al actualizar valoración: ' . $e->getMessage()])
+                ->with('swal_error', true);
         }
     }
 
@@ -597,7 +606,8 @@ class ValoracionController extends Controller
             
             if ($variacion->id_producto != $producto_id) {
                 return redirect()->route('valoraciones.index')
-                    ->with('error', 'La variación no pertenece a este producto');
+                    ->with('error', 'La variación no pertenece a este producto')
+                    ->with('swal_error', true);
             }
             
             // Eliminar imagen si existe
@@ -612,7 +622,8 @@ class ValoracionController extends Controller
             DB::commit();
 
             return redirect()->route('valoraciones.show', $producto_id)
-                ->with('success', 'Valoración eliminada exitosamente');
+                ->with('success', 'Valoración eliminada exitosamente')
+                ->with('swal_success', true);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -620,7 +631,8 @@ class ValoracionController extends Controller
             \Log::error('Error al eliminar valoración: ' . $e->getMessage());
             
             return redirect()->route('valoraciones.show', $producto_id)
-                ->with('error', 'Error al eliminar valoración: ' . $e->getMessage());
+                ->with('error', 'Error al eliminar valoración: ' . $e->getMessage())
+                ->with('swal_error', true);
         }
     }
 

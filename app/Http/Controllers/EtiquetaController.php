@@ -48,10 +48,18 @@ class EtiquetaController extends Controller
             'vNombre.unique' => 'Este nombre de etiqueta ya existe.',
             'tDescripcion.max' => 'La descripción no puede tener más de 500 caracteres.'
         ]);
-        Etiqueta::create($request->all());
         
-        return redirect()->route('etiquetas.index')
-            ->with('success', 'Etiqueta creada exitosamente');
+        try {
+            Etiqueta::create($request->all());
+            
+            return redirect()->route('etiquetas.index')
+                ->with('success', 'Etiqueta creada exitosamente');
+                
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Error al crear la etiqueta: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 
     /**
@@ -106,9 +114,22 @@ class EtiquetaController extends Controller
      */
     public function destroy(Etiqueta $etiqueta)
     {
-        $etiqueta->delete();
-        
-        return redirect()->route('etiquetas.index')
-            ->with('success', 'Etiqueta eliminada exitosamente');
+        try {
+            // Verificar si la etiqueta tiene productos asociados
+            if ($etiqueta->productos()->count() > 0) {
+                return redirect()->route('etiquetas.index')
+                    ->with('error', 'No se puede eliminar la etiqueta porque tiene productos asociados. ' .
+                           'Primero desvincula los productos de esta etiqueta.');
+            }
+            
+            $etiqueta->delete();
+            
+            return redirect()->route('etiquetas.index')
+                ->with('success', 'Etiqueta eliminada exitosamente');
+                
+        } catch (\Exception $e) {
+            return redirect()->route('etiquetas.index')
+                ->with('error', 'Error al eliminar la etiqueta: ' . $e->getMessage());
+        }
     }
 }

@@ -251,13 +251,14 @@
                                                class="btn btn-warning" title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <button type="button" class="btn btn-danger" 
-                                                    onclick="confirmarEliminacion('{{ addslashes($variacion->vSKU) }}', {{ $variacion->id_variacion }})"
+                                            <button type="button" class="btn btn-danger eliminar-btn" 
+                                                    data-sku="{{ addslashes($variacion->vSKU) }}" 
+                                                    data-id="{{ $variacion->id_variacion }}"
                                                     title="Eliminar">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                             <form id="delete-form-{{ $variacion->id_variacion }}" 
-                                                  action="{{ route('valoraciones.destroy', ['producto_id' => $producto->id_producto, 'variacion_id' => $variacion->id_variacion]) }}" 
+                                                  action="{{ route('valoraciones.destroyValoracion', ['producto_id' => $producto->id_producto, 'variacion_id' => $variacion->id_variacion]) }}" 
                                                   method="POST" class="d-none">
                                                 @csrf @method('DELETE')
                                             </form>
@@ -399,11 +400,77 @@
 @endpush
 
 @push('scripts')
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
-function confirmarEliminacion(sku, id) {
-    if (confirm("¿Estás seguro de eliminar la valoración con SKU \"" + sku + "\"? Esta acción no se puede deshacer.")) {
-        document.getElementById('delete-form-' + id).submit();
-    }
-}
+document.addEventListener('DOMContentLoaded', function() {
+    // Manejar eliminación con SweetAlert2
+    document.querySelectorAll('.eliminar-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const sku = this.getAttribute('data-sku');
+            const id = this.getAttribute('data-id');
+            
+            Swal.fire({
+                title: "¿Estás seguro?",
+                text: "¡No podrás revertir esta acción!",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                confirmButtonText: "Sí, eliminar",
+                cancelButtonText: "Cancelar",
+                position: "center"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('delete-form-' + id).submit();
+                }
+            });
+        });
+    });
+
+    // Mostrar mensaje SweetAlert2 después de eliminar exitosamente
+    @if(session('success') && str_contains(session('success'), 'eliminada'))
+    Swal.fire({
+        title: "¡Eliminado!",
+        text: "{{ session('success') }}",
+        icon: "success",
+        position: "center",
+        timer: 3000,
+        showConfirmButton: false
+    });
+    @endif
+
+    // Mostrar mensaje SweetAlert2 después de crear exitosamente
+    @if(session('success') && str_contains(session('success'), 'creada'))
+    Swal.fire({
+        title: "¡Registrado!",
+        text: "{{ session('success') }}",
+        icon: "success",
+        draggable: true,
+        position: "center",
+        timer: 3000,
+        showConfirmButton: false
+    });
+    @endif
+
+    // Mostrar mensaje SweetAlert2 si hay error
+    @if(session('error') || $errors->any())
+    @php
+        $errorMessage = session('error');
+        if (!$errorMessage && $errors->any()) {
+            $errorMessage = 'Por favor corrige los errores en el formulario.';
+        }
+    @endphp
+    Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "{{ $errorMessage }}",
+        footer: '<a href="#form-errors">Ver errores en el formulario</a>',
+        position: "center",
+        draggable: true
+    });
+    @endif
+});
 </script>
 @endpush

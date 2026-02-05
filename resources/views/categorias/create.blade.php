@@ -8,7 +8,7 @@
             <div class="card">
                 <div class="card-header">
                     <h2>Crear Nueva Categoría</h2>
-                    <a href="{{ route('categorias.index') }}" class="btn btn-secondary btn-sm">← Volver</a>
+                    <a href="{{ route('categorias.index') }}" class="btn btn-secondary btn-sm" id="cancelBtn">← Volver</a>
                 </div>
 
                 <div class="card-body">
@@ -133,7 +133,7 @@
                         </div>
 
                         <div class="d-flex justify-content-between">
-                            <a href="{{ route('categorias.index') }}" class="btn btn-secondary">
+                            <a href="{{ route('categorias.index') }}" class="btn btn-secondary" id="cancelButton">
                                 Cancelar
                             </a>
                             <button type="submit" class="btn btn-primary">
@@ -151,16 +151,46 @@
     // Variables de estado
     let selectedFile = null;
     let hasImageSelected = false;
+    let formChanged = false;
     
     // Obtener elementos del DOM
     const fileInput = document.getElementById('vImagen');
     const previewSection = document.getElementById('newImagePreviewSection');
     const noImageSection = document.getElementById('noImageSection');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const cancelButton = document.getElementById('cancelButton');
+    const createForm = document.getElementById('createForm');
+    
+    // Detectar cambios en el formulario
+    function detectFormChanges() {
+        const inputs = ['vNombre', 'vSlug', 'tDescripcion', 'id_categoria_padre'];
+        
+        inputs.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('change', () => formChanged = true);
+                element.addEventListener('input', () => formChanged = true);
+            }
+        });
+        
+        // Para checkbox
+        const checkbox = document.getElementById('bActivo');
+        if (checkbox) {
+            checkbox.addEventListener('change', () => formChanged = true);
+        }
+        
+        // Para file input
+        if (fileInput) {
+            fileInput.addEventListener('change', () => formChanged = true);
+        }
+    }
     
     // Configurar evento change del input de archivo
-    fileInput.addEventListener('change', function(event) {
-        handleFileSelection(event);
-    });
+    if (fileInput) {
+        fileInput.addEventListener('change', function(event) {
+            handleFileSelection(event);
+        });
+    }
     
     function actualizarSlug(nombre) {
         if (!nombre) return;
@@ -176,6 +206,7 @@
         slug = slug.replace(/^-+/, '').replace(/-+$/, '');
         
         document.getElementById('vSlug').value = slug;
+        formChanged = true;
     }
     
     // Función para manejar la selección de archivo
@@ -245,6 +276,7 @@
         hasImageSelected = false;
         previewSection.style.display = 'none';
         noImageSection.style.display = 'block';
+        formChanged = true;
     }
     
     // Función para cancelar la nueva imagen seleccionada
@@ -257,37 +289,106 @@
         hasImageSelected = false;
     }
     
-    // Función para manejar el envío del formulario
-    document.getElementById('createForm')?.addEventListener('submit', function(e) {
-        // Validar que si hay una imagen seleccionada, se envíe correctamente
-        if (hasImageSelected && selectedFile) {
-            // El archivo ya está en el input, se enviará automáticamente
-            // No necesitamos hacer nada más
-        }
-        
-        // Validación adicional del nombre (opcional)
-        const nombreInput = document.getElementById('vNombre');
-        if (!nombreInput.value.trim()) {
+    // Función para confirmar salida con cambios sin guardar
+    function confirmExit(e) {
+        if (formChanged) {
             e.preventDefault();
-            alert('El nombre de la categoría es obligatorio');
-            nombreInput.focus();
-            return false;
+            
+            Swal.fire({
+                title: "¿Quieres guardar los cambios?",
+                text: "Tienes cambios sin guardar en el formulario.",
+                icon: "question",
+                showDenyButton: true,
+                showCancelButton: true,
+                confirmButtonText: "Guardar",
+                denyButtonText: "No guardar",
+                cancelButtonText: "Cancelar"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Guardar los cambios
+                    createForm.submit();
+                } else if (result.isDenied) {
+                    // No guardar, redirigir
+                    window.location.href = e.target.href;
+                }
+                // Si cancela, no hacer nada (permanece en la página)
+            });
         }
-    });
+    }
     
     // Inicializar
     document.addEventListener('DOMContentLoaded', function() {
+        // Detectar cambios en el formulario
+        detectFormChanges();
+        
+        // Configurar eventos para los botones de cancelar
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', confirmExit);
+        }
+        
+        if (cancelButton) {
+            cancelButton.addEventListener('click', confirmExit);
+        }
+        
         // Prevenir envío accidental con Enter en el input de archivo
-        fileInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-            }
-        });
+        if (fileInput) {
+            fileInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                }
+            });
+        }
         
         // Inicializar slug si hay nombre en el input
         const nombreInput = document.getElementById('vNombre');
         if (nombreInput && nombreInput.value) {
             actualizarSlug(nombreInput.value);
+        }
+        
+        // Mostrar alerta de éxito después de crear
+        @if(session('success') && strpos(session('success'), 'creada') !== false)
+        Swal.fire({
+            title: "¡Registro Exitoso!",
+            text: "{{ session('success') }}",
+            icon: "success",
+            draggable: true,
+            timer: 3000,
+            timerProgressBar: true
+        });
+        @endif
+        
+        // Mostrar alerta de error
+        @if(session('error'))
+        Swal.fire({
+            icon: "error",
+            title: "Oops...",
+            text: "{{ session('error') }}",
+            footer: 'Por favor, verifica los datos ingresados'
+        });
+        @endif
+        
+        // Mostrar errores de validación con SweetAlert
+        @if($errors->any())
+        @php
+            $errorMessages = [];
+            foreach($errors->all() as $error) {
+                $errorMessages[] = $error;
+            }
+            $errorText = implode('\n', $errorMessages);
+        @endphp
+        Swal.fire({
+            icon: "error",
+            title: "Error de Validación",
+            text: "{{ $errorText }}"
+        });
+        @endif
+    });
+    
+    // Prevenir salida con cambios sin guardar
+    window.addEventListener('beforeunload', function(e) {
+        if (formChanged && !createForm.checkValidity()) {
+            e.preventDefault();
+            e.returnValue = 'Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?';
         }
     });
 </script>

@@ -7,30 +7,36 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
-                    <h2>Detalles de Atributo</h2>
-                    <a href="{{ route('atributos.index') }}" class="btn btn-secondary">← Volver</a>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h2 class="mb-0">Detalles de Atributo</h2>
+                        <a href="{{ route('atributos.index') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i> Volver
+                        </a>
+                    </div>
                 </div>
 
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-4 text-center">
                             <div class="mb-3">
-                                <div style="font-size: 3rem; margin-bottom: 15px;">🏷️</div>
+                                <div class="display-1 text-primary mb-3">
+                                    <i class="fas fa-tag"></i>
+                                </div>
                                 <h3>{{ $atributo->vNombre }}</h3>
                             </div>
                             
                             <div class="mb-3">
                                 @if($atributo->bActivo)
-                                    <span class="badge bg-success">Activo</span>
+                                    <span class="badge bg-success fs-6">Activo</span>
                                 @else
-                                    <span class="badge bg-secondary">Inactivo</span>
+                                    <span class="badge bg-secondary fs-6">Inactivo</span>
                                 @endif
                             </div>
                         </div>
 
                         <div class="col-md-8">
                             <!-- Mostrar Slug -->
-                            <div class="mb-3">
+                            <div class="mb-4">
                                 <strong>Slug (URL):</strong>
                                 <div class="mt-1">
                                     <code class="bg-light p-2 rounded d-block">
@@ -41,26 +47,26 @@
                             </div>
 
                             @if($atributo->tDescripcion)
-                            <div class="mb-3">
+                            <div class="mb-4">
                                 <strong>Descripción:</strong>
-                                <p>{{ $atributo->tDescripcion }}</p>
+                                <p class="mt-2">{{ $atributo->tDescripcion }}</p>
                             </div>
                             @endif
 
-                            <div class="mb-3">
-                                <strong>ID:</strong> {{ $atributo->id_atributo }}
+                            <div class="mb-4">
+                                <strong>ID:</strong> <span class="badge bg-dark">{{ $atributo->id_atributo }}</span>
                             </div>
 
-                            <div class="mb-3">
+                            <div class="mb-4">
                                 <strong>Total de Valores:</strong>
-                                <span class="badge bg-info">{{ $atributo->valores->count() }} valores</span>
-                                <a href="{{ route('atributos.valores', $atributo) }}" class="btn btn-sm btn-outline-primary ms-2">
-                                    Gestionar Valores
+                                <span class="badge bg-info fs-6">{{ $atributo->valores->count() }} valores</span>
+                                <a href="{{ route('atributos.valores', $atributo) }}" class="btn btn-outline-primary btn-sm ms-2">
+                                    <i class="fas fa-list me-1"></i> Gestionar Valores
                                 </a>
                             </div>
 
                             @if($atributo->valores->count() > 0)
-                            <div class="mb-3">
+                            <div class="mb-4">
                                 <strong>Valores del Atributo:</strong>
                                 <div class="mt-2">
                                     @foreach($atributo->valores as $valor)
@@ -99,16 +105,19 @@
                             </div>
                             @endif
 
-                            <div class="mt-4">
-                                <a href="{{ route('atributos.edit', $atributo) }}" class="btn btn-warning">
-                                    ✏️ Editar
-                                </a>
+                            <div class="mt-4 pt-3 border-top">
+                                <div class="btn-group" role="group">
+                                    <a href="{{ route('atributos.edit', $atributo) }}" class="btn btn-warning">
+                                        <i class="fas fa-edit me-1"></i> Editar
+                                    </a>
+                                    
+                                    <button type="button" class="btn btn-danger" onclick="confirmarEliminacion()">
+                                        <i class="fas fa-trash me-1"></i> Eliminar
+                                    </button>
+                                </div>
                                 
-                                <button type="button" class="btn btn-danger" id="btnEliminarAtributo">
-                                    🗑️ Eliminar
-                                </button>
-                                
-                                <form action="{{ route('atributos.destroy', $atributo) }}" method="POST" id="deleteForm" style="display: none;">
+                                <!-- Formulario oculto para eliminación -->
+                                <form id="formEliminar" action="{{ route('atributos.destroy', $atributo) }}" method="POST" style="display: none;">
                                     @csrf 
                                     @method('DELETE')
                                 </form>
@@ -120,40 +129,51 @@
         </div>
     </div>
 </div>
-@endsection
 
-@section('scripts')
+<!-- Cargar SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Botón de eliminar atributo
-    document.getElementById('btnEliminarAtributo').addEventListener('click', function() {
-        const atributoNombre = "{{ $atributo->vNombre }}";
-        const valoresCount = {{ $atributo->valores->count() }};
-        
-        let mensaje = `¿Estás seguro de que quieres eliminar el atributo "<strong>${atributoNombre}</strong>"?`;
-        
-        if (valoresCount > 0) {
-            mensaje += `<br><span class="text-danger">¡Se eliminarán también los ${valoresCount} valores asociados!</span>`;
+function confirmarEliminacion() {
+    const atributoNombre = "{{ $atributo->vNombre }}";
+    const valoresCount = {{ $atributo->valores->count() }};
+    
+    let mensaje = `¿Estás seguro de que quieres eliminar el atributo "<strong>${atributoNombre}</strong>"?`;
+    
+    if (valoresCount > 0) {
+        mensaje += `<br><span class="text-danger">¡Se eliminarán también los ${valoresCount} valores asociados!</span>`;
+    }
+    
+    mensaje += `<br><br>Esta acción no se puede deshacer.`;
+    
+    Swal.fire({
+        title: "¿Estás seguro?",
+        html: mensaje,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "Sí, eliminar",
+        cancelButtonText: "Cancelar",
+        customClass: {
+            popup: 'animated fadeIn'
         }
-        
-        mensaje += `<br><br>Esta acción no se puede deshacer.`;
-        
-        Swal.fire({
-            title: "¿Estás seguro?",
-            html: mensaje,
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonColor: "#3085d6",
-            cancelButtonColor: "#d33",
-            confirmButtonText: "Sí, eliminar",
-            cancelButtonText: "Cancelar"
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Enviar formulario de eliminación
-                document.getElementById('deleteForm').submit();
-            }
-        });
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Mostrar mensaje de eliminando
+            Swal.fire({
+                title: "Eliminando...",
+                text: "Por favor espera",
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Enviar formulario de eliminación
+            document.getElementById('formEliminar').submit();
+        }
     });
-});
+}
 </script>
 @endsection

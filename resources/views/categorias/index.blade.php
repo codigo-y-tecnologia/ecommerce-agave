@@ -11,7 +11,7 @@
             </div>
             
             <!-- Formulario de búsqueda -->
-            <form method="GET" action="{{ route('categorias.index') }}" class="mt-3">
+            <form method="GET" action="{{ route('categorias.index') }}" class="mt-3" id="searchForm">
                 <div class="row">
                     <div class="col-md-8">
                         <input type="text" name="search" class="form-control" 
@@ -120,11 +120,10 @@
                                         Editar
                                     </a>
                                     <form action="{{ route('categorias.destroy', $categoria) }}" method="POST" 
-                                          style="display: inline;">
+                                          style="display: inline;" class="delete-form" data-categoria="{{ $categoria->vNombre }}">
                                         @csrf 
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-danger" 
-                                                onclick="return confirm('¿Eliminar categoría?')">
+                                        <button type="button" class="btn btn-danger delete-btn">
                                             Eliminar
                                         </button>
                                     </form>
@@ -243,4 +242,72 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Función para mostrar alerta de confirmación al eliminar
+    document.addEventListener('DOMContentLoaded', function() {
+        // Configurar todos los botones de eliminar
+        const deleteButtons = document.querySelectorAll('.delete-btn');
+        
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Obtener el formulario padre
+                const form = this.closest('.delete-form');
+                const categoriaNombre = form.getAttribute('data-categoria');
+                
+                // Mostrar SweetAlert de confirmación
+                Swal.fire({
+                    title: "¿Estás seguro?",
+                    text: `Vas a eliminar la categoría "${categoriaNombre}". ¡No podrás revertir esto!`,
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#3085d6",
+                    cancelButtonColor: "#d33",
+                    confirmButtonText: "Sí, eliminar",
+                    cancelButtonText: "Cancelar"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Mostrar alerta de eliminación en progreso
+                        Swal.fire({
+                            title: "Eliminando...",
+                            text: "Por favor espera",
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+                        
+                        // Si confirma, enviar el formulario
+                        setTimeout(() => {
+                            form.submit();
+                        }, 500);
+                    }
+                });
+            });
+        });
+        
+        // Mostrar alerta de éxito después de eliminar
+        @if(session('success') && strpos(session('success'), 'eliminada') !== false)
+        Swal.fire({
+            title: "¡Eliminado!",
+            text: "{{ session('success') }}",
+            icon: "success",
+            timer: 3000,
+            showConfirmButton: false
+        });
+        @endif
+        
+        // Mostrar alerta de error después de intentar eliminar
+        @if(session('error'))
+        Swal.fire({
+            icon: "error",
+            title: "Oops...",
+            text: "{{ session('error') }}",
+            footer: 'Por favor, verifica que no tenga productos o subcategorías asociadas'
+        });
+        @endif
+    });
+</script>
 @endsection

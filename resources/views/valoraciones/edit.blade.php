@@ -16,7 +16,7 @@
     </div>
 
     <form action="{{ route('valoraciones.update', ['producto_id' => $producto->id_producto, 'variacion_id' => $variacion->id_variacion]) }}" 
-          method="POST" enctype="multipart/form-data" id="valoracionForm">
+          method="POST" enctype="multipart/form-data" id="valoracionForm" class="guardar-cambios-form">
         @csrf
         @method('PUT')
 
@@ -513,7 +513,7 @@
         </div>
 
         <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary btn-lg">
+            <button type="button" class="btn btn-primary btn-lg guardar-btn">
                 <i class="fas fa-save me-2"></i> Actualizar Valoración
             </button>
             <a href="{{ route('valoraciones.show', $producto->id_producto) }}" class="btn btn-secondary btn-lg">
@@ -989,7 +989,7 @@ function handleImageSelection(event) {
                 icon: 'error',
                 title: 'Archivo demasiado grande',
                 text: 'La imagen no debe pesar más de 5MB',
-                position: 'center'
+                position: "center"
             });
             event.target.value = '';
             return;
@@ -1196,6 +1196,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('valoracionForm');
     const imagenInput = document.getElementById('imagen');
     const eliminarImagenBtn = document.getElementById('eliminar-imagen-btn');
+    const guardarBtn = document.querySelector('.guardar-btn');
     
     // Inicializar cálculo de volumen
     calcularVolumen();
@@ -1261,9 +1262,12 @@ document.addEventListener('DOMContentLoaded', function() {
         element.setAttribute('autocomplete', 'off');
     });
     
-    // Validación del formulario al enviar
-    if (form) {
-        form.addEventListener('submit', function(e) {
+    // Manejar el botón de guardar con SweetAlert2
+    if (guardarBtn && form) {
+        guardarBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Primero validar el formulario
             let erroresCriticos = false;
             
             // 1. Validar campos obligatorios
@@ -1439,18 +1443,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 erroresCriticos = true;
             }
             
-            // 7. Asegurar que la imagen seleccionada se envíe
-            if (imagenSeleccionada && (!imagenInput.files || imagenInput.files.length === 0)) {
-                // Si hay una imagen en memoria pero no en el input, agregarla
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(imagenSeleccionada);
-                imagenInput.files = dataTransfer.files;
-            }
-            
-            // Si hay errores críticos, prevenir envío
+            // Si hay errores críticos, mostrar alerta de error
             if (erroresCriticos) {
-                e.preventDefault();
-                
                 // Enfocar el primer campo con error
                 const primerError = document.querySelector('.is-invalid');
                 if (primerError) {
@@ -1458,11 +1452,43 @@ document.addEventListener('DOMContentLoaded', function() {
                     primerError.focus();
                 }
                 
+                Swal.fire({
+                    icon: "error",
+                    title: "Oops...",
+                    text: "Por favor corrige los errores en el formulario.",
+                    footer: '<a href="#form-errors">Ver errores en el formulario</a>',
+                    position: "center"
+                });
                 return false;
             }
             
-            return true;
+            // Si no hay errores, mostrar confirmación para guardar
+            Swal.fire({
+                title: "¿Deseas guardar los cambios?",
+                showDenyButton: true,
+                showCancelButton: true,
+                confirmButtonText: "Guardar",
+                denyButtonText: `No guardar`,
+                cancelButtonText: "Cancelar",
+                position: "center"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Enviar el formulario
+                    form.submit();
+                } else if (result.isDenied) {
+                    // Redirigir sin guardar
+                    window.location.href = "{{ route('valoraciones.show', $producto->id_producto) }}";
+                }
+            });
         });
+    }
+    
+    // Asegurar que la imagen seleccionada se envíe
+    if (imagenSeleccionada && (!imagenInput.files || imagenInput.files.length === 0)) {
+        // Si hay una imagen en memoria pero no en el input, agregarla
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(imagenSeleccionada);
+        imagenInput.files = dataTransfer.files;
     }
 });
 

@@ -955,7 +955,7 @@ function handleImageSelection(event) {
                 icon: 'error',
                 title: 'Archivo demasiado grande',
                 text: 'La imagen no debe pesar más de 5MB',
-                position: 'center'
+                position: "center"
             });
             event.target.value = '';
             return;
@@ -1441,6 +1441,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     primerError.focus();
                 }
                 
+                Swal.fire({
+                    icon: "error",
+                    title: "Oops...",
+                    text: "Por favor corrige los errores en el formulario.",
+                    footer: '<a href="#form-errors">Ver errores en el formulario</a>',
+                    position: "center",
+                    draggable: true
+                });
                 return false;
             }
             
@@ -1452,7 +1460,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Mostrar mensaje SweetAlert2 después de crear exitosamente
 @if(session('success'))
 Swal.fire({
-    title: "¡Valoración Registrada!",
+    title: "¡Registrado!",
     text: "{{ session('success') }}",
     icon: "success",
     draggable: true,

@@ -241,6 +241,7 @@
     let lastGeneratedSlug = '';
     let originalSlug = "{{ $atributo->vSlug }}";
     let originalNombre = "{{ $atributo->vNombre }}";
+    let nombreCambiado = false;
     
     // Función para generar slug a partir de texto
     function generateSlug(text) {
@@ -301,6 +302,9 @@
     document.getElementById('vNombre').addEventListener('input', function() {
         const nombre = this.value.trim();
         const slugInput = document.getElementById('vSlug');
+        
+        // Verificar si el nombre ha cambiado
+        nombreCambiado = (nombre !== originalNombre);
         
         // Verificar si el slug ha sido editado manualmente
         slugEditedManually = checkIfSlugWasEdited();
@@ -375,6 +379,7 @@
         const slugInput = document.getElementById('vSlug');
         const btnGuardar = document.getElementById('btnGuardar');
         const nuevoNombre = nombreInput.value.trim();
+        const form = document.getElementById('formAtributo');
         
         // Validar nombre
         if (!nuevoNombre) {
@@ -395,17 +400,19 @@
             slugInput.value = generatedSlug;
         }
         
-        // Confirmar si el nombre ha cambiado significativamente
-        if (nuevoNombre !== originalNombre && nuevoNombre.toLowerCase() !== originalNombre.toLowerCase()) {
-            if (!confirm('¿Estás seguro de que quieres cambiar el nombre del atributo? Esto podría afectar a los productos que ya usan este atributo.')) {
-                return;
-            }
+        // Determinar el mensaje según si el nombre cambió
+        let titulo = "¿Deseas guardar los cambios?";
+        let texto = "Confirma si quieres guardar los cambios realizados en el atributo.";
+        
+        if (nuevoNombre !== originalNombre) {
+            titulo = "¿Cambiar el nombre del atributo?";
+            texto = `Vas a cambiar el nombre de "${originalNombre}" a "${nuevoNombre}". Esto podría afectar a los productos que ya usan este atributo. ¿Deseas continuar?`;
         }
         
         // Mostrar SweetAlert2 de confirmación
         Swal.fire({
-            title: "¿Deseas guardar los cambios?",
-            text: "Confirma si quieres guardar los cambios realizados en el atributo.",
+            title: titulo,
+            text: texto,
             icon: "question",
             showDenyButton: true,
             showCancelButton: true,
@@ -421,17 +428,18 @@
                 btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Guardando...';
                 btnGuardar.disabled = true;
                 
-                // Enviar formulario
-                document.getElementById('formAtributo').submit();
-                
-                // Mostrar mensaje de éxito
+                // Mostrar mensaje de progreso
                 Swal.fire({
-                    title: "¡Guardado!",
-                    text: "Los cambios se han guardado correctamente.",
-                    icon: "success",
-                    timer: 2000,
-                    showConfirmButton: false
+                    title: "Guardando...",
+                    text: "Por favor espera",
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
                 });
+                
+                // Enviar formulario
+                form.submit();
             } else if (result.isDenied) {
                 Swal.fire({
                     title: "Cambios no guardados",

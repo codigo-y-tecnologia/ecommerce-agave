@@ -8,22 +8,10 @@
             <div class="card">
                 <div class="card-header">
                     <h2>Editar Categoría</h2>
-                    <a href="{{ route('categorias.index') }}" class="btn btn-secondary btn-sm">← Volver</a>
+                    <a href="{{ route('categorias.index') }}" class="btn btn-secondary btn-sm" id="cancelBtn">← Volver</a>
                 </div>
 
                 <div class="card-body">
-                    @if(session('success'))
-                        <div class="alert alert-success">
-                            {{ session('success') }}
-                        </div>
-                    @endif
-
-                    @if(session('error'))
-                        <div class="alert alert-danger">
-                            {{ session('error') }}
-                        </div>
-                    @endif
-
                     <form action="{{ route('categorias.update', $categoria) }}" method="POST" enctype="multipart/form-data" id="editForm">
                         @csrf 
                         @method('PUT')
@@ -163,7 +151,7 @@
                         </div>
 
                         <div class="d-flex justify-content-between">
-                            <a href="{{ route('categorias.index') }}" class="btn btn-secondary">
+                            <a href="{{ route('categorias.index') }}" class="btn btn-secondary" id="cancelButton">
                                 Cancelar
                             </a>
                             <button type="submit" class="btn btn-primary">
@@ -181,16 +169,55 @@
     // Variables de estado
     let currentSelectedFile = null;
     let hasNewImage = false;
+    let formChanged = false;
+    let isSubmitting = false;
     
     // Obtener elementos del DOM
     const fileInput = document.getElementById('vImagen');
     const previewSection = document.getElementById('newImagePreviewSection');
     const deleteCheckbox = document.getElementById('eliminar_imagen');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const cancelButton = document.getElementById('cancelButton');
+    const editForm = document.getElementById('editForm');
+    
+    // Detectar cambios en el formulario
+    function detectFormChanges() {
+        const inputs = ['vNombre', 'vSlug', 'tDescripcion', 'id_categoria_padre'];
+        
+        inputs.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('change', () => formChanged = true);
+                element.addEventListener('input', () => formChanged = true);
+            }
+        });
+        
+        // Para checkbox
+        const checkbox = document.getElementById('bActivo');
+        if (checkbox) {
+            checkbox.addEventListener('change', () => formChanged = true);
+        }
+        
+        // Para delete checkbox
+        if (deleteCheckbox) {
+            deleteCheckbox.addEventListener('change', () => {
+                formChanged = true;
+                handleDeleteCheckbox();
+            });
+        }
+        
+        // Para file input
+        if (fileInput) {
+            fileInput.addEventListener('change', () => formChanged = true);
+        }
+    }
     
     // Configurar evento change del input de archivo
-    fileInput.addEventListener('change', function(event) {
-        handleFileSelection(event);
-    });
+    if (fileInput) {
+        fileInput.addEventListener('change', function(event) {
+            handleFileSelection(event);
+        });
+    }
     
     // Función para manejar la selección de archivo
     function handleFileSelection(event) {
@@ -263,6 +290,7 @@
         currentSelectedFile = null;
         hasNewImage = false;
         previewSection.style.display = 'none';
+        formChanged = true;
         
         // Habilitar checkbox si existe
         if (deleteCheckbox) {
@@ -285,8 +313,10 @@
         if (deleteCheckbox && deleteCheckbox.checked) {
             // Si marca eliminar:
             // 1. Deshabilitar input de nueva imagen
-            fileInput.disabled = true;
-            fileInput.value = '';
+            if (fileInput) {
+                fileInput.disabled = true;
+                fileInput.value = '';
+            }
             
             // 2. Cancelar cualquier nueva imagen seleccionada
             previewSection.style.display = 'none';
@@ -297,42 +327,126 @@
         } else if (deleteCheckbox) {
             // Si desmarca eliminar:
             // 1. Habilitar input de nueva imagen
-            fileInput.disabled = false;
+            if (fileInput) {
+                fileInput.disabled = false;
+            }
         }
     }
     
-    // Función para manejar el envío del formulario
-    document.getElementById('editForm')?.addEventListener('submit', function(e) {
-        // Si el checkbox de eliminar está marcado, asegurar que no se envíe nueva imagen
-        if (deleteCheckbox && deleteCheckbox.checked) {
-            // Deshabilitar temporalmente el input para que no se envíe
-            fileInput.disabled = true;
+    // Función para confirmar salida con cambios sin guardar
+    function confirmExit(e) {
+        if (formChanged && !isSubmitting) {
+            e.preventDefault();
+            
+            Swal.fire({
+                title: "¿Quieres guardar los cambios?",
+                text: "Tienes cambios sin guardar en el formulario.",
+                icon: "question",
+                showDenyButton: true,
+                showCancelButton: true,
+                confirmButtonText: "Guardar",
+                denyButtonText: "No guardar",
+                cancelButtonText: "Cancelar"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    isSubmitting = true;
+                    // Guardar los cambios
+                    editForm.submit();
+                } else if (result.isDenied) {
+                    // No guardar, redirigir
+                    window.location.href = e.target.href;
+                }
+                // Si cancela, no hacer nada (permanece en la página)
+            });
         }
-        
-        // Si hay una nueva imagen seleccionada, asegurarse de que se envíe
-        if (hasNewImage && currentSelectedFile) {
-            // El archivo ya está en el input, se enviará automáticamente
-        }
-    });
+    }
     
     // Inicializar
     document.addEventListener('DOMContentLoaded', function() {
+        // Detectar cambios en el formulario
+        detectFormChanges();
+        
+        // Configurar estado inicial del checkbox
         if (deleteCheckbox) {
-            // Configurar estado inicial
-            if (deleteCheckbox.checked) {
+            if (deleteCheckbox.checked && fileInput) {
                 fileInput.disabled = true;
             }
-            
-            // Escuchar cambios en el checkbox
-            deleteCheckbox.addEventListener('change', handleDeleteCheckbox);
+        }
+        
+        // Configurar eventos para los botones de cancelar
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', confirmExit);
+        }
+        
+        if (cancelButton) {
+            cancelButton.addEventListener('click', confirmExit);
+        }
+        
+        // Configurar evento submit del formulario
+        if (editForm) {
+            editForm.addEventListener('submit', function() {
+                isSubmitting = true;
+                
+                // Si el checkbox de eliminar está marcado, deshabilitar el input de archivo
+                if (deleteCheckbox && deleteCheckbox.checked && fileInput) {
+                    fileInput.disabled = true;
+                }
+            });
         }
         
         // Prevenir envío accidental con Enter
-        fileInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-            }
+        if (fileInput) {
+            fileInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                }
+            });
+        }
+        
+        // Mostrar alerta de éxito después de actualizar
+        @if(session('success') && strpos(session('success'), 'actualizada') !== false)
+        Swal.fire({
+            title: "¡Actualizado!",
+            text: "{{ session('success') }}",
+            icon: "success",
+            timer: 3000,
+            showConfirmButton: false
         });
+        @endif
+        
+        // Mostrar alerta de error
+        @if(session('error'))
+        Swal.fire({
+            icon: "error",
+            title: "Oops...",
+            text: "{{ session('error') }}",
+            footer: 'Por favor, verifica los datos ingresados'
+        });
+        @endif
+        
+        // Mostrar errores de validación con SweetAlert
+        @if($errors->any())
+        @php
+            $errorMessages = [];
+            foreach($errors->all() as $error) {
+                $errorMessages[] = $error;
+            }
+            $errorText = implode('\n', $errorMessages);
+        @endphp
+        Swal.fire({
+            icon: "error",
+            title: "Error de Validación",
+            text: "{{ $errorText }}"
+        });
+        @endif
+    });
+    
+    // Prevenir salida con cambios sin guardar
+    window.addEventListener('beforeunload', function(e) {
+        if (formChanged && !isSubmitting) {
+            e.preventDefault();
+            e.returnValue = 'Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?';
+        }
     });
 </script>
 @endsection
