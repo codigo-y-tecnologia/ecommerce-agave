@@ -24,7 +24,8 @@ use App\Models\{
     Pago,
     Venta,
     DetalleVenta,
-    Envio
+    Envio,
+    Producto
 };
 
 use Stripe\Stripe;
