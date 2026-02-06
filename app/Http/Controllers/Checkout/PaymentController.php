@@ -329,9 +329,9 @@ class PaymentController extends Controller
 
                         Stripe::setApiKey(config('services.stripe.secret'));
 
-                        $existing = Pago::where('vReferencia', $reference)->first();
+                        $pago = Pago::where('vReferencia', $reference)->first();
 
-                        if ($existing && $existing->eEstado === 'reembolsado') {
+                        if ($pago && $pago->eEstado === 'reembolsado') {
                             return response()->json(['status' => 'already_refunded'], 200);
                         }
 

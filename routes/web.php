@@ -95,6 +95,10 @@ Route::get('/checkout/success', [CheckoutSuccessController::class, 'index'])
 
 Route::get('/checkout/error', [CheckoutErrorController::class, 'index'])->name('checkout.error');
 
+Route::get('/checkout/payment-refunded', function () {
+    return view('checkout.payment-refunded');
+})->name('checkout.payment-refunded');
+
 // PayPal
 Route::post('/payment/paypal-create', [PaymentController::class, 'createPaypalOrder'])->name('payment.paypal.create');
 Route::post('/payment/paypal-capture', [PaymentController::class, 'capturePaypalOrder'])->name('payment.paypal.capture');
