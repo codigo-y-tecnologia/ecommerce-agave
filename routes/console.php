@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
+use App\Jobs\LimpiarReservasExpiradas;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -16,3 +17,5 @@ Schedule::command('carts:notify-active')
 
 Schedule::command('carts:cleanup-old')
     ->dailyAt('04:00');
+
+Schedule::job(new LimpiarReservasExpiradas)->everyMinute();

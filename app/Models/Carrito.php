@@ -37,4 +37,30 @@ class Carrito extends Model
             'id_carrito'
         );
     }
+
+    public function stockReservas()
+    {
+        return $this->hasMany(StockReserva::class, 'id_carrito');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Helpers de estado
+    |--------------------------------------------------------------------------
+    */
+
+    public function marcarComoReservado(): void
+    {
+        $this->update(['eEstado' => 'reservado']);
+    }
+
+    public function marcarComoConvertido(): void
+    {
+        $this->update(['eEstado' => 'convertido']);
+    }
+
+    public function marcarComoAbandonado(): void
+    {
+        $this->update(['eEstado' => 'abandonado']);
+    }
 }
