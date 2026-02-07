@@ -18,4 +18,4 @@ Schedule::command('carts:notify-active')
 Schedule::command('carts:cleanup-old')
     ->dailyAt('04:00');
 
-Schedule::job(new LimpiarReservasExpiradas)->everyMinute();
+Schedule::job(new LimpiarReservasExpiradas)->everyMinute()->withoutOverlapping();

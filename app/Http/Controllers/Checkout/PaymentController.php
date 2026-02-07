@@ -11,6 +11,8 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use App\Helpers\CarritoHelper;
+use App\Services\Stock\ReservarStockService;
+use App\Services\Stock\ConsumirReservaService;
 
 use App\Models\{
     Usuario,
@@ -98,15 +100,7 @@ class PaymentController extends Controller
                 ], 400);
             }
 
-            // VALIDAR STOCK ANTES DE CREAR SESIÓN STRIPE
-            try {
-                $this->validateCartStock($carrito);
-            } catch (\Exception $e) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $e->getMessage()
-                ], 400);
-            }
+            app(ReservarStockService::class)->ejecutar($carrito);
 
             // Calcular totales
             [$subtotal, $totalImpuestos, $total] =
@@ -275,12 +269,12 @@ class PaymentController extends Controller
                             if (!$carrito) {
                                 throw new Exception("Carrito no encontrado para finalizar pedido (Stripe webhook).");
                             }
-
-                            // Validate stock and abort transaction if not valid
-                            $this->validateCartStock($carrito);
                         } else {
                             Log::warning('No se encontró carrito_id en metadata de Stripe.');
                         }
+
+                        app(ConsumirReservaService::class)
+                            ->ejecutar($session->id);
 
                         $this->finalizeOrderFromCart(
                             $userId,
@@ -319,52 +313,6 @@ class PaymentController extends Controller
                 'error' => $e->getMessage(),
                 'payment_intent' => $reference ?? null,
             ]);
-
-            // 🔥 SI ES ERROR DE INVENTARIO → REEMBOLSAR
-            if (str_contains($e->getMessage(), 'Inventario insuficiente')) {
-
-                if (!empty($reference)) {
-
-                    try {
-
-                        Stripe::setApiKey(config('services.stripe.secret'));
-
-                        $pago = Pago::where('vReferencia', $reference)->first();
-
-                        if ($pago && $pago->eEstado === 'reembolsado') {
-                            return response()->json(['status' => 'already_refunded'], 200);
-                        }
-
-                        $paymentIntent = \Stripe\PaymentIntent::retrieve($reference);
-
-                        $monto = $paymentIntent->amount_received / 100;
-
-                        \Stripe\Refund::create([
-                            'payment_intent' => $reference,
-                        ]);
-
-                        Pago::create([
-                            'eMetodo_pago' => 'stripe',
-                            'dMonto' => $monto,
-                            'eEstado' => 'reembolsado',
-                            'vReferencia' => $reference,
-                            'vSessionID' => $session->id,
-                        ]);
-
-                        Log::warning('💸 Pago reembolsado automáticamente por falta de stock', [
-                            'payment_intent' => $reference,
-                        ]);
-                    } catch (\Exception $refundError) {
-                        Log::critical('❌ Error al reembolsar', [
-                            'payment_intent' => $reference,
-                            'error' => $refundError->getMessage(),
-                        ]);
-                    }
-                }
-
-                // Stripe DEBE recibir 200
-                return response()->json(['status' => 'refunded_out_of_stock'], 200);
-            }
 
             return response()->json(['error' => 'internal_error'], 200);
         }
@@ -683,9 +631,6 @@ class PaymentController extends Controller
             ->with(['detalles.producto.impuestos'])
             ->firstOrFail();
 
-        // REVALIDAR STOCK ANTES DE CREAR PEDIDO (defensa en profundidad)
-        $this->validateCartStock($carrito);
-
         // Recalcular totales
         [$subtotal, $totalImpuestos, $total] =
             (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
@@ -861,25 +806,6 @@ class PaymentController extends Controller
                 'iCantidad' => $detalle->cantidad,
                 'dPrecio_unitario' => $detalle->precio_unitario,
             ]);
-        }
-
-        // Descontar stock
-        foreach ($carrito->detalles as $detalle) {
-
-            $producto = \App\Models\Producto::where('id_producto', $detalle->id_producto)
-                ->lockForUpdate()
-                ->first();
-
-            if (!$producto) {
-                throw new Exception("Producto no encontrado (ID {$detalle->id_producto})");
-            }
-
-            if ($producto->iStock < $detalle->cantidad) {
-                throw new Exception("Inventario insuficiente para el producto: {$producto->vNombre}");
-            }
-
-            $producto->iStock -= $detalle->cantidad;
-            $producto->save();
         }
 
         // Crear venta
