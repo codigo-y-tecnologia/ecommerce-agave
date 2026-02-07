@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Helpers\CarritoHelper;
 use App\Services\Stock\ReservarStockService;
 use App\Services\Stock\ConsumirReservaService;
+use App\Services\Stock\LiberarReservaService;
 
 use App\Models\{
     Usuario,
@@ -27,7 +28,8 @@ use App\Models\{
     Venta,
     DetalleVenta,
     Envio,
-    Producto
+    Producto,
+    StockReserva
 };
 
 use Stripe\Stripe;
@@ -177,6 +179,13 @@ class PaymentController extends Controller
                 'cancel_url' => route('checkout.index') . '?paid=0',
             ]);
 
+            // ACTUALIZAR RESERVAS CON SESSION ID
+            StockReserva::where('id_carrito', $carrito->id_carrito)
+                ->whereNull('session_id')
+                ->update([
+                    'session_id' => $session->id
+                ]);
+
             return response()->json([
                 'success' => true,
                 'url' => $session->url,
@@ -261,10 +270,8 @@ class PaymentController extends Controller
 
                         // Re-validate stock using carrito id from metadata BEFORE finalizing
                         if ($carritoId) {
-                            $carrito = Carrito::where('id_carrito', $carritoId)
-                                ->where('eEstado', 'activo')
-                                ->with(['detalles.producto.impuestos'])
-                                ->first();
+
+                            $carrito = Carrito::where('id_carrito', $carritoId)->first();
 
                             if (!$carrito) {
                                 throw new Exception("Carrito no encontrado para finalizar pedido (Stripe webhook).");
@@ -308,7 +315,6 @@ class PaymentController extends Controller
             Log::error('Invalid signature en webhook', ['error' => $e->getMessage()]);
             return response('Invalid signature', 400);
         } catch (\Exception $e) {
-
             Log::error('Error en webhook Stripe', [
                 'error' => $e->getMessage(),
                 'payment_intent' => $reference ?? null,
@@ -618,17 +624,9 @@ class PaymentController extends Controller
             'sessionId' => $sessionId
         ]);
 
-        // Buscar usuario y carrito
-        $carrito = Carrito::where('id_carrito', $carritoId)
-            ->where(function ($q) use ($userId, $guestToken) {
-                if ($userId) {
-                    $q->where('id_usuario', $userId);
-                } else {
-                    $q->where('vGuest_token', $guestToken);
-                }
-            })
-            ->where('eEstado', 'activo')
-            ->with(['detalles.producto.impuestos'])
+        // Buscar carrito
+        $carrito = Carrito::with(['detalles.producto.impuestos'])
+            ->where('id_carrito', $carritoId)
             ->firstOrFail();
 
         // Recalcular totales

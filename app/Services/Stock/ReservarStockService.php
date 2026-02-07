@@ -29,21 +29,21 @@ class ReservarStockService
                 }
 
                 // 🧮 Stock real disponible
-                if (! $producto->tieneStock($detalle->cantidad)) {
+                if (! $producto->tieneStock($detalle->iCantidad)) {
                     throw new Exception(
                         "Stock insuficiente para {$producto->vNombre}"
                     );
                 }
 
                 // 🔐 RESERVAR STOCK
-                $producto->iStock_reservado += $detalle->cantidad;
+                $producto->iStock_reservado += $detalle->iCantidad;
                 $producto->save();
 
                 // 🧾 REGISTRAR LA RESERVA
                 StockReserva::create([
                     'id_producto' => $producto->id_producto,
                     'id_carrito'  => $carrito->id_carrito,
-                    'cantidad'    => $detalle->cantidad,
+                    'cantidad'    => $detalle->iCantidad,
                     'expires_at'  => now()->addMinutes(
                         config('stock.reserva_minutos', 15)
                     ),

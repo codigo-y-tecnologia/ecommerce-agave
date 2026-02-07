@@ -5,6 +5,7 @@ namespace App\Helpers;
 use App\Models\Carrito;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use App\Services\Stock\LiberarReservaService;
 
 class CarritoHelper
 {
@@ -20,7 +21,31 @@ class CarritoHelper
         // ========================
         if (Auth::check()) {
 
-            return Carrito::firstOrCreate(
+            // 1 Buscar carrito activo
+            $carrito = Carrito::where('id_usuario', Auth::id())
+                ->where('eEstado', 'activo')
+                ->first();
+
+            if ($carrito) {
+                return $carrito;
+            }
+
+            // 2 Buscar carrito reservado
+            $reservado = Carrito::where('id_usuario', Auth::id())
+                ->where('eEstado', 'reservado')
+                ->first();
+
+            if ($reservado) {
+                // 🔓 liberar reserva
+                app(LiberarReservaService::class)->ejecutar($reservado);
+
+                $reservado->eEstado = 'activo';
+                $reservado->save();
+
+                return $reservado;
+            }
+
+            return Carrito::create(
                 [
                     'id_usuario' => Auth::id(),
                     'eEstado'    => 'activo',
@@ -44,7 +69,29 @@ class CarritoHelper
 
         $guestToken = session('guest_token');
 
-        return Carrito::firstOrCreate(
+        $carrito = Carrito::where('vGuest_token', $guestToken)
+            ->where('eEstado', 'activo')
+            ->first();
+
+        if ($carrito) {
+            return $carrito;
+        }
+
+        $reservado = Carrito::where('vGuest_token', $guestToken)
+            ->where('eEstado', 'reservado')
+            ->first();
+
+        if ($reservado) {
+            app(LiberarReservaService::class)
+                ->ejecutar($reservado);
+
+            $reservado->eEstado = 'activo';
+            $reservado->save();
+
+            return $reservado;
+        }
+
+        return Carrito::create(
             [
                 'vGuest_token' => $guestToken,
                 'eEstado'      => 'activo',
