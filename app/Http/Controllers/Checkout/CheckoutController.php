@@ -704,4 +704,10 @@ class CheckoutController extends Controller
             ], 500);
         }
     }
+
+    public function cancel()
+    {
+        return redirect()->route('carrito.index')
+            ->with('info', 'Pago cancelado. Puedes editar tu carrito.');
+    }
 }

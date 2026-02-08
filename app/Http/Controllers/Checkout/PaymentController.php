@@ -176,7 +176,7 @@ class PaymentController extends Controller
                 ]],
                 'metadata' => $metadata,
                 'success_url' => route('checkout.success') . '?session_id={CHECKOUT_SESSION_ID}',
-                'cancel_url' => route('checkout.index') . '?paid=0',
+                'cancel_url' => route('checkout.cancel') . '?paid=0',
             ]);
 
             // ACTUALIZAR RESERVAS CON SESSION ID

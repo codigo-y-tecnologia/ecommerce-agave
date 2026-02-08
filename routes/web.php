@@ -50,6 +50,9 @@ Route::delete('/carrito/{detalle}', [CarritoController::class, 'destroy'])->name
 
 // Rutas publicas para el checkout
 Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+
+Route::get('/checkout/cancel', [CheckoutController::class, 'cancel'])->name('checkout.cancel');
+
 Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
 
 Route::post('/checkout/crear-direccion', [CheckoutController::class, 'crearDireccion'])

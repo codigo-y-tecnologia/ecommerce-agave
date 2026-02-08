@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Carrito;
 use App\Models\CarritoDetalle;
 use Illuminate\Support\Facades\DB;
+use App\Services\Stock\LiberarReservaPorCarritoService;
 
 class CarritoMergeService
 {
@@ -15,12 +16,22 @@ class CarritoMergeService
             // 1. Carrito invitado
             $guestCart = Carrito::where('vGuest_token', $guestToken)
                 ->whereNull('id_usuario')
-                ->where('eEstado', 'activo')
+                ->whereIn('eEstado', ['activo', 'reservado'])
                 ->with('detalles')
                 ->first();
 
             if (!$guestCart || $guestCart->detalles->isEmpty()) {
                 return;
+            }
+
+            // 🔓 Si estaba reservado, liberar stock y volver a activo
+            if ($guestCart->eEstado === 'reservado') {
+                app(LiberarReservaPorCarritoService::class)
+                    ->ejecutar($guestCart);
+
+                $guestCart->update([
+                    'eEstado' => 'activo',
+                ]);
             }
 
             // 2. Carrito activo del usuario (trigger maneja uActivo)

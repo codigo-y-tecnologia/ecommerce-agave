@@ -5,7 +5,7 @@ namespace App\Helpers;
 use App\Models\Carrito;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-use App\Services\Stock\LiberarReservaService;
+use App\Services\Stock\LiberarReservaPorCarritoService;
 
 class CarritoHelper
 {
@@ -37,7 +37,7 @@ class CarritoHelper
 
             if ($reservado) {
                 // 🔓 liberar reserva
-                app(LiberarReservaService::class)->ejecutar($reservado);
+                app(LiberarReservaPorCarritoService::class)->ejecutar($reservado);
 
                 $reservado->eEstado = 'activo';
                 $reservado->save();
@@ -82,7 +82,7 @@ class CarritoHelper
             ->first();
 
         if ($reservado) {
-            app(LiberarReservaService::class)
+            app(LiberarReservaPorCarritoService::class)
                 ->ejecutar($reservado);
 
             $reservado->eEstado = 'activo';

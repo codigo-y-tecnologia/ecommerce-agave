@@ -39,6 +39,10 @@
     </div>
 @endif
 
+@if(session('info'))
+    <div class="alert alert-info">{{ session('info') }}</div>
+@endif
+
     <!-- Tabla de productos en el carrito -->
     <table class="table table-bordered">
     <thead class="table-light">
