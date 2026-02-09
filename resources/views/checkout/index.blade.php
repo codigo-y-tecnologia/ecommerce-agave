@@ -804,16 +804,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const data = await res.json();
 
-            if (!data.success) {
-                Swal.fire("Error", data.message || "Error al crear la sesión de pago.", "error");
-                return;
+            if (!res.ok || !data.success) {
+
+            let icon = 'error';
+            let title = 'Error';
+
+            switch (data.type) {
+                case 'stock':
+                    icon = 'warning';
+                    title = 'Stock insuficiente';
+                    break;
+
+                case 'validation':
+                    icon = 'warning';
+                    title = 'Datos incompletos';
+                    break;
+
+                case 'business':
+                    icon = 'info';
+                    title = 'No se puede continuar';
+                    break;
+
+                case 'system':
+                default:
+                    icon = 'error';
+                    title = 'Error del sistema';
+                    break;
             }
+
+            Swal.fire({
+                icon: icon,
+                title: title,
+                text: data.message || 'Ocurrió un error inesperado',
+                confirmButtonText: 'OK'
+            });
+
+            return;
+    }
 
             window.location.href = data.url;
 
         } catch (err) {
-            console.error(err);
-            Swal.fire("Error", "No se pudo iniciar el pago con Stripe.", "error");
+            console.error('Stripe fetch error:', err);
+            
+            Swal.fire({
+            icon: 'error',
+            title: 'Error de conexión',
+            text: 'No se pudo contactar al servidor. Intenta nuevamente.',
+            confirmButtonText: 'OK'
+            });
         }
     });
 

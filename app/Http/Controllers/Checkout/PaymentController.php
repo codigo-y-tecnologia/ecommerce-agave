@@ -14,6 +14,7 @@ use App\Helpers\CarritoHelper;
 use App\Services\Stock\ReservarStockService;
 use App\Services\Stock\ConsumirReservaService;
 use App\Services\Stock\LiberarReservaService;
+use App\Exceptions\StockException;
 
 use App\Models\{
     Usuario,
@@ -58,6 +59,7 @@ class PaymentController extends Controller
                 if (!$request->email_invitado) {
                     return response()->json([
                         'success' => false,
+                        'type' => 'validation',
                         'message' => 'Debes ingresar un correo para continuar.'
                     ], 400);
                 }
@@ -67,6 +69,7 @@ class PaymentController extends Controller
             if (!$request->id_direccion) {
                 return response()->json([
                     'success' => false,
+                    'type' => 'validation',
                     'message' => 'Debes seleccionar una dirección de envío.'
                 ], 400);
             }
@@ -77,6 +80,7 @@ class PaymentController extends Controller
                 if (!$request->id_direccion_facturacion) {
                     return response()->json([
                         'success' => false,
+                        'type' => 'validation',
                         'message' => 'Debes seleccionar una dirección de facturación.'
                     ], 400);
                 }
@@ -98,6 +102,7 @@ class PaymentController extends Controller
             if (!$carrito || $carrito->detalles->isEmpty()) {
                 return response()->json([
                     'success' => false,
+                    'type' => 'validation',
                     'message' => 'Carrito vacío.'
                 ], 400);
             }
@@ -195,11 +200,11 @@ class PaymentController extends Controller
                 'url' => $session->url,
                 'id' => $session->id
             ]);
-        } catch (\Throwable $e) {
+        } catch (StockException $e) {
 
             if (isset($carrito)) {
                 $carrito->update([
-                    'estado' => 'activo'
+                    'eEstado' => 'activo'
                 ]);
             }
 
@@ -210,7 +215,26 @@ class PaymentController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al crear la sesión de pago.'
+                'type' => 'stock',
+                'message' => $e->getMessage()
+            ], 409);
+        } catch (\Throwable $e) {
+
+            if (isset($carrito)) {
+                $carrito->update([
+                    'eEstado' => 'activo'
+                ]);
+            }
+
+            Log::error("🔥 Stripe error", [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'type' => 'system',
+                'message' => 'Ocurrió un error al procesar el pago. Intenta nuevamente.'
             ], 500);
         }
     }
@@ -334,7 +358,7 @@ class PaymentController extends Controller
                 'payment_intent' => $reference ?? null,
             ]);
 
-            return response()->json(['error' => 'internal_error'], 200);
+            return response()->json(['error' => 'internal_error'], 500);
         }
     }
 
