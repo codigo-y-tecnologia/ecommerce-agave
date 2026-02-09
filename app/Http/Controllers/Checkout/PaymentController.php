@@ -102,8 +102,6 @@ class PaymentController extends Controller
                 ], 400);
             }
 
-            app(ReservarStockService::class)->ejecutar($carrito);
-
             // Calcular totales
             [$subtotal, $totalImpuestos, $total] =
                 (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
@@ -179,12 +177,18 @@ class PaymentController extends Controller
                 'cancel_url' => route('checkout.cancel') . '?paid=0',
             ]);
 
-            // ACTUALIZAR RESERVAS CON SESSION ID
-            StockReserva::where('id_carrito', $carrito->id_carrito)
-                ->whereNull('session_id')
-                ->update([
-                    'session_id' => $session->id
-                ]);
+            DB::transaction(function () use ($carrito, $session) {
+
+                // Reservar stock (lock + validación)
+                app(ReservarStockService::class)->ejecutar($carrito);
+
+                // Asociar session_id a TODAS las reservas del carrito
+                StockReserva::where('id_carrito', $carrito->id_carrito)
+                    ->whereNull('session_id')
+                    ->update([
+                        'session_id' => $session->id
+                    ]);
+            });
 
             return response()->json([
                 'success' => true,
@@ -192,7 +196,17 @@ class PaymentController extends Controller
                 'id' => $session->id
             ]);
         } catch (\Throwable $e) {
-            Log::error("🔥 Stripe error: " . $e->getMessage());
+
+            if (isset($carrito)) {
+                $carrito->update([
+                    'estado' => 'activo'
+                ]);
+            }
+
+            Log::error("🔥 Stripe error", [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
 
             return response()->json([
                 'success' => false,
