@@ -549,6 +549,20 @@
 {{-- 💻 Script AJAX --}}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+
+    window.addEventListener('pageshow', function (event) {
+    // Si viene desde el bfcache (botón atrás)
+    if (event.persisted) {
+        fetch("{{ route('checkout.release-reservation') }}", {
+            method: "POST",
+            headers: {
+                "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                "Content-Type": "application/json"
+            }
+        });
+    }
+});
+
     // =========================================
     // VARIABLES GLOBALES
     // =========================================

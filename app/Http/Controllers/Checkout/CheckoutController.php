@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Exception;
 use Carbon\Carbon;
 use App\Helpers\CarritoHelper;
+use App\Services\Stock\LiberarReservaPorCarritoService;
 
 class CheckoutController extends Controller
 {
@@ -22,6 +23,25 @@ class CheckoutController extends Controller
         // Si el usuario viene de Stripe o PayPal y el pago fue exitoso
         if (request()->paid == 1) {
             session()->forget('codigo_cupon');
+        }
+
+        if (session('stripe_checkout_in_progress')) {
+
+            $carritoId = session('stripe_carrito_id');
+
+            $carrito = Carrito::find($carritoId);
+
+            if ($carrito && $carrito->eEstado === 'reservado') {
+                app(LiberarReservaPorCarritoService::class)->ejecutar($carrito);
+
+                $carrito->eEstado = 'activo';
+                $carrito->save();
+            }
+
+            session()->forget([
+                'stripe_checkout_in_progress',
+                'stripe_carrito_id',
+            ]);
         }
 
         $carrito = CarritoHelper::carritoCheckout();

@@ -11,9 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use App\Helpers\CarritoHelper;
-use App\Services\Stock\ReservarStockService;
-use App\Services\Stock\ConsumirReservaService;
-use App\Services\Stock\LiberarReservaService;
+use App\Services\Stock\{ReservarStockService, ConsumirReservaService, LiberarReservaPorCarritoService, LiberarReservaService};
 use App\Exceptions\StockException;
 
 use App\Models\{
@@ -86,15 +84,7 @@ class PaymentController extends Controller
                 }
             }
 
-            // Guardar en sesión
-            session([
-                'id_direccion' => $request->id_direccion,
-                'email_invitado' => $request->email_invitado ?? null,
-                'id_direccion_facturacion' => $usarMisma
-                    ? $request->id_direccion
-                    : $request->id_direccion_facturacion,
-                'nota_pedido' => $request->nota ?? null
-            ]);
+            $this->releaseReservation();
 
             // Cargar carrito (usuario invitado y logueado)
             $carrito = CarritoHelper::carritoCheckout();
@@ -106,6 +96,26 @@ class PaymentController extends Controller
                     'message' => 'Carrito vacío.'
                 ], 400);
             }
+
+            if ($carrito->eEstado === 'reservado') {
+                return response()->json([
+                    'success' => false,
+                    'type' => 'business',
+                    'message' => 'Ya hay un pago en proceso para este carrito.'
+                ], 409);
+            }
+
+            // Guardar en sesión
+            session([
+                'id_direccion' => $request->id_direccion,
+                'email_invitado' => $request->email_invitado ?? null,
+                'id_direccion_facturacion' => $usarMisma
+                    ? $request->id_direccion
+                    : $request->id_direccion_facturacion,
+                'nota_pedido' => $request->nota ?? null,
+                'stripe_checkout_in_progress' => true,
+                'stripe_carrito_id' => $carrito->id_carrito,
+            ]);
 
             // Calcular totales
             [$subtotal, $totalImpuestos, $total] =
@@ -929,7 +939,10 @@ class PaymentController extends Controller
             'codigo_cupon',
             'id_direccion',
             'id_direccion_facturacion',
-            'nota_pedido'
+            'nota_pedido',
+            'email_invitado',
+            'stripe_checkout_in_progress',
+            'stripe_carrito_id'
         ]);
 
         // Email cliente
@@ -960,6 +973,32 @@ class PaymentController extends Controller
      * Valida stock del carrito antes de permitir cualquier pago.
      * Lanza excepción si algún producto está agotado o la cantidad solicitada supera stock.
      */
+
+    public function releaseReservation()
+    {
+        if (!session('stripe_checkout_in_progress')) {
+            return response()->json(['status' => 'no_action']);
+        }
+
+        $carritoId = session('stripe_carrito_id');
+
+        $carrito = Carrito::find($carritoId);
+
+        if ($carrito && $carrito->eEstado === 'reservado') {
+            app(LiberarReservaPorCarritoService::class)->ejecutar($carrito);
+
+            $carrito->eEstado = 'activo';
+            $carrito->save();
+        }
+
+        session()->forget([
+            'stripe_checkout_in_progress',
+            'stripe_carrito_id',
+        ]);
+
+        return response()->json(['status' => 'released']);
+    }
+
     private function validateCartStock($carrito)
     {
         if (!$carrito) {

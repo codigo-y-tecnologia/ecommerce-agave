@@ -72,6 +72,11 @@ Route::get('/api/direccion/{id}', function ($id) {
     ]);
 });
 
+Route::post('/checkout/release-reservation', [
+    PaymentController::class,
+    'releaseReservation'
+])->name('checkout.release-reservation');
+
 // Para usuarios invitados (guest)
 Route::get('/checkout/direccion-guest/{id}', [CheckoutController::class, 'getDireccionGuest'])
     ->name('checkout.direccion-guest');
