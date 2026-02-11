@@ -345,7 +345,7 @@
                 <button id="btn-stripe" type="button" class="btn btn-primary btn-lg px-5 py-3 d-none" 
                         style="font-size: 1.1rem; font-weight: 600;">
                     <i class="bi bi-credit-card-2-front me-2"></i>
-                    Pagar con Tarjeta - $<span id="stripe-total">{{ number_format($totalFinal, 2) }}</span>
+                    Pagar con tarjeta<span id="stripe-total"></span>
                 </button>
 
                 {{-- Botón PayPal --}}
@@ -551,6 +551,17 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     window.addEventListener('pageshow', function (event) {
+        resetStripeButton();
+    
+    if (event.persisted) {
+        if (paypalContainer) {
+            paypalContainer.innerHTML = '';
+            delete paypalContainer.dataset.rendered;
+        }
+    }
+
+    actualizarBotonesPago();
+
     // Si viene desde el bfcache (botón atrás)
     if (event.persisted) {
         fetch("{{ route('checkout.release-reservation') }}", {
@@ -611,19 +622,144 @@ document.addEventListener('DOMContentLoaded', () => {
     const paypalContainer = document.getElementById('paypal-button-container');
 
     function actualizarBotonesPago() {
-        const metodoSeleccionado = document.querySelector('input[name="metodo_pago"]:checked').value;
-        
-        // Ocultar todos los botones primero
-        btnStripe.classList.add('d-none');
-        paypalContainer.classList.add('d-none');
+    const metodoSeleccionado = document.querySelector('input[name="metodo_pago"]:checked')?.value;
 
-        // Mostrar solo el botón seleccionado
-        if (metodoSeleccionado === 'stripe') {
-            btnStripe.classList.remove('d-none');
-        } else if (metodoSeleccionado === 'paypal') {
-            paypalContainer.classList.remove('d-none');
+    // Ocultar todos los botones primero
+    btnStripe.classList.add('d-none');
+    paypalContainer.classList.add('d-none');
+
+    // Mostrar solo el botón seleccionado
+    if (metodoSeleccionado === 'stripe') {
+        btnStripe.classList.remove('d-none');
+    } else if (metodoSeleccionado === 'paypal') {
+        paypalContainer.classList.remove('d-none');
+        requestAnimationFrame(() => {
+        renderPaypalIfNeeded();
+     });
+    }
+}
+
+function renderPaypalIfNeeded() {
+    if (
+    paypalContainer.dataset.rendered === '1' &&
+    paypalContainer.querySelector('iframe')
+) {
+    return;
+}
+
+    if (typeof paypal === 'undefined') {
+        return;
+    }
+
+    paypal.Buttons({
+        onClick: function(data, actions) {
+            if (!validarDireccion()) {
+                return actions.reject();
+            }
+
+            // Validar email
+        if (document.getElementById('vEmail')) {
+    const email = document.getElementById('vEmail').value.trim();
+    if (!email) {
+        Swal.fire('Correo requerido', 'Ingresa tu correo para continuar', 'warning');
+        return actions.reject();
+    }
+}
+
+// Validar dirección de facturación
+    const usarMisma = document.getElementById('misma_direccion_facturacion').checked;
+    const selectFact = document.getElementById('id_direccion_facturacion');
+
+    if (!usarMisma) {
+        if (!selectFact.value || selectFact.value === "0") {
+
+            // Marcar select en rojo
+            selectFact.classList.remove('is-valid');
+            selectFact.classList.add('is-invalid');
+
+            Swal.fire({
+                icon: "warning",
+                title: "Dirección de facturación requerida",
+                text: "Selecciona una dirección de facturación para continuar.",
+            });
+
+            return actions.reject();
         }
     }
+            return actions.resolve();
+        },
+
+        createOrder: function(data, actions) {
+            // Obtener datos del formulario
+            const idDireccion = document.getElementById('id_direccion').value;
+            const mismaDireccion = document.getElementById('misma_direccion_facturacion').checked;
+            const idDireccionFacturacion = mismaDireccion ? idDireccion : document.getElementById('id_direccion_facturacion').value;
+            const emailInvitado = document.getElementById('vEmail')?.value.trim() ?? null;
+            const nota = document.getElementById('agregar_nota').checked
+                ? document.getElementById('nota_pedido').value
+                : null;
+
+            return fetch("{{ route('payment.paypal.create') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    id_direccion: idDireccion,
+                    id_direccion_facturacion: idDireccionFacturacion,
+                    email_invitado: emailInvitado,
+                    nota: nota
+                })
+            })
+            .then(res => res.json())
+            .then(json => {
+                if (!json.success) {
+                        Swal.fire({
+                        icon: "error",
+                        title: "No se puede continuar con el pago",
+                        text: json.message || "No fue posible crear la orden de PayPal.",
+                        confirmButtonText: "Entendido"
+                    });
+                        throw new Error(json.message || "No fue posible crear la orden de PayPal.");
+                    }
+                return json.orderID;
+            });
+        },
+
+        onApprove: function(data, actions) {
+            return fetch("{{ route('payment.paypal.capture') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ orderID: data.orderID })
+            })
+            .then(res => res.json())
+            .then(json => {
+                if (json.success) {
+                    window.location.href = json.redirect_url;
+                } else {
+                    window.location.href = window.checkoutErrorUrl + 
+        '?msg=' + encodeURIComponent(json.message ?? 'No se pudo completar el pago con PayPal.');
+                }
+            });
+        }, 
+
+        onCancel: function () {
+                Swal.fire("Cancelado", "Pago cancelado.", "info");
+            },
+
+            onError: function (err) {
+                console.error('PayPal error:', err);
+                window.location.href = window.checkoutErrorUrl + 
+        '?msg=' + encodeURIComponent('Ocurrió un error al procesar el pago con PayPal.');
+            }
+    }).render('#paypal-button-container');
+
+    paypalContainer.dataset.rendered = '1';
+}
 
     // Event listeners para los radio buttons
     metodoPagoRadios.forEach(radio => {
@@ -752,11 +888,29 @@ document.addEventListener('DOMContentLoaded', () => {
         return true;
     }
 
+    // Función para resetear el botón de Stripe en caso de error
+    function resetStripeButton() {
+    const btnStripe = document.getElementById('btn-stripe');
+    if (!btnStripe) return;
+
+    btnStripe.dataset.loading = '0';
+    btnStripe.disabled = false;
+
+    btnStripe.innerHTML = `
+        <i class="bi bi-credit-card-2-front me-2"></i>
+        Pagar con tarjeta
+    `;
+}
+
     // =========================================
     // 6. STRIPE
     // =========================================
-    document.getElementById('btn-stripe')?.addEventListener('click', async (e) => {
+    btnStripe?.addEventListener('click', async (e) => {
         e.preventDefault();
+
+        if (btnStripe.dataset.loading === '1') {
+            return;
+        }
 
         if (!validarDireccion()) {
             return;
@@ -800,6 +954,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const nota = document.getElementById('agregar_nota').checked 
     ? document.getElementById('nota_pedido').value 
     : null;
+
+    btnStripe.dataset.loading = '1';
+        btnStripe.disabled = true;
+        btnStripe.innerHTML = `
+        <span class="spinner-border spinner-border-sm me-2"></span>
+        Procesando...
+        `;
 
         try {
             const res = await fetch("{{ route('payment.stripe.session') }}", {
@@ -853,9 +1014,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 confirmButtonText: 'OK'
             });
 
+            resetStripeButton();
             return;
     }
-
             window.location.href = data.url;
 
         } catch (err) {
@@ -867,91 +1028,9 @@ document.addEventListener('DOMContentLoaded', () => {
             text: 'No se pudo contactar al servidor. Intenta nuevamente.',
             confirmButtonText: 'OK'
             });
+            resetStripeButton();
         }
     });
-
-    // =========================================
-    // 7. PAYPAL
-    // =========================================
-    
-    if (typeof paypal !== 'undefined') {
-        paypal.Buttons({
-            onClick: function(data, actions) {
-                if (!validarDireccion()) {
-                    return Promise.reject();
-                }
-                return Promise.resolve();
-            },
-
-            createOrder: function(data, actions) {
-                // Obtener datos del formulario
-                const idDireccion = document.getElementById('id_direccion').value;
-                const mismaDireccion = document.getElementById('misma_direccion_facturacion').checked;
-                const idDireccionFacturacion = mismaDireccion ? idDireccion : document.getElementById('id_direccion_facturacion').value;
-                const emailInvitado = document.getElementById('vEmail')?.value.trim() ?? null;
-                const nota = document.getElementById('agregar_nota').checked 
-                ? document.getElementById('nota_pedido').value 
-                : null;
-
-                return fetch("{{ route('payment.paypal.create') }}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({
-                        id_direccion: idDireccion,
-                        id_direccion_facturacion: idDireccionFacturacion,
-                        email_invitado: emailInvitado,
-                        nota: nota
-                    })
-                })
-                .then(res => res.json())
-                .then(json => {
-                    if (!json.success) {
-                        Swal.fire({
-                        icon: "error",
-                        title: "No se puede continuar con el pago",
-                        text: json.message || "No fue posible crear la orden de PayPal.",
-                        confirmButtonText: "Entendido"
-                    });
-                        throw new Error(json.message || "No fue posible crear la orden de PayPal.");
-                    }
-                    return json.orderID;
-                });
-            },
-
-            onApprove: function(data, actions) {
-                return fetch("{{ route('payment.paypal.capture') }}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({ orderID: data.orderID })
-                })
-                .then(res => res.json())
-                .then(json => {
-                    if (json.success) {
-                        window.location.href = json.redirect_url;
-                    } else {
-                        window.location.href = window.checkoutErrorUrl + 
-        '?msg=' + encodeURIComponent(json.message ?? 'No se pudo completar el pago con PayPal.');
-                    }
-                });
-            },
-
-            onCancel: function () {
-                Swal.fire("Cancelado", "Pago cancelado.", "info");
-            },
-
-            onError: function (err) {
-                console.error('PayPal error:', err);
-                window.location.href = window.checkoutErrorUrl + 
-        '?msg=' + encodeURIComponent('Ocurrió un error al procesar el pago con PayPal.');
-            }
-        }).render('#paypal-button-container');
-    }
 
     // =========================================
     // 8. MANEJO DE DIRECCIONES MEJORADO

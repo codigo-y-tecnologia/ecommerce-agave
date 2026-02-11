@@ -384,6 +384,7 @@ class PaymentController extends Controller
             if (!$request->email_invitado) {
                 return response()->json([
                     'success' => false,
+                    'type' => 'validation',
                     'message' => 'Debes ingresar un correo para continuar.'
                 ], 400);
             }
