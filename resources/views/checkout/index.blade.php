@@ -639,6 +639,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 }
 
+// Función para renderizar PayPal solo si no se ha renderizado antes y pagar con validaciones adicionales
 function renderPaypalIfNeeded() {
     if (
     paypalContainer.dataset.rendered === '1' &&
@@ -652,7 +653,11 @@ function renderPaypalIfNeeded() {
     }
 
     paypal.Buttons({
-        onClick: function(data, actions) {
+        onClick: async function (data, actions) {
+
+            /* VALIDACIONES FRONTEND */
+
+            // Validar que se haya seleccionado una dirección de envío
             if (!validarDireccion()) {
                 return actions.reject();
             }
@@ -686,6 +691,36 @@ function renderPaypalIfNeeded() {
             return actions.reject();
         }
     }
+
+    /* VALIDACIÓN BACKEND */
+            try {
+                const res = await fetch("{{ route('payment.paypal.validate') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        id_direccion: document.getElementById('id_direccion').value,
+                        usar_misma_direccion: document.getElementById('misma_direccion_facturacion').checked,
+                        id_direccion_facturacion: document.getElementById('id_direccion_facturacion')?.value ?? null,
+                        email_invitado: document.getElementById('vEmail')?.value ?? null
+                    })
+                });
+
+                const json = await res.json();
+
+                if (!json.success) {
+                    Swal.fire('No se puede continuar', json.message, 'warning');
+                    return actions.reject();
+                }
+
+            } catch (e) {
+                console.error('Error validando PayPal:', e);
+                Swal.fire('Error', 'No se pudo validar la información. Intenta nuevamente.', 'error');
+                return actions.reject();
+            }
+
             return actions.resolve();
         },
 
@@ -714,16 +749,17 @@ function renderPaypalIfNeeded() {
             })
             .then(res => res.json())
             .then(json => {
-                if (!json.success) {
-                        Swal.fire({
-                        icon: "error",
-                        title: "No se puede continuar con el pago",
-                        text: json.message || "No fue posible crear la orden de PayPal.",
-                        confirmButtonText: "Entendido"
-                    });
-                        throw new Error(json.message || "No fue posible crear la orden de PayPal.");
-                    }
-                return json.orderID;
+                if (json.success) {
+                    return json.orderID;
+                } else {
+                    Swal.fire('Error', json.message || 'No se pudo crear la orden de PayPal.', 'error');
+                    throw new Error(json.message || 'Error al crear orden PayPal');
+                }
+            })
+            .catch(err => {
+                console.error('Error en createOrder:', err);
+                Swal.fire('Error', 'Ocurrió un error al iniciar el proceso de pago con PayPal. Intenta nuevamente.', 'error');
+                throw err;
             });
         },
 
@@ -740,10 +776,15 @@ function renderPaypalIfNeeded() {
             .then(json => {
                 if (json.success) {
                     window.location.href = json.redirect_url;
-                } else {
-                    window.location.href = window.checkoutErrorUrl + 
-        '?msg=' + encodeURIComponent(json.message ?? 'No se pudo completar el pago con PayPal.');
-                }
+                    return;
+                } 
+
+                Swal.fire({
+                icon: 'error',
+                title: 'Pago no completado',
+                text: json.message || 'No se pudo completar el pago con PayPal.',
+                confirmButtonText: 'Entendido'
+                });
             });
         }, 
 
@@ -752,9 +793,14 @@ function renderPaypalIfNeeded() {
             },
 
             onError: function (err) {
-                console.error('PayPal error:', err);
-                window.location.href = window.checkoutErrorUrl + 
-        '?msg=' + encodeURIComponent('Ocurrió un error al procesar el pago con PayPal.');
+                console.error('PayPal SDK error:', err);
+
+                Swal.fire({
+                icon: 'error',
+                title: 'Error técnico',
+                text: 'Ocurrió un problema técnico con PayPal. Intenta nuevamente.',
+                confirmButtonText: 'Entendido'
+                });
             }
     }).render('#paypal-button-container');
 
@@ -878,7 +924,7 @@ function renderPaypalIfNeeded() {
         Swal.fire({
             icon: 'warning',
             title: 'Dirección requerida',
-            text: 'Por favor selecciona una dirección para continuar.',
+            text: 'Por favor selecciona una dirección de envío para continuar.',
             confirmButtonText: 'Entendido'
         });
         return false;

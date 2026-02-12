@@ -52,6 +52,15 @@ class PaymentController extends Controller
         try {
             $user = Auth::user();
 
+            // VALIDAR DIRECCION
+            if (!$request->id_direccion) {
+                return response()->json([
+                    'success' => false,
+                    'type' => 'validation',
+                    'message' => 'Debes seleccionar una dirección de envío.'
+                ], 400);
+            }
+
             // VALIDAR EMAIL (INVITADO)
             if (!$user) {
                 if (!$request->email_invitado) {
@@ -63,18 +72,11 @@ class PaymentController extends Controller
                 }
             }
 
-            // VALIDAR DIRECCION
-            if (!$request->id_direccion) {
-                return response()->json([
-                    'success' => false,
-                    'type' => 'validation',
-                    'message' => 'Debes seleccionar una dirección de envío.'
-                ], 400);
-            }
-
             // VALIDAR DIRECCIÓN DE FACTURACIÓN según checkbox
             $usarMisma = $request->has('misma_direccion_facturacion') && $request->misma_direccion_facturacion == 'on';
+
             if (!$usarMisma) {
+
                 if (!$request->id_direccion_facturacion) {
                     return response()->json([
                         'success' => false,
@@ -372,12 +374,19 @@ class PaymentController extends Controller
         }
     }
 
-    /**
-     * Crea una orden PayPal (server side) y devuelve id (cliente usa approve).
-     */
-    public function createPaypalOrder(Request $request)
+    /** Valida los datos del formulario de PayPal antes de crear la orden */
+    public function validatePaypal(Request $request)
     {
         $user = Auth::user();
+
+        // VALIDAR DIRECCION
+        if (!$request->id_direccion) {
+            return response()->json([
+                'success' => false,
+                'type' => 'validation',
+                'message' => 'Debes seleccionar una dirección de envío.'
+            ], 400);
+        }
 
         // VALIDAR EMAIL (INVITADO)
         if (!$user) {
@@ -390,38 +399,54 @@ class PaymentController extends Controller
             }
         }
 
-        // VALIDAR DIRECCION
-        if (!$request->id_direccion) {
+        // VALIDAR DIRECCIÓN DE FACTURACIÓN
+        if (
+            !$request->usar_misma_direccion &&
+            !$request->id_direccion_facturacion
+        ) {
             return response()->json([
                 'success' => false,
-                'message' => 'Debes seleccionar una dirección.'
+                'type' => 'validation',
+                'message' => 'Debes seleccionar una dirección de facturación.'
             ], 400);
         }
 
-        // VALIDAR DIRECCIÓN DE FACTURACIÓN
-        $usarMisma = $request->has('misma_direccion_facturacion') && $request->misma_direccion_facturacion == 'on';
-        if (!$usarMisma) {
-            if (!$request->id_direccion_facturacion) {
-                return response()->json(['success' => false, 'message' => 'Debes seleccionar una dirección de facturación.'], 400);
-            }
-        }
+        $this->releaseReservation();
 
         // Cargar carrito (usuario invitado y logueado)
         $carrito = CarritoHelper::carritoCheckout();
 
         if (!$carrito || $carrito->detalles->isEmpty()) {
-            return response()->json(['success' => false, 'message' => 'Carrito vacío.'], 400);
-        }
 
-        // VALIDAR STOCK ANTES DE CREAR ORDEN PAYPAL
-        try {
-            $this->validateCartStock($carrito);
-        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'type' => 'validation',
+                'message' => 'Carrito vacío.'
             ], 400);
         }
+
+        if ($carrito->eEstado === 'reservado') {
+            return response()->json([
+                'success' => false,
+                'type' => 'business',
+                'message' => 'Ya hay un pago en proceso para este carrito.'
+            ], 409);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Crea una orden PayPal (server side) y devuelve id (cliente usa approve).
+     */
+    public function createPaypalOrder(Request $request)
+    {
+
+        // DIRECCIÓN DE FACTURACIÓN
+        $usarMisma = $request->has('misma_direccion_facturacion') && $request->misma_direccion_facturacion == 'on';
+
+        // Cargar carrito (usuario invitado y logueado)
+        $carrito = CarritoHelper::carritoCheckout();
 
         // Guardar en sesión
         session([

@@ -118,6 +118,9 @@ Route::get('/pago-error', function () {
     return view('checkout.session-error');
 })->name('session.error');
 
+Route::post('/payment/paypal/validate', [PaymentController::class, 'validatePaypal'])
+    ->name('payment.paypal.validate');
+
 // Login y registro solo para invitados
 Route::middleware('guest')->group(function () {
 
