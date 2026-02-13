@@ -198,7 +198,7 @@
                                            id="dPrecio_oferta" 
                                            class="form-control @error('dPrecio_oferta') is-invalid @enderror"
                                            value="{{ old('dPrecio_oferta') }}" 
-                                           oninput="validarPrecioOferta(this)"
+                                           oninput="validarPrecio(this)"
                                            placeholder="0.00"
                                            autocomplete="off">
                                 </div>
@@ -683,8 +683,8 @@
                                         <div class="alert alert-warning mb-0">
                                             <i class="fas fa-exclamation-triangle me-2"></i>
                                             Este atributo no tiene valores. 
-                                            <button type="button" class="btn btn-link p-0 ms-1" onclick="activarTabValores()">
-                                                Agregar valores
+                                            <button type="button" class="btn btn-link p-0 ms-1" onclick="activarTabAtributos()">
+                                                Crear valores
                                             </button>
                                         </div>
                                     @endif
@@ -806,12 +806,6 @@
                     <button class="nav-link" id="atributos-tab" data-bs-toggle="tab" 
                             data-bs-target="#atributos-content" type="button" role="tab">
                         <i class="fas fa-list-alt me-1"></i>Atributos
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="valores-atributos-tab" data-bs-toggle="tab" 
-                            data-bs-target="#valores-atributos-content" type="button" role="tab">
-                        <i class="fas fa-list me-1"></i>Valores de Atributos
                     </button>
                 </li>
             </ul>
@@ -979,83 +973,12 @@
                         
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle me-2"></i>
-                            <strong>Nota:</strong> Después de crear el atributo, podrás agregar valores específicos en la pestaña "Valores de Atributos".
+                            <strong>Nota:</strong> Después de crear el atributo, podrás agregar valores específicos en la sección <strong>"Seleccionar Atributos para Variaciones"</strong>.
                         </div>
                         
                         <div class="d-flex justify-content-end">
                             <button type="button" class="btn btn-primary" onclick="crearAtributo()">
                                 <i class="fas fa-save me-1"></i> Crear Atributo
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- TAB: VALORES DE ATRIBUTOS -->
-                <div class="tab-pane fade" id="valores-atributos-content" role="tabpanel">
-                    <div class="quick-form" id="quick-valor-form">
-                        <h5><i class="fas fa-list me-2"></i>Agregar Valor a Atributo</h5>
-                        <p class="text-muted small mb-3">Los valores son las opciones específicas de cada atributo (ej: para "Tamaño" los valores son "750ml", "1L", etc.).</p>
-                        
-                        <div class="mb-3">
-                            <label for="atributo_valor_atributo" class="form-label fw-bold">Seleccionar Atributo *</label>
-                            <select class="form-select" id="atributo_valor_atributo">
-                                <option value="">-- Seleccionar Atributo --</option>
-                                @foreach($atributos as $atributo)
-                                    <option value="{{ $atributo->id_atributo }}">{{ $atributo->vNombre }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="vValor_valor" class="form-label fw-bold">Valor *</label>
-                                <input type="text" class="form-control" id="vValor_valor" 
-                                       placeholder="Ej: 750ml, Joven, Rojo"
-                                       oninput="quickGenerarSlug(this.value, 'vSlug_valor')">
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="vSlug_valor" class="form-label fw-bold">Slug (URL amigable)</label>
-                                <input type="text" class="form-control" id="vSlug_valor" 
-                                       placeholder="750ml, joven, rojo">
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="dPrecio_extra_valor" class="form-label fw-bold">Precio Extra</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="text" class="form-control" id="dPrecio_extra_valor" 
-                                           placeholder="0.00" value="0"
-                                           oninput="validarPrecio(this)">
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-4 mb-3">
-                                <label for="iStock_valor" class="form-label fw-bold">Stock</label>
-                                <input type="text" class="form-control" id="iStock_valor" 
-                                       placeholder="0" value="0"
-                                       oninput="validarStock(this)">
-                            </div>
-                            
-                            <div class="col-md-4 mb-3">
-                                <label for="bActivo_valor" class="form-label fw-bold d-block">Estado</label>
-                                <div class="form-check form-switch mt-2">
-                                    <input type="checkbox" class="form-check-input" id="bActivo_valor" checked>
-                                    <label class="form-check-label" for="bActivo_valor">Activo</label>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <strong>Importante:</strong> Primero debes crear el atributo antes de poder asignarle valores.
-                        </div>
-                        
-                        <div class="d-flex justify-content-end">
-                            <button type="button" class="btn btn-primary" onclick="crearValorAtributo()">
-                                <i class="fas fa-save me-1"></i> Agregar Valor
                             </button>
                         </div>
                     </div>
@@ -2195,16 +2118,6 @@ function eliminarValorDeAtributo(atributoId, valorId) {
     });
 }
 
-// Eliminar atributo completo
-function eliminarAtributoDePestanas(atributoId) {
-    // Desactivar atributo
-    const atributoActivo = document.getElementById(`atributo-activo-${atributoId}`);
-    if (atributoActivo) {
-        atributoActivo.checked = false;
-        atributoActivo.dispatchEvent(new Event('change'));
-    }
-}
-
 // ============================================
 // FUNCIONES PARA FORMULARIOS RÁPIDOS
 // ============================================
@@ -2508,12 +2421,7 @@ function crearAtributo() {
                 
                 document.getElementById('quick-atributo-form').reset();
                 
-                const select = document.getElementById('atributo_valor_atributo');
-                const option = document.createElement('option');
-                option.value = response.atributo.id_atributo;
-                option.text = response.atributo.vNombre;
-                select.appendChild(option);
-                
+                // Recargar la página después de crear el atributo
                 setTimeout(() => {
                     location.reload();
                 }, 2000);
@@ -2522,84 +2430,6 @@ function crearAtributo() {
                     icon: 'error',
                     title: 'Error',
                     text: response.message || 'Error al crear el atributo'
-                });
-            }
-        },
-        error: function(xhr) {
-            Swal.close();
-            let message = 'Error en la solicitud';
-            if (xhr.responseJSON && xhr.responseJSON.message) {
-                message = xhr.responseJSON.message;
-            } else if (xhr.responseJSON && xhr.responseJSON.errors) {
-                const errors = Object.values(xhr.responseJSON.errors).flat();
-                message = errors.join(', ');
-            }
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: message
-            });
-        }
-    });
-}
-
-function crearValorAtributo() {
-    const atributoId = document.getElementById('atributo_valor_atributo').value;
-    const valor = document.getElementById('vValor_valor').value.trim();
-    const slug = document.getElementById('vSlug_valor').value.trim();
-    const precioExtra = document.getElementById('dPrecio_extra_valor').value || 0;
-    const stock = document.getElementById('iStock_valor').value || 0;
-    const activa = document.getElementById('bActivo_valor').checked ? 1 : 0;
-    
-    if (!atributoId) {
-        Swal.fire('Error', 'Debes seleccionar un atributo primero', 'error');
-        return;
-    }
-    
-    if (!valor) {
-        Swal.fire('Error', 'El nombre del valor es obligatorio', 'error');
-        return;
-    }
-    
-    Swal.fire({
-        title: 'Creando valor...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
-    
-    $.ajax({
-        url: `{{ url('atributos') }}/${atributoId}/valores`,
-        method: 'POST',
-        data: {
-            _token: '{{ csrf_token() }}',
-            vValor: valor,
-            vSlug: slug,
-            dPrecio_extra: precioExtra,
-            iStock: stock,
-            bActivo: activa
-        },
-        success: function(response) {
-            Swal.close();
-            if (response.success || !response.error) {
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Éxito!',
-                    text: 'Valor creado correctamente',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-                
-                document.getElementById('quick-valor-form').reset();
-                
-                setTimeout(() => {
-                    location.reload();
-                }, 2000);
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: response.message || 'Error al crear el valor'
                 });
             }
         },
@@ -2644,14 +2474,6 @@ function agregarEtiquetaAlFormulario(etiqueta) {
 
 function activarTabAtributos() {
     const tab = document.getElementById('atributos-tab');
-    if (tab) {
-        tab.click();
-        tab.scrollIntoView({ behavior: 'smooth' });
-    }
-}
-
-function activarTabValores() {
-    const tab = document.getElementById('valores-atributos-tab');
     if (tab) {
         tab.click();
         tab.scrollIntoView({ behavior: 'smooth' });
