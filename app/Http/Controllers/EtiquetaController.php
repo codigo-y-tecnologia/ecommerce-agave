@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Etiqueta;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class EtiquetaController extends Controller
 {
@@ -41,7 +42,8 @@ class EtiquetaController extends Controller
     {
         $request->validate([
             'vNombre' => 'required|max:100|unique:tbl_etiquetas,vNombre',
-            'tDescripcion' => 'nullable|max:500'
+            'tDescripcion' => 'nullable|max:500',
+            'color' => 'nullable|max:7'
         ], [
             'vNombre.required' => 'El nombre de la etiqueta es obligatorio.',
             'vNombre.max' => 'El nombre no puede tener más de 100 caracteres.',
@@ -85,7 +87,8 @@ class EtiquetaController extends Controller
     {
         $request->validate([
             'vNombre' => 'required|max:100|unique:tbl_etiquetas,vNombre,' . $etiqueta->id_etiqueta . ',id_etiqueta',
-            'tDescripcion' => 'nullable|max:500'
+            'tDescripcion' => 'nullable|max:500',
+            'color' => 'nullable|max:7'
         ], [
             'vNombre.required' => 'El nombre de la etiqueta es obligatorio',
             'vNombre.unique' => 'Ya existe una etiqueta con este nombre',
@@ -96,7 +99,8 @@ class EtiquetaController extends Controller
         try {
             $etiqueta->update([
                 'vNombre' => $request->vNombre,
-                'tDescripcion' => $request->tDescripcion
+                'tDescripcion' => $request->tDescripcion,
+                'color' => $request->color
             ]);
             
             return redirect()->route('etiquetas.index')
@@ -131,5 +135,64 @@ class EtiquetaController extends Controller
             return redirect()->route('etiquetas.index')
                 ->with('error', 'Error al eliminar la etiqueta: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * ============================================
+     * NUEVOS MÉTODOS PARA PANEL DE GESTIÓN
+     * ============================================
+     */
+
+    /**
+     * Creación rápida de etiqueta desde AJAX
+     */
+    public function quickCreate(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'vNombre' => 'required|max:100|unique:tbl_etiquetas,vNombre',
+            'color' => 'nullable|max:7'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $etiqueta = Etiqueta::create([
+                'vNombre' => $request->vNombre,
+                'color' => $request->color ?? '#007bff',
+                'tDescripcion' => $request->tDescripcion ?? null
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'etiqueta' => $etiqueta,
+                'message' => 'Etiqueta creada exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear etiqueta: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener etiquetas en formato JSON
+     */
+    public function getJson()
+    {
+        $etiquetas = Etiqueta::orderBy('vNombre')
+            ->get(['id_etiqueta', 'vNombre', 'color', 'tDescripcion']);
+        
+        return response()->json([
+            'success' => true,
+            'etiquetas' => $etiquetas
+        ]);
     }
 }

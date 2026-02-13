@@ -333,4 +333,52 @@ class CategoriaController extends Controller
                 ->with('error', 'Error al eliminar la categoría: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Creación rápida de categoría desde AJAX
+     */
+    public function quickCreate(Request $request)
+    {
+        $request->validate([
+            'vNombre' => 'required|max:100',
+            'id_categoria_padre' => 'nullable|exists:tbl_categorias,id_categoria'
+        ]);
+
+        try {
+            $categoria = Categoria::create([
+                'vNombre' => $request->vNombre,
+                'vSlug' => Str::slug($request->vNombre),
+                'id_categoria_padre' => $request->id_categoria_padre,
+                'bActivo' => true,
+                'iOrden' => 0
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'categoria' => $categoria,
+                'message' => 'Categoría creada exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear categoría: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener categorías en formato JSON
+     */
+    public function getJson()
+    {
+        $categorias = Categoria::where('bActivo', true)
+            ->orderBy('vNombre')
+            ->get();
+        
+        return response()->json([
+            'success' => true,
+            'categorias' => $categorias
+        ]);
+    }
 }

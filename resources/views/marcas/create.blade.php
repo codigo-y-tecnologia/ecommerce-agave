@@ -69,8 +69,30 @@ function limpiarFormulario() {
     mensajesError.forEach(mensaje => {
         mensaje.remove();
     });
-    
-    
 }
+
+// Mostrar mensaje de éxito
+@if(session('success'))
+Swal.fire({
+    icon: 'success',
+    title: '¡Éxito!',
+    text: '{{ session('success') }}',
+    timer: 3000,
+    showConfirmButton: false
+});
+@endif
+
+// Mostrar mensaje de error
+@if(session('error'))
+Swal.fire({
+    icon: 'error',
+    title: 'Error',
+    text: '{{ session('error') }}'
+});
+@endif
 </script>
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+@endpush
 @endsection

@@ -135,6 +135,23 @@ Route::get('/productos/{id}/generar-combinaciones-view', function($id) {
 })->name('productos.generar-combinaciones-view');
 
 // =====================================================================
+// NUEVAS RUTAS PARA PANEL DE GESTIÓN (TIPO WORDPRESS)
+// =====================================================================
+Route::middleware('auth')->group(function () {
+    // Rutas para gestión rápida desde productos
+    Route::post('/categorias/quick-create', [CategoriaController::class, 'quickCreate'])->name('categorias.quick-create');
+    Route::post('/marcas/quick-create', [MarcaController::class, 'quickCreate'])->name('marcas.quick-create');
+    Route::post('/etiquetas/quick-create', [EtiquetaController::class, 'quickCreate'])->name('etiquetas.quick-create');
+    Route::post('/atributos/quick-create', [AtributoController::class, 'quickCreate'])->name('atributos.quick-create');
+    
+    // Rutas para obtener datos en formato JSON
+    Route::get('/categorias/json', [CategoriaController::class, 'getJson'])->name('categorias.json');
+    Route::get('/marcas/json', [MarcaController::class, 'getJson'])->name('marcas.json');
+    Route::get('/etiquetas/json', [EtiquetaController::class, 'getJson'])->name('etiquetas.json');
+    Route::get('/atributos/json', [AtributoController::class, 'getJson'])->name('atributos.json');
+});
+
+// =====================================================================
 // RUTAS DE FALLBACK (si ninguna ruta coincide)
 // =====================================================================
 Route::fallback(function () {

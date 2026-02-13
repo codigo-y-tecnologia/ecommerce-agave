@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class ProductoController extends Controller
 {
@@ -106,7 +107,6 @@ class ProductoController extends Controller
                 'numeric',
                 'min:0',
                 'max:9999999.99',
-                // Validación condicional: si tiene oferta activa, precio debe ser menor que precio de venta
                 function ($attribute, $value, $fail) use ($request) {
                     if ($request->input('bTiene_oferta') == 1 && $value !== null) {
                         $precioVenta = $request->dPrecio_venta;
@@ -140,7 +140,6 @@ class ProductoController extends Controller
             'imagenes.*.image' => 'Solo se permiten archivos de imagen',
             'imagenes.*.mimes' => 'Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP, JFIF, SVG',
             'imagenes.*.max' => 'Cada imagen no debe superar los 5MB',
-            // NUEVOS MENSAJES DE ERROR
             'dPeso.numeric' => 'El peso debe ser un número válido',
             'dPeso.min' => 'El peso no puede ser negativo',
             'dPeso.max' => 'El peso máximo es 999.999 kg',
@@ -154,7 +153,6 @@ class ProductoController extends Controller
             'dAlto_cm.min' => 'El alto no puede ser negativo',
             'dAlto_cm.max' => 'El alto máximo es 999.99 cm',
             'vClase_envio.in' => 'La clase de envío seleccionada no es válida',
-            // MENSAJES PARA OFERTA (CORREGIDOS)
             'bTiene_oferta.in' => 'El valor de oferta debe ser 0 o 1',
             'dPrecio_oferta.numeric' => 'El precio de oferta debe ser un número válido',
             'dPrecio_oferta.min' => 'El precio de oferta no puede ser negativo',
@@ -165,12 +163,10 @@ class ProductoController extends Controller
             'vMotivo_oferta.max' => 'El motivo de la oferta no puede exceder los 255 caracteres',
         ]);
 
-        // Validación adicional: si bTiene_oferta es 1, entonces dPrecio_oferta es requerido
         $validator->sometimes('dPrecio_oferta', 'required', function ($input) {
             return $input->bTiene_oferta == 1;
         });
 
-        // Validación adicional: si bTiene_oferta es 1, entonces fechas son requeridas
         $validator->sometimes('dFecha_inicio_oferta', 'required', function ($input) {
             return $input->bTiene_oferta == 1;
         });
@@ -179,14 +175,11 @@ class ProductoController extends Controller
             return $input->bTiene_oferta == 1;
         });
 
-        // Verificar si hay errores de validación
         if ($validator->fails()) {
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();
         }
-
-        $validated = $validator->validated();
 
         try {
             DB::beginTransaction();
@@ -202,13 +195,11 @@ class ProductoController extends Controller
                 'id_categoria' => $request->id_categoria,
                 'id_marca' => $request->id_marca,
                 'bActivo' => $request->has('bActivo') ? true : false,
-                // NUEVOS CAMPOS
                 'dPeso' => $request->dPeso ?: null,
                 'dLargo_cm' => $request->dLargo_cm ?: null,
                 'dAncho_cm' => $request->dAncho_cm ?: null,
                 'dAlto_cm' => $request->dAlto_cm ?: null,
                 'vClase_envio' => $request->vClase_envio ?: null,
-                // CAMPOS DE OFERTA (CORREGIDOS)
                 'bTiene_oferta' => $request->input('bTiene_oferta', 0) == 1 ? true : false,
                 'dPrecio_oferta' => $request->dPrecio_oferta ?: null,
                 'dFecha_inicio_oferta' => $request->dFecha_inicio_oferta ?: null,
@@ -218,7 +209,6 @@ class ProductoController extends Controller
 
             $producto = Producto::create($productoData);
 
-            // Guardar imágenes si se enviaron
             if ($request->hasFile('imagenes')) {
                 $producto->guardarImagenes($request->file('imagenes'));
             }
@@ -248,7 +238,6 @@ class ProductoController extends Controller
                 }
             }
 
-            // Guardar etiquetas especiales
             if ($request->has('etiquetas_especiales')) {
                 Log::info('Etiquetas especiales para producto ' . $producto->id_producto . ': ', $request->etiquetas_especiales);
             }
@@ -322,7 +311,6 @@ class ProductoController extends Controller
 
     public function update(Request $request, Producto $producto)
     {
-        // Validación personalizada para precio de oferta
         $validator = Validator::make($request->all(), [
             'vCodigo_barras' => [
                 'required',
@@ -349,7 +337,6 @@ class ProductoController extends Controller
             'imagenes_a_eliminar' => 'nullable|array',
             'imagenes_a_eliminar.*' => 'string',
             'atributos' => 'nullable|array',
-            // NUEVAS VALIDACIONES PARA DIMENSIONES Y PESO
             'dPeso' => 'nullable|numeric|min:0|max:999.999',
             'dLargo_cm' => 'nullable|numeric|min:0|max:999.99',
             'dAncho_cm' => 'nullable|numeric|min:0|max:999.99',
@@ -357,14 +344,12 @@ class ProductoController extends Controller
             'vClase_envio' => 'nullable|in:estandar,express,fragil,grandes_dimensiones',
             'etiquetas_especiales' => 'nullable|array',
             'etiquetas_especiales.*' => 'in:nuevo,popular,oferta,destacado',
-            // NUEVAS VALIDACIONES PARA OFERTA (CORREGIDAS)
             'bTiene_oferta' => 'nullable|in:0,1',
             'dPrecio_oferta' => [
                 'nullable',
                 'numeric',
                 'min:0',
                 'max:9999999.99',
-                // Validación condicional: si tiene oferta activa, precio debe ser menor que precio de venta
                 function ($attribute, $value, $fail) use ($request) {
                     if ($request->input('bTiene_oferta') == 1 && $value !== null) {
                         $precioVenta = $request->dPrecio_venta;
@@ -398,7 +383,6 @@ class ProductoController extends Controller
             'imagenes.*.image' => 'Solo se permiten archivos de imagen',
             'imagenes.*.mimes' => 'Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP, JFIF, SVG',
             'imagenes.*.max' => 'Cada imagen no debe superar los 5MB',
-            // NUEVOS MENSAJES DE ERROR
             'dPeso.numeric' => 'El peso debe ser un número válido',
             'dPeso.min' => 'El peso no puede ser negativo',
             'dPeso.max' => 'El peso máximo es 999.999 kg',
@@ -412,7 +396,6 @@ class ProductoController extends Controller
             'dAlto_cm.min' => 'El alto no puede ser negativo',
             'dAlto_cm.max' => 'El alto máximo es 999.99 cm',
             'vClase_envio.in' => 'La clase de envío seleccionada no es válida',
-            // MENSAJES PARA OFERTA (CORREGIDOS)
             'bTiene_oferta.in' => 'El valor de oferta debe ser 0 o 1',
             'dPrecio_oferta.numeric' => 'El precio de oferta debe ser un número válido',
             'dPrecio_oferta.min' => 'El precio de oferta no puede ser negativo',
@@ -423,12 +406,10 @@ class ProductoController extends Controller
             'vMotivo_oferta.max' => 'El motivo de la oferta no puede exceder los 255 caracteres',
         ]);
 
-        // Validación adicional: si bTiene_oferta es 1, entonces dPrecio_oferta es requerido
         $validator->sometimes('dPrecio_oferta', 'required', function ($input) {
             return $input->bTiene_oferta == 1;
         });
 
-        // Validación adicional: si bTiene_oferta es 1, entonces fechas son requeridas
         $validator->sometimes('dFecha_inicio_oferta', 'required', function ($input) {
             return $input->bTiene_oferta == 1;
         });
@@ -437,19 +418,15 @@ class ProductoController extends Controller
             return $input->bTiene_oferta == 1;
         });
 
-        // Verificar si hay errores de validación
         if ($validator->fails()) {
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();
         }
 
-        $validated = $validator->validated();
-
         try {
             DB::beginTransaction();
 
-            // Verificar espacio para nuevas imágenes
             $imagenesActuales = $producto->getNumeroImagenes();
             $nuevasImagenes = $request->hasFile('imagenes') ? count($request->file('imagenes')) : 0;
             $imagenesAEliminar = $request->imagenes_a_eliminar ? count($request->imagenes_a_eliminar) : 0;
@@ -462,7 +439,6 @@ class ProductoController extends Controller
                     ->withErrors(['imagenes' => 'No puedes tener más de 8 imágenes. Actualmente tienes ' . $imagenesActuales . ' imágenes.']);
             }
 
-            // Eliminar imágenes seleccionadas
             if ($request->has('imagenes_a_eliminar') && is_array($request->imagenes_a_eliminar)) {
                 $producto->eliminarImagenesEspecificas($request->imagenes_a_eliminar);
             }
@@ -478,13 +454,11 @@ class ProductoController extends Controller
                 'id_categoria' => $request->id_categoria,
                 'id_marca' => $request->id_marca,
                 'bActivo' => $request->has('bActivo') ? true : false,
-                // NUEVOS CAMPOS
                 'dPeso' => $request->dPeso ?: null,
                 'dLargo_cm' => $request->dLargo_cm ?: null,
                 'dAncho_cm' => $request->dAncho_cm ?: null,
                 'dAlto_cm' => $request->dAlto_cm ?: null,
                 'vClase_envio' => $request->vClase_envio ?: null,
-                // CAMPOS DE OFERTA (CORREGIDOS)
                 'bTiene_oferta' => $request->input('bTiene_oferta', 0) == 1 ? true : false,
                 'dPrecio_oferta' => $request->dPrecio_oferta ?: null,
                 'dFecha_inicio_oferta' => $request->dFecha_inicio_oferta ?: null,
@@ -492,7 +466,6 @@ class ProductoController extends Controller
                 'vMotivo_oferta' => $request->vMotivo_oferta ?: null,
             ]);
             
-            // Agregar nuevas imágenes
             if ($request->hasFile('imagenes')) {
                 $producto->guardarImagenes($request->file('imagenes'));
             }
@@ -522,7 +495,6 @@ class ProductoController extends Controller
                 }
             }
 
-            // Guardar etiquetas especiales en actualización
             if ($request->has('etiquetas_especiales')) {
                 Log::info('Etiquetas especiales actualizadas para producto ' . $producto->id_producto . ': ', $request->etiquetas_especiales);
             }
@@ -569,7 +541,6 @@ class ProductoController extends Controller
         $producto = Producto::with(['variaciones.atributos.atributo', 'variaciones.atributos.valor'])
             ->findOrFail($id);
         
-        // Vista simplificada - solo muestra atributos y variaciones existentes
         return view('productos.atributos', compact('producto'));
     }
 
@@ -577,7 +548,6 @@ class ProductoController extends Controller
     {
         $producto = Producto::with(['valoresAtributos.atributo'])->findOrFail($id);
         
-        // Cargar atributos con valores activos
         $atributos = Atributo::with(['valoresActivos' => function($query) {
             $query->where('bActivo', true)->orderBy('iOrden');
         }])->where('bActivo', true)->get();
@@ -589,7 +559,6 @@ class ProductoController extends Controller
     {
         $producto = Producto::findOrFail($id);
         
-        // Validación más flexible para permitir múltiples atributos
         $request->validate([
             'atributos' => 'nullable|array',
             'atributos.*.id_atributo' => 'required|exists:tbl_atributos,id_atributo',
@@ -610,15 +579,12 @@ class ProductoController extends Controller
         try {
             DB::beginTransaction();
 
-            // Eliminar atributos existentes del producto
             DB::table('tbl_producto_atributos')->where('id_producto', $producto->id_producto)->delete();
 
             if ($request->has('atributos')) {
                 foreach ($request->atributos as $atributoData) {
-                    // Verificar que el atributo tenga valores seleccionados
                     if (isset($atributoData['valores']) && is_array($atributoData['valores'])) {
                         foreach ($atributoData['valores'] as $valorData) {
-                            // Verificar que todos los datos necesarios estén presentes
                             if (isset($valorData['id_valor'])) {
                                 DB::table('tbl_producto_atributos')->insert([
                                     'id_producto' => $producto->id_producto,
@@ -640,7 +606,6 @@ class ProductoController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             
-            // Mensaje de error más descriptivo
             $errorMessage = 'Error al asignar atributos: ' . $e->getMessage();
             if (strpos($e->getMessage(), 'Integrity constraint violation') !== false) {
                 $errorMessage = 'Error: Existe un problema con los datos enviados. Verifica que todos los valores sean válidos.';

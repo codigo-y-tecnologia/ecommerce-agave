@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Marca;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class MarcaController extends Controller
 {
@@ -127,5 +129,62 @@ class MarcaController extends Controller
         
         return redirect()->route('marcas.index')
             ->with('success', 'Marca eliminada exitosamente');
+    }
+
+    /**
+     * ============================================
+     * NUEVOS MÉTODOS PARA PANEL DE GESTIÓN
+     * ============================================
+     */
+
+    /**
+     * Creación rápida de marca desde AJAX
+     */
+    public function quickCreate(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'vNombre' => 'required|max:100|unique:tbl_marcas,vNombre'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $marca = Marca::create([
+                'vNombre' => $request->vNombre,
+                'tDescripcion' => $request->tDescripcion ?? null
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'marca' => $marca,
+                'message' => 'Marca creada exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear marca: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener marcas en formato JSON
+     */
+    public function getJson()
+    {
+        $marcas = Marca::orderBy('vNombre')
+            ->get(['id_marca', 'vNombre', 'tDescripcion']);
+        
+        return response()->json([
+            'success' => true,
+            'marcas' => $marcas
+        ]);
     }
 }

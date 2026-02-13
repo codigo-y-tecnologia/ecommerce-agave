@@ -7,9 +7,14 @@ use App\Models\ProductoVariacion;
 use App\Models\VariacionAtributo;
 use App\Models\Atributo;
 use App\Models\AtributoValor;
+use App\Models\Marca;
+use App\Models\Categoria;
+use App\Models\Etiqueta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class ValoracionController extends Controller
 {
@@ -50,16 +55,43 @@ class ValoracionController extends Controller
             $atributos[$nombreAtributo][] = $valor;
         }
         
-        return view('valoraciones.create', compact('producto', 'atributos'));
+        $categorias = Categoria::with(['hijos' => function($query) {
+            $query->where('bActivo', true)
+                  ->with(['hijos' => function($subQuery) {
+                      $subQuery->where('bActivo', true)
+                               ->orderBy('iOrden')
+                               ->orderBy('vNombre');
+                  }])
+                  ->orderBy('iOrden')
+                  ->orderBy('vNombre');
+        }])
+        ->whereNull('id_categoria_padre')
+        ->where('bActivo', true)
+        ->orderBy('iOrden')
+        ->orderBy('vNombre')
+        ->get();
+        
+        $marcas = Marca::all();
+        $etiquetas = Etiqueta::all();
+        $atributosGlobales = Atributo::with(['valoresActivos' => function($query) {
+            $query->where('bActivo', true)->orderBy('iOrden');
+        }])->where('bActivo', true)->get();
+        
+        return view('valoraciones.create', compact(
+            'producto', 
+            'atributos', 
+            'categorias', 
+            'marcas', 
+            'etiquetas', 
+            'atributosGlobales'
+        ));
     }
 
     public function store(Request $request, $producto_id)
     {
-        // Validar que el producto exista
         $productoPadre = Producto::findOrFail($producto_id);
         
-        // Validación de campos
-        $validator = \Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'vSKU' => 'required|unique:tbl_producto_variaciones,vSKU|max:50',
             'dPrecio' => [
                 'required',
@@ -140,7 +172,6 @@ class ValoracionController extends Controller
             'imagen' => 'nullable|image|max:5120|mimes:jpg,jpeg,png,gif,webp,bmp,svg',
             'atributos' => 'required|array',
             'atributos.*' => 'required|exists:tbl_atributo_valores,id_atributo_valor',
-            // Campos para oferta especial
             'bTiene_oferta' => 'nullable|in:0,1',
             'dFecha_inicio_oferta' => 'nullable|date',
             'dFecha_fin_oferta' => 'nullable|date|after_or_equal:dFecha_inicio_oferta',
@@ -186,12 +217,10 @@ class ValoracionController extends Controller
             'vMotivo_oferta.max' => 'El motivo de la oferta no puede exceder los 255 caracteres',
         ]);
 
-        // Validación adicional: si bTiene_oferta es 1, entonces dPrecio_oferta es requerido
         $validator->sometimes('dPrecio_oferta', 'required', function ($input) {
             return $input->bTiene_oferta == 1;
         });
 
-        // Validación adicional: si bTiene_oferta es 1, entonces fechas son requeridas
         $validator->sometimes('dFecha_inicio_oferta', 'required', function ($input) {
             return $input->bTiene_oferta == 1;
         });
@@ -212,7 +241,6 @@ class ValoracionController extends Controller
         try {
             DB::beginTransaction();
 
-            // Log para depuración
             \Log::info('Datos del formulario recibidos:', [
                 'bTiene_oferta' => $request->has('bTiene_oferta'),
                 'bTiene_oferta_value' => $request->bTiene_oferta,
@@ -222,7 +250,6 @@ class ValoracionController extends Controller
                 'vMotivo_oferta' => $request->vMotivo_oferta,
             ]);
 
-            // Determinar clase de envío
             $claseEnvio = $request->vClase_envio;
             if (empty($claseEnvio) && $productoPadre->vClase_envio) {
                 $claseEnvio = $productoPadre->vClase_envio;
@@ -230,7 +257,6 @@ class ValoracionController extends Controller
                 $claseEnvio = 'Estándar';
             }
 
-            // Preparar datos para la variación
             $variacionData = [
                 'id_producto' => $producto_id,
                 'vSKU' => $request->vSKU,
@@ -244,7 +270,6 @@ class ValoracionController extends Controller
                 'vClase_envio' => $claseEnvio,
                 'tDescripcion' => $request->tDescripcion,
                 'bActivo' => $request->has('bActivo') ? 1 : 0,
-                // Campos de oferta - CORREGIDO
                 'bTiene_oferta' => $request->has('bTiene_oferta') && $request->bTiene_oferta == '1' ? 1 : 0,
                 'dFecha_inicio_oferta' => $request->dFecha_inicio_oferta ?: null,
                 'dFecha_fin_oferta' => $request->dFecha_fin_oferta ?: null,
@@ -255,7 +280,6 @@ class ValoracionController extends Controller
 
             $variacion = ProductoVariacion::create($variacionData);
 
-            // Log para verificar creación
             \Log::info('Variación creada con ID:', ['id' => $variacion->id_variacion]);
             \Log::info('Campos de oferta guardados:', [
                 'bTiene_oferta' => $variacion->bTiene_oferta,
@@ -265,12 +289,10 @@ class ValoracionController extends Controller
                 'vMotivo_oferta' => $variacion->vMotivo_oferta,
             ]);
 
-            // Guardar imagen si existe
             if ($request->hasFile('imagen') && $request->file('imagen')->isValid()) {
                 $this->guardarImagenVariacion($variacion, $request->file('imagen'));
             }
 
-            // Guardar atributos
             foreach ($request->atributos as $atributo_id => $valor_id) {
                 $atributoValor = AtributoValor::where('id_atributo_valor', $valor_id)
                     ->where('id_atributo', $atributo_id)
@@ -330,24 +352,52 @@ class ValoracionController extends Controller
             $valoresSeleccionados[$atributoVariacion->id_atributo] = $atributoVariacion->id_atributo_valor;
         }
         
-        return view('valoraciones.edit', compact('producto', 'variacion', 'atributos', 'valoresSeleccionados'));
+        $categorias = Categoria::with(['hijos' => function($query) {
+            $query->where('bActivo', true)
+                  ->with(['hijos' => function($subQuery) {
+                      $subQuery->where('bActivo', true)
+                               ->orderBy('iOrden')
+                               ->orderBy('vNombre');
+                  }])
+                  ->orderBy('iOrden')
+                  ->orderBy('vNombre');
+        }])
+        ->whereNull('id_categoria_padre')
+        ->where('bActivo', true)
+        ->orderBy('iOrden')
+        ->orderBy('vNombre')
+        ->get();
+        
+        $marcas = Marca::all();
+        $etiquetas = Etiqueta::all();
+        $atributosGlobales = Atributo::with(['valoresActivos' => function($query) {
+            $query->where('bActivo', true)->orderBy('iOrden');
+        }])->where('bActivo', true)->get();
+        
+        return view('valoraciones.edit', compact(
+            'producto', 
+            'variacion', 
+            'atributos', 
+            'valoresSeleccionados',
+            'categorias',
+            'marcas',
+            'etiquetas',
+            'atributosGlobales'
+        ));
     }
 
     public function update(Request $request, $producto_id, $variacion_id)
     {
-        // Validar que el producto y la variación existan
         $productoPadre = Producto::findOrFail($producto_id);
         $variacion = ProductoVariacion::findOrFail($variacion_id);
         
-        // Verificar que la variación pertenece al producto
         if ($variacion->id_producto != $producto_id) {
             return redirect()->route('valoraciones.index')
                 ->with('error', 'La variación no pertenece a este producto')
                 ->with('swal_error', true);
         }
         
-        // Validación de campos
-        $validator = \Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'vSKU' => 'required|unique:tbl_producto_variaciones,vSKU,' . $variacion_id . ',id_variacion|max:50',
             'dPrecio' => [
                 'required',
@@ -428,7 +478,6 @@ class ValoracionController extends Controller
             'imagen' => 'nullable|image|max:5120|mimes:jpg,jpeg,png,gif,webp,bmp,svg',
             'atributos' => 'required|array',
             'atributos.*' => 'required|exists:tbl_atributo_valores,id_atributo_valor',
-            // Campos para oferta especial
             'bTiene_oferta' => 'nullable|in:0,1',
             'dFecha_inicio_oferta' => 'nullable|date',
             'dFecha_fin_oferta' => 'nullable|date|after_or_equal:dFecha_inicio_oferta',
@@ -474,12 +523,10 @@ class ValoracionController extends Controller
             'vMotivo_oferta.max' => 'El motivo de la oferta no puede exceder los 255 caracteres',
         ]);
 
-        // Validación adicional: si bTiene_oferta es 1, entonces dPrecio_oferta es requerido
         $validator->sometimes('dPrecio_oferta', 'required', function ($input) {
             return $input->bTiene_oferta == 1;
         });
 
-        // Validación adicional: si bTiene_oferta es 1, entonces fechas son requeridas
         $validator->sometimes('dFecha_inicio_oferta', 'required', function ($input) {
             return $input->bTiene_oferta == 1;
         });
@@ -500,7 +547,6 @@ class ValoracionController extends Controller
         try {
             DB::beginTransaction();
 
-            // Log para depuración
             \Log::info('Datos del formulario de actualización:', [
                 'bTiene_oferta' => $request->has('bTiene_oferta'),
                 'bTiene_oferta_value' => $request->bTiene_oferta,
@@ -510,7 +556,6 @@ class ValoracionController extends Controller
                 'vMotivo_oferta' => $request->vMotivo_oferta,
             ]);
 
-            // Determinar clase de envío
             $claseEnvio = $request->vClase_envio;
             if (empty($claseEnvio) && $productoPadre->vClase_envio) {
                 $claseEnvio = $productoPadre->vClase_envio;
@@ -518,7 +563,6 @@ class ValoracionController extends Controller
                 $claseEnvio = $variacion->vClase_envio ?: 'Estándar';
             }
 
-            // Preparar datos para actualización
             $updateData = [
                 'vSKU' => $request->vSKU,
                 'dPrecio' => $request->dPrecio,
@@ -531,7 +575,6 @@ class ValoracionController extends Controller
                 'vClase_envio' => $claseEnvio,
                 'tDescripcion' => $request->tDescripcion,
                 'bActivo' => $request->has('bActivo') ? 1 : 0,
-                // Campos de oferta - CORREGIDO
                 'bTiene_oferta' => $request->has('bTiene_oferta') && $request->bTiene_oferta == '1' ? 1 : 0,
                 'dFecha_inicio_oferta' => $request->dFecha_inicio_oferta ?: null,
                 'dFecha_fin_oferta' => $request->dFecha_fin_oferta ?: null,
@@ -540,7 +583,6 @@ class ValoracionController extends Controller
 
             \Log::info('Datos de actualización que se van a guardar:', $updateData);
 
-            // Manejo de imagen
             if ($request->hasFile('imagen') && $request->file('imagen')->isValid()) {
                 $this->eliminarImagenVariacion($variacion);
                 $this->guardarImagenVariacion($variacion, $request->file('imagen'));
@@ -548,10 +590,8 @@ class ValoracionController extends Controller
                 $this->eliminarImagenVariacion($variacion);
             }
 
-            // Actualizar la variación
             $variacion->update($updateData);
 
-            // Log para verificar actualización
             \Log::info('Variación actualizada con ID:', ['id' => $variacion->id_variacion]);
             \Log::info('Campos de oferta actualizados:', [
                 'bTiene_oferta' => $variacion->bTiene_oferta,
@@ -561,7 +601,6 @@ class ValoracionController extends Controller
                 'vMotivo_oferta' => $variacion->vMotivo_oferta,
             ]);
 
-            // Actualizar atributos
             $variacion->atributos()->delete();
             
             foreach ($request->atributos as $atributo_id => $valor_id) {
@@ -610,13 +649,8 @@ class ValoracionController extends Controller
                     ->with('swal_error', true);
             }
             
-            // Eliminar imagen si existe
             $this->eliminarImagenVariacion($variacion);
-            
-            // Eliminar atributos asociados
             $variacion->atributos()->delete();
-            
-            // Eliminar la variación
             $variacion->delete();
 
             DB::commit();
@@ -680,5 +714,244 @@ class ValoracionController extends Controller
             $variacion->vImagen = null;
             $variacion->save();
         }
+    }
+
+    public function quickCreateCategoria(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'vNombre' => 'required|max:100|unique:tbl_categorias,vNombre',
+            'vSlug' => 'required|max:100|unique:tbl_categorias,vSlug',
+            'id_categoria_padre' => 'nullable|exists:tbl_categorias,id_categoria',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $categoria = new Categoria();
+            $categoria->vNombre = $request->vNombre;
+            $categoria->vSlug = $request->vSlug;
+            $categoria->id_categoria_padre = $request->id_categoria_padre;
+            $categoria->bActivo = true;
+            
+            $ultimoOrden = Categoria::where('id_categoria_padre', $request->id_categoria_padre)->max('iOrden');
+            $categoria->iOrden = $ultimoOrden ? $ultimoOrden + 1 : 0;
+            
+            $categoria->save();
+
+            return response()->json([
+                'success' => true,
+                'categoria' => $categoria,
+                'message' => 'Categoría creada exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear categoría: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function quickCreateMarca(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'vNombre' => 'required|max:100|unique:tbl_marcas,vNombre'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $marca = Marca::create([
+                'vNombre' => $request->vNombre,
+                'tDescripcion' => $request->tDescripcion ?? null
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'marca' => $marca,
+                'message' => 'Marca creada exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear marca: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function quickCreateEtiqueta(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'vNombre' => 'required|max:100|unique:tbl_etiquetas,vNombre',
+            'color' => 'nullable|max:7'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $etiqueta = Etiqueta::create([
+                'vNombre' => $request->vNombre,
+                'color' => $request->color ?? '#007bff',
+                'tDescripcion' => $request->tDescripcion ?? null
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'etiqueta' => $etiqueta,
+                'message' => 'Etiqueta creada exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear etiqueta: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function quickCreateAtributo(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'vNombre' => 'required|max:100|unique:tbl_atributos,vNombre'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $atributo = new Atributo();
+            $atributo->vNombre = $request->vNombre;
+            $atributo->vSlug = $request->vSlug ?: Str::slug($request->vNombre);
+            $atributo->tDescripcion = $request->tDescripcion ?? null;
+            $atributo->bActivo = true;
+            $atributo->save();
+
+            return response()->json([
+                'success' => true,
+                'atributo' => $atributo,
+                'message' => 'Atributo creado exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear atributo: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function quickCreateValorAtributo(Request $request, $atributo_id)
+    {
+        $validator = Validator::make($request->all(), [
+            'vValor' => 'required|max:100',
+            'vSlug' => 'nullable|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $atributo = Atributo::findOrFail($atributo_id);
+            
+            $valor = new AtributoValor();
+            $valor->id_atributo = $atributo_id;
+            $valor->vValor = $request->vValor;
+            $valor->vSlug = $request->vSlug ?: Str::slug($request->vValor);
+            $valor->bActivo = true;
+            
+            $ultimoOrden = AtributoValor::where('id_atributo', $atributo_id)->max('iOrden');
+            $valor->iOrden = $ultimoOrden ? $ultimoOrden + 1 : 0;
+            
+            $valor->save();
+
+            return response()->json([
+                'success' => true,
+                'valor' => $valor,
+                'message' => 'Valor creado exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear valor: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getJsonCategorias()
+    {
+        $categorias = Categoria::where('bActivo', true)
+            ->orderBy('vNombre')
+            ->get(['id_categoria', 'vNombre', 'id_categoria_padre']);
+        
+        return response()->json([
+            'success' => true,
+            'categorias' => $categorias
+        ]);
+    }
+
+    public function getJsonMarcas()
+    {
+        $marcas = Marca::orderBy('vNombre')
+            ->get(['id_marca', 'vNombre', 'tDescripcion']);
+        
+        return response()->json([
+            'success' => true,
+            'marcas' => $marcas
+        ]);
+    }
+
+    public function getJsonEtiquetas()
+    {
+        $etiquetas = Etiqueta::orderBy('vNombre')
+            ->get(['id_etiqueta', 'vNombre', 'color', 'tDescripcion']);
+        
+        return response()->json([
+            'success' => true,
+            'etiquetas' => $etiquetas
+        ]);
+    }
+
+    public function getJsonAtributos()
+    {
+        $atributos = Atributo::with(['valoresActivos' => function($query) {
+            $query->orderBy('iOrden')->orderBy('vValor');
+        }])->where('bActivo', true)
+        ->orderBy('vNombre')
+        ->get();
+        
+        return response()->json([
+            'success' => true,
+            'atributos' => $atributos
+        ]);
     }
 }

@@ -5,174 +5,142 @@ namespace App\Http\Controllers;
 use App\Models\Atributo;
 use App\Models\AtributoValor;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class AtributoController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
     {
-           $query = Atributo::withCount('valores');
-    
-    // Búsqueda por ID o nombre - NUEVO
-    if ($request->has('search') && !empty($request->search)) {
-        $searchTerm = $request->search;
-        $query->where(function($q) use ($searchTerm) {
-            $q->where('vNombre', 'LIKE', '%' . $searchTerm . '%')
-              ->orWhere('id_atributo', $searchTerm);
-        });
-    }
-    
-    // Ordenamiento - NUEVO (pero mantiene el orden por defecto que ya tenías)
-    if ($request->has('orden')) {
-        switch ($request->orden) {
-            case 'nombre':
-                $query->orderBy('vNombre', 'asc');
-                break;
-            case 'nombre_desc':
-                $query->orderBy('vNombre', 'desc');
-                break;
-            case 'id':
-                $query->orderBy('id_atributo', 'asc');
-                break;
-            case 'id_desc':
-                $query->orderBy('id_atributo', 'desc');
-                break;
-            case 'valores':
-                $query->orderBy('valores_count', 'desc');
-                break;
-            case 'valores_desc':
-                $query->orderBy('valores_count', 'asc');
-                break;
-            default:
-                $query->orderBy('vNombre'); // Mantiene el orden que ya tenías
-                break;
-        }
-    } else {
-        $query->orderBy('vNombre'); // Orden por defecto original
-    }
-    
-    $atributos = $query->get(); // Mantiene el get() original
-    
-    return view('atributos.index', compact('atributos'));
-
+        $atributos = Atributo::with(['valoresActivos'])
+            ->orderBy('iOrden')
+            ->orderBy('vNombre')
+            ->get();
+        
+        return view('atributos.index', compact('atributos'));
     }
 
+    /**
+     * Show the form for creating a new resource.
+     */
     public function create()
     {
         return view('atributos.create');
     }
 
+    /**
+     * Store a newly created resource in storage.
+     */
     public function store(Request $request)
     {
-         $request->validate([
-        'vNombre' => 'required|max:100|unique:tbl_atributos,vNombre',
-        'vSlug' => 'nullable|max:100|unique:tbl_atributos,vSlug',
-        'tDescripcion' => 'nullable'
-    ], [
-        'vNombre.required' => 'El nombre del atributo es obligatorio',
-        'vNombre.unique' => 'Ya existe un atributo con este nombre',
-        'vSlug.unique' => 'El slug ya está en uso. Intenta con otro.'
-    ]);
-
-    try {
-        DB::beginTransaction();
-
-        $atributo = Atributo::create([
-            'vNombre' => $request->vNombre,
-            'vSlug' => $request->vSlug ?: Str::slug($request->vNombre),
-            'tDescripcion' => $request->tDescripcion,
-            'bActivo' => true
-            // Si $timestamps = true en el modelo, Laravel agregará automáticamente created_at y updated_at
+        $request->validate([
+            'vNombre' => 'required|max:100|unique:tbl_atributos,vNombre',
+            'vSlug' => 'nullable|max:100|unique:tbl_atributos,vSlug',
+            'tDescripcion' => 'nullable|max:500',
+            'iOrden' => 'nullable|integer|min:0'
         ]);
 
-        DB::commit();
+        try {
+            $atributo = Atributo::create([
+                'vNombre' => $request->vNombre,
+                'vSlug' => $request->vSlug ?? Str::slug($request->vNombre),
+                'tDescripcion' => $request->tDescripcion,
+                'iOrden' => $request->iOrden ?? 0,
+                'bActivo' => $request->has('bActivo') ? 1 : 0
+            ]);
 
-        return redirect()->route('atributos.index')
-            ->with('success', 'Atributo creado exitosamente');
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        
-        return redirect()->back()
-            ->withInput()
-            ->withErrors(['error' => 'Error al crear el atributo: ' . $e->getMessage()]);
+            return redirect()->route('atributos.index')
+                ->with('success', 'Atributo creado exitosamente');
+                
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Error al crear el atributo: ' . $e->getMessage())
+                ->withInput();
+        }
     }
-    }
 
+    /**
+     * Display the specified resource.
+     */
     public function show(Atributo $atributo)
     {
-        $atributo->load('valores');
+        $atributo->load(['valoresActivos']);
         return view('atributos.show', compact('atributo'));
     }
 
+    /**
+     * Show the form for editing the specified resource.
+     */
     public function edit(Atributo $atributo)
     {
-        $atributo->load('valores');
         return view('atributos.edit', compact('atributo'));
     }
 
+    /**
+     * Update the specified resource in storage.
+     */
     public function update(Request $request, Atributo $atributo)
     {
         $request->validate([
             'vNombre' => 'required|max:100|unique:tbl_atributos,vNombre,' . $atributo->id_atributo . ',id_atributo',
             'vSlug' => 'nullable|max:100|unique:tbl_atributos,vSlug,' . $atributo->id_atributo . ',id_atributo',
-            'tDescripcion' => 'nullable'
-        ], [
-            'vNombre.required' => 'El nombre del atributo es obligatorio',
-            'vNombre.unique' => 'Ya existe un atributo con este nombre',
-            'vSlug.unique' => 'El slug ya está en uso. Intenta con otro.'
+            'tDescripcion' => 'nullable|max:500',
+            'iOrden' => 'nullable|integer|min:0'
         ]);
 
         try {
-            DB::beginTransaction();
-
             $atributo->update([
                 'vNombre' => $request->vNombre,
-                'vSlug' => $request->vSlug ?: Str::slug($request->vNombre),
-                'tDescripcion' => $request->tDescripcion
+                'vSlug' => $request->vSlug ?? Str::slug($request->vNombre),
+                'tDescripcion' => $request->tDescripcion,
+                'iOrden' => $request->iOrden ?? 0,
+                'bActivo' => $request->has('bActivo') ? 1 : 0
             ]);
-
-            DB::commit();
 
             return redirect()->route('atributos.index')
                 ->with('success', 'Atributo actualizado exitosamente');
-
+                
         } catch (\Exception $e) {
-            DB::rollBack();
-            
             return redirect()->back()
-                ->withInput()
-                ->withErrors(['error' => 'Error al actualizar el atributo: ' . $e->getMessage()]);
+                ->with('error', 'Error al actualizar el atributo: ' . $e->getMessage())
+                ->withInput();
         }
     }
 
+    /**
+     * Remove the specified resource from storage.
+     */
     public function destroy(Atributo $atributo)
     {
         try {
-            DB::beginTransaction();
+            // Verificar si el atributo está asignado a productos
+            if ($atributo->productos()->count() > 0) {
+                return redirect()->route('atributos.index')
+                    ->with('error', 'No se puede eliminar el atributo porque está asignado a productos.');
+            }
 
-            // Eliminar el atributo y sus valores (en cascada)
             $atributo->delete();
-
-            DB::commit();
-
+            
             return redirect()->route('atributos.index')
                 ->with('success', 'Atributo eliminado exitosamente');
-
+                
         } catch (\Exception $e) {
-            DB::rollBack();
-            
             return redirect()->route('atributos.index')
                 ->with('error', 'Error al eliminar el atributo: ' . $e->getMessage());
         }
     }
 
-    // Métodos para gestionar valores del atributo
+    /**
+     * MÉTODOS PARA VALORES DE ATRIBUTOS
+     */
+    
     public function valores(Atributo $atributo)
     {
-        $valores = $atributo->valores()->orderBy('vValor')->get();
+        $valores = $atributo->valores()->orderBy('iOrden')->get();
         return view('atributos.valores.index', compact('atributo', 'valores'));
     }
 
@@ -183,100 +151,203 @@ class AtributoController extends Controller
 
     public function storeValor(Request $request, Atributo $atributo)
     {
-       $request->validate([
+        $request->validate([
             'vValor' => 'required|max:100',
             'vSlug' => 'nullable|max:100|unique:tbl_atributo_valores,vSlug',
-            'bActivo' => 'boolean'
-        ], [
-            'vValor.required' => 'El valor es obligatorio',
-            'vValor.max' => 'El valor no puede tener más de 100 caracteres',
-            'vSlug.unique' => 'El slug ya está en uso. Intenta con otro.'
+            'dPrecio_extra' => 'nullable|numeric|min:0',
+            'iStock' => 'nullable|integer|min:0',
+            'iOrden' => 'nullable|integer|min:0'
         ]);
 
         try {
-            DB::beginTransaction();
-
             AtributoValor::create([
                 'id_atributo' => $atributo->id_atributo,
                 'vValor' => $request->vValor,
-                'vSlug' => $request->vSlug ?: Str::slug($request->vValor),
-                'dPrecio_extra' => 0,
-                'iStock' => 0,
-                'iOrden' => 0,
-                'bActivo' => $request->has('bActivo')
+                'vSlug' => $request->vSlug ?? Str::slug($request->vValor),
+                'dPrecio_extra' => $request->dPrecio_extra ?? 0,
+                'iStock' => $request->iStock ?? 0,
+                'iOrden' => $request->iOrden ?? 0,
+                'bActivo' => $request->has('bActivo') ? 1 : 0
             ]);
 
-            DB::commit();
-
             return redirect()->route('atributos.valores', $atributo)
-                ->with('success', 'Valor agregado exitosamente');
-
+                ->with('success', 'Valor creado exitosamente');
+                
         } catch (\Exception $e) {
-            DB::rollBack();
-            
             return redirect()->back()
-                ->withInput()
-                ->withErrors(['error' => 'Error al agregar el valor: ' . $e->getMessage()]);
+                ->with('error', 'Error al crear el valor: ' . $e->getMessage())
+                ->withInput();
         }
     }
 
     public function editValor(Atributo $atributo, AtributoValor $valor)
     {
-          return view('atributos.valores.edit', compact('atributo', 'valor'));
+        return view('atributos.valores.edit', compact('atributo', 'valor'));
     }
 
     public function updateValor(Request $request, Atributo $atributo, AtributoValor $valor)
     {
-         $request->validate([
+        $request->validate([
             'vValor' => 'required|max:100',
             'vSlug' => 'nullable|max:100|unique:tbl_atributo_valores,vSlug,' . $valor->id_atributo_valor . ',id_atributo_valor',
-            'bActivo' => 'boolean'
-        ], [
-            'vValor.required' => 'El valor es obligatorio',
-            'vValor.max' => 'El valor no puede tener más de 100 caracteres',
-            'vSlug.unique' => 'El slug ya está en uso. Intenta con otro.'
+            'dPrecio_extra' => 'nullable|numeric|min:0',
+            'iStock' => 'nullable|integer|min:0',
+            'iOrden' => 'nullable|integer|min:0'
         ]);
 
         try {
-            DB::beginTransaction();
-
             $valor->update([
                 'vValor' => $request->vValor,
-                'vSlug' => $request->vSlug ?: Str::slug($request->vValor),
-                'bActivo' => $request->has('bActivo')
+                'vSlug' => $request->vSlug ?? Str::slug($request->vValor),
+                'dPrecio_extra' => $request->dPrecio_extra ?? 0,
+                'iStock' => $request->iStock ?? 0,
+                'iOrden' => $request->iOrden ?? 0,
+                'bActivo' => $request->has('bActivo') ? 1 : 0
             ]);
-
-            DB::commit();
 
             return redirect()->route('atributos.valores', $atributo)
                 ->with('success', 'Valor actualizado exitosamente');
-
+                
         } catch (\Exception $e) {
-            DB::rollBack();
-            
             return redirect()->back()
-                ->withInput()
-                ->withErrors(['error' => 'Error al actualizar el valor: ' . $e->getMessage()]);
+                ->with('error', 'Error al actualizar el valor: ' . $e->getMessage())
+                ->withInput();
         }
     }
 
     public function destroyValor(Atributo $atributo, AtributoValor $valor)
     {
-      try {
-            DB::beginTransaction();
+        try {
+            // Verificar si el valor está asignado a productos
+            if ($valor->productos()->count() > 0) {
+                return redirect()->route('atributos.valores', $atributo)
+                    ->with('error', 'No se puede eliminar el valor porque está asignado a productos.');
+            }
 
             $valor->delete();
-
-            DB::commit();
-
+            
             return redirect()->route('atributos.valores', $atributo)
                 ->with('success', 'Valor eliminado exitosamente');
-
+                
         } catch (\Exception $e) {
-            DB::rollBack();
-            
             return redirect()->route('atributos.valores', $atributo)
                 ->with('error', 'Error al eliminar el valor: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * ============================================
+     * MÉTODOS PARA PANEL DE GESTIÓN RÁPIDA
+     * ============================================
+     */
+
+    /**
+     * Creación rápida de atributo desde AJAX
+     */
+    public function quickCreate(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'vNombre' => 'required|max:100|unique:tbl_atributos,vNombre',
+            'vSlug' => 'nullable|max:100|unique:tbl_atributos,vSlug',
+            'tDescripcion' => 'nullable|max:500'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $atributo = Atributo::create([
+                'vNombre' => $request->vNombre,
+                'vSlug' => $request->vSlug ?? Str::slug($request->vNombre),
+                'tDescripcion' => $request->tDescripcion ?? null,
+                'iOrden' => 0,
+                'bActivo' => true
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'atributo' => $atributo,
+                'message' => 'Atributo creado exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear atributo: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Creación rápida de valor de atributo desde AJAX
+     */
+    public function quickCreateValor(Request $request, Atributo $atributo)
+    {
+        $validator = Validator::make($request->all(), [
+            'vValor' => 'required|max:100',
+            'vSlug' => 'nullable|max:100',
+            'dPrecio_extra' => 'nullable|numeric|min:0',
+            'iStock' => 'nullable|integer|min:0'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            // Obtener el último orden para este atributo
+            $ultimoOrden = AtributoValor::where('id_atributo', $atributo->id_atributo)
+                                        ->max('iOrden');
+            
+            $valor = AtributoValor::create([
+                'id_atributo' => $atributo->id_atributo,
+                'vValor' => $request->vValor,
+                'vSlug' => $request->vSlug ?? Str::slug($request->vValor),
+                'dPrecio_extra' => $request->dPrecio_extra ?? 0,
+                'iStock' => $request->iStock ?? 0,
+                'iOrden' => $ultimoOrden ? $ultimoOrden + 1 : 0,
+                'bActivo' => true
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'valor' => $valor,
+                'message' => 'Valor creado exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear valor: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener atributos en formato JSON
+     */
+    public function getJson()
+    {
+        $atributos = Atributo::with(['valoresActivos' => function($query) {
+            $query->where('bActivo', true)->orderBy('iOrden');
+        }])
+        ->where('bActivo', true)
+        ->orderBy('iOrden')
+        ->orderBy('vNombre')
+        ->get();
+        
+        return response()->json([
+            'success' => true,
+            'atributos' => $atributos
+        ]);
     }
 }

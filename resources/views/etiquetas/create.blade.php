@@ -13,7 +13,7 @@
                     <form action="{{ route('etiquetas.store') }}" method="POST" id="createForm">
                         @csrf
                         <div class="mb-3">
-                            <label for="vNombre" class="form-label">Nombre de la Etiqueta</label>
+                            <label for="vNombre" class="form-label">Nombre de la Etiqueta *</label>
                             <input type="text" class="form-control @error('vNombre') is-invalid @enderror" 
                                    id="vNombre" name="vNombre" value="{{ old('vNombre') }}" 
                                    placeholder="Ej: Oferta, Nuevo, Popular..." required>
@@ -28,6 +28,20 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @endif
                             @enderror
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="color" class="form-label">Color</label>
+                            <div class="input-group">
+                                <input type="color" class="form-control form-control-color" 
+                                       id="color" name="color" value="{{ old('color', '#007bff') }}"
+                                       title="Elige un color para la etiqueta">
+                                <input type="text" class="form-control" 
+                                       id="color_text" value="{{ old('color', '#007bff') }}" 
+                                       placeholder="#007bff" maxlength="7"
+                                       onchange="document.getElementById('color').value = this.value">
+                            </div>
+                            <small class="text-muted">Color opcional para identificar la etiqueta</small>
                         </div>
                         
                         <div class="mb-3">
@@ -69,7 +83,7 @@
         const cancelBtn = document.getElementById('cancelBtn');
         
         // Detectar cambios en los inputs
-        const inputs = ['vNombre', 'tDescripcion'];
+        const inputs = ['vNombre', 'tDescripcion', 'color', 'color_text'];
         inputs.forEach(inputId => {
             const element = document.getElementById(inputId);
             if (element) {
@@ -108,6 +122,24 @@
                             window.location.href = cancelBtn.href;
                         }
                     });
+                }
+            });
+        }
+        
+        // Sincronizar color picker con text input
+        const colorPicker = document.getElementById('color');
+        const colorText = document.getElementById('color_text');
+        
+        if (colorPicker && colorText) {
+            colorPicker.addEventListener('input', function() {
+                colorText.value = this.value;
+                formChanged = true;
+            });
+            
+            colorText.addEventListener('input', function() {
+                if (this.value.match(/^#[0-9A-F]{6}$/i)) {
+                    colorPicker.value = this.value;
+                    formChanged = true;
                 }
             });
         }
