@@ -578,6 +578,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // VARIABLES GLOBALES
     // =========================================
     let notaTexto = ''; // Variable para guardar el texto de la nota
+    let paypalBusinessError = null;
 
     // =========================================
     // 1. MANEJO DE DIRECCIÓN DE FACTURACIÓN
@@ -725,7 +726,10 @@ function renderPaypalIfNeeded() {
         },
 
         createOrder: function(data, actions) {
-            // Obtener datos del formulario
+
+            paypalBusinessError = null;
+            
+            // Obtener datos del formulario para enviar al backend antes de crear la orden
             const idDireccion = document.getElementById('id_direccion').value;
             const mismaDireccion = document.getElementById('misma_direccion_facturacion').checked;
             const idDireccionFacturacion = mismaDireccion ? idDireccion : document.getElementById('id_direccion_facturacion').value;
@@ -752,14 +756,17 @@ function renderPaypalIfNeeded() {
                 if (json.success) {
                     return json.orderID;
                 } else {
-                    Swal.fire('Error', json.message || 'No se pudo crear la orden de PayPal.', 'error');
-                    throw new Error(json.message || 'Error al crear orden PayPal');
+                    paypalBusinessError = json.message || 'No se pudo continuar';
+
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'No se puede continuar',
+                        text: paypalBusinessError,
+                        confirmButtonText: 'Entendido'
+                    });
+                    return Promise.reject();
+                    //throw new Error(paypalBusinessError);
                 }
-            })
-            .catch(err => {
-                console.error('Error en createOrder:', err);
-                Swal.fire('Error', 'Ocurrió un error al iniciar el proceso de pago con PayPal. Intenta nuevamente.', 'error');
-                throw err;
             });
         },
 
@@ -789,11 +796,23 @@ function renderPaypalIfNeeded() {
         }, 
 
         onCancel: function () {
+                fetch("{{ route('checkout.release-reservation') }}", {
+                method: "POST",
+                headers: {
+                    "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                    "Content-Type": "application/json"
+                }
+            });
                 Swal.fire("Cancelado", "Pago cancelado.", "info");
             },
 
             onError: function (err) {
                 console.error('PayPal SDK error:', err);
+
+                if (paypalBusinessError) {
+                paypalBusinessError = null;
+                return;
+            }
 
                 Swal.fire({
                 icon: 'error',

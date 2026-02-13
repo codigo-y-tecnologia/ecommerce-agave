@@ -131,6 +131,8 @@ class PaymentController extends Controller
             if ($codigoCupon) {
                 $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])
                     ->where('bActivo', 1)
+                    ->whereDate('dValido_desde', '<=', now())
+                    ->whereDate('dValido_hasta', '>=', now())
                     ->first();
 
                 if ($cupon && $cupon->vCodigo_cupon !== 'ENVIOGRATIS') {
@@ -459,12 +461,14 @@ class PaymentController extends Controller
                 'nota_pedido' => $request->nota ?? null,
                 'guest_token' => session('guest_token'),
                 'user_id' => Auth::id(),
+                'paypal_carrito_id' => $carrito->id_carrito,
             ]
         ]);
 
         // Recalcular totales (misma lógica)
         [$subtotal, $totalImpuestos, $total] = (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
 
+        // Cupón
         $codigoCupon = session('codigo_cupon');
         $descuento = 0;
         $cupon = null;
@@ -480,11 +484,19 @@ class PaymentController extends Controller
             }
         }
 
+        // Envío
         $montoEnvioGratis = 1500;
         $costoEnvioFijo = 150;
+
         $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
 
-        if ($cupon && $cupon->vCodigo_cupon === 'ENVIOGRATIS') $envio = 0;
+        if ($cupon && $cupon->vCodigo_cupon === 'ENVIOGRATIS') {
+            $envio = 0;
+        }
+
+        if ($cupon && $cupon->vCodigo_cupon === 'enviogratis') {
+            $envio = 0;
+        }
 
         $totalFinal = max(0, $total - $descuento + $envio);
 
@@ -529,10 +541,61 @@ class PaymentController extends Controller
 
             $order = json_decode((string) $orderResp->getBody(), true);
 
-            return response()->json(['success' => true, 'orderID' => $order['id']]);
+            $orderId = $order['id'];
+
+            DB::transaction(function () use ($carrito, $orderId) {
+
+                // Reservar stock (lock + validación)
+                app(ReservarStockService::class)->ejecutar($carrito);
+
+                // Asociar session_id a TODAS las reservas del carrito
+                StockReserva::where('id_carrito', $carrito->id_carrito)
+                    ->whereNull('session_id')
+                    ->update([
+                        'session_id' => $orderId
+                    ]);
+            });
+
+            return response()->json([
+                'success' => true,
+                'orderID' => $orderId
+            ]);
+        } catch (StockException $e) {
+
+            if (isset($carrito)) {
+                $carrito->update([
+                    'eEstado' => 'activo'
+                ]);
+            }
+
+            Log::error("🔥 PayPal error", [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'type' => 'stock',
+                'message' => $e->getMessage()
+            ], 409);
         } catch (\Throwable $e) {
-            Log::error('PayPal create order: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Error al crear orden PayPal'], 500);
+
+            if (isset($carrito)) {
+                $carrito->update([
+                    'eEstado' => 'activo'
+                ]);
+            }
+
+            Log::error("🔥 Paypal error", [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'type' => 'system',
+                'message' => 'Ocurrió un error al procesar el pago. Intenta nuevamente.'
+            ], 500);
         }
     }
 
@@ -1002,27 +1065,50 @@ class PaymentController extends Controller
 
     public function releaseReservation()
     {
-        if (!session('stripe_checkout_in_progress')) {
-            return response()->json(['status' => 'no_action']);
+        if (session('stripe_checkout_in_progress')) {
+
+            $carritoId = session('stripe_carrito_id');
+
+            $carrito = Carrito::find($carritoId);
+
+            if ($carrito && $carrito->eEstado === 'reservado') {
+                app(LiberarReservaPorCarritoService::class)->ejecutar($carrito);
+
+                $carrito->eEstado = 'activo';
+                $carrito->save();
+            }
+
+            session()->forget([
+                'stripe_checkout_in_progress',
+                'stripe_carrito_id',
+            ]);
+
+            return response()->json(['status' => 'released']);
         }
 
-        $carritoId = session('stripe_carrito_id');
+        if (session('paypal_context')) {
 
-        $carrito = Carrito::find($carritoId);
+            $context = session('paypal_context');
 
-        if ($carrito && $carrito->eEstado === 'reservado') {
-            app(LiberarReservaPorCarritoService::class)->ejecutar($carrito);
+            $carritoId = $context['paypal_carrito_id'] ?? null;
 
-            $carrito->eEstado = 'activo';
-            $carrito->save();
+            $carrito = Carrito::find($carritoId);
+
+            if ($carrito && $carrito->eEstado === 'reservado') {
+                app(LiberarReservaPorCarritoService::class)->ejecutar($carrito);
+
+                $carrito->eEstado = 'activo';
+                $carrito->save();
+            }
+
+            session()->forget([
+                'paypal_context',
+            ]);
+
+            return response()->json(['status' => 'released']);
         }
 
-        session()->forget([
-            'stripe_checkout_in_progress',
-            'stripe_carrito_id',
-        ]);
-
-        return response()->json(['status' => 'released']);
+        return response()->json(['status' => 'no_reservation']);
     }
 
     private function validateCartStock($carrito)
