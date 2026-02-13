@@ -37,12 +37,6 @@ class OrderReceivedController extends Controller
 
         $pedido = $query->firstOrFail();
 
-        // $pedido = Pedido::with(['detalles.producto.impuestos', 'usuario', 'venta'])
-        //     ->where('id_usuario', Auth::user()->id_usuario)
-        //     ->findOrFail($id);
-
-        // $direccion = Direccion::find($pedido->id_direccion);
-
         // Método de pago
         $payment_method = $pedido->venta->eMetodo_pago ?? 'No disponible';
 

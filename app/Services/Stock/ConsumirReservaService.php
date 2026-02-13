@@ -18,7 +18,7 @@ class ConsumirReservaService
                 ->get();
 
             if ($reservas->isEmpty()) {
-                // Puede ser webhook duplicado
+                // Puede ser webhook o Paypal duplicado
                 return;
             }
 

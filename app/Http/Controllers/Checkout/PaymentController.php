@@ -320,7 +320,7 @@ class PaymentController extends Controller
 
                         Log::info('Referencia a guardar: ' . $reference);
 
-                        // Re-validate stock using carrito id from metadata BEFORE finalizing
+                        // buscamos carrito
                         if ($carritoId) {
 
                             $carrito = Carrito::where('id_carrito', $carritoId)->first();
@@ -330,8 +330,11 @@ class PaymentController extends Controller
                             }
                         } else {
                             Log::warning('No se encontró carrito_id en metadata de Stripe.');
+
+                            throw new \Exception('Carrito no encontrado');
                         }
 
+                        // Consumir reserva (validación + stock real)
                         app(ConsumirReservaService::class)
                             ->ejecutar($session->id);
 
@@ -607,6 +610,10 @@ class PaymentController extends Controller
     {
         $orderId = $request->orderID;
 
+        Log::info('Capturando orden PayPal', [
+            'order_id' => $orderId,
+        ]);
+
         $context = session('paypal_context');
 
         $idDireccion = $context['id_direccion'] ?? null;
@@ -614,10 +621,14 @@ class PaymentController extends Controller
         $userId = $context['user_id'] ?? null;
         $guestToken = $context['guest_token'] ?? null;
         $emailGuest = $context['email_invitado'] ?? null;
+        $carritoId = $context['paypal_carrito_id'] ?? null;
         $notaPedido = $context['nota_pedido'] ?? null;
 
         if (!$orderId) {
-            return response()->json(['success' => false, 'message' => 'orderID requerido'], 400);
+            return response()->json([
+                'success' => false,
+                'message' => 'orderID requerido'
+            ], 400);
         }
 
         $client = new Client();
@@ -644,7 +655,7 @@ class PaymentController extends Controller
 
             $capData = json_decode((string) $capResp->getBody(), true);
 
-            // Aquí puedes obtener detalles como captura id y status
+            // Aquí se pueden obtener detalles como captura id y status
             $status = $capData['status'] ?? null;
             $captureId = $capData['purchase_units'][0]['payments']['captures'][0]['id'] ?? null;
             $amount = $capData['purchase_units'][0]['payments']['captures'][0]['amount']['value'] ?? null;
@@ -687,28 +698,35 @@ class PaymentController extends Controller
             }
 
             // Finalizar pedido localmente (crear Pedido, Venta, Pago, etc.)
-            DB::transaction(function () use ($userId, $guestToken, $emailGuest, $idDireccion, $idDireccionFact, $notaPedido, $orderId, $captureId) {
+            DB::transaction(function () use ($userId, $guestToken, $emailGuest, $carritoId, $idDireccion, $idDireccionFact, $notaPedido, $orderId, $captureId) {
+
+                Log::info('Finalizando pedido desde carrito PayPal', [
+                    'order_id' => $orderId,
+                ]);
 
                 // buscamos carrito 
-                $carrito = CarritoHelper::carritoCheckout();
+                if ($carritoId) {
 
-                if (!$carrito) {
+                    $carrito = Carrito::where('id_carrito', $carritoId)->first();
+
+                    if (!$carrito) {
+                        throw new Exception("Carrito no encontrado para finalizar pedido (PayPal capturePaypalOrder).");
+                    }
+                } else {
+                    Log::warning('No se encontró carrito_id en sesión para captura PayPal.');
+
                     throw new \Exception('Carrito no encontrado');
                 }
 
-                // 🔒 LOCK del carrito
-                $carrito = Carrito::where('id_carrito', $carrito->id_carrito)
-                    ->lockForUpdate()
-                    ->first();
-
-                // VALIDAR STOCK ANTES DE FINALIZAR ORDEN
-                $this->validateCartStock($carrito);
+                // Consumir reserva (validación + stock real)
+                app(ConsumirReservaService::class)
+                    ->ejecutar($orderId);
 
                 $this->finalizeOrderFromCart(
                     $userId,
                     $guestToken,
                     $emailGuest,
-                    $carrito->id_carrito,
+                    $carritoId,
                     'paypal',
                     $captureId,
                     session('codigo_cupon') ?? null,
@@ -1059,8 +1077,8 @@ class PaymentController extends Controller
     }
 
     /**
-     * Valida stock del carrito antes de permitir cualquier pago.
-     * Lanza excepción si algún producto está agotado o la cantidad solicitada supera stock.
+     * Libera la reserva de stock si el usuario abandona el proceso de pago.
+     * Se llama desde el frontend cuando detecta que el usuario cierra la ventana de pago o navega fuera.
      */
 
     public function releaseReservation()
@@ -1109,38 +1127,5 @@ class PaymentController extends Controller
         }
 
         return response()->json(['status' => 'no_reservation']);
-    }
-
-    private function validateCartStock($carrito)
-    {
-        if (!$carrito) {
-            throw new Exception("Carrito no encontrado.");
-        }
-
-        foreach ($carrito->detalles as $detalle) {
-
-            $producto = \App\Models\Producto::select('id_producto', 'vNombre', 'iStock')
-                ->where('id_producto', $detalle->id_producto)
-                ->first();
-
-            if (!$producto) {
-                throw new Exception("Uno de los productos del carrito ya no existe.");
-            }
-
-            // Manejar inconsistencia en modelo: iCantidad o cantidad
-            $cantidad = $detalle->iCantidad ?? $detalle->cantidad ?? 1;
-
-            if ($producto->iStock <= 0) {
-                throw new Exception("El producto '{$producto->vNombre}' está agotado. Debes retirarlo del carrito.");
-            }
-
-            if ($cantidad > $producto->iStock) {
-                throw new Exception(
-                    "La cantidad seleccionada de '{$producto->vNombre}' ({$cantidad}) supera el stock disponible ({$producto->iStock})."
-                );
-            }
-        }
-
-        return true;
     }
 }
