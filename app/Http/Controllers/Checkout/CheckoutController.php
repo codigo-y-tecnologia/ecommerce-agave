@@ -44,6 +44,26 @@ class CheckoutController extends Controller
             ]);
         }
 
+        if (session('paypal_context')) {
+
+            $context = session('paypal_context');
+
+            $carritoId = $context['paypal_carrito_id'] ?? null;
+
+            $carrito = Carrito::find($carritoId);
+
+            if ($carrito && $carrito->eEstado === 'reservado') {
+                app(LiberarReservaPorCarritoService::class)->ejecutar($carrito);
+
+                $carrito->eEstado = 'activo';
+                $carrito->save();
+            }
+
+            session()->forget([
+                'paypal_context',
+            ]);
+        }
+
         $carrito = CarritoHelper::carritoCheckout();
 
         if (!$carrito || $carrito->detalles->isEmpty()) {
@@ -599,7 +619,6 @@ class CheckoutController extends Controller
             ]);
 
             $codigo = $request->codigo;
-            $usuario = Auth::user();
 
             $carrito = CarritoHelper::carritoCheckout();
 
