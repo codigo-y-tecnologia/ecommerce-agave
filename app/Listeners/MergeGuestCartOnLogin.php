@@ -6,6 +6,7 @@ use Illuminate\Auth\Events\Login;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use App\Services\CarritoMergeService;
+use App\Services\DireccionMergeService;
 
 class MergeGuestCartOnLogin
 {
@@ -29,6 +30,9 @@ class MergeGuestCartOnLogin
         $guestToken = session('guest_token');
 
         app(CarritoMergeService::class)
+            ->merge($guestToken, $event->user->id_usuario);
+
+        app(DireccionMergeService::class)
             ->merge($guestToken, $event->user->id_usuario);
 
         // Limpiar sesión
