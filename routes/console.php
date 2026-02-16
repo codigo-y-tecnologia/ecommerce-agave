@@ -12,6 +12,10 @@ Artisan::command('inspire', function () {
 Schedule::command('carritos:limpiar-abandonados')
     ->dailyAt('03:00');
 
+Schedule::command('guest:clean-addresses', ['--days' => 15])
+    ->dailyAt('03:30')
+    ->withoutOverlapping();
+
 Schedule::command('carts:notify-active')
     ->hourly();
 

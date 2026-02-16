@@ -42,6 +42,9 @@ class ConsumirReservaService
             if ($carrito) {
                 $carrito->marcarComoConvertido();
             }
+
+            // 🧹 Limpiar reservas
+            StockReserva::where('session_id', $sessionId)->delete();
         });
     }
 }
