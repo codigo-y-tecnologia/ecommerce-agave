@@ -30,6 +30,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Perfil\DireccionController;
 use App\Http\Controllers\Admin\AdminPerfilController;
 use App\Http\Controllers\Auth\EmailChangeController;
+use App\Http\Controllers\Admin\SettingController;
 
 // Route::get('/', function () {
 //     return view('inicio');
@@ -255,6 +256,14 @@ Route::middleware(['auth', 'permission:mi_perfil_admin'])->group(function () {
 
     Route::get('/email/change/verify/{token}', [EmailChangeController::class, 'verify'])
         ->name('email.change.verify');
+});
+
+Route::middleware(['auth', 'permission:gestionar_tienda'])->group(function () {
+
+    // Gestión de la tienda
+    Route::get('/admin/settings', [SettingController::class, 'index'])->name('admin.settings.index');
+    Route::post('/admin/settings/auto-register', [SettingController::class, 'updateAutoRegister'])->name('admin.settings.auto-register');
+    Route::post('/admin/settings/allow-returns', [SettingController::class, 'updateAllowReturns'])->name('admin.settings.allow-returns');
 });
 
 // Reportes

@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Mail;
 use App\Helpers\CarritoHelper;
 use App\Services\Stock\{ReservarStockService, ConsumirReservaService, LiberarReservaPorCarritoService, LiberarReservaService};
 use App\Exceptions\StockException;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 use App\Models\{
     Usuario,
@@ -28,7 +30,8 @@ use App\Models\{
     DetalleVenta,
     Envio,
     Producto,
-    StockReserva
+    StockReserva,
+    Setting
 };
 
 use Stripe\Stripe;
@@ -1038,7 +1041,6 @@ class PaymentController extends Controller
 
         // Limpiar carrito
         $carrito->detalles()->delete();
-        $carrito->eEstado = 'convertido';
         $carrito->save();
 
         session()->forget([
@@ -1127,5 +1129,51 @@ class PaymentController extends Controller
         }
 
         return response()->json(['status' => 'no_reservation']);
+    }
+
+    private function autoRegisterGuestIfEnabled(
+        $userId,
+        $email,
+        $nombre,
+        $apaterno,
+        $amaterno
+    ) {
+        // Ya es usuario → no hacer nada
+        if ($userId) {
+            return $userId;
+        }
+
+        // Switch apagado → no registrar
+        if (!Setting::getValue('auto_register_guest_after_purchase')) {
+            return null;
+        }
+
+        // Si el email ya existe → usar ese usuario
+        $existingUser = Usuario::where('vEmail', $email)->first();
+        if ($existingUser) {
+            return $existingUser->id_usuario;
+        }
+
+        // Crear usuario
+        $password = Str::random(12);
+
+        $usuario = Usuario::create([
+            'vNombre' => $nombre,
+            'vApaterno' => $apaterno,
+            'vAmaterno' => $amaterno,
+            'vEmail' => $email,
+            'vPassword' => Hash::make($password),
+            'is_verified' => 0,
+        ]);
+
+        // Rol cliente (Spatie)
+        $usuario->assignRole('cliente');
+
+        // Aquí puedes mandar email de bienvenida / set password
+        Mail::to($email)->send(
+            new \App\Mail\CuentaCreadaAutomaticamente($usuario, $password)
+        );
+
+        return $usuario->id_usuario;
     }
 }

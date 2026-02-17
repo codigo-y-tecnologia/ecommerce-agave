@@ -42,6 +42,9 @@
                 @endcan
                 <li><a href="#">Ver Carritos de Clientes</a></li>
                 <li><a href="#">Reportes</a></li>
+                @can('gestionar_tienda')
+                    <li><a href="{{ route('admin.settings.index') }}">Ajustes de la tienda</a></li>
+                @endcan
             </ul>
         </nav>
     @endrole

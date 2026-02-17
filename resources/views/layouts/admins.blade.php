@@ -51,6 +51,9 @@
                                             <li><a class="dropdown-item" href="{{ route('reportes.index') }}">Reportes</a></li>
                                         @endcan
                                         <li><a class="dropdown-item" href="#">Reembolsos</a></li>
+                                        @can('gestionar_tienda')
+                                             <li><a class="dropdown-item" href="{{ route('admin.settings.index') }}">Ajustes de la tienda</a></li>
+                                        @endcan
                                     </ul>
                                 </li>
                         @endrole

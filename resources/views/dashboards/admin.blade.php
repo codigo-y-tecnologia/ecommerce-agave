@@ -79,5 +79,18 @@
         </div>
     </div>
 </div>
+
+<div class="col-md-4">
+    <div class="card border-dark shadow-sm">
+        <div class="card-body text-center">
+            <h5>⚙️ Configuración</h5>
+            <p>Controla el comportamiento general del ecommerce.</p>
+            <a href="{{ route('admin.settings.index') }}" class="btn btn-dark w-100">
+                Ajustes de la tienda
+            </a>
+        </div>
+    </div>
+</div>
+
 </div>
 @endsection
