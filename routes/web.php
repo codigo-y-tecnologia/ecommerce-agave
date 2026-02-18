@@ -122,6 +122,12 @@ Route::get('/pago-error', function () {
 Route::post('/payment/paypal/validate', [PaymentController::class, 'validatePaypal'])
     ->name('payment.paypal.validate');
 
+Route::get('/activar-cuenta/{token}', [AuthController::class, 'activarCuenta'])
+    ->name('activar.cuenta');
+
+Route::post('/activar-cuenta/{token}', [AuthController::class, 'guardarPassword'])
+    ->name('guardar.password');
+
 // Login y registro solo para invitados
 Route::middleware('guest')->group(function () {
 

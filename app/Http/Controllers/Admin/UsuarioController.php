@@ -72,9 +72,6 @@ class UsuarioController extends Controller
             'vEmail.email' => 'El correo electrónico debe tener un formato válido.',
         ]);
 
-        // Funciones de limpieza y detección
-        $this->verificarYLimpiar($data, config('security.sql_keywords'));
-
         $usuario->update([
             'vNombre' => $data['vNombre'],
             'vApaterno' => $data['vApaterno'],

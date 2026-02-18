@@ -38,8 +38,6 @@ class AuthController extends Controller
             'vEmail.email' => 'El correo electrónico debe tener un formato válido.',
         ]);
 
-        $this->verificarYLimpiar($credentials, config('security.sql_keywords'));
-
         $credentials = [
             'vEmail' => $request->vEmail,
             'password' => $request->vPassword,
@@ -120,13 +118,6 @@ class AuthController extends Controller
             return back()->withErrors(['dFecha_nacimiento' => 'Debes ser mayor de edad para registrarte.'])->withInput();
         }
 
-        /**
-         * Limpia y valida si los campos contienen contenido potencialmente peligroso
-         * (anti inyección SQL básica sin falsos positivos)
-         */
-        // Funciones de limpieza y detección
-        $this->verificarYLimpiar($data, config('security.sql_keywords'));
-
         // Generar tokens
         $rememberToken = Str::random(60);
         $apiToken = Str::random(60);
@@ -159,9 +150,6 @@ class AuthController extends Controller
                 'vEmail' => 'Error al enviar el email de verificación. Por favor, intenta nuevamente.'
             ])->withInput();
         }
-
-        // Auth::login($usuario); // inicia sesión automático después de registro
-        // $request->session()->regenerate();
 
         return redirect('/login')->with([
             'success' => '¡Registro exitoso!',
@@ -201,10 +189,6 @@ class AuthController extends Controller
             'vEmail.email' => 'El correo electrónico debe tener un formato válido.',
         ]);
 
-        $emailData = $request->only('vEmail');
-        $this->verificarYLimpiar($emailData, config('security.sql_keywords'));
-
-
         $user = Usuario::where('vEmail', $request->vEmail)->first();
 
         if ($user->hasVerifiedEmail()) {
@@ -234,5 +218,37 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         return redirect('/');
+    }
+
+    public function activarCuenta($token)
+    {
+        $usuario = Usuario::where('email_verification_token', $token)->firstOrFail();
+
+        return view('auth.activar_cuenta', compact('usuario', 'token'));
+    }
+
+    public function guardarPassword(Request $request, $token)
+    {
+        $request->validate([
+            'password' => 'required|min:8|confirmed',
+        ], [
+            'password.required' => 'La contraseña es obligatoria.',
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
+            'password.confirmed' => 'Las contraseñas no coinciden.',
+        ]);
+
+        $usuario = Usuario::where('email_verification_token', $token)->firstOrFail();
+
+        $usuario->update([
+            'vPassword' => Hash::make($request->password),
+            'email_verified_at' => now(),
+            'is_verified' => 1,
+            'email_verification_token' => null,
+        ]);
+
+        Auth::login($usuario);
+
+        return redirect()->route('dashboard.cliente')
+            ->with('success', 'Cuenta activada correctamente');
     }
 }

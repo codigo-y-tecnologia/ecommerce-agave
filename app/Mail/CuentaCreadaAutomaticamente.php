@@ -8,46 +8,28 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use App\Models\Usuario;
 
 class CuentaCreadaAutomaticamente extends Mailable
 {
     use Queueable, SerializesModels;
 
+    public Usuario $usuario;
+    public string $token;
+
     /**
      * Create a new message instance.
      */
-    public function __construct()
+    public function __construct(Usuario $usuario, string $token)
     {
-        //
+        $this->usuario = $usuario;
+        $this->token = $token;
     }
 
-    /**
-     * Get the message envelope.
-     */
-    public function envelope(): Envelope
+    public function build()
     {
-        return new Envelope(
-            subject: 'Cuenta Creada Automaticamente',
-        );
-    }
-
-    /**
-     * Get the message content definition.
-     */
-    public function content(): Content
-    {
-        return new Content(
-            view: 'view.name',
-        );
-    }
-
-    /**
-     * Get the attachments for the message.
-     *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
-     */
-    public function attachments(): array
-    {
-        return [];
+        return $this
+            ->subject('Te creamos una cuenta en ' . config('app.name'))
+            ->view('emails.cuenta_creada_automatica');
     }
 }

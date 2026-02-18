@@ -119,8 +119,6 @@ class SuperadminController extends Controller
             return back()->withErrors(['dFecha_nacimiento' => 'El administrador debe ser mayor de edad para registrarse.'])->withInput();
         }
 
-        $this->verificarYLimpiar($data, config('security.sql_keywords'));
-
         // Generar contraseña aleatoria segura
         $passwordPlain = Str::random(10);
 

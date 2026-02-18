@@ -917,11 +917,25 @@ class PaymentController extends Controller
             ]);
         }
 
+        // 🔹 REGISTRO AUTOMÁTICO (SI ES INVITADO Y ESTÁ HABILITADO)
+        $nuevoUserId = $this->autoRegisterGuestIfEnabled(
+            $userId,
+            $email,
+            $nombre,
+            $apaterno,
+            $amaterno
+        );
+
+        // Si se creó cuenta, usar ese usuario para el pedido y la venta
+        if ($nuevoUserId) {
+            $userId = $nuevoUserId;
+        }
+
         // Crear pedido
         $pedido = Pedido::create([
             'id_usuario' => $userId,
-            'id_direccion' => $userId ? $idDireccion : null,
-            'id_direccion_facturacion' => $userId ? $idDireccionFact : null,
+            'id_direccion' => null,
+            'id_direccion_facturacion' => null,
             'vNombre' => $nombre,
             'eEstado' => 'pagado',
             'dTotal' => $totalFinal,
@@ -1005,12 +1019,6 @@ class PaymentController extends Controller
         Log::info('Pago creado exitosamente', [
             'id_pago' => $pago->id_pago,
             'referencia' => $pago->vReferencia
-        ]);
-
-        //Registrar envío
-        Envio::create([
-            'id_pedido' => $pedido->id_pedido,
-            'eEstado' => Envio::ESTADO_PENDIENTE,
         ]);
 
         // Cupón uso
@@ -1155,14 +1163,15 @@ class PaymentController extends Controller
         }
 
         // Crear usuario
-        $password = Str::random(12);
+        $token = Str::uuid()->toString();
 
         $usuario = Usuario::create([
             'vNombre' => $nombre,
             'vApaterno' => $apaterno,
             'vAmaterno' => $amaterno,
             'vEmail' => $email,
-            'vPassword' => Hash::make($password),
+            'vPassword' => bcrypt(Str::random(32)),
+            'email_verification_token' => $token,
             'is_verified' => 0,
         ]);
 
@@ -1171,7 +1180,7 @@ class PaymentController extends Controller
 
         // Aquí puedes mandar email de bienvenida / set password
         Mail::to($email)->send(
-            new \App\Mail\CuentaCreadaAutomaticamente($usuario, $password)
+            new \App\Mail\CuentaCreadaAutomaticamente($usuario, $token)
         );
 
         return $usuario->id_usuario;
