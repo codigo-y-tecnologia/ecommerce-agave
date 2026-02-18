@@ -1170,7 +1170,7 @@ class PaymentController extends Controller
             'vApaterno' => $apaterno,
             'vAmaterno' => $amaterno,
             'vEmail' => $email,
-            'vPassword' => bcrypt(Str::random(32)),
+            'vPassword' => null,
             'email_verification_token' => $token,
             'is_verified' => 0,
         ]);
@@ -1178,7 +1178,7 @@ class PaymentController extends Controller
         // Rol cliente (Spatie)
         $usuario->assignRole('cliente');
 
-        // Aquí puedes mandar email de bienvenida / set password
+        // Aquí se manda email de bienvenida / set password
         Mail::to($email)->send(
             new \App\Mail\CuentaCreadaAutomaticamente($usuario, $token)
         );

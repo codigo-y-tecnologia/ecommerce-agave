@@ -17,19 +17,33 @@
             <div class="card shadow-lg border-0 rounded-4">
                 <div class="card-body p-5">
 
+                    <!-- TÍTULO -->
                     <div class="text-center mb-4">
-                        <h2 class="fw-bold">Establecer contraseña</h2>
+                        <h2 class="fw-bold">Bienvenido 👋</h2>
                         <p class="text-muted small mb-0">
-                            Para activar tu cuenta, establece una contraseña segura.
+                            Tu cuenta ha sido creada correctamente.
                         </p>
                     </div>
 
+                    <!-- CONTEXTO -->
+                    <p class="small text-muted mb-3">
+                        Hemos creado una cuenta para ti automáticamente después de tu compra.
+                        Para poder acceder y gestionar tus pedidos, necesitas establecer una contraseña.
+                    </p>
+
+                    <!-- INFO CONTRASEÑA -->
                     <div class="alert alert-info small">
-                        La contraseña debe tener al menos <strong>8 caracteres</strong>,
-                        incluir <strong>una mayúscula</strong>, <strong>una minúscula</strong>
-                        y <strong>un número</strong>.
+                        🔐 La contraseña debe tener al menos <strong>8 caracteres</strong>.
                     </div>
 
+                    <!-- AVISO DE EXPIRACIÓN -->
+                    <div class="alert alert-warning small">
+                        ⏳ <strong>Importante:</strong>  
+                        Este enlace para establecer tu contraseña es válido por <strong>60 minutos</strong>.
+                        Si el enlace expira, podrás solicitar uno nuevo desde la pantalla de inicio de sesión.
+                    </div>
+
+                    <!-- FORM -->
                     <form method="POST" action="{{ route('guardar.password', $token) }}">
                         @csrf
 
@@ -65,6 +79,11 @@
                             </button>
                         </div>
                     </form>
+
+                    <!-- FOOTER -->
+                    <p class="text-muted small text-center mt-4 mb-0">
+                        Si tú no realizaste esta acción, puedes ignorar este correo.
+                    </p>
 
                 </div>
             </div>

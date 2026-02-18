@@ -11,6 +11,7 @@ use App\Models\Usuario;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Notifications\VerifyEmailNotification;
+use App\Mail\CuentaCreadaAutomaticamente;
 
 class AuthController extends Controller
 {
@@ -38,6 +39,18 @@ class AuthController extends Controller
             'vEmail.email' => 'El correo electrónico debe tener un formato válido.',
         ]);
 
+        $user = Usuario::where('vEmail', $request->vEmail)->first();
+
+        if (
+            $user && empty($user->vPassword)
+        ) {
+            return back()->withErrors([
+                'vEmail' => 'Tu cuenta fue creada automáticamente después de una compra. Revisa tu correo y establece tu contraseña para poder iniciar sesión.',
+            ])
+                ->with('show_set_password', true)
+                ->withInput();
+        }
+
         $credentials = [
             'vEmail' => $request->vEmail,
             'password' => $request->vPassword,
@@ -53,7 +66,7 @@ class AuthController extends Controller
             if (!$user->hasVerifiedEmail()) {
                 Auth::logout();
                 return back()->withErrors([
-                    'vEmail' => 'Por favor, verifica tu dirección de correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada.',
+                    'vEmail' => 'Por favor, verifica tu dirección de correo electrónico antes de iniciar sesión. Si no recibiste el correo de verificación, puedes solicitar uno nuevo.',
                 ])->withInput();
             }
 
@@ -250,5 +263,37 @@ class AuthController extends Controller
 
         return redirect()->route('dashboard.cliente')
             ->with('success', 'Cuenta activada correctamente');
+    }
+
+    public function reenviarCorreo(Request $request)
+    {
+        $request->validate([
+            'vEmail' => 'required|email|max:100|exists:tbl_usuarios,vEmail',
+        ], [
+            'vEmail.exists' => 'No se encontró una cuenta con ese correo electrónico.',
+            'vEmail.email' => 'El correo electrónico debe tener un formato válido.',
+        ]);
+
+        $usuario = Usuario::where('vEmail', $request->vEmail)->first();
+
+        // Seguridad: solo si NO tiene contraseña
+        if ($usuario->vPassword !== null) {
+            return back()->withErrors([
+                'vEmail' => 'Esta cuenta ya tiene una contraseña configurada.'
+            ]);
+        }
+
+        // Generar nuevo token
+        $token = Str::uuid()->toString();
+
+        $usuario->update([
+            'email_verification_token' => $token,
+        ]);
+
+        Mail::to($usuario->vEmail)->send(
+            new CuentaCreadaAutomaticamente($usuario, $token)
+        );
+
+        return back()->with('success', 'Te enviamos nuevamente el correo para establecer tu contraseña.');
     }
 }

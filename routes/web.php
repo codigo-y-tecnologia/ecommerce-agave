@@ -128,6 +128,11 @@ Route::get('/activar-cuenta/{token}', [AuthController::class, 'activarCuenta'])
 Route::post('/activar-cuenta/{token}', [AuthController::class, 'guardarPassword'])
     ->name('guardar.password');
 
+Route::post(
+    '/cuenta/reenviar-creacion-password',
+    [AuthController::class, 'reenviarCorreo']
+)->name('cuenta.reenviar-password');
+
 // Login y registro solo para invitados
 Route::middleware('guest')->group(function () {
 

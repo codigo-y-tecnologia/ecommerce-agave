@@ -54,6 +54,16 @@
       </div>
     @endif
 
+    @if (session('show_set_password'))
+    <form method="POST" action="{{ route('cuenta.reenviar-password') }}" class="mt-2">
+        @csrf
+        <input type="hidden" name="vEmail" value="{{ old('vEmail') }}">
+        <button type="submit" class="btn btn-warning btn-sm w-100">
+            Reenviar correo para establecer mi contraseña
+        </button>
+    </form>
+@endif
+
     <form id="loginForm" action="{{ route('login') }}" method="POST">
       @csrf
 
