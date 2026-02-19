@@ -2,7 +2,7 @@
 
 namespace App\Services\Stock;
 
-use App\Models\{Producto, StockReserva};
+use App\Models\{Carrito, Producto, StockReserva};
 use Illuminate\Support\Facades\DB;
 
 class LiberarReservaService
@@ -17,6 +17,11 @@ class LiberarReservaService
             if ($producto) {
                 $producto->iStock_reservado -= $reserva->cantidad;
                 $producto->save();
+            }
+
+            $carrito = Carrito::find($reserva->first()->id_carrito);
+            if ($carrito) {
+                $carrito->marcarComoActivo();
             }
 
             $reserva->delete();

@@ -49,6 +49,11 @@ class Carrito extends Model
     |--------------------------------------------------------------------------
     */
 
+    public function marcarComoActivo(): void
+    {
+        $this->update(['eEstado' => 'activo']);
+    }
+
     public function marcarComoReservado(): void
     {
         $this->update(['eEstado' => 'reservado']);

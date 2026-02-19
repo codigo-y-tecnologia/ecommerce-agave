@@ -1101,9 +1101,6 @@ class PaymentController extends Controller
 
             if ($carrito && $carrito->eEstado === 'reservado') {
                 app(LiberarReservaPorCarritoService::class)->ejecutar($carrito);
-
-                $carrito->eEstado = 'activo';
-                $carrito->save();
             }
 
             session()->forget([
@@ -1124,9 +1121,6 @@ class PaymentController extends Controller
 
             if ($carrito && $carrito->eEstado === 'reservado') {
                 app(LiberarReservaPorCarritoService::class)->ejecutar($carrito);
-
-                $carrito->eEstado = 'activo';
-                $carrito->save();
             }
 
             session()->forget([

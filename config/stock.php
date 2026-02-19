@@ -9,6 +9,6 @@ return [
     */
 
     // Minutos que una reserva de stock permanece activa
-    'reserva_minutos' => 15,
+    'reserva_minutos' => 30,
 
 ];

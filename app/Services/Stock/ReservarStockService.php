@@ -45,7 +45,7 @@ class ReservarStockService
                 'id_carrito'  => $carrito->id_carrito,
                 'cantidad'    => $detalle->iCantidad,
                 'expires_at'  => now()->addMinutes(
-                    config('stock.reserva_minutos', 15)
+                    config('stock.reserva_minutos', 30)
                 ),
             ]);
         }
