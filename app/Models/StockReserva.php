@@ -58,7 +58,8 @@ class StockReserva extends Model
      */
     public function scopeExpiradas(Builder $query): Builder
     {
-        return $query->where('expires_at', '<', now());
+        return $query->where('expires_at', '<', now())
+            ->whereNull('pagada_at');
     }
 
     /**

@@ -9,8 +9,10 @@ class LimpiarReservasExpiradas
 {
     public function handle(LiberarReservaService $liberador)
     {
+
+        logger()->info('🧹 Limpiando reservas expiradas');
+
         StockReserva::expiradas()
-            ->pendientes()
             ->each(function ($reserva) use ($liberador) {
                 $liberador->ejecutar($reserva);
             });

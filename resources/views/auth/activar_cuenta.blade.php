@@ -36,13 +36,6 @@
                         🔐 La contraseña debe tener al menos <strong>8 caracteres</strong>.
                     </div>
 
-                    <!-- AVISO DE EXPIRACIÓN -->
-                    <div class="alert alert-warning small">
-                        ⏳ <strong>Importante:</strong>  
-                        Este enlace para establecer tu contraseña es válido por <strong>60 minutos</strong>.
-                        Si el enlace expira, podrás solicitar uno nuevo desde la pantalla de inicio de sesión.
-                    </div>
-
                     <!-- FORM -->
                     <form method="POST" action="{{ route('guardar.password', $token) }}">
                         @csrf
