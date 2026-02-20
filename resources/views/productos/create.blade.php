@@ -467,15 +467,15 @@
             </div>
         </div>
 
-        <!-- IMÁGENES DEL PRODUCTO -->
+        <!-- IMAGEN PRINCIPAL, VIDEO E IMÁGENES ADICIONALES DEL PRODUCTO -->
         <div class="card mb-4">
             <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0"><i class="fas fa-images me-2"></i>Imágenes del Producto</h5>
+                <h5 class="mb-0"><i class="fas fa-images me-2"></i>Multimedia del Producto Principal</h5>
             </div>
             <div class="card-body">
                 <div class="row">
                     <!-- IMAGEN PRINCIPAL -->
-                    <div class="col-md-12">
+                    <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="imagen_principal" class="form-label fw-bold">
                                 <i class="fas fa-star text-warning me-1"></i>Imagen Principal <span class="text-danger">*</span>
@@ -510,6 +510,78 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- VIDEO DEL PRODUCTO (OPCIONAL) -->
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="video_producto" class="form-label fw-bold">
+                                <i class="fas fa-video text-danger me-1"></i>Video del Producto (Opcional)
+                            </label>
+                            <input type="file" name="video_producto" id="video_producto" 
+                                   class="form-control @error('video_producto') is-invalid @enderror" 
+                                   accept="video/mp4,video/webm,video/ogg,video/avi,video/mov,video/mkv"
+                                   onchange="previewVideo(this)">
+                            @error('video_producto')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Formatos: MP4, WebM, OGG, AVI, MOV, MKV. Máximo 50MB.
+                            </small>
+                            
+                            <!-- Preview de video -->
+                            <div id="preview_video_container" class="mt-2" style="display: none;">
+                                <div class="border rounded p-2 text-center bg-light">
+                                    <video id="preview_video" controls style="max-width: 100%; max-height: 150px;">
+                                        <source src="#" type="video/mp4">
+                                        Tu navegador no soporta el elemento de video.
+                                    </video>
+                                    <div class="mt-2">
+                                        <small class="text-muted d-block">Video seleccionado</small>
+                                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarVideo()">
+                                            <i class="fas fa-times me-1"></i>Quitar video
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- GIF DEL PRODUCTO (OPCIONAL) -->
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="gif_producto" class="form-label fw-bold">
+                                <i class="fas fa-file-image text-success me-1"></i>GIF Animado (Opcional)
+                            </label>
+                            <input type="file" name="gif_producto" id="gif_producto" 
+                                   class="form-control @error('gif_producto') is-invalid @enderror" 
+                                   accept="image/gif"
+                                   onchange="previewGif(this)">
+                            @error('gif_producto')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Formatos: GIF. Máximo 10MB. Animación del producto.
+                            </small>
+                            
+                            <!-- Preview de GIF -->
+                            <div id="preview_gif_container" class="mt-2" style="display: none;">
+                                <div class="border rounded p-2 text-center bg-light">
+                                    <img id="preview_gif" src="#" 
+                                         class="img-thumbnail" 
+                                         style="max-width: 200px; max-height: 200px; object-fit: contain;"
+                                         alt="Preview GIF">
+                                    <div class="mt-2">
+                                        <small class="text-muted d-block">GIF seleccionado</small>
+                                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarGif()">
+                                            <i class="fas fa-times me-1"></i>Quitar GIF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- IMÁGENES ADICIONALES DEL PRODUCTO -->
@@ -517,7 +589,7 @@
                     <div class="col-md-12">
                         <div class="form-group mb-3">
                             <label for="imagenes" class="form-label fw-bold">
-                                <i class="fas fa-images me-1"></i>Imágenes Adicionales del Producto (Máximo 8)
+                                <i class="fas fa-images me-1"></i>Imágenes Adicionales del Producto (Máximo 7)
                             </label>
                             <input type="file" name="imagenes[]" id="imagenes" 
                                    class="form-control @error('imagenes') is-invalid @enderror" 
@@ -528,7 +600,7 @@
                             @enderror
                             <small class="form-text text-muted">
                                 Formatos: JPG, JPEG, PNG, WEBP. Máximo 5MB por imagen.
-                                Puedes seleccionar hasta 8 imágenes adicionales.
+                                Puedes seleccionar hasta 7 imágenes adicionales.
                             </small>
                             <div class="mt-2">
                                 <span class="badge bg-info" id="selected-images-count">0 archivos</span>
@@ -542,11 +614,12 @@
                     <div class="row align-items-center">
                         <div class="col-md-6">
                             <i class="fas fa-camera me-1"></i>
-                            <strong>Total de imágenes:</strong> 
-                            <span id="total-imagenes">0</span> de 9 (1 principal + 8 adicionales)
+                            <strong>Total de imágenes del producto:</strong> 
+                            <span id="total-imagenes">0</span> de 9 (1 principal + 1 GIF + 7 adicionales)
                         </div>
                         <div class="col-md-6 text-end">
                             <span class="badge bg-primary me-2" id="principal-count">Principal: 0</span>
+                            <span class="badge bg-success me-2" id="gif-count">GIF: 0</span>
                             <span class="badge bg-secondary" id="adicionales-count">Adicionales: 0</span>
                         </div>
                     </div>
@@ -746,7 +819,7 @@
             </div>
         </div>
 
-        <!-- VARIACIONES DEL PRODUCTO -->
+        <!-- VARIACIONES DEL PRODUCTO - PESTAÑAS POR VALOR -->
         <div class="card mb-4">
             <div class="card-header" style="background-color: #6f42c1; color: white;">
                 <div class="d-flex justify-content-between align-items-center">
@@ -841,7 +914,7 @@
             
             <!-- CONTENIDO DE LOS TABS (FORMULARIOS RÁPIDOS) -->
             <div class="tab-content p-4">
-                <!-- TAB: CATEGORÍAS (CORREGIDO) -->
+                <!-- TAB: CATEGORÍAS -->
                 <div class="tab-pane fade show active" id="categorias-content" role="tabpanel">
                     <div class="quick-form" id="quick-categoria-form">
                         <h5><i class="fas fa-tags me-2"></i>Crear Nueva Categoría</h5>
@@ -1229,6 +1302,12 @@
     z-index: 2;
 }
 
+.video-preview, .gif-preview {
+    max-width: 100%;
+    max-height: 150px;
+    border-radius: 8px;
+}
+
 .selected-image-item {
     position: relative;
     border: 1px solid #dee2e6;
@@ -1267,8 +1346,12 @@ let selectedImages = [];
 let imageCounter = 0;
 let atributosActivos = {};
 let imagenPrincipalFile = null;
+let videoFile = null;
+let gifFile = null;
 let variacionCounter = 0;
 let variacionesImagenes = {};
+let variacionesVideos = {};
+let variacionesGifs = {};
 
 // ============ FUNCIONES DE VALIDACIÓN ============
 
@@ -1558,13 +1641,14 @@ function toggleDescuentoFields() {
     }
 }
 
-// ============ FUNCIONES DE IMÁGENES DEL PRODUCTO PRINCIPAL ============
+// ============ FUNCIONES DE IMÁGENES Y VIDEO DEL PRODUCTO PRINCIPAL ============
 
 function previewImagenPrincipal(input) {
     const previewContainer = document.getElementById('preview_principal_container');
     const previewImg = document.getElementById('preview_principal_img');
     
     if (input.files && input.files[0]) {
+        // Validar formato
         const file = input.files[0];
         const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
         
@@ -1602,6 +1686,81 @@ function cancelarImagenPrincipal() {
     input.value = '';
     previewContainer.style.display = 'none';
     imagenPrincipalFile = null;
+    actualizarContadorImagenes();
+}
+
+function previewVideo(input) {
+    const previewContainer = document.getElementById('preview_video_container');
+    const previewVideo = document.getElementById('preview_video');
+    const source = previewVideo.querySelector('source');
+    
+    if (input.files && input.files[0]) {
+        videoFile = input.files[0];
+        const url = URL.createObjectURL(input.files[0]);
+        source.src = url;
+        source.type = input.files[0].type;
+        previewVideo.load();
+        previewContainer.style.display = 'block';
+    } else {
+        previewContainer.style.display = 'none';
+        videoFile = null;
+    }
+}
+
+function cancelarVideo() {
+    const input = document.getElementById('video_producto');
+    const previewContainer = document.getElementById('preview_video_container');
+    const previewVideo = document.getElementById('preview_video');
+    const source = previewVideo.querySelector('source');
+    
+    input.value = '';
+    previewContainer.style.display = 'none';
+    source.src = '#';
+    videoFile = null;
+}
+
+function previewGif(input) {
+    const previewContainer = document.getElementById('preview_gif_container');
+    const previewImg = document.getElementById('preview_gif');
+    
+    if (input.files && input.files[0]) {
+        // Validar formato
+        const file = input.files[0];
+        
+        if (file.type !== 'image/gif') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Formato no válido',
+                text: 'El campo GIF solo acepta archivos con formato GIF'
+            });
+            input.value = '';
+            return;
+        }
+        
+        gifFile = file;
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewContainer.style.display = 'block';
+        }
+        
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        previewContainer.style.display = 'none';
+        gifFile = null;
+    }
+    
+    actualizarContadorImagenes();
+}
+
+function cancelarGif() {
+    const input = document.getElementById('gif_producto');
+    const previewContainer = document.getElementById('preview_gif_container');
+    
+    input.value = '';
+    previewContainer.style.display = 'none';
+    gifFile = null;
     actualizarContadorImagenes();
 }
 
@@ -1666,10 +1825,11 @@ function limpiarFormularioMarca() {
 
 function handleImageSelection(event) {
     const files = event.target.files;
-    const maxFiles = 8;
+    const maxFiles = 7;
     const currentCount = selectedImages.length;
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     
+    // Verificar límite total
     if (currentCount + files.length > maxFiles) {
         Swal.fire({
             icon: 'warning',
@@ -1680,9 +1840,11 @@ function handleImageSelection(event) {
         return;
     }
     
+    // Procesar cada archivo
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         
+        // Validar tipo de archivo
         if (!validTypes.includes(file.type)) {
             Swal.fire({
                 icon: 'warning',
@@ -1692,6 +1854,7 @@ function handleImageSelection(event) {
             continue;
         }
         
+        // Validar tamaño (5MB)
         if (file.size > 5 * 1024 * 1024) {
             Swal.fire({
                 icon: 'warning',
@@ -1701,6 +1864,7 @@ function handleImageSelection(event) {
             continue;
         }
         
+        // Evitar duplicados
         if (!isImageDuplicate(file)) {
             const imageId = 'img_' + Date.now() + '_' + imageCounter++;
             const preview = URL.createObjectURL(file);
@@ -1715,9 +1879,16 @@ function handleImageSelection(event) {
         }
     }
     
+    // Actualizar contador en el badge
     document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
+    
+    // Renderizar las imágenes seleccionadas
     renderSelectedImages();
+    
+    // Limpiar el input para permitir seleccionar los mismos archivos si es necesario
     event.target.value = '';
+    
+    // Actualizar contador total
     actualizarContadorImagenes();
 }
 
@@ -1736,7 +1907,9 @@ function removeSelectedImage(imageId) {
     }
     selectedImages = selectedImages.filter(img => img.id !== imageId);
     
+    // Actualizar contador en el badge
     document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
+    
     renderSelectedImages();
     actualizarContadorImagenes();
 }
@@ -1807,9 +1980,10 @@ function renderSelectedImages() {
 }
 
 function actualizarContadorImagenes() {
-    const total = (imagenPrincipalFile ? 1 : 0) + selectedImages.length;
+    const total = (imagenPrincipalFile ? 1 : 0) + (gifFile ? 1 : 0) + selectedImages.length;
     document.getElementById('total-imagenes').textContent = total;
     document.getElementById('principal-count').textContent = `Principal: ${imagenPrincipalFile ? 1 : 0}`;
+    document.getElementById('gif-count').textContent = `GIF: ${gifFile ? 1 : 0}`;
     document.getElementById('adicionales-count').textContent = `Adicionales: ${selectedImages.length}`;
 }
 
@@ -2115,6 +2289,166 @@ function actualizarPestanasValores() {
                 <input type="hidden" name="variaciones[${valorKey}][vNombre_variacion]" 
                        value="${valor.atributoNombre}: ${valor.nombre}">
 
+                <!-- SECCIÓN MULTIMEDIA DE LA VARIACIÓN -->
+                <div class="card mb-4 border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0"><i class="fas fa-images me-2"></i>Multimedia de la Variación</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- IMAGEN PRINCIPAL DE LA VARIACIÓN -->
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label for="imagen_principal_${valorKey}" class="form-label fw-bold">
+                                        <i class="fas fa-star text-warning me-1"></i>Imagen Principal de la Variación <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="file" 
+                                           name="variaciones[${valorKey}][imagen_principal]" 
+                                           id="imagen_principal_${valorKey}" 
+                                           class="form-control variacion-imagen-principal"
+                                           accept="image/jpeg,image/jpg,image/png"
+                                           required
+                                           onchange="previewImagenPrincipalVariacion(this, '${valorKey}')">
+                                    <small class="form-text text-muted">
+                                        Formatos: JPG, JPEG, PNG. Máximo 5MB.
+                                    </small>
+                                    
+                                    <!-- Preview de imagen principal de variación -->
+                                    <div id="preview_principal_variacion_${valorKey}_container" class="mt-2" style="display: none;">
+                                        <div class="border rounded p-2 text-center bg-light">
+                                            <img id="preview_principal_variacion_${valorKey}" src="#" 
+                                                 class="img-thumbnail" 
+                                                 style="max-width: 150px; max-height: 150px; object-fit: contain;"
+                                                 alt="Preview imagen principal variación">
+                                            <div class="mt-2">
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelarImagenPrincipalVariacion('${valorKey}')">
+                                                    <i class="fas fa-times me-1"></i>Quitar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- VIDEO DE LA VARIACIÓN (OPCIONAL) -->
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label for="video_${valorKey}" class="form-label fw-bold">
+                                        <i class="fas fa-video text-danger me-1"></i>Video de la Variación (Opcional)
+                                    </label>
+                                    <input type="file" 
+                                           name="variaciones[${valorKey}][vVideo]" 
+                                           id="video_${valorKey}" 
+                                           class="form-control"
+                                           accept="video/mp4,video/webm,video/ogg,video/avi,video/mov,video/mkv"
+                                           onchange="previewVideoVariacion(this, '${valorKey}')">
+                                    <small class="form-text text-muted">
+                                        Formatos: MP4, WebM, OGG, AVI, MOV, MKV. Máximo 50MB.
+                                    </small>
+                                    
+                                    <!-- Preview de video para variación -->
+                                    <div id="preview_video_${valorKey}_container" class="mt-2" style="display: none;">
+                                        <div class="border rounded p-2 text-center bg-light">
+                                            <video id="preview_video_${valorKey}" controls style="max-width: 100%; max-height: 150px;">
+                                                <source src="#" type="video/mp4">
+                                                Tu navegador no soporta el elemento de video.
+                                            </video>
+                                            <div class="mt-2">
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelarVideoVariacion('${valorKey}')">
+                                                    <i class="fas fa-times me-1"></i>Quitar video
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- GIF DE LA VARIACIÓN (OPCIONAL) -->
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label for="gif_${valorKey}" class="form-label fw-bold">
+                                        <i class="fas fa-file-image text-success me-1"></i>GIF Animado de la Variación (Opcional)
+                                    </label>
+                                    <input type="file" 
+                                           name="variaciones[${valorKey}][vGif]" 
+                                           id="gif_${valorKey}" 
+                                           class="form-control"
+                                           accept="image/gif"
+                                           onchange="previewGifVariacion(this, '${valorKey}')">
+                                    <small class="form-text text-muted">
+                                        Formatos: GIF. Máximo 10MB. Animación de la variación.
+                                    </small>
+                                    
+                                    <!-- Preview de GIF para variación -->
+                                    <div id="preview_gif_${valorKey}_container" class="mt-2" style="display: none;">
+                                        <div class="border rounded p-2 text-center bg-light">
+                                            <img id="preview_gif_${valorKey}" src="#" 
+                                                 class="img-thumbnail" 
+                                                 style="max-width: 150px; max-height: 150px; object-fit: contain;"
+                                                 alt="Preview GIF variación">
+                                            <div class="mt-2">
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelarGifVariacion('${valorKey}')">
+                                                    <i class="fas fa-times me-1"></i>Quitar GIF
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- IMÁGENES ADICIONALES DE LA VARIACIÓN -->
+                        <div class="row mt-3">
+                            <div class="col-md-12">
+                                <div class="form-group mb-3">
+                                    <label for="imagenes_${valorKey}" class="form-label fw-bold">
+                                        <i class="fas fa-images me-1"></i>Imágenes Adicionales de la Variación (Máximo 7)
+                                    </label>
+                                    <input type="file" 
+                                           name="variaciones[${valorKey}][imagenes][]" 
+                                           id="imagenes_${valorKey}" 
+                                           class="form-control"
+                                           multiple accept="image/jpeg,image/jpg,image/png,image/webp"
+                                           onchange="handleVariacionImageSelection(this, '${valorKey}')">
+                                    <small class="form-text text-muted">
+                                        Formatos: JPG, JPEG, PNG, WEBP. Máximo 5MB por imagen.
+                                        Puedes seleccionar hasta 7 imágenes adicionales.
+                                    </small>
+                                    <div class="mt-2">
+                                        <span class="badge bg-info" id="selected-images-count-${valorKey}">0 archivos</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Contador de imágenes de la variación -->
+                        <div class="alert alert-info py-2 mt-2" id="contador_variacion_${valorKey}">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <i class="fas fa-camera me-1"></i>
+                                    <strong>Total de imágenes de esta variación:</strong> 
+                                    <span id="total_imagenes_variacion_${valorKey}">0</span> de 9 (1 principal + 1 GIF + 7 adicionales)
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    <span class="badge bg-primary me-2" id="principal_count_variacion_${valorKey}">Principal: 0</span>
+                                    <span class="badge bg-success me-2" id="gif_count_variacion_${valorKey}">GIF: 0</span>
+                                    <span class="badge bg-secondary" id="adicionales_count_variacion_${valorKey}">Adicionales: 0</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Galería de imágenes adicionales de la variación -->
+                        <div class="mt-3">
+                            <h6 class="fw-bold mb-2">Imágenes adicionales seleccionadas para esta variación:</h6>
+                            <div id="variacion_images_${valorKey}_container" class="row g-2"></div>
+                            <div class="alert alert-warning py-2" id="no_imagenes_variacion_${valorKey}_msg">
+                                <i class="fas fa-info-circle me-1"></i>
+                                <small>No hay imágenes adicionales seleccionadas para esta variación</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row mb-3">
                     <div class="col-md-8">
                         <div class="form-group">
@@ -2404,9 +2738,318 @@ function actualizarPestanasValores() {
         contentPane.innerHTML = formHtml;
         tabContent.appendChild(contentPane);
         
+        // Inicializar arrays para esta variación
         variacionesImagenes[valorKey] = [];
+        variacionesVideos[valorKey] = null;
+        variacionesGifs[valorKey] = null;
+        
+        // Inicializar contador de imágenes
         document.getElementById(`selected-images-count-${valorKey}`).textContent = '0 archivos';
     });
+}
+
+// ============ FUNCIONES PARA MULTIMEDIA DE VARIACIONES ============
+
+function previewImagenPrincipalVariacion(input, valorKey) {
+    const previewContainer = document.getElementById(`preview_principal_variacion_${valorKey}_container`);
+    const previewImg = document.getElementById(`preview_principal_variacion_${valorKey}`);
+    
+    if (input.files && input.files[0]) {
+        // Validar formato
+        const file = input.files[0];
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        
+        if (!validTypes.includes(file.type)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Formato no válido',
+                text: 'La imagen principal de la variación solo acepta formatos JPG, JPEG y PNG'
+            });
+            input.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewContainer.style.display = 'block';
+        }
+        
+        reader.readAsDataURL(input.files[0]);
+        
+        // Actualizar contador
+        actualizarContadorImagenesVariacion(valorKey);
+    } else {
+        previewContainer.style.display = 'none';
+        actualizarContadorImagenesVariacion(valorKey);
+    }
+}
+
+function cancelarImagenPrincipalVariacion(valorKey) {
+    const input = document.getElementById(`imagen_principal_${valorKey}`);
+    const previewContainer = document.getElementById(`preview_principal_variacion_${valorKey}_container`);
+    
+    input.value = '';
+    previewContainer.style.display = 'none';
+    actualizarContadorImagenesVariacion(valorKey);
+}
+
+function previewVideoVariacion(input, valorKey) {
+    const previewContainer = document.getElementById(`preview_video_${valorKey}_container`);
+    const previewVideo = document.getElementById(`preview_video_${valorKey}`);
+    const source = previewVideo.querySelector('source');
+    
+    if (input.files && input.files[0]) {
+        variacionesVideos[valorKey] = input.files[0];
+        const url = URL.createObjectURL(input.files[0]);
+        source.src = url;
+        source.type = input.files[0].type;
+        previewVideo.load();
+        previewContainer.style.display = 'block';
+    } else {
+        previewContainer.style.display = 'none';
+        variacionesVideos[valorKey] = null;
+        source.src = '#';
+    }
+}
+
+function cancelarVideoVariacion(valorKey) {
+    const input = document.getElementById(`video_${valorKey}`);
+    const previewContainer = document.getElementById(`preview_video_${valorKey}_container`);
+    const previewVideo = document.getElementById(`preview_video_${valorKey}`);
+    const source = previewVideo.querySelector('source');
+    
+    input.value = '';
+    previewContainer.style.display = 'none';
+    source.src = '#';
+    variacionesVideos[valorKey] = null;
+}
+
+function previewGifVariacion(input, valorKey) {
+    const previewContainer = document.getElementById(`preview_gif_${valorKey}_container`);
+    const previewImg = document.getElementById(`preview_gif_${valorKey}`);
+    
+    if (input.files && input.files[0]) {
+        // Validar formato
+        const file = input.files[0];
+        
+        if (file.type !== 'image/gif') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Formato no válido',
+                text: 'El campo GIF solo acepta archivos con formato GIF'
+            });
+            input.value = '';
+            return;
+        }
+        
+        variacionesGifs[valorKey] = input.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewContainer.style.display = 'block';
+        }
+        
+        reader.readAsDataURL(input.files[0]);
+        
+        actualizarContadorImagenesVariacion(valorKey);
+    } else {
+        previewContainer.style.display = 'none';
+        variacionesGifs[valorKey] = null;
+        actualizarContadorImagenesVariacion(valorKey);
+    }
+}
+
+function cancelarGifVariacion(valorKey) {
+    const input = document.getElementById(`gif_${valorKey}`);
+    const previewContainer = document.getElementById(`preview_gif_${valorKey}_container`);
+    
+    input.value = '';
+    previewContainer.style.display = 'none';
+    variacionesGifs[valorKey] = null;
+    actualizarContadorImagenesVariacion(valorKey);
+}
+
+function handleVariacionImageSelection(input, valorKey) {
+    const files = input.files;
+    const maxFiles = 7;
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    
+    if (!variacionesImagenes[valorKey]) {
+        variacionesImagenes[valorKey] = [];
+    }
+    
+    const currentCount = variacionesImagenes[valorKey].length;
+    
+    // Verificar límite total
+    if (currentCount + files.length > maxFiles) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de imágenes',
+            text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales para esta variación. Ya tienes ${currentCount} seleccionadas.`
+        });
+        input.value = '';
+        return;
+    }
+    
+    // Procesar cada archivo
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        // Validar tipo de archivo
+        if (!validTypes.includes(file.type)) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Formato no válido',
+                text: `El archivo "${file.name}" no es un formato válido. Formatos aceptados: JPG, JPEG, PNG, WEBP.`
+            });
+            continue;
+        }
+        
+        // Validar tamaño (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Archivo demasiado grande',
+                text: `La imagen "${file.name}" excede el límite de 5MB.`
+            });
+            continue;
+        }
+        
+        // Evitar duplicados
+        if (!isVariacionImageDuplicate(file, valorKey)) {
+            const imageId = 'varimg_' + Date.now() + '_' + variacionCounter++;
+            const preview = URL.createObjectURL(file);
+            
+            variacionesImagenes[valorKey].push({
+                id: imageId,
+                file: file,
+                preview: preview,
+                name: file.name,
+                size: file.size
+            });
+        }
+    }
+    
+    // Actualizar contador
+    document.getElementById(`selected-images-count-${valorKey}`).textContent = variacionesImagenes[valorKey].length + ' archivos';
+    
+    // Renderizar las imágenes
+    renderVariacionImages(valorKey);
+    
+    // Limpiar input
+    input.value = '';
+    
+    // Actualizar contador total
+    actualizarContadorImagenesVariacion(valorKey);
+}
+
+function isVariacionImageDuplicate(newFile, valorKey) {
+    return variacionesImagenes[valorKey] && variacionesImagenes[valorKey].some(img => 
+        img.file.name === newFile.name && 
+        img.file.size === newFile.size && 
+        img.file.lastModified === newFile.lastModified
+    );
+}
+
+function removeVariacionImage(valorKey, imageId) {
+    const imageIndex = variacionesImagenes[valorKey].findIndex(img => img.id === imageId);
+    if (imageIndex !== -1) {
+        const image = variacionesImagenes[valorKey][imageIndex];
+        if (image && image.preview) {
+            URL.revokeObjectURL(image.preview);
+        }
+        variacionesImagenes[valorKey].splice(imageIndex, 1);
+        
+        // Actualizar contador
+        document.getElementById(`selected-images-count-${valorKey}`).textContent = variacionesImagenes[valorKey].length + ' archivos';
+        
+        renderVariacionImages(valorKey);
+        actualizarContadorImagenesVariacion(valorKey);
+    }
+}
+
+function renderVariacionImages(valorKey) {
+    const container = document.getElementById(`variacion_images_${valorKey}_container`);
+    const noMsg = document.getElementById(`no_imagenes_variacion_${valorKey}_msg`);
+    
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (!variacionesImagenes[valorKey] || variacionesImagenes[valorKey].length === 0) {
+        if (noMsg) noMsg.style.display = 'block';
+        return;
+    }
+    
+    if (noMsg) noMsg.style.display = 'none';
+    
+    variacionesImagenes[valorKey].forEach((image, index) => {
+        const col = document.createElement('div');
+        col.className = 'col-6 col-md-3 mb-3';
+        
+        const card = document.createElement('div');
+        card.className = 'card border image-preview-card position-relative';
+        
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1 remove-btn';
+        btn.style.cssText = 'width: 24px; height: 24px; padding: 0; border-radius: 50%; z-index: 10;';
+        btn.onclick = function(e) {
+            e.preventDefault();
+            removeVariacionImage(valorKey, image.id); 
+        };
+        
+        const btnIcon = document.createElement('i');
+        btnIcon.className = 'fas fa-times';
+        btnIcon.style.fontSize = '12px';
+        btn.appendChild(btnIcon);
+        
+        const img = document.createElement('img');
+        img.src = image.preview;
+        img.className = 'card-img-top';
+        img.style.cssText = 'height: 100px; object-fit: contain; background: #f8f9fa; padding: 5px;';
+        img.alt = 'Imagen ' + (index + 1);
+        
+        const cardBody = document.createElement('div');
+        cardBody.className = 'card-body p-1 text-center';
+        
+        const small = document.createElement('small');
+        small.className = 'text-muted d-block';
+        small.style.cssText = 'font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+        small.textContent = image.file.name.length > 15 ? image.file.name.substring(0, 15) + '...' : image.file.name;
+        
+        cardBody.appendChild(small);
+        
+        card.appendChild(btn);
+        card.appendChild(img);
+        card.appendChild(cardBody);
+        
+        col.appendChild(card);
+        container.appendChild(col);
+    });
+}
+
+function actualizarContadorImagenesVariacion(valorKey) {
+    const inputPrincipal = document.getElementById(`imagen_principal_${valorKey}`);
+    const tienePrincipal = inputPrincipal && inputPrincipal.files && inputPrincipal.files.length > 0;
+    
+    const tieneGif = variacionesGifs[valorKey] !== null && variacionesGifs[valorKey] !== undefined;
+    
+    const adicionalesCount = variacionesImagenes[valorKey] ? variacionesImagenes[valorKey].length : 0;
+    const total = (tienePrincipal ? 1 : 0) + (tieneGif ? 1 : 0) + adicionalesCount;
+    
+    const totalSpan = document.getElementById(`total_imagenes_variacion_${valorKey}`);
+    const principalSpan = document.getElementById(`principal_count_variacion_${valorKey}`);
+    const gifSpan = document.getElementById(`gif_count_variacion_${valorKey}`);
+    const adicionalesSpan = document.getElementById(`adicionales_count_variacion_${valorKey}`);
+    
+    if (totalSpan) totalSpan.textContent = total;
+    if (principalSpan) principalSpan.textContent = `Principal: ${tienePrincipal ? 1 : 0}`;
+    if (gifSpan) gifSpan.textContent = `GIF: ${tieneGif ? 1 : 0}`;
+    if (adicionalesSpan) adicionalesSpan.textContent = `Adicionales: ${adicionalesCount}`;
 }
 
 function toggleDescuentoVariacion(checkbox, valorKey) {
@@ -2525,74 +3168,6 @@ function quickGenerarSlug(texto, inputId) {
 
 function quickActualizarSlug(nombre, slugId) {
     quickGenerarSlug(nombre, slugId);
-}
-
-// ============ FUNCIONES PARA CREACIÓN RÁPIDA DE CATEGORÍA (CORREGIDAS) ============
-
-function actualizarSelectCategoriaPadre(nuevaCategoria, nivel) {
-    const selectPadre = document.getElementById('id_categoria_padre_quick');
-    if (!selectPadre) return;
-    
-    let prefijo = '';
-    if (nivel === 0) {
-        prefijo = '🏠 ';
-    } else {
-        for (let i = 0; i < nivel; i++) {
-            prefijo += '↳ ';
-        }
-    }
-    
-    const option = document.createElement('option');
-    option.value = nuevaCategoria.id_categoria;
-    option.innerHTML = prefijo + nuevaCategoria.vNombre;
-    
-    let inserted = false;
-    for (let i = 1; i < selectPadre.options.length; i++) {
-        const currentOption = selectPadre.options[i];
-        if (currentOption.innerHTML.localeCompare(option.innerHTML) > 0) {
-            selectPadre.insertBefore(option, currentOption);
-            inserted = true;
-            break;
-        }
-    }
-    
-    if (!inserted) {
-        selectPadre.appendChild(option);
-    }
-}
-
-function actualizarSelectCategoriaPrincipal(nuevaCategoria, nivel) {
-    const selectCategoria = document.getElementById('id_categoria');
-    if (!selectCategoria) return;
-    
-    let prefijo = '';
-    if (nivel === 0) {
-        prefijo = '🏠 ';
-    } else {
-        for (let i = 0; i < nivel; i++) {
-            prefijo += '↳ ';
-        }
-    }
-    
-    const option = document.createElement('option');
-    option.value = nuevaCategoria.id_categoria;
-    option.innerHTML = prefijo + nuevaCategoria.vNombre;
-    
-    let inserted = false;
-    for (let i = 1; i < selectCategoria.options.length; i++) {
-        const currentOption = selectCategoria.options[i];
-        if (currentOption.innerHTML.localeCompare(option.innerHTML) > 0) {
-            selectCategoria.insertBefore(option, currentOption);
-            inserted = true;
-            break;
-        }
-    }
-    
-    if (!inserted) {
-        selectCategoria.appendChild(option);
-    }
-    
-    selectCategoria.value = nuevaCategoria.id_categoria;
 }
 
 // ============ FUNCIONES PARA CREACIÓN RÁPIDA ============
@@ -2849,7 +3424,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // FORMULARIO DE CATEGORÍA (CORREGIDO)
     const categoriaForm = document.getElementById('categoriaQuickForm');
     
     if (categoriaForm) {
@@ -2882,21 +3456,105 @@ document.addEventListener('DOMContentLoaded', function() {
                 Swal.close();
                 
                 if (data.success) {
-                    const nuevaCategoria = data.categoria;
-                    const nivel = data.nivel || 0;
-                    
-                    actualizarSelectCategoriaPadre(nuevaCategoria, nivel);
-                    actualizarSelectCategoriaPrincipal(nuevaCategoria, nivel);
-                    
-                    limpiarFormularioCategoria();
-                    
                     Swal.fire({
                         icon: 'success',
-                        title: '¡Categoría creada!',
-                        text: 'La categoría se ha creado y aparecerá en la posición correcta de la jerarquía',
+                        title: '¡Éxito!',
+                        text: data.message || 'Categoría creada exitosamente',
                         timer: 2000,
                         showConfirmButton: false
                     });
+                    
+                    limpiarFormularioCategoria();
+                    
+                    // Obtener la categoría recién creada con información jerárquica
+                    const nuevaCategoria = data.categoria;
+                    
+                    // Actualizar select principal de categorías (id_categoria)
+                    const selectCategoria = document.getElementById('id_categoria');
+                    if (selectCategoria) {
+                        // Usar el display_name que viene del servidor con prefijos jerárquicos
+                        const option = document.createElement('option');
+                        option.value = nuevaCategoria.id_categoria;
+                        option.innerHTML = nuevaCategoria.display_name || nuevaCategoria.vNombre;
+                        
+                        // Insertar en orden jerárquico correcto (al final de su nivel)
+                        let inserted = false;
+                        const padreId = nuevaCategoria.id_categoria_padre;
+                        
+                        if (padreId) {
+                            // Buscar la posición correcta después de las categorías del mismo padre
+                            const options = Array.from(selectCategoria.options);
+                            let lastSiblingIndex = -1;
+                            
+                            for (let i = 0; i < options.length; i++) {
+                                if (options[i].value == padreId) {
+                                    // Es el padre, continuar buscando después
+                                } else if (lastSiblingIndex === -1 && i > 0) {
+                                    // Verificar si este es hermano del mismo padre
+                                    const padreDeEsta = options[i].getAttribute('data-padre-id');
+                                    if (padreDeEsta == padreId) {
+                                        lastSiblingIndex = i;
+                                    }
+                                }
+                            }
+                            
+                            if (lastSiblingIndex !== -1) {
+                                // Insertar después del último hermano
+                                selectCategoria.insertBefore(option, options[lastSiblingIndex + 1] || null);
+                            } else {
+                                // No hay hermanos, buscar después del padre
+                                for (let i = 0; i < options.length; i++) {
+                                    if (options[i].value == padreId) {
+                                        selectCategoria.insertBefore(option, options[i + 1] || null);
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            // Es raíz, agregar al final de las raíces
+                            selectCategoria.appendChild(option);
+                        }
+                        
+                        // Si no se insertó en ninguna posición específica, agregar al final
+                        if (!inserted) {
+                            selectCategoria.appendChild(option);
+                        }
+                        
+                        // Seleccionar la nueva categoría
+                        selectCategoria.value = nuevaCategoria.id_categoria;
+                    }
+                    
+                    // Actualizar select de categoría padre en el formulario rápido
+                    const selectPadre = document.getElementById('id_categoria_padre_quick');
+                    if (selectPadre) {
+                        const option = document.createElement('option');
+                        option.value = nuevaCategoria.id_categoria;
+                        option.innerHTML = nuevaCategoria.display_name || nuevaCategoria.vNombre;
+                        
+                        // Insertar en orden jerárquico
+                        let inserted = false;
+                        const padreId = nuevaCategoria.id_categoria_padre;
+                        
+                        if (padreId) {
+                            const options = Array.from(selectPadre.options);
+                            for (let i = 0; i < options.length; i++) {
+                                if (options[i].value == padreId) {
+                                    // Insertar después del padre (al final de sus hijos)
+                                    let j = i + 1;
+                                    while (j < options.length && options[j].innerHTML.includes('↳')) {
+                                        j++;
+                                    }
+                                    selectPadre.insertBefore(option, options[j] || null);
+                                    inserted = true;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if (!inserted) {
+                            selectPadre.appendChild(option);
+                        }
+                    }
                     
                 } else {
                     let errorMessage = data.message || 'Error al crear la categoría';
@@ -2944,6 +3602,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // Inicializar contador
     document.getElementById('selected-images-count').textContent = '0 archivos';
     
     renderSelectedImages();

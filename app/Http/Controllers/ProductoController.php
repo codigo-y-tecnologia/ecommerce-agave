@@ -210,7 +210,7 @@ class ProductoController extends Controller
             'etiquetas_especiales' => 'nullable|array',
             'etiquetas_especiales.*' => 'in:nuevo,popular,oferta,destacado',
             
-            // CAMPOS DE DESCUENTO - CORREGIDOS (usando los nombres del formulario)
+            // CAMPOS DE DESCUENTO
             'bTiene_descuento' => 'nullable|in:0,1',
             'dPrecio_descuento' => [
                 'nullable',
@@ -774,7 +774,7 @@ class ProductoController extends Controller
             'etiquetas_especiales' => 'nullable|array',
             'etiquetas_especiales.*' => 'in:nuevo,popular,oferta,destacado',
             
-            // CAMPOS DE DESCUENTO - CORREGIDOS
+            // CAMPOS DE DESCUENTO
             'bTiene_descuento' => 'nullable|in:0,1',
             'dPrecio_descuento' => [
                 'nullable',
@@ -1014,8 +1014,8 @@ class ProductoController extends Controller
                     ->with('swal_error', true);
             }
 
-            // Eliminar imágenes seleccionadas
-            if ($request->has('imagenes_a_eliminar') && is_array($request->imagenes_a_eliminar)) {
+            // Eliminar imágenes seleccionadas SOLO si se especifica
+            if ($request->has('imagenes_a_eliminar') && is_array($request->imagenes_a_eliminar) && count($request->imagenes_a_eliminar) > 0) {
                 $producto->eliminarImagenesEspecificas($request->imagenes_a_eliminar);
             }
 
@@ -1072,8 +1072,8 @@ class ProductoController extends Controller
                 'dAlto_cm' => $producto->dAlto_cm,
             ]);
             
-            // Guardar nuevas imágenes
-            if ($request->hasFile('imagenes')) {
+            // Guardar nuevas imágenes SOLO si se subieron
+            if ($request->hasFile('imagenes') && count($request->file('imagenes')) > 0) {
                 $producto->guardarImagenes($request->file('imagenes'));
             }
 
@@ -1162,13 +1162,16 @@ class ProductoController extends Controller
                                 ]);
                             }
 
-                            // Actualizar imagen
+                            // Actualizar imagen SOLO si se sube una nueva
                             if ($request->hasFile("variaciones.{$key}.vImagen")) {
                                 $this->eliminarImagenVariacion($variacion);
                                 $this->guardarImagenVariacion($variacion, $request->file("variaciones.{$key}.vImagen"));
-                            } elseif (isset($variacionData['eliminar_imagen']) && $variacionData['eliminar_imagen'] == '1') {
+                            } 
+                            // Eliminar imagen SOLO si se marca explícitamente
+                            elseif (isset($variacionData['eliminar_imagen']) && $variacionData['eliminar_imagen'] == '1') {
                                 $this->eliminarImagenVariacion($variacion);
                             }
+                            // Si no hay archivo nuevo y no se marca para eliminar, conservar la imagen existente
                         }
                     } else {
                         // Crear nueva variación

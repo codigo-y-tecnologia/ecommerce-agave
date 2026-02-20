@@ -146,30 +146,43 @@ class CategoriaController extends Controller
             
             DB::commit();
 
+            // Cargar la relación padre para obtener información jerárquica
+            $categoria->load('padre');
+
+            // Determinar el nivel jerárquico y prefijo para mostrar
+            $nivel = 0;
+            $padreActual = $categoria->padre;
+            while ($padreActual) {
+                $nivel++;
+                $padreActual = $padreActual->padre;
+            }
+
+            // Construir el nombre con prefijo para mostrar en selects - CORREGIDO para mostrar flechas
+            $prefijo = '';
+            $icono = '';
+            
+            if ($nivel === 0) {
+                // Categoría raíz
+                $icono = '🏠 ';
+                $prefijo = '';
+            } else {
+                // Subcategoría - mostrar flechas según el nivel
+                for ($i = 0; $i < $nivel; $i++) {
+                    $prefijo .= '&nbsp;&nbsp;&nbsp;';
+                }
+                $icono = '↳ ';
+            }
+
+            $categoria->display_name = $prefijo . $icono . $categoria->vNombre;
+            $categoria->nivel = $nivel;
+            $categoria->icono = $icono;
+            $categoria->prefijo = $prefijo;
+
             // Verificar si es una petición AJAX
             if ($request->ajax() || $request->wantsJson()) {
-                // Obtener la categoría con su padre para determinar el nivel jerárquico
-                $categoria->load('padre');
-                
-                // Calcular el nivel jerárquico para el prefijo
-                $nivel = 0;
-                $padreActual = $categoria->padre;
-                while ($padreActual) {
-                    $nivel++;
-                    $padreActual = $padreActual->padre;
-                }
-                
-                // Construir el prefijo según el nivel
-                $prefijo = '';
-                for ($i = 0; $i < $nivel; $i++) {
-                    $prefijo .= '↳ ';
-                }
-                
                 return response()->json([
                     'success' => true,
                     'categoria' => $categoria,
-                    'nivel' => $nivel,
-                    'prefijo' => $prefijo,
                     'message' => 'Categoría creada exitosamente'
                 ]);
             }
@@ -267,9 +280,9 @@ class CategoriaController extends Controller
             $categoria->iOrden = $request->iOrden;
             $categoria->bActivo = $request->has('bActivo') ? 1 : 0;
 
-            // Manejo de imagen - IMPORTANTE: Solo eliminar si se sube una nueva o se marca para eliminar
+            // Manejo de imagen - CORREGIDO: Solo eliminar si se sube una nueva o se marca para eliminar
             if ($request->hasFile('vImagen') && $request->file('vImagen')->isValid()) {
-                // Eliminar imagen anterior si existe
+                // Eliminar imagen anterior si existe (solo cuando se sube una nueva)
                 if ($categoria->vImagen) {
                     $rutaImagen = public_path('storage/categorias/' . $categoria->vImagen);
                     if (file_exists($rutaImagen)) {
@@ -295,8 +308,8 @@ class CategoriaController extends Controller
                 // Asignar nombre de imagen a la categoría
                 $categoria->vImagen = $nombreImagen;
             } 
-            // Solo eliminar si se marca explícitamente para eliminar
             elseif ($request->has('eliminar_imagen') && $request->eliminar_imagen == '1') {
+                // Solo eliminar si se marca explícitamente la casilla de eliminar
                 if ($categoria->vImagen) {
                     $rutaImagen = public_path('storage/categorias/' . $categoria->vImagen);
                     if (file_exists($rutaImagen)) {
@@ -305,8 +318,7 @@ class CategoriaController extends Controller
                 }
                 $categoria->vImagen = null;
             }
-            // Si no hay archivo nuevo y no se marca para eliminar, conservar la imagen existente
-            // No se hace nada, se mantiene $categoria->vImagen con su valor actual
+            // Si no hay archivo y no se marca eliminar, mantener la imagen actual (no hacer nada)
 
             $categoria->save();
             
