@@ -16,7 +16,7 @@
     <p class="title">Nuevo Pedido Recibido</p>
 
     <p><strong>ID del pedido:</strong> #{{ $pedido->id_pedido }}</p>
-    <p><strong>Cliente:</strong> {{ $pedido->usuario->vNombre }} {{ $pedido->usuario->vApaterno }}</p>
+    <p><strong>Cliente:</strong> {{ $pedido->vNombre }} {{ $pedido->vApaterno }} {{ $pedido->vAmaterno }}</p>
     <p><strong>Total:</strong> ${{ number_format($pedido->dTotal, 2) }}</p>
 
     <h3>Productos:</h3>

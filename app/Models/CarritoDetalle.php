@@ -12,6 +12,8 @@ class CarritoDetalle extends Model
 
     protected $fillable = ['id_carrito', 'id_producto', 'iCantidad', 'dPrecio_unitario'];
 
+    // CLAVE
+    protected $touches = ['carrito'];
 
     /**
      * Relación con el carrito al que pertenece el detalle.

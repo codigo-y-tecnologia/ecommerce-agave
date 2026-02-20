@@ -10,18 +10,28 @@ use Exception;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use App\Helpers\CarritoHelper;
+use App\Services\Stock\{ReservarStockService, ConsumirReservaService, LiberarReservaPorCarritoService, LiberarReservaService};
+use App\Exceptions\StockException;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 use App\Models\{
+    Usuario,
     Carrito,
     Pedido,
     PedidoDetalle,
     Direccion,
+    DireccionGuest,
     Cupon,
     CuponUso,
     Pago,
     Venta,
     DetalleVenta,
-    Envio
+    Envio,
+    Producto,
+    StockReserva,
+    Setting
 };
 
 use Stripe\Stripe;
@@ -32,7 +42,7 @@ use Stripe\PaymentIntent;
 // PayPal (we will use Guzzle)
 use GuzzleHttp\Client;
 
-class PaymentController extends Controller 
+class PaymentController extends Controller
 
 {
 
@@ -40,65 +50,429 @@ class PaymentController extends Controller
      * Crea una Stripe Checkout Session y devuelve la URL (cliente redirige).
      */
 
-public function createStripeSession(Request $request)
-{
-    try {
-        $user = Auth::user();
+    public function createStripeSession(Request $request)
+    {
+        try {
+            $user = Auth::user();
 
-        // VALIDAR DIRECCION
-        if (!$request->id_direccion) {
+            // VALIDAR DIRECCION
+            if (!$request->id_direccion) {
                 return response()->json([
                     'success' => false,
+                    'type' => 'validation',
                     'message' => 'Debes seleccionar una dirección de envío.'
                 ], 400);
             }
 
+            // VALIDAR EMAIL (INVITADO)
+            if (!$user) {
+                if (!$request->email_invitado) {
+                    return response()->json([
+                        'success' => false,
+                        'type' => 'validation',
+                        'message' => 'Debes ingresar un correo para continuar.'
+                    ], 400);
+                }
+            }
+
             // VALIDAR DIRECCIÓN DE FACTURACIÓN según checkbox
             $usarMisma = $request->has('misma_direccion_facturacion') && $request->misma_direccion_facturacion == 'on';
+
             if (!$usarMisma) {
+
                 if (!$request->id_direccion_facturacion) {
                     return response()->json([
                         'success' => false,
+                        'type' => 'validation',
                         'message' => 'Debes seleccionar una dirección de facturación.'
                     ], 400);
                 }
             }
 
-        // Guardar en sesión
-        session([
-            'id_direccion' => $request->id_direccion,
-            'id_direccion_facturacion' => $usarMisma
+            $this->releaseReservation();
+
+            // Cargar carrito (usuario invitado y logueado)
+            $carrito = CarritoHelper::carritoCheckout();
+
+            if (!$carrito || $carrito->detalles->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'type' => 'validation',
+                    'message' => 'Carrito vacío.'
+                ], 400);
+            }
+
+            if ($carrito->eEstado === 'reservado') {
+                return response()->json([
+                    'success' => false,
+                    'type' => 'business',
+                    'message' => 'Ya hay un pago en proceso para este carrito.'
+                ], 409);
+            }
+
+            // Guardar en sesión
+            session([
+                'id_direccion' => $request->id_direccion,
+                'email_invitado' => $request->email_invitado ?? null,
+                'id_direccion_facturacion' => $usarMisma
                     ? $request->id_direccion
                     : $request->id_direccion_facturacion,
-            'nota_pedido' => $request->nota ?? null
-        ]);
+                'nota_pedido' => $request->nota ?? null,
+                'stripe_checkout_in_progress' => true,
+                'stripe_carrito_id' => $carrito->id_carrito,
+            ]);
 
-        // Cargar carrito
-        $carrito = Carrito::where('id_usuario', $user->id_usuario)
-            ->where('eEstado', 'activo')
-            ->with(['detalles.producto.impuestos'])
-            ->first();
+            // Calcular totales
+            [$subtotal, $totalImpuestos, $total] =
+                (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
 
-        if (!$carrito || $carrito->detalles->isEmpty()) {
+            // Cupón
+            $codigoCupon = session('codigo_cupon');
+            $descuento = 0;
+            $cupon = null;
+
+            if ($codigoCupon) {
+                $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])
+                    ->where('bActivo', 1)
+                    ->whereDate('dValido_desde', '<=', now())
+                    ->whereDate('dValido_hasta', '>=', now())
+                    ->first();
+
+                if ($cupon && $cupon->vCodigo_cupon !== 'ENVIOGRATIS') {
+                    if ($cupon->eTipo === 'porcentaje') {
+                        $descuento = $total * ($cupon->dDescuento / 100);
+                    } else {
+                        $descuento = $cupon->dDescuento;
+                    }
+                }
+            }
+
+            // Envío
+            $montoEnvioGratis = 1500;
+            $costoEnvioFijo = 150;
+
+            $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
+
+            if ($cupon && $cupon->vCodigo_cupon === 'ENVIOGRATIS') {
+                $envio = 0;
+            }
+
+            if ($cupon && $cupon->vCodigo_cupon === 'enviogratis') {
+                $envio = 0;
+            }
+
+            $totalFinal = max(0, $total - $descuento + $envio);
+
+            // Stripe
+            Stripe::setApiKey(env('STRIPE_SECRET'));
+
+            $amountCents = (int) round($totalFinal * 100);
+
+            // Metadata COMPLETA
+            $metadata = [
+                'user_id' => Auth::check() ? Auth::id() : null,
+                'guest_token'  => session('guest_token'),
+                'carrito_id' => $carrito->id_carrito,
+                'id_direccion' => $request->id_direccion,
+                'email_invitado' => session('email_invitado') ?? null,
+                'id_direccion_facturacion' => session('id_direccion_facturacion'),
+                'nota_pedido' => session('nota_pedido') ?? '',
+                'codigo_cupon' => $codigoCupon ?? ''
+            ];
+
+            // Crear sesión Stripe
+            $session = StripeSession::create([
+                'mode' => 'payment',
+                'line_items' => [[
+                    'price_data' => [
+                        'currency' => 'mxn',
+                        'product_data' => [
+                            'name' => 'Compra en ' . config('app.name', 'Tienda'),
+                        ],
+                        'unit_amount' => $amountCents,
+                        'tax_behavior' => 'inclusive',
+                    ],
+                    'quantity' => 1,
+                ]],
+                'metadata' => $metadata,
+                'success_url' => route('checkout.success') . '?session_id={CHECKOUT_SESSION_ID}',
+                'cancel_url' => route('checkout.cancel') . '?paid=0',
+            ]);
+
+            DB::transaction(function () use ($carrito, $session) {
+
+                // Reservar stock (lock + validación)
+                app(ReservarStockService::class)->ejecutar($carrito);
+
+                // Asociar session_id a TODAS las reservas del carrito
+                StockReserva::where('id_carrito', $carrito->id_carrito)
+                    ->whereNull('session_id')
+                    ->update([
+                        'session_id' => $session->id
+                    ]);
+            });
+
+            return response()->json([
+                'success' => true,
+                'url' => $session->url,
+                'id' => $session->id
+            ]);
+        } catch (StockException $e) {
+
+            if (isset($carrito)) {
+                $carrito->update([
+                    'eEstado' => 'activo'
+                ]);
+            }
+
+            Log::error("🔥 Stripe error", [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return response()->json([
                 'success' => false,
+                'type' => 'stock',
+                'message' => $e->getMessage()
+            ], 409);
+        } catch (\Throwable $e) {
+
+            if (isset($carrito)) {
+                $carrito->update([
+                    'eEstado' => 'activo'
+                ]);
+            }
+
+            Log::error("🔥 Stripe error", [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'type' => 'system',
+                'message' => 'Ocurrió un error al procesar el pago. Intenta nuevamente.'
+            ], 500);
+        }
+    }
+    /**
+     * Maneja el webhook de Stripe para pagos completados.
+     */
+    public function stripeWebhook(Request $request)
+    {
+        Log::info('Webhook de Stripe recibido', [
+            'type' => $request->getContent() ? 'has content' : 'empty',
+            'headers' => $request->headers->all()
+        ]);
+
+        $payload = $request->getContent();
+        $sigHeader = $request->header('Stripe-Signature');
+        $webhookSecret = env('STRIPE_WEBHOOK_SECRET');
+
+        Log::info('Webhook details', [
+            'payload_length' => strlen($payload),
+            'sig_header' => $sigHeader ? 'present' : 'missing',
+            'webhook_secret' => $webhookSecret ? 'set' : 'not set'
+        ]);
+
+        try {
+            $event = \Stripe\Webhook::constructEvent(
+                $payload,
+                $sigHeader,
+                $webhookSecret
+            );
+
+            Log::info('Evento de Stripe verificado', ['type' => $event->type]);
+
+            if ($event->type === 'checkout.session.completed') {
+
+                $session = $event->data->object;
+                $metadata = $session->metadata ?? null;
+
+                Log::info('checkout.session.completed', [
+                    'session_id' => $session->id,
+                    'metadata' => $metadata
+                ]);
+
+                if ($session->payment_status === 'paid') {
+
+                    // $reference = $session->id;
+                    $reference = $session->payment_intent;
+
+                    // 🔒 PROTECCIÓN IDEMPOTENTE (EVENTOS DUPLICADOS)
+                    if (Pago::where('vReferencia', $reference)->exists()) {
+                        Log::warning('⚠️ Pago Stripe ya procesado. Evento duplicado ignorado.', [
+                            'payment_intent' => $reference,
+                            'session_id' => $session->id,
+                        ]);
+
+                        // Stripe espera 200 OK
+                        return response()->json(['status' => 'already_processed'], 200);
+                    }
+
+                    DB::transaction(function () use ($session, $metadata, $reference) {
+
+                        $userId = $metadata->user_id ?? null;
+                        $guestToken = $metadata->guest_token ?? null;
+                        $emailGuest = $metadata->email_invitado ?? null;
+                        $carritoId = $metadata->carrito_id ?? null;
+                        $codigoCupon = $metadata->codigo_cupon ?? null;
+                        $idDireccion = $metadata->id_direccion ?? null;
+                        $idDireccionFact = $metadata->id_direccion_facturacion ?? $idDireccion;
+                        $notaPedido = $metadata->nota_pedido ?? null;
+
+                        Log::info('Referencia a guardar: ' . $reference);
+
+                        // buscamos carrito
+                        if ($carritoId) {
+
+                            $carrito = Carrito::where('id_carrito', $carritoId)->first();
+
+                            if (!$carrito) {
+                                throw new Exception("Carrito no encontrado para finalizar pedido (Stripe webhook).");
+                            }
+                        } else {
+                            Log::warning('No se encontró carrito_id en metadata de Stripe.');
+
+                            throw new \Exception('Carrito no encontrado');
+                        }
+
+                        // Consumir reserva (validación + stock real)
+                        app(ConsumirReservaService::class)
+                            ->ejecutar($session->id);
+
+                        $this->finalizeOrderFromCart(
+                            $userId,
+                            $guestToken,
+                            $emailGuest,
+                            $carritoId,
+                            'stripe',
+                            $reference,
+                            $codigoCupon,
+                            $idDireccion,
+                            $idDireccionFact,
+                            $notaPedido,
+                            $session->id
+                        );
+
+                        Log::info('Pedido finalizado exitosamente');
+                    });
+                } else {
+                    Log::warning('La sesión no está pagada', [
+                        'session_id' => $session->id,
+                        'payment_status' => $session->payment_status
+                    ]);
+                }
+            }
+
+            return response()->json(['received' => true]);
+        } catch (\UnexpectedValueException $e) {
+            Log::error('Invalid payload en webhook', ['error' => $e->getMessage()]);
+            return response('Invalid payload', 400);
+        } catch (\Stripe\Exception\SignatureVerificationException $e) {
+            Log::error('Invalid signature en webhook', ['error' => $e->getMessage()]);
+            return response('Invalid signature', 400);
+        } catch (\Exception $e) {
+            Log::error('Error en webhook Stripe', [
+                'error' => $e->getMessage(),
+                'payment_intent' => $reference ?? null,
+            ]);
+
+            return response()->json(['error' => 'internal_error'], 500);
+        }
+    }
+
+    /** Valida los datos del formulario de PayPal antes de crear la orden */
+    public function validatePaypal(Request $request)
+    {
+        $user = Auth::user();
+
+        // VALIDAR DIRECCION
+        if (!$request->id_direccion) {
+            return response()->json([
+                'success' => false,
+                'type' => 'validation',
+                'message' => 'Debes seleccionar una dirección de envío.'
+            ], 400);
+        }
+
+        // VALIDAR EMAIL (INVITADO)
+        if (!$user) {
+            if (!$request->email_invitado) {
+                return response()->json([
+                    'success' => false,
+                    'type' => 'validation',
+                    'message' => 'Debes ingresar un correo para continuar.'
+                ], 400);
+            }
+        }
+
+        // VALIDAR DIRECCIÓN DE FACTURACIÓN
+        if (
+            !$request->usar_misma_direccion &&
+            !$request->id_direccion_facturacion
+        ) {
+            return response()->json([
+                'success' => false,
+                'type' => 'validation',
+                'message' => 'Debes seleccionar una dirección de facturación.'
+            ], 400);
+        }
+
+        $this->releaseReservation();
+
+        // Cargar carrito (usuario invitado y logueado)
+        $carrito = CarritoHelper::carritoCheckout();
+
+        if (!$carrito || $carrito->detalles->isEmpty()) {
+
+            return response()->json([
+                'success' => false,
+                'type' => 'validation',
                 'message' => 'Carrito vacío.'
             ], 400);
         }
 
-        // VALIDAR STOCK ANTES DE CREAR SESIÓN STRIPE
-        try {
-            $this->validateCartStock($carrito);
-        } catch (\Exception $e) {
+        if ($carrito->eEstado === 'reservado') {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
-            ], 400);
+                'type' => 'business',
+                'message' => 'Ya hay un pago en proceso para este carrito.'
+            ], 409);
         }
 
-        // Calcular totales
-        [$subtotal, $totalImpuestos, $total] =
-            (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Crea una orden PayPal (server side) y devuelve id (cliente usa approve).
+     */
+    public function createPaypalOrder(Request $request)
+    {
+
+        // DIRECCIÓN DE FACTURACIÓN
+        $usarMisma = $request->has('misma_direccion_facturacion') && $request->misma_direccion_facturacion == 'on';
+
+        // Cargar carrito (usuario invitado y logueado)
+        $carrito = CarritoHelper::carritoCheckout();
+
+        // Guardar en sesión
+        session([
+            'paypal_context' => [
+                'id_direccion' => $request->id_direccion,
+                'email_invitado' => $request->email_invitado ?? null,
+                'id_direccion_facturacion' => $usarMisma
+                    ? $request->id_direccion
+                    : $request->id_direccion_facturacion,
+                'nota_pedido' => $request->nota ?? null,
+                'guest_token' => session('guest_token'),
+                'user_id' => Auth::id(),
+                'paypal_carrito_id' => $carrito->id_carrito,
+            ]
+        ]);
+
+        // Recalcular totales (misma lógica)
+        [$subtotal, $totalImpuestos, $total] = (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
 
         // Cupón
         $codigoCupon = session('codigo_cupon');
@@ -106,16 +480,13 @@ public function createStripeSession(Request $request)
         $cupon = null;
 
         if ($codigoCupon) {
-            $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])
-                ->where('bActivo', 1)
+            $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])->where('bActivo', 1)
+                ->whereDate('dValido_desde', '<=', now())
+                ->whereDate('dValido_hasta', '>=', now())
                 ->first();
 
             if ($cupon && $cupon->vCodigo_cupon !== 'ENVIOGRATIS') {
-                if ($cupon->eTipo === 'porcentaje') {
-                    $descuento = $total * ($cupon->dDescuento / 100);
-                } else {
-                    $descuento = $cupon->dDescuento;
-                }
+                $descuento = ($cupon->eTipo === 'porcentaje') ? $total * ($cupon->dDescuento / 100) : $cupon->dDescuento;
             }
         }
 
@@ -132,254 +503,6 @@ public function createStripeSession(Request $request)
         if ($cupon && $cupon->vCodigo_cupon === 'enviogratis') {
             $envio = 0;
         }
-
-        $totalFinal = max(0, $total - $descuento + $envio);
-
-        // Stripe
-        Stripe::setApiKey(env('STRIPE_SECRET'));
-
-        $amountCents = (int) round($totalFinal * 100);
-
-        // Metadata COMPLETA
-        $metadata = [
-            'user_id' => $user->id_usuario,
-            'carrito_id' => $carrito->id_carrito,
-            'id_direccion' => $request->id_direccion,
-            'id_direccion_facturacion' => session('id_direccion_facturacion'),
-            'nota_pedido' => session('nota_pedido') ?? '',
-            'codigo_cupon' => $codigoCupon ?? ''
-        ];
-
-        // Crear sesión Stripe
-        $session = StripeSession::create([
-            'mode' => 'payment',
-            'line_items' => [[
-                'price_data' => [
-                    'currency' => 'mxn',
-                    'product_data' => [
-                        'name' => 'Compra en ' . config('app.name', 'Tienda'),
-                    ],
-                    'unit_amount' => $amountCents,
-                    'tax_behavior' => 'inclusive',
-                ],
-                'quantity' => 1,
-            ]],
-            'metadata' => $metadata,
-            'success_url' => route('checkout.success') . '?session_id={CHECKOUT_SESSION_ID}',
-            'cancel_url' => route('checkout.index') . '?paid=0',
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'url' => $session->url,
-            'id' => $session->id
-        ]);
-
-    } catch (\Throwable $e) {
-        Log::error("🔥 Stripe error: " . $e->getMessage());
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Error al crear la sesión de pago.'
-        ], 500);
-    }
-}
-    /**
-     * Maneja el webhook de Stripe para pagos completados.
-     */
-public function stripeWebhook(Request $request)
-{
-    Log::info('Webhook de Stripe recibido', [
-        'type' => $request->getContent() ? 'has content' : 'empty',
-        'headers' => $request->headers->all()
-    ]);
-
-    $payload = $request->getContent();
-    $sigHeader = $request->header('Stripe-Signature');
-    $webhookSecret = env('STRIPE_WEBHOOK_SECRET');
-
-    Log::info('Webhook details', [
-        'payload_length' => strlen($payload),
-        'sig_header' => $sigHeader ? 'present' : 'missing',
-        'webhook_secret' => $webhookSecret ? 'set' : 'not set'
-    ]);
-
-    try {
-        $event = \Stripe\Webhook::constructEvent(
-            $payload,
-            $sigHeader,
-            $webhookSecret
-        );
-
-        Log::info('Evento de Stripe verificado', ['type' => $event->type]);
-
-        if ($event->type === 'checkout.session.completed') {
-
-            $session = $event->data->object;
-            $metadata = $session->metadata ?? null;
-
-            Log::info('checkout.session.completed', [
-                'session_id' => $session->id,
-                'metadata' => $metadata
-            ]);
-
-            if ($session->payment_status === 'paid') {
-
-                // $reference = $session->id;
-                $reference = $session->payment_intent;
-
-                // 🔒 PROTECCIÓN IDEMPOTENTE (EVENTOS DUPLICADOS)
-                if (Pago::where('vReferencia', $reference)->exists()) {
-                    Log::warning('⚠️ Pago Stripe ya procesado. Evento duplicado ignorado.', [
-                        'payment_intent' => $reference,
-                        'session_id' => $session->id,
-                    ]);
-
-                    // Stripe espera 200 OK
-                    return response()->json(['status' => 'already_processed'], 200);
-                }
-
-                DB::transaction(function () use ($session, $metadata, $reference) {
-                    $userId = $metadata->user_id ?? null;
-                    $carritoId = $metadata->carrito_id ?? null;
-                    $codigoCupon = $metadata->codigo_cupon ?? null;
-                    $idDireccion = $metadata->id_direccion ?? null;
-                    $idDireccionFact = $metadata->id_direccion_facturacion ?? $idDireccion;
-                    $notaPedido = $metadata->nota_pedido ?? null;
-
-                    Log::info('Referencia a guardar: ' . $reference);
-
-                    // Re-validate stock using carrito id from metadata BEFORE finalizing
-                        if ($carritoId) {
-                            $carrito = Carrito::where('id_carrito', $carritoId)
-                                ->where('eEstado', 'activo')
-                                ->with(['detalles.producto.impuestos'])
-                                ->first();
-
-                            if (!$carrito) {
-                                throw new Exception("Carrito no encontrado para finalizar pedido (Stripe webhook).");
-                            }
-
-                            // Validate stock and abort transaction if not valid
-                            $this->validateCartStock($carrito);
-                        } else {
-                            Log::warning('No se encontró carrito_id en metadata de Stripe.');
-                        }
-
-                    $this->finalizeOrderFromCart(
-                        $userId,
-                        $carritoId,
-                        'stripe',
-                        $reference,
-                        $codigoCupon,
-                        $idDireccion,
-                        $idDireccionFact,
-                        $notaPedido,
-                        $session->id
-                    );
-
-                    Log::info('Pedido finalizado exitosamente');
-                });
-
-            } else {
-                Log::warning('La sesión no está pagada', [
-                    'session_id' => $session->id,
-                    'payment_status' => $session->payment_status
-                ]);
-            }
-        }
-
-        return response()->json(['received' => true]);
-
-    } catch (\UnexpectedValueException $e) {
-        Log::error('Invalid payload en webhook', ['error' => $e->getMessage()]);
-        return response('Invalid payload', 400);
-
-    } catch (\Stripe\Exception\SignatureVerificationException $e) {
-        Log::error('Invalid signature en webhook', ['error' => $e->getMessage()]);
-        return response('Invalid signature', 400);
-
-    } catch (\Exception $e) {
-        Log::error('Error general en webhook', ['error' => $e->getMessage()]);
-        return response('Error', 500);
-    }
-}
-
-    /**
-     * Crea una orden PayPal (server side) y devuelve id (cliente usa approve).
-     */
-    public function createPaypalOrder(Request $request)
-    {
-        $user = Auth::user();
-
-        // VALIDAR DIRECCION
-        if (!$request->id_direccion) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Debes seleccionar una dirección.'
-            ], 400);
-        }
-
-        // VALIDAR DIRECCIÓN DE FACTURACIÓN
-        $usarMisma = $request->has('misma_direccion_facturacion') && $request->misma_direccion_facturacion == 'on';
-        if (!$usarMisma) {
-            if (!$request->id_direccion_facturacion) {
-                return response()->json(['success' => false, 'message' => 'Debes seleccionar una dirección de facturación.'], 400);
-            }
-        }
-
-        $carrito = Carrito::where('id_usuario', $user->id_usuario)
-            ->where('eEstado', 'activo')
-            ->with(['detalles.producto.impuestos'])
-            ->first();
-
-
-        if (!$carrito || $carrito->detalles->isEmpty()) {
-            return response()->json(['success' => false, 'message' => 'Carrito vacío.'], 400);
-        }
-
-        // VALIDAR STOCK ANTES DE CREAR ORDEN PAYPAL
-        try {
-            $this->validateCartStock($carrito);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 400);
-        }
-
-        // Guardar en sesión
-        session([
-            'id_direccion' => $request->id_direccion,
-            'id_direccion_facturacion' => $usarMisma
-                ? $request->id_direccion
-                : $request->id_direccion_facturacion,
-            'nota_pedido' => $request->nota ?? null
-        ]);
-
-        // Recalcular totales (misma lógica)
-        [$subtotal, $totalImpuestos, $total] = (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
-
-        $codigoCupon = session('codigo_cupon');
-        $descuento = 0;
-        $cupon = null;
-
-        if ($codigoCupon) {
-            $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])->where('bActivo',1)
-                ->whereDate('dValido_desde','<=', now())
-                ->whereDate('dValido_hasta','>=', now())
-                ->first();
-
-            if ($cupon && $cupon->vCodigo_cupon !== 'ENVIOGRATIS') {
-                $descuento = ($cupon->eTipo === 'porcentaje') ? $total * ($cupon->dDescuento / 100) : $cupon->dDescuento;
-            }
-        }
-
-        $montoEnvioGratis = 1500;
-        $costoEnvioFijo = 150;
-        $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
-
-        if ($cupon && $cupon->vCodigo_cupon === 'ENVIOGRATIS') $envio = 0;
 
         $totalFinal = max(0, $total - $descuento + $envio);
 
@@ -424,10 +547,61 @@ public function stripeWebhook(Request $request)
 
             $order = json_decode((string) $orderResp->getBody(), true);
 
-            return response()->json(['success' => true, 'orderID' => $order['id']]);
+            $orderId = $order['id'];
+
+            DB::transaction(function () use ($carrito, $orderId) {
+
+                // Reservar stock (lock + validación)
+                app(ReservarStockService::class)->ejecutar($carrito);
+
+                // Asociar session_id a TODAS las reservas del carrito
+                StockReserva::where('id_carrito', $carrito->id_carrito)
+                    ->whereNull('session_id')
+                    ->update([
+                        'session_id' => $orderId
+                    ]);
+            });
+
+            return response()->json([
+                'success' => true,
+                'orderID' => $orderId
+            ]);
+        } catch (StockException $e) {
+
+            if (isset($carrito)) {
+                $carrito->update([
+                    'eEstado' => 'activo'
+                ]);
+            }
+
+            Log::error("🔥 PayPal error", [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'type' => 'stock',
+                'message' => $e->getMessage()
+            ], 409);
         } catch (\Throwable $e) {
-            Log::error('PayPal create order: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Error al crear orden PayPal'], 500);
+
+            if (isset($carrito)) {
+                $carrito->update([
+                    'eEstado' => 'activo'
+                ]);
+            }
+
+            Log::error("🔥 Paypal error", [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'type' => 'system',
+                'message' => 'Ocurrió un error al procesar el pago. Intenta nuevamente.'
+            ], 500);
         }
     }
 
@@ -438,10 +612,26 @@ public function stripeWebhook(Request $request)
     public function capturePaypalOrder(Request $request)
     {
         $orderId = $request->orderID;
-        $user = Auth::user();
+
+        Log::info('Capturando orden PayPal', [
+            'order_id' => $orderId,
+        ]);
+
+        $context = session('paypal_context');
+
+        $idDireccion = $context['id_direccion'] ?? null;
+        $idDireccionFact = $context['id_direccion_facturacion'] ?? null;
+        $userId = $context['user_id'] ?? null;
+        $guestToken = $context['guest_token'] ?? null;
+        $emailGuest = $context['email_invitado'] ?? null;
+        $carritoId = $context['paypal_carrito_id'] ?? null;
+        $notaPedido = $context['nota_pedido'] ?? null;
 
         if (!$orderId) {
-            return response()->json(['success' => false, 'message' => 'orderID requerido'], 400);
+            return response()->json([
+                'success' => false,
+                'message' => 'orderID requerido'
+            ], 400);
         }
 
         $client = new Client();
@@ -468,324 +658,525 @@ public function stripeWebhook(Request $request)
 
             $capData = json_decode((string) $capResp->getBody(), true);
 
-            // Aquí puedes obtener detalles como captura id y status
+            // Aquí se pueden obtener detalles como captura id y status
             $status = $capData['status'] ?? null;
             $captureId = $capData['purchase_units'][0]['payments']['captures'][0]['id'] ?? null;
             $amount = $capData['purchase_units'][0]['payments']['captures'][0]['amount']['value'] ?? null;
 
             /**
-         * ============================
-         * VALIDAR ESTADO COMPLETED
-         * ============================
-         */
-        if ($status !== 'COMPLETED') {
+             * ============================
+             * VALIDAR ESTADO COMPLETED
+             * ============================
+             */
+            if ($status !== 'COMPLETED') {
 
-            Log::warning('❌ Pago PayPal NO completado', [
-                'order_id' => $orderId,
-                'status' => $status,
-                'response' => $capData
-            ]);
+                Log::warning('❌ Pago PayPal NO completado', [
+                    'order_id' => $orderId,
+                    'status' => $status,
+                    'response' => $capData
+                ]);
 
-            return response()->json([
-                'success' => false,
-                'message' => 'El pago con PayPal no se completó correctamente.'
-            ], 402);
-        }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El pago con PayPal no se completó correctamente.'
+                ], 402);
+            }
 
-        /**
-         * ============================
-         * IDEMPOTENCIA (NO DUPLICAR)
-         * ============================
-         */
-        if (Pago::where('vReferencia', $captureId)->exists()) {
+            /**
+             * ============================
+             * IDEMPOTENCIA (NO DUPLICAR)
+             * ============================
+             */
+            if (Pago::where('vReferencia', $captureId)->exists()) {
 
-            Log::warning('⚠️ Pago PayPal duplicado ignorado', [
-                'capture_id' => $captureId,
-                'order_id' => $orderId
-            ]);
+                Log::warning('⚠️ Pago PayPal duplicado ignorado', [
+                    'capture_id' => $captureId,
+                    'order_id' => $orderId
+                ]);
 
-            return response()->json([
-                'success' => true,
-                'status' => 'already_processed'
-            ], 200);
-        }
+                return response()->json([
+                    'success' => true,
+                    'status' => 'already_processed'
+                ], 200);
+            }
 
             // Finalizar pedido localmente (crear Pedido, Venta, Pago, etc.)
-            DB::transaction(function () use ($user, $orderId, $captureId) {
-               
-                // buscamos carrito id por user
-                $carrito = Carrito::where('id_usuario', $user->id_usuario)
-                    ->where('eEstado', 'activo')
-                    ->with(['detalles.producto.impuestos'])
-                    ->firstOrFail();
+            DB::transaction(function () use ($userId, $guestToken, $emailGuest, $carritoId, $idDireccion, $idDireccionFact, $notaPedido, $orderId, $captureId) {
 
-                // VALIDAR STOCK ANTES DE FINALIZAR ORDEN
-                $this->validateCartStock($carrito);
+                Log::info('Finalizando pedido desde carrito PayPal', [
+                    'order_id' => $orderId,
+                ]);
 
-                // Obtener id_direccion de la sesión
-                $idDireccion = session('id_direccion');
-                $idDireccionFact = session('id_direccion_facturacion');
-                $notaPedido = session('nota_pedido') ?? null;
+                // buscamos carrito 
+                if ($carritoId) {
 
-                $this->finalizeOrderFromCart($user->id_usuario, $carrito->id_carrito, 'paypal', $captureId, session('codigo_cupon') ?? null, $idDireccion, $idDireccionFact, $notaPedido, null);
+                    $carrito = Carrito::where('id_carrito', $carritoId)->first();
+
+                    if (!$carrito) {
+                        throw new Exception("Carrito no encontrado para finalizar pedido (PayPal capturePaypalOrder).");
+                    }
+                } else {
+                    Log::warning('No se encontró carrito_id en sesión para captura PayPal.');
+
+                    throw new \Exception('Carrito no encontrado');
+                }
+
+                // Consumir reserva (validación + stock real)
+                app(ConsumirReservaService::class)
+                    ->ejecutar($orderId);
+
+                $this->finalizeOrderFromCart(
+                    $userId,
+                    $guestToken,
+                    $emailGuest,
+                    $carritoId,
+                    'paypal',
+                    $captureId,
+                    session('codigo_cupon') ?? null,
+                    $idDireccion,
+                    $idDireccionFact,
+                    $notaPedido,
+                    null
+                );
             });
 
             // OBTENER EL ID DEL PEDIDO RECIÉN CREADO
-    $pedido = Pedido::where('id_usuario', $user->id_usuario)
-        ->latest('id_pedido')
-        ->first();
+            $pago = Pago::where('vReferencia', $captureId)->firstOrFail();
+            $pedido = Pedido::findOrFail($pago->id_pedido);
 
-        // Generar la URL de redirección
-    $redirectUrl = route('order.received', $pedido->id_pedido);
+            // Generar la URL de redirección
+            $redirectUrl = route('order.received', $pedido->id_pedido);
 
-        return response()->json([
-        'success' => true,
-        'capture' => $captureId,
-        'status' => $status,
-        'amount' => $amount,
-        'pedido_id' => $pedido->id_pedido,
-        'redirect_url' => $redirectUrl
-    ]);
-
+            return response()->json([
+                'success' => true,
+                'capture' => $captureId,
+                'status' => $status,
+                'amount' => $amount,
+                'pedido_id' => $pedido->id_pedido,
+                'redirect_url' => $redirectUrl
+            ]);
         } catch (\Throwable $e) {
 
             Log::error('🔥 PayPal capture error', [
-            'order_id' => $orderId,
-            'error' => $e->getMessage()
-        ]);
+                'order_id' => $orderId,
+                'error' => $e->getMessage()
+            ]);
 
             return response()->json(['success' => false, 'message' => 'Error capturando orden PayPal.'], 500);
         }
     }
 
-    private function finalizeOrderFromCart($userId, $carritoId, $method, $reference, $codigoCupon = null, $idDireccion = null, $idDireccionFact = null, $notaPedido = null, $sessionId = null)
-{
-    Log::info('Iniciando finalizeOrderFromCart', [
-        'userId' => $userId,
-        'carritoId' => $carritoId,
-        'method' => $method,
-        'reference' => $reference,
-        'codigoCupon' => $codigoCupon,
-        'idDireccion' => $idDireccion,
-        'notaPedido' => $notaPedido,
-        'sessionId' => $sessionId
-    ]);
+    private function finalizeOrderFromCart($userId, $guestToken, $emailGuest, $carritoId, $method, $reference, $codigoCupon = null, $idDireccion = null, $idDireccionFact = null, $notaPedido = null, $sessionId = null)
+    {
+        Log::info('Iniciando finalizeOrderFromCart', [
+            'userId' => $userId,
+            'guestToken' => $guestToken,
+            'emailGuest' => $emailGuest,
+            'carritoId' => $carritoId,
+            'method' => $method,
+            'reference' => $reference,
+            'codigoCupon' => $codigoCupon,
+            'idDireccion' => $idDireccion,
+            'idDireccionFacturacion' => $idDireccionFact,
+            'notaPedido' => $notaPedido,
+            'sessionId' => $sessionId
+        ]);
 
-    // Buscar usuario y carrito
-    $carrito = Carrito::where('id_carrito', $carritoId)
-        ->with(['detalles.producto.impuestos'])
-        ->firstOrFail();
+        // Buscar carrito
+        $carrito = Carrito::with(['detalles.producto.impuestos'])
+            ->where('id_carrito', $carritoId)
+            ->firstOrFail();
 
-    $userId = $userId ?? $carrito->id_usuario;
+        // Recalcular totales
+        [$subtotal, $totalImpuestos, $total] =
+            (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
 
-    // REVALIDAR STOCK ANTES DE CREAR PEDIDO (defensa en profundidad)
-        $this->validateCartStock($carrito);
+        $montoEnvioGratis = 1500;
+        $costoEnvioFijo = 150;
+        $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
 
-    // Recalcular totales
-    [$subtotal, $totalImpuestos, $total] =
-        (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
+        $descuento = 0;
+        $cupon = null;
 
-    $montoEnvioGratis = 1500;
-    $costoEnvioFijo = 150;
-    $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
+        if ($codigoCupon) {
+            $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])
+                ->where('bActivo', 1)
+                ->first();
 
-    $descuento = 0;
-    $cupon = null;
+            if ($cupon) {
 
-    if ($codigoCupon) {
-        $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])
-            ->where('bActivo', 1)
-            ->first();
+                // Verificar usos actuales vs máximo
+                $usosActuales = CuponUso::where('id_cupon', $cupon->id_cupon)->count();
 
-        if ($cupon) {
-
-            // Verificar usos actuales vs máximo
-            $usosActuales = CuponUso::where('id_cupon', $cupon->id_cupon)->count();
-
-            if ($usosActuales >= $cupon->iUso_maximo) {
-                Log::warning("Cupón {$codigoCupon} excedió el límite de usos ({$usosActuales}/{$cupon->iUso_maximo})");
-                $cupon = null;
-            } else {
-                if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
-                    $envio = 0;
+                if ($usosActuales >= $cupon->iUso_maximo) {
+                    Log::warning("Cupón {$codigoCupon} excedió el límite de usos ({$usosActuales}/{$cupon->iUso_maximo})");
+                    $cupon = null;
                 } else {
-                    $descuento = ($cupon->eTipo === 'porcentaje')
-                        ? $total * ($cupon->dDescuento / 100)
-                        : $cupon->dDescuento;
+                    if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
+                        $envio = 0;
+                    } else {
+                        $descuento = ($cupon->eTipo === 'porcentaje')
+                            ? $total * ($cupon->dDescuento / 100)
+                            : $cupon->dDescuento;
+                    }
                 }
             }
         }
-    }
 
-    $totalFinal = max(0, $total - $descuento + $envio);
+        $totalFinal = max(0, $total - $descuento + $envio);
 
-    // Crear pedido
-    $pedido = Pedido::create([
-        'id_usuario' => $userId,
-        'id_direccion' => $idDireccion,
-        'id_direccion_facturacion' => $idDireccionFact,  
-        'eEstado' => 'pagado',
-        'dTotal' => $totalFinal,
-        'tNota' => $notaPedido,
-    ]);
+        if ($userId) {
+            $usuario = Usuario::findOrFail($userId);
 
-    foreach ($carrito->detalles as $detalle) {
-        PedidoDetalle::create([
-            'id_pedido' => $pedido->id_pedido,
-            'id_producto' => $detalle->id_producto,
-            'iCantidad' => $detalle->cantidad,
-            'dPrecio_unitario' => $detalle->precio_unitario,
-        ]);
-    }
+            $nombre    = $usuario->vNombre;
+            $apaterno  = $usuario->vApaterno;
+            $amaterno  = $usuario->vAmaterno;
+            $email     = $usuario->vEmail;
 
-    // Descontar stock
-    foreach ($carrito->detalles as $detalle) {
-        $producto = \App\Models\Producto::find($detalle->id_producto);
+            $direccionEnvio = Direccion::where('id_direccion', $idDireccion)
+                ->where('id_usuario', $userId)
+                ->firstOrFail();
 
-        if ($producto) {
-            if ($producto->iStock < $detalle->cantidad) {
-                throw new Exception("Inventario insuficiente para el producto: {$producto->vNombre}");
-            }
-
-            $producto->iStock -= $detalle->cantidad;
-            $producto->save();
-        }
-    }
-
-    // Crear venta
-    $venta = Venta::create([
-        'id_pedido' => $pedido->id_pedido,
-        'id_usuario' => $userId,
-        'dTotal' => $totalFinal,
-        'dDescuento' => $descuento,
-        'dCosto_envio' => $envio,
-        'eMetodo_pago' => $method,
-    ]);
-
-    foreach ($carrito->detalles as $detalle) {
-        DetalleVenta::create([
-            'id_venta' => $venta->id_venta,
-            'id_producto' => $detalle->id_producto,
-            'iCantidad' => $detalle->cantidad,
-            'dPrecio_unitario' => $detalle->precio_unitario,
-        ]);
-    }
-
-    Log::info('Creando registro de pago', [
-        'id_pedido' => $pedido->id_pedido,
-        'metodo' => $method,
-        'monto' => $totalFinal,
-        'referencia' => $reference,
-        'session_id' => $sessionId,
-        'estado' => 'exitoso',
-    ]);
-
-    // Registrar pago
-    $pago = Pago::create([
-        'id_pedido' => $pedido->id_pedido,
-        'eMetodo_pago' => $method,
-        'dMonto' => $totalFinal,
-        'eEstado' => 'exitoso',
-        'vReferencia' => $reference,
-        'vSessionID' => $sessionId,
-    ]);
-
-    Log::info('Pago creado exitosamente', [
-        'id_pago' => $pago->id_pago,
-        'referencia' => $pago->vReferencia
-    ]);
-
-    //Registrar envío
-    Envio::create([
-        'id_pedido' => $pedido->id_pedido,
-        'eEstado' => Envio::ESTADO_PENDIENTE,
-    ]);
-
-    // Cupón uso
-    if ($cupon) {
-
-        // Verificar nuevamente antes de registrar
-        $usosActuales = CuponUso::where('id_cupon', $cupon->id_cupon)->count();
-
-        if ($usosActuales < $cupon->iUso_maximo) {
-
-            CuponUso::create([
-                'id_cupon' => $cupon->id_cupon,
-                'id_venta' => $venta->id_venta,
-            ]);
-
-            $nuevosUsos = $usosActuales + 1;
-
-            Log::info("Cupón {$cupon->vCodigo_cupon} aplicado. Usos: {$nuevosUsos}/{$cupon->iUso_maximo}");
-
-            if ($nuevosUsos >= $cupon->iUso_maximo) {
-                $cupon->update(['bActivo' => 0]);
-                Log::info("Cupón {$cupon->vCodigo_cupon} desactivado por alcanzar el límite de usos");
-            }
-
+            $telefonoEnvio = $direccionEnvio->vTelefono_contacto;
+            $rfc = $direccionEnvio->vRFC;
+            $calleEnvio = $direccionEnvio->vCalle;
+            $numeroExteriorEnvio = $direccionEnvio->vNumero_exterior;
+            $numeroInteriorEnvio = $direccionEnvio->vNumero_interior;
+            $coloniaEnvio = $direccionEnvio->vColonia;
+            $codigoPostalEnvio = $direccionEnvio->vCodigo_postal;
+            $ciudadEnvio = $direccionEnvio->vCiudad;
+            $estadoEnvio = $direccionEnvio->vEstado;
+            $entreCalleUnoEnvio = $direccionEnvio->vEntre_calle_1;
+            $entreCalleDosEnvio = $direccionEnvio->vEntre_calle_2;
+            $referenciasEnvio = $direccionEnvio->tReferencias;
         } else {
-            Log::warning("Cupón {$cupon->vCodigo_cupon} ya no tiene usos disponibles al momento de guardar");
+            $email = $emailGuest;
+
+            $direccionEnvio = DireccionGuest::where('id_direccion_guest', $idDireccion)
+                ->where('vGuest_token', $guestToken)
+                ->firstOrFail();
+
+            $nombre    = $direccionEnvio->vNombre;
+            $apaterno  = $direccionEnvio->vApaterno;
+            $amaterno  = $direccionEnvio->vAmaterno;
+            $telefonoEnvio = $direccionEnvio->vTelefono_contacto;
+            $rfc = $direccionEnvio->vRFC;
+            $calleEnvio = $direccionEnvio->vCalle;
+            $numeroExteriorEnvio = $direccionEnvio->vNumero_exterior;
+            $numeroInteriorEnvio = $direccionEnvio->vNumero_interior;
+            $coloniaEnvio = $direccionEnvio->vColonia;
+            $codigoPostalEnvio = $direccionEnvio->vCodigo_postal;
+            $ciudadEnvio = $direccionEnvio->vCiudad;
+            $estadoEnvio = $direccionEnvio->vEstado;
+            $entreCalleUnoEnvio = $direccionEnvio->vEntre_calle_1;
+            $entreCalleDosEnvio = $direccionEnvio->vEntre_calle_2;
+            $referenciasEnvio = $direccionEnvio->tReferencias;
         }
-    }
 
-    // Limpiar carrito
-    $carrito->detalles()->delete();
-    $carrito->eEstado = 'convertido';
-    $carrito->save();
+        if ($idDireccionFact) {
+            if ($userId) {
+                $direccionFact = Direccion::where('id_direccion', $idDireccionFact)
+                    ->where('id_usuario', $userId)
+                    ->first();
 
-    session()->forget('codigo_cupon');
-    session()->forget('nota_pedido');
+                $telefonoFacturacion = $direccionFact->vTelefono_contacto;
+                $rfc = $direccionFact->vRFC;
+                $calleFacturacion = $direccionFact->vCalle;
+                $numeroExteriorFacturacion = $direccionFact->vNumero_exterior;
+                $numeroInteriorFacturacion = $direccionFact->vNumero_interior;
+                $coloniaFacturacion = $direccionFact->vColonia;
+                $codigoPostalFacturacion = $direccionFact->vCodigo_postal;
+                $ciudadFacturacion = $direccionFact->vCiudad;
+                $estadoFacturacion = $direccionFact->vEstado;
+                $entreCalleUnoFacturacion = $direccionFact->vEntre_calle_1;
+                $entreCalleDosFacturacion = $direccionFact->vEntre_calle_2;
+                $referenciasFacturacion = $direccionFact->tReferencias;
+            } else {
+                $direccionFact = DireccionGuest::where('id_direccion_guest', $idDireccionFact)
+                    ->where('vGuest_token', $guestToken)
+                    ->first();
 
-    // Email cliente
-    Mail::to($pedido->usuario->vEmail)->send(
-        new \App\Mail\PedidoRealizadoCliente($pedido, $subtotal, $envio, $descuento, $totalFinal, $cupon)
-    );
+                $telefonoFacturacion = $direccionFact->vTelefono_contacto;
+                $rfc = $direccionFact->vRFC;
+                $calleFacturacion = $direccionFact->vCalle;
+                $numeroExteriorFacturacion = $direccionFact->vNumero_exterior;
+                $numeroInteriorFacturacion = $direccionFact->vNumero_interior;
+                $coloniaFacturacion = $direccionFact->vColonia;
+                $codigoPostalFacturacion = $direccionFact->vCodigo_postal;
+                $ciudadFacturacion = $direccionFact->vCiudad;
+                $estadoFacturacion = $direccionFact->vEstado;
+                $entreCalleUnoFacturacion = $direccionFact->vEntre_calle_1;
+                $entreCalleDosFacturacion = $direccionFact->vEntre_calle_2;
+                $referenciasFacturacion = $direccionFact->tReferencias;
+            }
+        }
 
-    // Email admin
-    $adminEmail = \App\Models\Usuario::whereIn('eRol', ['admin', 'superadmin'])
-        ->value('vEmail');
+        if (!$userId && $idDireccion) {
+            Log::info('Pedido invitado: id_direccion ignorado para evitar FK inválida', [
+                'id_direccion' => $idDireccion
+            ]);
+        }
 
-    if ($adminEmail) {
-        Mail::to($adminEmail)->send(
-            new \App\Mail\PedidoNuevoAdmin($pedido, $subtotal, $envio, $descuento, $totalFinal, $cupon)
+        // 🔹 REGISTRO AUTOMÁTICO (SI ES INVITADO Y ESTÁ HABILITADO)
+        $nuevoUserId = $this->autoRegisterGuestIfEnabled(
+            $userId,
+            $email,
+            $nombre,
+            $apaterno,
+            $amaterno
         );
-    }
 
-    return true;
-}
-
-/**
-     * Valida stock del carrito antes de permitir cualquier pago.
-     * Lanza excepción si algún producto está agotado o la cantidad solicitada supera stock.
-     */
-    private function validateCartStock($carrito)
-    {
-        if (!$carrito) {
-            throw new Exception("Carrito no encontrado.");
+        // Si se creó cuenta, usar ese usuario para el pedido y la venta
+        if ($nuevoUserId) {
+            $userId = $nuevoUserId;
         }
+
+        // Crear pedido
+        $pedido = Pedido::create([
+            'id_usuario' => $userId,
+            'id_direccion' => null,
+            'id_direccion_facturacion' => null,
+            'vNombre' => $nombre,
+            'eEstado' => 'pagado',
+            'dTotal' => $totalFinal,
+            'tNota' => $notaPedido,
+            'vApaterno' => $apaterno,
+            'vAmaterno' => $amaterno,
+            'vEmail' => $email,
+            'env_telefono_contacto' => $telefonoEnvio,
+            'env_calle' => $calleEnvio,
+            'env_numero_exterior' => $numeroExteriorEnvio,
+            'env_numero_interior' => $numeroInteriorEnvio,
+            'env_colonia' => $coloniaEnvio,
+            'env_codigo_postal' => $codigoPostalEnvio,
+            'env_ciudad' => $ciudadEnvio,
+            'env_estado' => $estadoEnvio,
+            'env_entre_calle_1' => $entreCalleUnoEnvio,
+            'env_entre_calle_2' => $entreCalleDosEnvio,
+            'env_referencias' => $referenciasEnvio,
+            'fac_telefono_contacto' => $telefonoFacturacion,
+            'fac_calle' => $calleFacturacion,
+            'fac_numero_exterior' => $numeroExteriorFacturacion,
+            'fac_numero_interior' => $numeroInteriorFacturacion,
+            'fac_colonia' => $coloniaFacturacion,
+            'fac_codigo_postal' => $codigoPostalFacturacion,
+            'fac_ciudad' => $ciudadFacturacion,
+            'fac_estado' => $estadoFacturacion,
+            'fac_entre_calle_1' => $entreCalleUnoFacturacion,
+            'fac_entre_calle_2' => $entreCalleDosFacturacion,
+            'fac_referencias' => $referenciasFacturacion,
+            'vRFC' => $rfc,
+            'vGuest_token' => $guestToken
+        ]);
 
         foreach ($carrito->detalles as $detalle) {
+            PedidoDetalle::create([
+                'id_pedido' => $pedido->id_pedido,
+                'id_producto' => $detalle->id_producto,
+                'iCantidad' => $detalle->cantidad,
+                'dPrecio_unitario' => $detalle->precio_unitario,
+            ]);
+        }
 
-            $producto = $detalle->producto;
+        // Crear venta
+        $venta = Venta::create([
+            'id_pedido' => $pedido->id_pedido,
+            'id_usuario' => $userId,
+            'dTotal' => $totalFinal,
+            'dDescuento' => $descuento,
+            'dCosto_envio' => $envio,
+            'eMetodo_pago' => $method,
+        ]);
 
-            if (!$producto) {
-                throw new Exception("Uno de los productos del carrito ya no existe.");
+        foreach ($carrito->detalles as $detalle) {
+            DetalleVenta::create([
+                'id_venta' => $venta->id_venta,
+                'id_producto' => $detalle->id_producto,
+                'iCantidad' => $detalle->cantidad,
+                'dPrecio_unitario' => $detalle->precio_unitario,
+            ]);
+        }
+
+        Log::info('Creando registro de pago', [
+            'id_pedido' => $pedido->id_pedido,
+            'metodo' => $method,
+            'monto' => $totalFinal,
+            'referencia' => $reference,
+            'session_id' => $sessionId,
+            'estado' => 'exitoso',
+        ]);
+
+        // Registrar pago
+        $pago = Pago::create([
+            'id_pedido' => $pedido->id_pedido,
+            'eMetodo_pago' => $method,
+            'dMonto' => $totalFinal,
+            'eEstado' => 'exitoso',
+            'vReferencia' => $reference,
+            'vSessionID' => $sessionId,
+        ]);
+
+        Log::info('Pago creado exitosamente', [
+            'id_pago' => $pago->id_pago,
+            'referencia' => $pago->vReferencia
+        ]);
+
+        // Cupón uso
+        if ($cupon) {
+
+            // Verificar nuevamente antes de registrar
+            $usosActuales = CuponUso::where('id_cupon', $cupon->id_cupon)->count();
+
+            if ($usosActuales < $cupon->iUso_maximo) {
+
+                CuponUso::create([
+                    'id_cupon' => $cupon->id_cupon,
+                    'id_venta' => $venta->id_venta,
+                ]);
+
+                $nuevosUsos = $usosActuales + 1;
+
+                Log::info("Cupón {$cupon->vCodigo_cupon} aplicado. Usos: {$nuevosUsos}/{$cupon->iUso_maximo}");
+
+                if ($nuevosUsos >= $cupon->iUso_maximo) {
+                    $cupon->update(['bActivo' => 0]);
+                    Log::info("Cupón {$cupon->vCodigo_cupon} desactivado por alcanzar el límite de usos");
+                }
+            } else {
+                Log::warning("Cupón {$cupon->vCodigo_cupon} ya no tiene usos disponibles al momento de guardar");
             }
+        }
 
-            // Manejar inconsistencia en modelo: iCantidad o cantidad
-            $cantidad = $detalle->iCantidad ?? $detalle->cantidad ?? 1;
+        // Limpiar carrito
+        $carrito->detalles()->delete();
+        $carrito->save();
 
-            if ($producto->iStock <= 0) {
-                throw new Exception("El producto '{$producto->vNombre}' está agotado. Debes retirarlo del carrito.");
-            }
+        session()->forget([
+            'paypal_context',
+            'codigo_cupon',
+            'id_direccion',
+            'id_direccion_facturacion',
+            'nota_pedido',
+            'email_invitado',
+            'stripe_checkout_in_progress',
+            'stripe_carrito_id'
+        ]);
 
-            if ($cantidad > $producto->iStock) {
-                throw new Exception(
-                    "La cantidad seleccionada de '{$producto->vNombre}' ({$cantidad}) supera el stock disponible ({$producto->iStock})."
-                );
-            }
+        // Email cliente
+        Mail::to($email)->send(
+            new \App\Mail\PedidoRealizadoCliente($pedido, $subtotal, $envio, $descuento, $totalFinal, $cupon)
+        );
+
+        // Email admin
+        $adminEmails = Usuario::role('admin')->pluck('vEmail');
+
+        if ($adminEmails->isNotEmpty()) {
+            Mail::to($adminEmails)->send(
+                new \App\Mail\PedidoNuevoAdmin(
+                    $pedido,
+                    $subtotal,
+                    $envio,
+                    $descuento,
+                    $totalFinal,
+                    $cupon
+                )
+            );
         }
 
         return true;
+    }
+
+    /**
+     * Libera la reserva de stock si el usuario abandona el proceso de pago.
+     * Se llama desde el frontend cuando detecta que el usuario cierra la ventana de pago o navega fuera.
+     */
+
+    public function releaseReservation()
+    {
+        if (session('stripe_checkout_in_progress')) {
+
+            $carritoId = session('stripe_carrito_id');
+
+            $carrito = Carrito::find($carritoId);
+
+            if ($carrito && $carrito->eEstado === 'reservado') {
+                app(LiberarReservaPorCarritoService::class)->ejecutar($carrito);
+            }
+
+            session()->forget([
+                'stripe_checkout_in_progress',
+                'stripe_carrito_id',
+            ]);
+
+            return response()->json(['status' => 'released']);
+        }
+
+        if (session('paypal_context')) {
+
+            $context = session('paypal_context');
+
+            $carritoId = $context['paypal_carrito_id'] ?? null;
+
+            $carrito = Carrito::find($carritoId);
+
+            if ($carrito && $carrito->eEstado === 'reservado') {
+                app(LiberarReservaPorCarritoService::class)->ejecutar($carrito);
+            }
+
+            session()->forget([
+                'paypal_context',
+            ]);
+
+            return response()->json(['status' => 'released']);
+        }
+
+        return response()->json(['status' => 'no_reservation']);
+    }
+
+    private function autoRegisterGuestIfEnabled(
+        $userId,
+        $email,
+        $nombre,
+        $apaterno,
+        $amaterno
+    ) {
+        // Ya es usuario → no hacer nada
+        if ($userId) {
+            return $userId;
+        }
+
+        // Switch apagado → no registrar
+        if (!Setting::getValue('auto_register_guest_after_purchase')) {
+            return null;
+        }
+
+        // Si el email ya existe → usar ese usuario
+        $existingUser = Usuario::where('vEmail', $email)->first();
+        if ($existingUser) {
+            return $existingUser->id_usuario;
+        }
+
+        // Crear usuario
+        $token = Str::uuid()->toString();
+
+        $usuario = Usuario::create([
+            'vNombre' => $nombre,
+            'vApaterno' => $apaterno,
+            'vAmaterno' => $amaterno,
+            'vEmail' => $email,
+            'vPassword' => null,
+            'email_verification_token' => $token,
+            'is_verified' => 0,
+        ]);
+
+        // Rol cliente (Spatie)
+        $usuario->assignRole('cliente');
+
+        // Aquí se manda email de bienvenida / set password
+        Mail::to($email)->send(
+            new \App\Mail\CuentaCreadaAutomaticamente($usuario, $token)
+        );
+
+        return $usuario->id_usuario;
     }
 }

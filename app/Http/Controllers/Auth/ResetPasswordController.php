@@ -13,12 +13,13 @@ class ResetPasswordController extends Controller
 {
 
     use InputSanitizer;
-    
+
     public function showResetForm(Request $request, $token = null)
     {
         return view('auth.reset-password', [
-            'token' => $token, 
-            'email' => $request->email]);
+            'token' => $token,
+            'email' => $request->email
+        ]);
     }
 
     public function reset(Request $request)
@@ -39,8 +40,6 @@ class ResetPasswordController extends Controller
             'password.max' => 'La contraseña no debe exceder los 150 caracteres.',
         ]);
 
-        $this->verificarYLimpiar($data, config('security.sql_keywords'));
-        
         $status = Password::broker('users')->reset(
             $request->only('vEmail', 'password', 'password_confirmation', 'token'),
             function ($user, $password) {

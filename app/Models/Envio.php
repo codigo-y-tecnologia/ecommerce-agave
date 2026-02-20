@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class Envio extends Model
 {
     use HasFactory;
-    
+
     protected $table = 'tbl_envios';
     protected $primaryKey = 'id_envio';
     public $timestamps = false;
@@ -21,8 +21,8 @@ class Envio extends Model
     ];
 
     protected $casts = [
-    'eEstado' => 'string',
-];
+        'eEstado' => 'string',
+    ];
 
     /*
     |--------------------------------------------------------------------------

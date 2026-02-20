@@ -14,7 +14,7 @@
 <body>
 
 <div class="card">
-    <p class="title">¡Gracias por tu compra, {{ $pedido->usuario->vNombre }}!</p>
+    <p class="title">¡Gracias por tu compra, {{ $pedido->vNombre }}!</p>
 
     <p>Hemos recibido tu pedido correctamente.</p>
 

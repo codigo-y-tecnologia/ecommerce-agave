@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Carrito;
 use App\Models\CarritoDetalle;
 use App\Models\Producto;
+use App\Helpers\CarritoHelper;
 
 class CarritoController extends Controller
 {
@@ -16,30 +17,47 @@ class CarritoController extends Controller
      */
     public function index()
     {
-        $usuario = Auth::user();
+        $carrito = CarritoHelper::carritoActual()
+            ->load('detalles.producto');
 
-        // Buscar carrito activo del usuario
-        $carrito = Carrito::where('id_usuario', $usuario->id_usuario)
-            ->where('eEstado', 'activo')
-            ->with('detalles.producto') // eager load para no hacer muchas queries
-            ->first();
+        $mensajes = [];
 
-            if (!$carrito || $carrito->detalles->isEmpty()) {
-            // Si no tiene carrito o no hay productos
-            return view('carrito.index', [
-                'detalles' => [],
-                'total' => 0
-            ])->with('carrito_vacio', 'Tu carrito está vacío.');
+        foreach ($carrito->detalles as $detalle) {
+            $producto = $detalle->producto;
+
+            // Producto eliminado o desactivado
+            if (!$producto || $producto->iStock <= 0) {
+                $mensajes[] = "El producto {$detalle->producto->vNombre} ya no tiene stock y fue eliminado del carrito.";
+                $detalle->delete();
+                continue;
+            }
+
+            // Ajustar cantidad si excede stock
+            if ($detalle->iCantidad > $producto->iStock) {
+                $detalle->iCantidad = $producto->iStock;
+                $detalle->save();
+
+                $mensajes[] = "La cantidad de {$producto->vNombre} fue ajustada al stock disponible.";
+            }
         }
 
-        // Calcular total
-        $total = $carrito->detalles->sum(function ($d) {
-    return $d->producto->precio_con_impuestos * $d->iCantidad;
-});
+        $carrito->refresh();
+
+        $detalles = $carrito->detalles;
+
+        // Calcular total actualizado
+        $total = $detalles->sum(
+            fn($d) =>
+            $d->producto->precio_con_impuestos * $d->iCantidad
+        );
 
         return view('carrito.index', [
-            'detalles' => $carrito->detalles,
-            'total' => $total
+            'detalles' => $detalles,
+            'total' => $total,
+            'warning' => $mensajes,
+            'carrito_vacio' => $detalles->isEmpty()
+                ? 'Tu carrito está vacío.'
+                : null,
         ]);
     }
 
@@ -56,28 +74,31 @@ class CarritoController extends Controller
      */
     public function store(Request $request, $idProducto)
     {
-         $usuario = Auth::user();
+
+        $request->validate([
+            'cantidad' => 'required|integer|min:1'
+        ]);
 
         // Validar que el producto exista
         $producto = Producto::findOrFail($idProducto);
 
         // Validación: producto sin stock
-    if ($producto->iStock <= 0) {
-        return redirect()->back()->with('warning', 'Este producto está agotado y no puede agregarse al carrito.');
-    }
+        if ($producto->iStock <= 0) {
+            return redirect()->back()->with('warning', 'Este producto está agotado y no puede agregarse al carrito.');
+        }
 
-    // Cantidad solicitada 
-    $cantidadSolicitada = (int) $request->input('cantidad', 1);
+        // Cantidad solicitada 
+        $cantidadSolicitada = (int) $request->cantidad;
 
-        // Buscar o crear carrito activo del usuario
-        $carrito = Carrito::firstOrCreate(
-            [
-                'id_usuario' => $usuario->id_usuario,
-                'eEstado' => 'activo'
-            ]
-        );
+        if ($cantidadSolicitada > $producto->iStock) {
+            return redirect()->back()->with(
+                'warning',
+                "Solo hay {$producto->iStock} unidades disponibles."
+            );
+        }
 
-        // Revisar si el producto ya está en el carrito
+        $carrito = CarritoHelper::carritoActual();
+
         $detalle = CarritoDetalle::where('id_carrito', $carrito->id_carrito)
             ->where('id_producto', $producto->id_producto)
             ->first();
@@ -85,27 +106,19 @@ class CarritoController extends Controller
         if ($detalle) {
 
             // Validar que no exceda stock disponible
-        $nuevaCantidad = $detalle->iCantidad + $cantidadSolicitada;
+            $nuevaCantidad = $detalle->iCantidad + $cantidadSolicitada;
 
-        if ($nuevaCantidad > $producto->iStock) {
-            return redirect()->back()->with(
-                'warning',
-                "Solo hay {$producto->iStock} unidades disponibles."
-            );
-        }
+            if ($nuevaCantidad > $producto->iStock) {
+                return redirect()->back()->with(
+                    'warning',
+                    "Solo hay {$producto->iStock} unidades disponibles."
+                );
+            }
 
             // Si ya existe, actualizar cantidad
-            //$detalle->iCantidad += $request->input('cantidad', 1);
             $detalle->iCantidad = $nuevaCantidad;
             $detalle->save();
         } else {
-
-            if ($cantidadSolicitada > $producto->iStock) {
-            return redirect()->back()->with(
-                'warning',
-                "Solo hay {$producto->iStock} unidades disponibles."
-            );
-        }
 
             // Si no existe, crear nuevo detalle
             CarritoDetalle::create([
@@ -144,22 +157,25 @@ class CarritoController extends Controller
             'cantidad' => 'required|integer|min:1'
         ]);
 
-        $detalle = CarritoDetalle::findOrFail($idDetalle);
+        $carrito = CarritoHelper::carritoActual();
+
+        $detalle = CarritoDetalle::where('id_detalle_carrito', $idDetalle)
+            ->where('id_carrito', $carrito->id_carrito)
+            ->firstOrFail();
+
         $producto = $detalle->producto;
-        $cantidadSolicitada = (int) $request->input('cantidad');
-        // $detalle->iCantidad = $request->input('cantidad');
-        // $detalle->save();
+        $cantidadSolicitada = (int) $request->cantidad;
 
         // Validar stock disponible
-    if ($cantidadSolicitada > $producto->iStock) {
-        return redirect()->back()->with(
-            'warning',
-            "No puedes agregar {$cantidadSolicitada} unidades. Solo hay {$producto->iStock} disponibles."
-        );
-    }
+        if ($cantidadSolicitada > $producto->iStock) {
+            return redirect()->back()->with(
+                'warning',
+                "No puedes agregar {$cantidadSolicitada} unidades. Solo hay {$producto->iStock} disponibles."
+            );
+        }
 
-    $detalle->iCantidad = $cantidadSolicitada;
-    $detalle->save();
+        $detalle->iCantidad = $cantidadSolicitada;
+        $detalle->save();
 
         return redirect()->route('carrito.index')->with('success', 'Cantidad actualizada correctamente.');
     }
@@ -169,7 +185,12 @@ class CarritoController extends Controller
      */
     public function destroy($idDetalle)
     {
-        $detalle = CarritoDetalle::findOrFail($idDetalle);
+        $carrito = CarritoHelper::carritoActual();
+
+        $detalle = CarritoDetalle::where('id_detalle_carrito', $idDetalle)
+            ->where('id_carrito', $carrito->id_carrito)
+            ->firstOrFail();
+
         $detalle->delete();
 
         return redirect()->route('carrito.index')->with('success', 'Producto eliminado del carrito.');

@@ -85,31 +85,42 @@
 
                     {{-- 👤 Cliente --}}
                     <ul class="dropdown-menu dropdown-menu-end shadow">
-                        @if(Auth::user()->eRol === 'cliente')
+                        @role('cliente')
+                            @can('ver_perfil')
                             <li><a class="dropdown-item" href="{{ route('perfil.index') }}">Mi Perfil</a></li>
-                            <li><a class="dropdown-item" href="{{ route('favoritos.index') }}">Mis Favoritos</a></li>
+                            @endcan
+                            @can('ver_favoritos')
+                            <li><a class="dropdown-item" href="{{ route('favoritos.index') }}">Mis Favoritos</a></li>    
+                            @endcan
+                            @can('ver_carrito')
                             <li><a class="dropdown-item" href="{{ route('carrito.index') }}">Mi Carrito</a></li>
-                            <li><a class="dropdown-item" href="{{ route('pedidos.index') }}">Mis Pedidos</a></li>
-                        @endif
+                            @endcan
+                            @can('ver_pedidos_propios')
+                            <li><a class="dropdown-item" href="{{ route('pedidos.index') }}">Mis Pedidos</a></li>    
+                            @endcan
+                        @endrole
 
                         {{-- ⚙️ Admin --}}
-                        @if(Auth::user()->eRol === 'admin')
+                        @role('admin')
+                            @can('mi_perfil_admin')
+                            <li><a class="dropdown-item" href="{{ route('admin.perfil.index') }}">Mi Perfil</a></li>
+                            @endcan  
                             <li><a class="dropdown-item" href="{{ route('admin.usuarios') }}">Clientes Registrados</a></li>
                             <li><a class="dropdown-item" href="{{ route('cupones.index') }}">Cupones</a></li>
                             <li><a class="dropdown-item" href="{{ route('impuestos.index') }}">Impuestos</a></li>
                             <li><a class="dropdown-item" href="{{ route('productos.index') }}">Productos</a></li>
                             <li><a class="dropdown-item" href="#">Pedidos</a></li>
                             <li><a class="dropdown-item" href="{{ route('ventas.index') }}">Reportes</a></li>
-                        @endif
+                        @endrole
 
                         {{-- 👑 Superadmin --}}
-                        @if(Auth::user()->eRol === 'superadmin')
+                        @role('superadmin')
                             <li><a class="dropdown-item" href="{{ route('superadmin.admins.index') }}">Gestión de Administradores</a></li>
                             <li><a class="dropdown-item" href="#">Monitoreo del sistema</a></li>
                             <li><a class="dropdown-item" href="#">Logs de seguridad</a></li>
                             <li><a class="dropdown-item" href="#">Configuración Global</a></li>
                             <li><a class="dropdown-item" href="#">Gestión de permisos</a></li>
-                        @endif
+                        @endrole
 
                         <li><hr class="dropdown-divider"></li>
 
@@ -139,7 +150,7 @@
             @endguest
 
             @auth
-                @if(Auth::user()->eRol === 'cliente')
+                @role('cliente')
                     <a class="nav-link text-dark" href="{{ route('favoritos.index') }}">
                         ❤️ Mis Favoritos
                     </a>
@@ -152,7 +163,7 @@
                     <a class="nav-link text-dark" href="{{ route('perfil.index') }}">
                         👤 Perfil
                     </a>
-                @endif
+                @endrole
             @endauth
 
             <a class="nav-link text-dark" href="{{ route('busqueda.resultados') }}">

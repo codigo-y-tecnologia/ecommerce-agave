@@ -11,6 +11,7 @@ use App\Models\Usuario;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Notifications\VerifyEmailNotification;
+use App\Mail\CuentaCreadaAutomaticamente;
 
 class AuthController extends Controller
 {
@@ -21,8 +22,8 @@ class AuthController extends Controller
     {
 
         if (Auth::check()) {
-        return $this->redirectToDashboard(Auth::user());
-    }
+            return $this->redirectToDashboard(Auth::user());
+        }
 
         return view('auth.login');
     }
@@ -38,7 +39,17 @@ class AuthController extends Controller
             'vEmail.email' => 'El correo electrónico debe tener un formato válido.',
         ]);
 
-        $this->verificarYLimpiar($credentials, config('security.sql_keywords'));
+        $user = Usuario::where('vEmail', $request->vEmail)->first();
+
+        if (
+            $user && empty($user->vPassword)
+        ) {
+            return back()->withErrors([
+                'vEmail' => 'Tu cuenta fue creada automáticamente después de una compra. Revisa tu correo y establece tu contraseña para poder iniciar sesión.',
+            ])
+                ->with('show_set_password', true)
+                ->withInput();
+        }
 
         $credentials = [
             'vEmail' => $request->vEmail,
@@ -55,15 +66,15 @@ class AuthController extends Controller
             if (!$user->hasVerifiedEmail()) {
                 Auth::logout();
                 return back()->withErrors([
-                    'vEmail' => 'Por favor, verifica tu dirección de correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada.',
+                    'vEmail' => 'Por favor, verifica tu dirección de correo electrónico antes de iniciar sesión. Si no recibiste el correo de verificación, puedes solicitar uno nuevo.',
                 ])->withInput();
             }
 
             $request->session()->regenerate();
-            //return redirect()->intended('/');
+            return redirect()->intended('/');
 
             // Redirigir al dashboard según rol
-            return $this->redirectToDashboard($user);
+            //return $this->redirectToDashboard($user);
         }
 
         return back()->withErrors([
@@ -72,18 +83,14 @@ class AuthController extends Controller
     }
 
     private function redirectToDashboard($user)
-{
-    switch ($user->eRol) {
-        case 'cliente':
-            return redirect()->route('dashboard.cliente');
-        case 'admin':
-            return redirect()->route('dashboard.admin');
-        case 'superadmin':
-            return redirect()->route('dashboard.superadmin');
-        default:
-            return redirect()->route('home');
+    {
+        return match (true) {
+            $user->hasRole('superadmin') => redirect()->route('dashboard.superadmin'),
+            $user->hasRole('admin')      => redirect()->route('dashboard.admin'),
+            $user->hasRole('cliente')    => redirect()->route('dashboard.cliente'),
+            default                      => abort(403, 'Rol no autorizado'),
+        };
     }
-}
 
     public function showRegister()
     {
@@ -116,20 +123,13 @@ class AuthController extends Controller
         ]);
 
         // Validación: mayor de edad
-    $fechaNac = new \DateTime($data['dFecha_nacimiento']);
-    $hoy = new \DateTime();
-    $edad = $hoy->diff($fechaNac)->y;
+        $fechaNac = new \DateTime($data['dFecha_nacimiento']);
+        $hoy = new \DateTime();
+        $edad = $hoy->diff($fechaNac)->y;
 
-    if ($edad < 18) {
-        return back()->withErrors(['dFecha_nacimiento' => 'Debes ser mayor de edad para registrarte.'])->withInput();
-    }
-
-        /**
-            * Limpia y valida si los campos contienen contenido potencialmente peligroso
-             * (anti inyección SQL básica sin falsos positivos)
-         */
-        // Funciones de limpieza y detección
-        $this->verificarYLimpiar($data, config('security.sql_keywords'));
+        if ($edad < 18) {
+            return back()->withErrors(['dFecha_nacimiento' => 'Debes ser mayor de edad para registrarte.'])->withInput();
+        }
 
         // Generar tokens
         $rememberToken = Str::random(60);
@@ -145,16 +145,18 @@ class AuthController extends Controller
             'is_verified' => false,
             'vPassword' => Hash::make($data['vPassword']),
             'dFecha_nacimiento' => $data['dFecha_nacimiento'],
-            'eRol' => 'cliente',
+            // 'eRol' => 'cliente',
             'remember_token' => $rememberToken, // Token para "recordar sesión"
             'api_token' => $apiToken, // Token para API
         ]);
+
+        $usuario->assignRole('cliente');
 
         // Enviar email de verificación
         try {
             $usuario->notify(new VerifyEmailNotification($usuario, $verificationToken));
         } catch (\Exception $e) {
-            dd($e->getMessage()); 
+            dd($e->getMessage());
             // Si falla el envío del email, eliminar el usuario creado
             $usuario->delete();
             return back()->withErrors([
@@ -162,13 +164,10 @@ class AuthController extends Controller
             ])->withInput();
         }
 
-        // Auth::login($usuario); // inicia sesión automático después de registro
-        // $request->session()->regenerate();
-
         return redirect('/login')->with([
-        'success' => '¡Registro exitoso!',
-        'verification_message' => 'Te hemos enviado un enlace de verificación a tu correo electrónico. Por favor, revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta.'
-    ]);
+            'success' => '¡Registro exitoso!',
+            'verification_message' => 'Te hemos enviado un enlace de verificación a tu correo electrónico. Por favor, revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta.'
+        ]);
     }
 
     // Método para verificar el email
@@ -187,9 +186,9 @@ class AuthController extends Controller
         $user->markEmailAsVerified();
 
         return redirect('/login')->with([
-        'success' => '¡Cuenta activada!',
-        'verification_success' => 'Tu dirección de correo electrónico ha sido verificada exitosamente. Ahora puedes iniciar sesión con tus credenciales.'
-    ]);
+            'success' => '¡Cuenta activada!',
+            'verification_success' => 'Tu dirección de correo electrónico ha sido verificada exitosamente. Ahora puedes iniciar sesión con tus credenciales.'
+        ]);
     }
 
     // Método para reenviar email de verificación
@@ -202,10 +201,6 @@ class AuthController extends Controller
             'vEmail.exists' => 'No se encontró una cuenta con ese correo electrónico.',
             'vEmail.email' => 'El correo electrónico debe tener un formato válido.',
         ]);
-
-        $emailData = $request->only('vEmail');
-        $this->verificarYLimpiar($emailData, config('security.sql_keywords'));
-
 
         $user = Usuario::where('vEmail', $request->vEmail)->first();
 
@@ -223,7 +218,7 @@ class AuthController extends Controller
             $user->notify(new VerifyEmailNotification($user, $user->verification_token));
             return back()->with('success', 'Se ha enviado un nuevo enlace de verificación a tu correo electrónico.');
         } catch (\Exception $e) {
-             dd($e->getMessage()); 
+            dd($e->getMessage());
             return back()->withErrors([
                 'vEmail' => 'Error al enviar el email de verificación. Por favor, intenta nuevamente.'
             ]);
@@ -236,5 +231,69 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         return redirect('/');
+    }
+
+    public function activarCuenta($token)
+    {
+        $usuario = Usuario::where('email_verification_token', $token)->firstOrFail();
+
+        return view('auth.activar_cuenta', compact('usuario', 'token'));
+    }
+
+    public function guardarPassword(Request $request, $token)
+    {
+        $request->validate([
+            'password' => 'required|min:8|confirmed',
+        ], [
+            'password.required' => 'La contraseña es obligatoria.',
+            'password.min' => 'La contraseña debe tener al menos 8 caracteres.',
+            'password.confirmed' => 'Las contraseñas no coinciden.',
+        ]);
+
+        $usuario = Usuario::where('email_verification_token', $token)->firstOrFail();
+
+        $usuario->update([
+            'vPassword' => Hash::make($request->password),
+            'email_verified_at' => now(),
+            'is_verified' => 1,
+            'email_verification_token' => null,
+        ]);
+
+        Auth::login($usuario);
+
+        return redirect()->route('dashboard.cliente')
+            ->with('success', 'Cuenta activada correctamente');
+    }
+
+    public function reenviarCorreo(Request $request)
+    {
+        $request->validate([
+            'vEmail' => 'required|email|max:100|exists:tbl_usuarios,vEmail',
+        ], [
+            'vEmail.exists' => 'No se encontró una cuenta con ese correo electrónico.',
+            'vEmail.email' => 'El correo electrónico debe tener un formato válido.',
+        ]);
+
+        $usuario = Usuario::where('vEmail', $request->vEmail)->first();
+
+        // Seguridad: solo si NO tiene contraseña
+        if ($usuario->vPassword !== null) {
+            return back()->withErrors([
+                'vEmail' => 'Esta cuenta ya tiene una contraseña configurada.'
+            ]);
+        }
+
+        // Generar nuevo token
+        $token = Str::uuid()->toString();
+
+        $usuario->update([
+            'email_verification_token' => $token,
+        ]);
+
+        Mail::to($usuario->vEmail)->send(
+            new CuentaCreadaAutomaticamente($usuario, $token)
+        );
+
+        return back()->with('success', 'Te enviamos nuevamente el correo para establecer tu contraseña.');
     }
 }

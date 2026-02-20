@@ -14,7 +14,9 @@
             <div class="card-body text-center">
                 <h5>👥 Usuarios Registrados</h5>
                 <p>Consulta, edita o elimina usuarios.</p>
-                <a href="{{ route('admin.usuarios') }}" class="btn btn-warning w-100">Ver usuarios</a>
+                @can('ver_clientes')
+                    <a href="{{ route('admin.usuarios') }}" class="btn btn-warning w-100">Ver usuarios</a>
+                @endcan
             </div>
         </div>
     </div>
@@ -74,7 +76,9 @@
             <div class="card-body text-center">
                 <h5>📊 Reportes</h5>
                 <p>Genera reportes de ventas, usuarios y más.</p>
-                <a href="{{ route('reportes.index') }}" class="btn btn-danger w-100">Ver reportes</a>
+                @can('ver_reportes')
+                    <a href="{{ route('reportes.index') }}" class="btn btn-danger w-100">Ver reportes</a>
+                @endcan
             </div>
         </div>
     </div>
@@ -89,5 +93,18 @@
         </div>
     </div>
 </div>
+
+<div class="col-md-4">
+    <div class="card border-dark shadow-sm">
+        <div class="card-body text-center">
+            <h5>⚙️ Configuración</h5>
+            <p>Controla el comportamiento general del ecommerce.</p>
+            <a href="{{ route('admin.settings.index') }}" class="btn btn-dark w-100">
+                Ajustes de la tienda
+            </a>
+        </div>
+    </div>
+</div>
+
 </div>
 @endsection

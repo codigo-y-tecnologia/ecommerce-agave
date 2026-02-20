@@ -16,15 +16,14 @@
         });
     </script>
 @endif
-    @if(session('error'))
-        <div class="alert alert-danger">{{ session('error') }}</div>
-    @endif
-    @if(session('warning'))
-        <div class="alert alert-warning">{{ session('warning') }}</div>
-    @endif
-    @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
+
+@if ($errors->has('stock'))
+    <div class="alert alert-warning">
+        {{ $errors->first('stock') }}
+    </div>
+@endif
+    
+@include('superadmin.partials.alerts')
 
     <form action="{{ route('checkout.store') }}" method="POST" id="checkout-form">
         @csrf
@@ -43,11 +42,16 @@
                         <select name="id_direccion" id="id_direccion" class="form-select" required>
                             <option value="">-- Selecciona una dirección --</option>
                             @foreach($direcciones as $dir)
-                                <option value="{{ $dir->id_direccion }}"
-                                    @if(isset($direccionPrincipal) && $direccionPrincipal->id_direccion === $dir->id_direccion)
-                                        selected
-                                    @endif
-                                >
+                            @php
+            // Para usuarios invitados, usar id_direccion_guest
+            $idValue = Auth::check() ? $dir->id_direccion : $dir->id_direccion_guest;
+        @endphp
+                                <option value="{{ $idValue }}"
+                                    @if(isset($direccionPrincipal) && 
+                (Auth::check() && $direccionPrincipal->id_direccion === $dir->id_direccion) ||
+                (!Auth::check() && $direccionPrincipal->id_direccion_guest === $dir->id_direccion_guest))
+                selected
+            @endif>
                                     {{ $dir->vCalle }} {{ $dir->vNumero_exterior }}, {{ $dir->vColonia }}, {{ $dir->vCiudad }}
                                 </option>
                             @endforeach
@@ -87,17 +91,48 @@
                     <select name="id_direccion_facturacion" id="id_direccion_facturacion" class="form-select">
                         <option value="">-- Selecciona una dirección de facturación --</option>
                         @foreach($direcciones as $dir)
-                            <option value="{{ $dir->id_direccion }}">
-                                {{ $dir->vCalle }} {{ $dir->vNumero_exterior }}, {{ $dir->vColonia }}, {{ $dir->vCiudad }}
-                            </option>
-                        @endforeach
+            @php
+                // Usar el mismo ID que en el select de envío
+                $idValue = Auth::check() ? $dir->id_direccion : $dir->id_direccion_guest;
+            @endphp
+            <option value="{{ $idValue }}">
+                {{ $dir->vCalle }} {{ $dir->vNumero_exterior }}, {{ $dir->vColonia }}, {{ $dir->vCiudad }}
+            </option>
+        @endforeach
                     </select>
                 </div>
             </div>
         </div>
 
         {{-- ========================================= --}}
-        {{-- 3. MÉTODO DE PAGO --}}
+        {{-- 3. INFORMACIÓN DE CONTACTO (USUARIOS NO REGISTRADOS) --}}
+        {{-- ========================================= --}}
+        @guest
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-light">
+        <h5 class="card-title mb-0">📧 Información de contacto</h5>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">
+            Utilizaremos este correo electrónico para enviarte detalles y actualizaciones sobre tu pedido.
+        </p>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold">Correo electrónico <span class="text-danger">*</span></label>
+            <input type="email"
+                   name="vEmail"
+                   id="vEmail"
+                   class="form-control"
+                   placeholder="ejemplo@correo.com"
+                   maxlength="100"
+                   required>
+        </div>
+    </div>
+</div>
+@endguest
+
+        {{-- ========================================= --}}
+        {{-- 4. MÉTODO DE PAGO --}}
         {{-- ========================================= --}}
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-light">
@@ -128,7 +163,7 @@
         </div>
 
         {{-- ========================================= --}}
-        {{-- 4. NOTA DEL PEDIDO --}}
+        {{-- 5. NOTA DEL PEDIDO --}}
         {{-- ========================================= --}}
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-light">
@@ -151,7 +186,7 @@
         </div>
 
         {{-- ========================================= --}}
-        {{-- 5. RESUMEN DEL PEDIDO --}}
+        {{-- 6. RESUMEN DEL PEDIDO --}}
         {{-- ========================================= --}}
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-light">
@@ -300,7 +335,7 @@
         </div>
 
         {{-- ========================================= --}}
-        {{-- 6. BOTONES DE PAGO --}}
+        {{-- 7. BOTONES DE PAGO --}}
         {{-- ========================================= --}}
         <div class="card shadow-sm mb-4">
             <div class="card-body text-center">
@@ -310,7 +345,7 @@
                 <button id="btn-stripe" type="button" class="btn btn-primary btn-lg px-5 py-3 d-none" 
                         style="font-size: 1.1rem; font-weight: 600;">
                     <i class="bi bi-credit-card-2-front me-2"></i>
-                    Pagar con Tarjeta - $<span id="stripe-total">{{ number_format($totalFinal, 2) }}</span>
+                    Pagar con tarjeta<span id="stripe-total"></span>
                 </button>
 
                 {{-- Botón PayPal --}}
@@ -338,21 +373,34 @@
             <div class="modal-body">
                 {{-- Mensajes de error --}}
                 <div id="modal-errors" class="alert alert-danger d-none"></div>
-                
+
+                {{-- Campos del formulario --}}
+
+                {{-- Nombre y apellidos (solo para usuarios no registrados) --}}
+                @guest
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <label class="form-label fw-bold">Nombre <span class="text-danger">*</span></label>
+        <input type="text" name="vNombre" id="vNombre" class="form-control" maxlength="60" required>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label fw-bold">Apellido paterno<span class="text-danger">*</span></label>
+        <input type="text" name="vApaterno" id="vApaterno" class="form-control" maxlength="50" required>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label fw-bold">Apellido materno<span class="text-danger">*</span></label>
+        <input type="text" name="vAmaterno" id="vAmaterno" class="form-control" maxlength="50" required>
+    </div>
+</div>
+@endguest
                 <div class="row g-3">
                     {{-- Teléfono con código de país --}}
-                    <div class="col-md-12">
+                    <div class="col-md-6">
                         <label class="form-label fw-bold">📞 Teléfono de contacto <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <select name="codigo_pais" id="codigo_pais" class="form-select" style="max-width: 140px;" required>
+                            <select name="codigo_pais" id="codigo_pais" class="form-select" style="max-width: 120px;" required>
                                 <option value="+52">🇲🇽 +52</option>
                                 <option value="+1">🇺🇸 +1</option>
-                                <option value="+34">🇪🇸 +34</option>
-                                <option value="+51">🇵🇪 +51</option>
-                                <option value="+56">🇨🇱 +56</option>
-                                <option value="+54">🇦🇷 +54</option>
-                                <option value="+55">🇧🇷 +55</option>
-                                <option value="+57">🇨🇴 +57</option>
                             </select>
                             <input type="text" name="vTelefono_contacto" id="vTelefono_contacto" class="form-control" 
                                    maxlength="15" pattern="[0-9]*" placeholder="Ej: 5512345678" required
@@ -361,6 +409,20 @@
                         </div>
                         <div class="form-text">Solo números, máximo 15 dígitos (sin código de país)</div>
                     </div>
+
+                    {{-- RFC (opcional) --}}
+    <div class="col-md-6">
+        <label class="form-label fw-bold">RFC</label>
+        <input type="text"
+               name="vRFC"
+               id="vRFC"
+               class="form-control"
+               maxlength="13"
+               placeholder="XAXX010101000"
+               style="text-transform: uppercase;"
+               oninput="this.value = this.value.toUpperCase()">
+        <div class="form-text">Opcional para facturación</div>
+    </div>
 
                     {{-- Calle --}}
                     <div class="col-md-8">
@@ -487,10 +549,36 @@
 {{-- 💻 Script AJAX --}}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+
+    window.addEventListener('pageshow', function (event) {
+        resetStripeButton();
+    
+    if (event.persisted) {
+        if (paypalContainer) {
+            paypalContainer.innerHTML = '';
+            delete paypalContainer.dataset.rendered;
+        }
+    }
+
+    actualizarBotonesPago();
+
+    // Si viene desde el bfcache (botón atrás)
+    if (event.persisted) {
+        fetch("{{ route('checkout.release-reservation') }}", {
+            method: "POST",
+            headers: {
+                "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                "Content-Type": "application/json"
+            }
+        });
+    }
+});
+
     // =========================================
     // VARIABLES GLOBALES
     // =========================================
     let notaTexto = ''; // Variable para guardar el texto de la nota
+    let paypalBusinessError = null;
 
     // =========================================
     // 1. MANEJO DE DIRECCIÓN DE FACTURACIÓN
@@ -535,19 +623,208 @@ document.addEventListener('DOMContentLoaded', () => {
     const paypalContainer = document.getElementById('paypal-button-container');
 
     function actualizarBotonesPago() {
-        const metodoSeleccionado = document.querySelector('input[name="metodo_pago"]:checked').value;
-        
-        // Ocultar todos los botones primero
-        btnStripe.classList.add('d-none');
-        paypalContainer.classList.add('d-none');
+    const metodoSeleccionado = document.querySelector('input[name="metodo_pago"]:checked')?.value;
 
-        // Mostrar solo el botón seleccionado
-        if (metodoSeleccionado === 'stripe') {
-            btnStripe.classList.remove('d-none');
-        } else if (metodoSeleccionado === 'paypal') {
-            paypalContainer.classList.remove('d-none');
+    // Ocultar todos los botones primero
+    btnStripe.classList.add('d-none');
+    paypalContainer.classList.add('d-none');
+
+    // Mostrar solo el botón seleccionado
+    if (metodoSeleccionado === 'stripe') {
+        btnStripe.classList.remove('d-none');
+    } else if (metodoSeleccionado === 'paypal') {
+        paypalContainer.classList.remove('d-none');
+        requestAnimationFrame(() => {
+        renderPaypalIfNeeded();
+     });
+    }
+}
+
+// Función para renderizar PayPal solo si no se ha renderizado antes y pagar con validaciones adicionales
+function renderPaypalIfNeeded() {
+    if (
+    paypalContainer.dataset.rendered === '1' &&
+    paypalContainer.querySelector('iframe')
+) {
+    return;
+}
+
+    if (typeof paypal === 'undefined') {
+        return;
+    }
+
+    paypal.Buttons({
+        onClick: async function (data, actions) {
+
+            /* VALIDACIONES FRONTEND */
+
+            // Validar que se haya seleccionado una dirección de envío
+            if (!validarDireccion()) {
+                return actions.reject();
+            }
+
+            // Validar email
+        if (document.getElementById('vEmail')) {
+    const email = document.getElementById('vEmail').value.trim();
+    if (!email) {
+        Swal.fire('Correo requerido', 'Ingresa tu correo para continuar', 'warning');
+        return actions.reject();
+    }
+}
+
+// Validar dirección de facturación
+    const usarMisma = document.getElementById('misma_direccion_facturacion').checked;
+    const selectFact = document.getElementById('id_direccion_facturacion');
+
+    if (!usarMisma) {
+        if (!selectFact.value || selectFact.value === "0") {
+
+            // Marcar select en rojo
+            selectFact.classList.remove('is-valid');
+            selectFact.classList.add('is-invalid');
+
+            Swal.fire({
+                icon: "warning",
+                title: "Dirección de facturación requerida",
+                text: "Selecciona una dirección de facturación para continuar.",
+            });
+
+            return actions.reject();
         }
     }
+
+    /* VALIDACIÓN BACKEND */
+            try {
+                const res = await fetch("{{ route('payment.paypal.validate') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        id_direccion: document.getElementById('id_direccion').value,
+                        usar_misma_direccion: document.getElementById('misma_direccion_facturacion').checked,
+                        id_direccion_facturacion: document.getElementById('id_direccion_facturacion')?.value ?? null,
+                        email_invitado: document.getElementById('vEmail')?.value ?? null
+                    })
+                });
+
+                const json = await res.json();
+
+                if (!json.success) {
+                    Swal.fire('No se puede continuar', json.message, 'warning');
+                    return actions.reject();
+                }
+
+            } catch (e) {
+                console.error('Error validando PayPal:', e);
+                Swal.fire('Error', 'No se pudo validar la información. Intenta nuevamente.', 'error');
+                return actions.reject();
+            }
+
+            return actions.resolve();
+        },
+
+        createOrder: function(data, actions) {
+
+            paypalBusinessError = null;
+            
+            // Obtener datos del formulario para enviar al backend antes de crear la orden
+            const idDireccion = document.getElementById('id_direccion').value;
+            const mismaDireccion = document.getElementById('misma_direccion_facturacion').checked;
+            const idDireccionFacturacion = mismaDireccion ? idDireccion : document.getElementById('id_direccion_facturacion').value;
+            const emailInvitado = document.getElementById('vEmail')?.value.trim() ?? null;
+            const nota = document.getElementById('agregar_nota').checked
+                ? document.getElementById('nota_pedido').value
+                : null;
+
+            return fetch("{{ route('payment.paypal.create') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    id_direccion: idDireccion,
+                    id_direccion_facturacion: idDireccionFacturacion,
+                    email_invitado: emailInvitado,
+                    nota: nota
+                })
+            })
+            .then(res => res.json())
+            .then(json => {
+                if (json.success) {
+                    return json.orderID;
+                } else {
+                    paypalBusinessError = json.message || 'No se pudo continuar';
+
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'No se puede continuar',
+                        text: paypalBusinessError,
+                        confirmButtonText: 'Entendido'
+                    });
+                    return Promise.reject();
+                    //throw new Error(paypalBusinessError);
+                }
+            });
+        },
+
+        onApprove: function(data, actions) {
+            return fetch("{{ route('payment.paypal.capture') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ orderID: data.orderID })
+            })
+            .then(res => res.json())
+            .then(json => {
+                if (json.success) {
+                    window.location.href = json.redirect_url;
+                    return;
+                } 
+
+                Swal.fire({
+                icon: 'error',
+                title: 'Pago no completado',
+                text: json.message || 'No se pudo completar el pago con PayPal.',
+                confirmButtonText: 'Entendido'
+                });
+            });
+        }, 
+
+        onCancel: function () {
+                fetch("{{ route('checkout.release-reservation') }}", {
+                method: "POST",
+                headers: {
+                    "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                    "Content-Type": "application/json"
+                }
+            });
+                Swal.fire("Cancelado", "Pago cancelado.", "info");
+            },
+
+            onError: function (err) {
+                console.error('PayPal SDK error:', err);
+
+                if (paypalBusinessError) {
+                paypalBusinessError = null;
+                return;
+            }
+
+                Swal.fire({
+                icon: 'error',
+                title: 'Error técnico',
+                text: 'Ocurrió un problema técnico con PayPal. Intenta nuevamente.',
+                confirmButtonText: 'Entendido'
+                });
+            }
+    }).render('#paypal-button-container');
+
+    paypalContainer.dataset.rendered = '1';
+}
 
     // Event listeners para los radio buttons
     metodoPagoRadios.forEach(radio => {
@@ -666,7 +943,7 @@ document.addEventListener('DOMContentLoaded', () => {
         Swal.fire({
             icon: 'warning',
             title: 'Dirección requerida',
-            text: 'Por favor selecciona una dirección para continuar.',
+            text: 'Por favor selecciona una dirección de envío para continuar.',
             confirmButtonText: 'Entendido'
         });
         return false;
@@ -676,15 +953,42 @@ document.addEventListener('DOMContentLoaded', () => {
         return true;
     }
 
+    // Función para resetear el botón de Stripe en caso de error
+    function resetStripeButton() {
+    const btnStripe = document.getElementById('btn-stripe');
+    if (!btnStripe) return;
+
+    btnStripe.dataset.loading = '0';
+    btnStripe.disabled = false;
+
+    btnStripe.innerHTML = `
+        <i class="bi bi-credit-card-2-front me-2"></i>
+        Pagar con tarjeta
+    `;
+}
+
     // =========================================
     // 6. STRIPE
     // =========================================
-    document.getElementById('btn-stripe')?.addEventListener('click', async (e) => {
+    btnStripe?.addEventListener('click', async (e) => {
         e.preventDefault();
+
+        if (btnStripe.dataset.loading === '1') {
+            return;
+        }
 
         if (!validarDireccion()) {
             return;
         }
+
+        // Validar email
+        if (document.getElementById('vEmail')) {
+    const email = document.getElementById('vEmail').value.trim();
+    if (!email) {
+        Swal.fire('Correo requerido', 'Ingresa tu correo para continuar', 'warning');
+        return;
+    }
+}
 
         // Validar dirección de facturación
     const usarMisma = document.getElementById('misma_direccion_facturacion').checked;
@@ -711,10 +1015,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const idDireccion = document.getElementById('id_direccion').value;
         const mismaDireccion = document.getElementById('misma_direccion_facturacion').checked;
         const idDireccionFacturacion = mismaDireccion ? idDireccion : document.getElementById('id_direccion_facturacion').value;
+        const emailInvitado = document.getElementById('vEmail')?.value.trim() ?? null;
         const nota = document.getElementById('agregar_nota').checked 
     ? document.getElementById('nota_pedido').value 
     : null;
 
+    btnStripe.dataset.loading = '1';
+        btnStripe.disabled = true;
+        btnStripe.innerHTML = `
+        <span class="spinner-border spinner-border-sm me-2"></span>
+        Procesando...
+        `;
 
         try {
             const res = await fetch("{{ route('payment.stripe.session') }}", {
@@ -726,104 +1037,65 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     id_direccion: idDireccion,
                     id_direccion_facturacion: idDireccionFacturacion,
+                    email_invitado: emailInvitado,
                     nota: nota
                 })
             });
 
             const data = await res.json();
 
-            if (!data.success) {
-                Swal.fire("Error", data.message || "Error al crear la sesión de pago.", "error");
-                return;
+            if (!res.ok || !data.success) {
+
+            let icon = 'error';
+            let title = 'Error';
+
+            switch (data.type) {
+                case 'stock':
+                    icon = 'warning';
+                    title = 'Stock insuficiente';
+                    break;
+
+                case 'validation':
+                    icon = 'warning';
+                    title = 'Datos incompletos';
+                    break;
+
+                case 'business':
+                    icon = 'info';
+                    title = 'No se puede continuar';
+                    break;
+
+                case 'system':
+                default:
+                    icon = 'error';
+                    title = 'Error del sistema';
+                    break;
             }
 
+            Swal.fire({
+                icon: icon,
+                title: title,
+                text: data.message || 'Ocurrió un error inesperado',
+                confirmButtonText: 'OK'
+            });
+
+            resetStripeButton();
+            return;
+    }
             window.location.href = data.url;
 
         } catch (err) {
-            console.error(err);
-            Swal.fire("Error", "No se pudo iniciar el pago con Stripe.", "error");
+            console.error('Stripe fetch error:', err);
+            
+            Swal.fire({
+            icon: 'error',
+            title: 'Error de conexión',
+            text: 'No se pudo contactar al servidor. Intenta nuevamente.',
+            confirmButtonText: 'OK'
+            });
+            resetStripeButton();
         }
     });
-
-    // =========================================
-    // 7. PAYPAL
-    // =========================================
-    if (typeof paypal !== 'undefined') {
-        paypal.Buttons({
-            onClick: function(data, actions) {
-                if (!validarDireccion()) {
-                    return Promise.reject();
-                }
-                return Promise.resolve();
-            },
-
-            createOrder: function(data, actions) {
-                // Obtener datos del formulario
-                const idDireccion = document.getElementById('id_direccion').value;
-                const mismaDireccion = document.getElementById('misma_direccion_facturacion').checked;
-                const idDireccionFacturacion = mismaDireccion ? idDireccion : document.getElementById('id_direccion_facturacion').value;
-                const nota = document.getElementById('agregar_nota').checked 
-                ? document.getElementById('nota_pedido').value 
-                : null;
-
-                return fetch("{{ route('payment.paypal.create') }}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({
-                        id_direccion: idDireccion,
-                        id_direccion_facturacion: idDireccionFacturacion,
-                        nota: nota
-                    })
-                })
-                .then(res => res.json())
-                .then(json => {
-                    if (!json.success) {
-                        Swal.fire({
-                        icon: "error",
-                        title: "No se puede continuar con el pago",
-                        text: json.message || "No fue posible crear la orden de PayPal.",
-                        confirmButtonText: "Entendido"
-                    });
-                        throw new Error(json.message || "No fue posible crear la orden de PayPal.");
-                    }
-                    return json.orderID;
-                });
-            },
-
-            onApprove: function(data, actions) {
-                return fetch("{{ route('payment.paypal.capture') }}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({ orderID: data.orderID })
-                })
-                .then(res => res.json())
-                .then(json => {
-                    if (json.success) {
-                        window.location.href = json.redirect_url;
-                    } else {
-                        window.location.href = window.checkoutErrorUrl + 
-        '?msg=' + encodeURIComponent(res.message ?? 'No se pudo completar el pago con PayPal.');
-                    }
-                });
-            },
-
-            onCancel: function () {
-                Swal.fire("Cancelado", "Pago cancelado.", "info");
-            },
-
-            onError: function (err) {
-                console.error('PayPal error:', err);
-                window.location.href = window.checkoutErrorUrl + 
-        '?msg=' + encodeURIComponent('Ocurrió un error al procesar el pago con PayPal.');
-            }
-        }).render('#paypal-button-container');
-    }
 
     // =========================================
     // 8. MANEJO DE DIRECCIONES MEJORADO
@@ -926,7 +1198,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const res = await fetch(`/api/direccion/${id}`);
+
+            // Determinar si es usuario invitado (guest)
+            const isGuest = {{ Auth::guest() ? 'true' : 'false' }};
+
+            // Construir la URL de la API según el tipo de usuario
+            let apiUrl;
+        if (isGuest) {
+            // Usuario invitado: usar endpoint para direcciones guest
+            apiUrl = `/checkout/direccion-guest/${id}`;
+        } else {
+            // Usuario logueado: usar endpoint normal
+            apiUrl = `/api/direccion/${id}`;
+        }
+            const res = await fetch(apiUrl);
+            //const res = await fetch(`/api/direccion/${id}`);
             const data = await res.json();
 
             if (data.success) {
@@ -981,12 +1267,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'No se pudo cargar la dirección.',
+                    text: data.message || 'No se pudo cargar la dirección',
                     confirmButtonText: 'Entendido'
                 });
             }
         } catch (err) {
-            console.error(err);
+            console.error('Error al obtener la dirección:', error);
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
@@ -1118,7 +1404,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     let erroresBackend = [];
                     for (const campo in data.errors) {
                         const nombreCampo = {
+                            'vNombre': 'Nombre',
+                            'vApaterno': 'Apellido paterno',
+                            'vAmaterno': 'Apellido materno',
                             'vTelefono_contacto': 'Teléfono de contacto',
+                            'vRFC': 'RFC',
                             'vCalle': 'Calle',
                             'vNumero_exterior': 'Número exterior',
                             'vColonia': 'Colonia',
@@ -1300,6 +1590,5 @@ label .text-danger {
 }
 
 </style>
-
 
 @endsection

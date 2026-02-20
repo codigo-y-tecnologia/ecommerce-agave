@@ -9,6 +9,19 @@
 </div>
 
 <div class="row g-4">
+
+    <div class="col-md-4">
+        <div class="card border-secondary shadow-sm">
+            <div class="card-body text-center">
+                <h5>👤 Mi Perfil</h5>
+                <p>Gestiona tu perfil y preferencias.</p>
+                @can('mi_perfil_superadmin')
+                    <a href="{{ route('superadmin.perfil.index') }}" class="btn btn-secondary w-100">Mi Perfil</a>
+                @endcan
+            </div>
+        </div>
+    </div>
+
     <div class="col-md-4">
         <div class="card border-danger shadow-sm">
             <div class="card-body text-center">
@@ -24,7 +37,11 @@
             <div class="card-body text-center">
                 <h5>🧑‍💼 Administradores</h5>
                 <p>Agrega o elimina administradores y asigna permisos.</p>
-                <a href="{{ route('superadmin.admins.index') }}" class="btn btn-primary w-100">Gestionar administradores</a>
+                @can('gestionar_administradores')
+    <a href="{{ route('superadmin.admins.index') }}" class="btn btn-primary w-100">
+        Gestionar administradores
+    </a>
+@endcan
             </div>
         </div>
     </div>
@@ -44,7 +61,9 @@
             <div class="card-body text-center">
                 <h5>🧾 Permisos y Roles</h5>
                 <p>Gestiona permisos avanzados y asignaciones de roles.</p>
-                <a href="#" class="btn btn-info w-100">Gestionar permisos</a>
+                @can('gestionar_permisos')
+                    <a href="{{ route('roles.permisos') }}" class="btn btn-info w-100">Gestionar permisos</a>
+                @endcan
             </div>
         </div>
     </div>
