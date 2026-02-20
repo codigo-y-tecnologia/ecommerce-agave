@@ -1353,6 +1353,9 @@ let variacionesImagenes = {};
 let variacionesVideos = {};
 let variacionesGifs = {};
 
+// Variable para almacenar la imagen de categoría seleccionada
+let categoriaImagenFile = null;
+
 // ============ FUNCIONES DE VALIDACIÓN ============
 
 function validarPrecioDescuentoProductoInstantaneo(input) {
@@ -1764,12 +1767,14 @@ function cancelarGif() {
     actualizarContadorImagenes();
 }
 
-// Funciones para imágenes de categoría
+// ============ FUNCIONES PARA IMÁGENES DE CATEGORÍA - CORREGIDAS ============
+
 function previewImagenCategoria(input) {
     const preview = document.getElementById('categoriaImagePreview');
     const previewImg = document.getElementById('categoriaPreviewImg');
     
-    if (input.files && input.files[0]) {
+    // SOLO actualizar si hay un archivo seleccionado
+    if (input.files && input.files.length > 0) {
         const file = input.files[0];
         const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
         
@@ -1783,6 +1788,9 @@ function previewImagenCategoria(input) {
             return;
         }
         
+        // Guardar el archivo en la variable global
+        categoriaImagenFile = file;
+        
         const reader = new FileReader();
         
         reader.onload = function(e) {
@@ -1792,6 +1800,7 @@ function previewImagenCategoria(input) {
         
         reader.readAsDataURL(file);
     }
+    // Si no hay archivo (usuario canceló), NO HACER NADA - mantener la imagen anterior
 }
 
 function cancelarImagenCategoria() {
@@ -1800,12 +1809,14 @@ function cancelarImagenCategoria() {
     
     preview.style.display = 'none';
     fileInput.value = '';
+    categoriaImagenFile = null;
 }
 
 function resetearInputImagen() {
     const fileInput = document.getElementById('vImagen_categoria');
     fileInput.value = '';
     document.getElementById('categoriaImagePreview').style.display = 'none';
+    categoriaImagenFile = null;
 }
 
 function limpiarFormularioCategoria() {
@@ -1816,6 +1827,7 @@ function limpiarFormularioCategoria() {
     document.getElementById('bActivo_categoria').checked = true;
     document.getElementById('vImagen_categoria').value = '';
     document.getElementById('categoriaImagePreview').style.display = 'none';
+    categoriaImagenFile = null;
 }
 
 function limpiarFormularioMarca() {
@@ -3430,7 +3442,17 @@ document.addEventListener('DOMContentLoaded', function() {
         categoriaForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
+            // Crear FormData y agregar la imagen si existe
             const formData = new FormData(this);
+            
+            // Si hay una imagen seleccionada previamente, asegurarse de que se incluya
+            if (categoriaImagenFile) {
+                // Reemplazar el archivo en el FormData si ya existe
+                if (formData.has('vImagen')) {
+                    formData.delete('vImagen');
+                }
+                formData.append('vImagen', categoriaImagenFile);
+            }
             
             Swal.fire({
                 title: 'Creando categoría...',
@@ -3469,53 +3491,93 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Obtener la categoría recién creada con información jerárquica
                     const nuevaCategoria = data.categoria;
                     
+                    // CONSTRUIR EL NOMBRE CON FLECHAS PARA MOSTRAR
+                    let nombreConJerarquia = '';
+                    
+                    // Calcular el nivel jerárquico
+                    let nivel = 0;
+                    if (nuevaCategoria.padre) {
+                        nivel = nuevaCategoria.nivel || 1;
+                    }
+                    
+                    // Construir el nombre con los prefijos correctos
+                    if (nivel === 0) {
+                        // Es categoría raíz
+                        nombreConJerarquia = '🏠 ' + nuevaCategoria.vNombre;
+                    } else {
+                        // Es subcategoría - agregar espacios y flechas
+                        let espacios = '';
+                        for (let i = 0; i < nivel; i++) {
+                            espacios += '&nbsp;&nbsp;&nbsp;';
+                        }
+                        nombreConJerarquia = espacios + '↳ ' + nuevaCategoria.vNombre;
+                    }
+                    
                     // Actualizar select principal de categorías (id_categoria)
                     const selectCategoria = document.getElementById('id_categoria');
                     if (selectCategoria) {
-                        // Usar el display_name que viene del servidor con prefijos jerárquicos
                         const option = document.createElement('option');
                         option.value = nuevaCategoria.id_categoria;
-                        option.innerHTML = nuevaCategoria.display_name || nuevaCategoria.vNombre;
+                        option.innerHTML = nombreConJerarquia;
+                        option.setAttribute('data-padre-id', nuevaCategoria.id_categoria_padre || '');
+                        option.setAttribute('data-nivel', nivel);
                         
-                        // Insertar en orden jerárquico correcto (al final de su nivel)
+                        // Insertar en la posición correcta según jerarquía
+                        const options = Array.from(selectCategoria.options);
                         let inserted = false;
                         const padreId = nuevaCategoria.id_categoria_padre;
                         
                         if (padreId) {
-                            // Buscar la posición correcta después de las categorías del mismo padre
-                            const options = Array.from(selectCategoria.options);
-                            let lastSiblingIndex = -1;
+                            // Buscar dónde insertar: después del padre y después de todos sus hijos
+                            let padreIndex = -1;
+                            let ultimoHijoIndex = -1;
                             
                             for (let i = 0; i < options.length; i++) {
                                 if (options[i].value == padreId) {
-                                    // Es el padre, continuar buscando después
-                                } else if (lastSiblingIndex === -1 && i > 0) {
-                                    // Verificar si este es hermano del mismo padre
-                                    const padreDeEsta = options[i].getAttribute('data-padre-id');
-                                    if (padreDeEsta == padreId) {
-                                        lastSiblingIndex = i;
-                                    }
+                                    padreIndex = i;
                                 }
-                            }
-                            
-                            if (lastSiblingIndex !== -1) {
-                                // Insertar después del último hermano
-                                selectCategoria.insertBefore(option, options[lastSiblingIndex + 1] || null);
-                            } else {
-                                // No hay hermanos, buscar después del padre
-                                for (let i = 0; i < options.length; i++) {
-                                    if (options[i].value == padreId) {
-                                        selectCategoria.insertBefore(option, options[i + 1] || null);
+                                
+                                // Si ya encontramos el padre y el índice es mayor que padreIndex
+                                if (padreIndex !== -1 && i > padreIndex) {
+                                    const optionPadreId = options[i].getAttribute('data-padre-id');
+                                    // Si esta opción tiene como padre el ID que buscamos, es un hijo
+                                    if (optionPadreId == padreId) {
+                                        ultimoHijoIndex = i;
+                                    } else if (optionPadreId && optionPadreId !== padreId) {
+                                        // Si encontramos una opción con otro padre, ya pasamos la sección de hijos
                                         break;
                                     }
                                 }
                             }
+                            
+                            if (ultimoHijoIndex !== -1) {
+                                // Insertar después del último hijo
+                                selectCategoria.insertBefore(option, options[ultimoHijoIndex + 1] || null);
+                                inserted = true;
+                            } else if (padreIndex !== -1) {
+                                // No hay hijos, insertar después del padre
+                                selectCategoria.insertBefore(option, options[padreIndex + 1] || null);
+                                inserted = true;
+                            }
                         } else {
-                            // Es raíz, agregar al final de las raíces
-                            selectCategoria.appendChild(option);
+                            // Es raíz, insertar al final de las raíces
+                            // Buscar el índice del último elemento raíz (sin data-padre-id o con data-padre-id vacío)
+                            let ultimaRaizIndex = -1;
+                            for (let i = 0; i < options.length; i++) {
+                                const optionPadreId = options[i].getAttribute('data-padre-id');
+                                if (!optionPadreId || optionPadreId === '') {
+                                    ultimaRaizIndex = i;
+                                }
+                            }
+                            
+                            if (ultimaRaizIndex !== -1) {
+                                // Insertar después de la última raíz
+                                selectCategoria.insertBefore(option, options[ultimaRaizIndex + 1] || null);
+                                inserted = true;
+                            }
                         }
                         
-                        // Si no se insertó en ninguna posición específica, agregar al final
+                        // Si no se pudo insertar en una posición específica, agregar al final
                         if (!inserted) {
                             selectCategoria.appendChild(option);
                         }
@@ -3529,25 +3591,53 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (selectPadre) {
                         const option = document.createElement('option');
                         option.value = nuevaCategoria.id_categoria;
-                        option.innerHTML = nuevaCategoria.display_name || nuevaCategoria.vNombre;
+                        option.innerHTML = nombreConJerarquia;
+                        option.setAttribute('data-padre-id', nuevaCategoria.id_categoria_padre || '');
+                        option.setAttribute('data-nivel', nivel);
                         
-                        // Insertar en orden jerárquico
+                        // Insertar en la posición correcta (misma lógica que arriba)
+                        const options = Array.from(selectPadre.options);
                         let inserted = false;
                         const padreId = nuevaCategoria.id_categoria_padre;
                         
                         if (padreId) {
-                            const options = Array.from(selectPadre.options);
+                            let padreIndex = -1;
+                            let ultimoHijoIndex = -1;
+                            
                             for (let i = 0; i < options.length; i++) {
                                 if (options[i].value == padreId) {
-                                    // Insertar después del padre (al final de sus hijos)
-                                    let j = i + 1;
-                                    while (j < options.length && options[j].innerHTML.includes('↳')) {
-                                        j++;
-                                    }
-                                    selectPadre.insertBefore(option, options[j] || null);
-                                    inserted = true;
-                                    break;
+                                    padreIndex = i;
                                 }
+                                
+                                if (padreIndex !== -1 && i > padreIndex) {
+                                    const optionPadreId = options[i].getAttribute('data-padre-id');
+                                    if (optionPadreId == padreId) {
+                                        ultimoHijoIndex = i;
+                                    } else if (optionPadreId && optionPadreId !== padreId) {
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            if (ultimoHijoIndex !== -1) {
+                                selectPadre.insertBefore(option, options[ultimoHijoIndex + 1] || null);
+                                inserted = true;
+                            } else if (padreIndex !== -1) {
+                                selectPadre.insertBefore(option, options[padreIndex + 1] || null);
+                                inserted = true;
+                            }
+                        } else {
+                            let ultimaRaizIndex = -1;
+                            for (let i = 0; i < options.length; i++) {
+                                const optionPadreId = options[i].getAttribute('data-padre-id');
+                                if (!optionPadreId || optionPadreId === '') {
+                                    ultimaRaizIndex = i;
+                                }
+                            }
+                            
+                            if (ultimaRaizIndex !== -1) {
+                                selectPadre.insertBefore(option, options[ultimaRaizIndex + 1] || null);
+                                inserted = true;
                             }
                         }
                         
