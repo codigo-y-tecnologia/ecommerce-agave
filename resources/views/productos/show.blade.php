@@ -666,7 +666,7 @@
                             </div>
                             
                             <div class="text-center mt-3">
-                                <a href="{{ route('productos.valoraciones') }}" 
+                                <a href="{{ route('productos.variaciones') }}" 
                                    class="btn btn-outline-info btn-lg">
                                     <i class="fas fa-cog me-1"></i> Gestionar Variaciones
                                 </a>
@@ -768,7 +768,7 @@
                         @endif
                         
                         @if($producto->tieneVariaciones())
-                            <a href="{{ route('productos.valoraciones') }}" 
+                            <a href="{{ route('productos.variaciones') }}" 
                                class="btn btn-outline-info btn-lg ms-2">
                                 <i class="fas fa-cog me-1"></i> Gestionar Variaciones
                             </a>

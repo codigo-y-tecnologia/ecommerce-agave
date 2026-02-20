@@ -50,8 +50,8 @@
                         <div class="alert alert-info mt-3">
                             <i class="fas fa-info-circle me-2"></i>
                             <strong>Información:</strong> Para crear variaciones del producto, dirígete a la sección de 
-                            <a href="{{ route('valoraciones.index') }}" class="alert-link">Valoraciones</a> o 
-                            <a href="{{ route('valoraciones.create', $producto->id_producto) }}" class="alert-link">crea una nueva valoración</a>.
+                            <a href="{{ route('variaciones.index') }}" class="alert-link">Variaciones</a> o 
+                            <a href="{{ route('variaciones.create', $producto->id_producto) }}" class="alert-link">crea una nueva valoración</a>.
                         </div>
                     @else
                         <div class="text-center py-4">
@@ -114,11 +114,11 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{{ route('valoraciones.edit', ['producto_id' => $producto->id_producto, 'variacion_id' => $variacion->id_variacion]) }}" 
+                                    <a href="{{ route('variaciones.edit', ['producto_id' => $producto->id_producto, 'variacion_id' => $variacion->id_variacion]) }}" 
                                        class="btn btn-warning" title="Editar">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <form action="{{ route('valoraciones.destroy', ['producto_id' => $producto->id_producto, 'variacion_id' => $variacion->id_variacion]) }}" 
+                                    <form action="{{ route('variaciones.destroy', ['producto_id' => $producto->id_producto, 'variacion_id' => $variacion->id_variacion]) }}" 
                                           method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar esta variación?')">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="btn btn-danger" title="Eliminar">
@@ -142,13 +142,13 @@
             <div class="card-body text-center py-5">
                 <i class="fas fa-cubes fa-3x text-muted mb-3"></i>
                 <h4 class="text-muted">No hay variaciones creadas</h4>
-                <p class="text-muted mb-3">Crea variaciones manualmente desde la sección de valoraciones</p>
+                <p class="text-muted mb-3">Crea variaciones manualmente desde la sección de variaciones</p>
                 <div class="mt-3">
-                    <a href="{{ route('valoraciones.create', $producto->id_producto) }}" class="btn btn-success me-2">
+                    <a href="{{ route('variaciones.create', $producto->id_producto) }}" class="btn btn-success me-2">
                         <i class="fas fa-plus me-1"></i> Crear Nueva Valoración
                     </a>
-                    <a href="{{ route('valoraciones.index') }}" class="btn btn-outline-primary">
-                        <i class="fas fa-list me-1"></i> Ver Todas las Valoraciones
+                    <a href="{{ route('variaciones.index') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-list me-1"></i> Ver Todas las Variaciones
                     </a>
                 </div>
             </div>

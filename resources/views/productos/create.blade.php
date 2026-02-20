@@ -18,9 +18,7 @@
     <form action="{{ route('productos.store') }}" method="POST" enctype="multipart/form-data" id="productoForm">
         @csrf
 
-        <!-- ========================================= -->
-        <!-- INFORMACIÓN BÁSICA DEL PRODUCTO          -->
-        <!-- ========================================= -->
+        <!-- INFORMACIÓN BÁSICA DEL PRODUCTO -->
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
                 <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información Básica</h5>
@@ -144,24 +142,24 @@
                     </div>
                 </div>
 
-                <!-- CAMPOS DE OFERTA -->
+                <!-- CAMPOS DE DESCUENTO -->
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">
-                                <i class="fas fa-percentage me-1"></i>Oferta Especial
+                                <i class="fas fa-percentage me-1"></i>Descuento Especial
                             </label>
                             <div class="form-check form-switch">
-                                <input type="checkbox" name="bTiene_oferta" id="bTiene_oferta" 
+                                <input type="checkbox" name="bTiene_descuento" id="bTiene_descuento" 
                                        class="form-check-input" value="1"
-                                       {{ old('bTiene_oferta') ? 'checked' : '' }}
-                                       onchange="toggleOfertaFields()">
-                                <label class="form-check-label" for="bTiene_oferta">
-                                    Activar oferta para este producto
+                                       {{ old('bTiene_descuento') ? 'checked' : '' }}
+                                       onchange="toggleDescuentoFields()">
+                                <label class="form-check-label" for="bTiene_descuento">
+                                    Activar Descuento para este producto
                                 </label>
                             </div>
                             <small class="form-text text-muted">
-                                Permite establecer un precio de oferta por tiempo limitado
+                                Permite establecer un precio de descuento por tiempo limitado
                             </small>
                         </div>
                     </div>
@@ -183,26 +181,28 @@
                     </div>
                 </div>
 
-                <!-- CAMPOS DE OFERTA (OCULTOS INICIALMENTE) -->
-                <div id="ofertaFields" style="display: none;">
+                <!-- CAMPOS DE DESCUENTO (OCULTOS INICIALMENTE) -->
+                <div id="descuentoFields" style="display: none;">
                     <div class="row">
                         <div class="col-md-4">
                             <div class="form-group mb-3">
-                                <label for="dPrecio_oferta" class="form-label fw-bold">
-                                    Precio de oferta <span class="text-danger">*</span>
+                                <label for="dPrecio_descuento" class="form-label fw-bold">
+                                    Precio de Descuento <span class="text-danger">*</span>
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
                                     <input type="text" 
-                                           name="dPrecio_oferta" 
-                                           id="dPrecio_oferta" 
-                                           class="form-control @error('dPrecio_oferta') is-invalid @enderror"
-                                           value="{{ old('dPrecio_oferta') }}" 
-                                           oninput="validarPrecio(this)"
+                                           name="dPrecio_descuento" 
+                                           id="dPrecio_descuento" 
+                                           class="form-control @error('dPrecio_descuento') is-invalid @enderror"
+                                           value="{{ old('dPrecio_descuento') }}" 
+                                           oninput="validarPrecio(this); validarPrecioDescuentoProductoInstantaneo(this);"
+                                           onblur="validarPrecioDescuentoProducto()"
                                            placeholder="0.00"
                                            autocomplete="off">
                                 </div>
-                                @error('dPrecio_oferta')
+                                <div id="error-precio-descuento" class="invalid-feedback" style="display: none;"></div>
+                                @error('dPrecio_descuento')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                                 <small class="form-text text-muted">Debe ser menor al precio de venta</small>
@@ -211,16 +211,16 @@
                         
                         <div class="col-md-4">
                             <div class="form-group mb-3">
-                                <label for="dFecha_inicio_oferta" class="form-label fw-bold">
+                                <label for="dFecha_inicio_descuento" class="form-label fw-bold">
                                     Fecha inicio <span class="text-danger">*</span>
                                 </label>
                                 <input type="date" 
-                                       name="dFecha_inicio_oferta" 
-                                       id="dFecha_inicio_oferta" 
-                                       class="form-control @error('dFecha_inicio_oferta') is-invalid @enderror"
-                                       value="{{ old('dFecha_inicio_oferta') }}"
+                                       name="dFecha_inicio_descuento" 
+                                       id="dFecha_inicio_descuento" 
+                                       class="form-control @error('dFecha_inicio_descuento') is-invalid @enderror"
+                                       value="{{ old('dFecha_inicio_descuento') }}"
                                        autocomplete="off">
-                                @error('dFecha_inicio_oferta')
+                                @error('dFecha_inicio_descuento')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -228,16 +228,16 @@
                         
                         <div class="col-md-4">
                             <div class="form-group mb-3">
-                                <label for="dFecha_fin_oferta" class="form-label fw-bold">
+                                <label for="dFecha_fin_descuento" class="form-label fw-bold">
                                     Fecha fin <span class="text-danger">*</span>
                                 </label>
                                 <input type="date" 
-                                       name="dFecha_fin_oferta" 
-                                       id="dFecha_fin_oferta" 
-                                       class="form-control @error('dFecha_fin_oferta') is-invalid @enderror"
-                                       value="{{ old('dFecha_fin_oferta') }}"
+                                       name="dFecha_fin_descuento" 
+                                       id="dFecha_fin_descuento" 
+                                       class="form-control @error('dFecha_fin_descuento') is-invalid @enderror"
+                                       value="{{ old('dFecha_fin_descuento') }}"
                                        autocomplete="off">
-                                @error('dFecha_fin_oferta')
+                                @error('dFecha_fin_descuento')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -247,18 +247,18 @@
                     <div class="row">
                         <div class="col-md-12">
                             <div class="form-group mb-3">
-                                <label for="vMotivo_oferta" class="form-label fw-bold">
-                                    Motivo de la oferta
+                                <label for="vMotivo_descuento" class="form-label fw-bold">
+                                    Motivo del descuento
                                 </label>
                                 <input type="text" 
-                                       name="vMotivo_oferta" 
-                                       id="vMotivo_oferta" 
-                                       class="form-control @error('vMotivo_oferta') is-invalid @enderror"
-                                       value="{{ old('vMotivo_oferta') }}"
+                                       name="vMotivo_descuento" 
+                                       id="vMotivo_descuento" 
+                                       class="form-control @error('vMotivo_descuento') is-invalid @enderror"
+                                       value="{{ old('vMotivo_descuento') }}"
                                        maxlength="255"
                                        placeholder="Ej: Liquidación de temporada, Black Friday, etc."
                                        autocomplete="off">
-                                @error('vMotivo_oferta')
+                                @error('vMotivo_descuento')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -273,17 +273,20 @@
                             <label for="dPeso" class="form-label fw-bold">
                                 <i class="fas fa-weight-hanging me-1"></i>Peso (kg)
                             </label>
-                            <input type="text" name="dPeso" id="dPeso" 
+                            <input type="text" 
+                                   name="dPeso" 
+                                   id="dPeso" 
                                    class="form-control @error('dPeso') is-invalid @enderror"
                                    value="{{ old('dPeso') }}"
-                                   oninput="validarDecimal(this, 3)"
+                                   oninput="validarPeso(this)"
+                                   onblur="formatearPeso(this)"
+                                   onkeydown="permitirBorrado(event)"
                                    placeholder="0.000"
-                                   title="Máximo: 999.999 kg"
+                                   title="Máximo: 999.999 kg (máximo 3 decimales)"
                                    autocomplete="off">
                             @error('dPeso')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            <small class="form-text text-muted">Máximo 999.999 kg</small>
                         </div>
                     </div>
                     
@@ -292,17 +295,20 @@
                             <label for="dLargo_cm" class="form-label fw-bold">
                                 <i class="fas fa-ruler-vertical me-1"></i>Largo (cm)
                             </label>
-                            <input type="text" name="dLargo_cm" id="dLargo_cm" 
+                            <input type="text" 
+                                   name="dLargo_cm" 
+                                   id="dLargo_cm" 
                                    class="form-control @error('dLargo_cm') is-invalid @enderror"
                                    value="{{ old('dLargo_cm') }}"
-                                   oninput="validarDecimal(this, 2)"
+                                   oninput="validarDimensionCm(this)"
+                                   onblur="formatearDimensionCm(this)"
+                                   onkeydown="permitirBorrado(event)"
                                    placeholder="0.00"
-                                   title="Máximo: 999.99 cm"
+                                   title="Máximo: 999.99 cm (máximo 2 decimales)"
                                    autocomplete="off">
                             @error('dLargo_cm')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            <small class="form-text text-muted">Máximo 999.99 cm</small>
                         </div>
                     </div>
                     
@@ -311,17 +317,20 @@
                             <label for="dAncho_cm" class="form-label fw-bold">
                                 <i class="fas fa-ruler-horizontal me-1"></i>Ancho (cm)
                             </label>
-                            <input type="text" name="dAncho_cm" id="dAncho_cm" 
+                            <input type="text" 
+                                   name="dAncho_cm" 
+                                   id="dAncho_cm" 
                                    class="form-control @error('dAncho_cm') is-invalid @enderror"
                                    value="{{ old('dAncho_cm') }}"
-                                   oninput="validarDecimal(this, 2)"
+                                   oninput="validarDimensionCm(this)"
+                                   onblur="formatearDimensionCm(this)"
+                                   onkeydown="permitirBorrado(event)"
                                    placeholder="0.00"
-                                   title="Máximo: 999.99 cm"
+                                   title="Máximo: 999.99 cm (máximo 2 decimales)"
                                    autocomplete="off">
                             @error('dAncho_cm')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            <small class="form-text text-muted">Máximo 999.99 cm</small>
                         </div>
                     </div>
                     
@@ -330,22 +339,25 @@
                             <label for="dAlto_cm" class="form-label fw-bold">
                                 <i class="fas fa-arrows-alt-v me-1"></i>Alto (cm)
                             </label>
-                            <input type="text" name="dAlto_cm" id="dAlto_cm" 
+                            <input type="text" 
+                                   name="dAlto_cm" 
+                                   id="dAlto_cm" 
                                    class="form-control @error('dAlto_cm') is-invalid @enderror"
                                    value="{{ old('dAlto_cm') }}"
-                                   oninput="validarDecimal(this, 2)"
+                                   oninput="validarDimensionCm(this)"
+                                   onblur="formatearDimensionCm(this)"
+                                   onkeydown="permitirBorrado(event)"
                                    placeholder="0.00"
-                                   title="Máximo: 999.99 cm"
+                                   title="Máximo: 999.99 cm (máximo 2 decimales)"
                                    autocomplete="off">
                             @error('dAlto_cm')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            <small class="form-text text-muted">Máximo 999.99 cm</small>
                         </div>
                     </div>
                 </div>
 
-                <!-- CLASE DE ENVÍO Y ETIQUETAS ESPECIALES -->
+                <!-- CLASE DE ENVÍO -->
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group mb-3">
@@ -366,71 +378,14 @@
                             <small class="form-text text-muted">Determina el tipo de envío para este producto</small>
                         </div>
                     </div>
-                    
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label class="form-label fw-bold">
-                                <i class="fas fa-star me-1"></i>Etiquetas especiales
-                            </label>
-                            <div class="row">
-                                <div class="col-6 col-md-3">
-                                    <div class="form-check">
-                                        <input type="checkbox" name="etiquetas_especiales[]" 
-                                               value="nuevo" class="form-check-input"
-                                               id="etiqueta_nuevo"
-                                               {{ is_array(old('etiquetas_especiales')) && in_array('nuevo', old('etiquetas_especiales')) ? 'checked' : '' }}>
-                                        <label class="form-check-label" for="etiqueta_nuevo">
-                                            <span class="badge bg-primary">Nuevo</span>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <div class="form-check">
-                                        <input type="checkbox" name="etiquetas_especiales[]" 
-                                               value="popular" class="form-check-input"
-                                               id="etiqueta_popular"
-                                               {{ is_array(old('etiquetas_especiales')) && in_array('popular', old('etiquetas_especiales')) ? 'checked' : '' }}>
-                                        <label class="form-check-label" for="etiqueta_popular">
-                                            <span class="badge bg-success">Popular</span>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <div class="form-check">
-                                        <input type="checkbox" name="etiquetas_especiales[]" 
-                                               value="oferta" class="form-check-input"
-                                               id="etiqueta_oferta"
-                                               {{ is_array(old('etiquetas_especiales')) && in_array('oferta', old('etiquetas_especiales')) ? 'checked' : '' }}>
-                                        <label class="form-check-label" for="etiqueta_oferta">
-                                            <span class="badge bg-danger">Oferta</span>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <div class="form-check">
-                                        <input type="checkbox" name="etiquetas_especiales[]" 
-                                               value="destacado" class="form-check-input"
-                                               id="etiqueta_destacado"
-                                               {{ is_array(old('etiquetas_especiales')) && in_array('destacado', old('etiquetas_especiales')) ? 'checked' : '' }}>
-                                        <label class="form-check-label" for="etiqueta_destacado">
-                                            <span class="badge bg-warning text-dark">Destacado</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                            <small class="form-text text-muted">Etiquetas especiales para destacar el producto</small>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- ========================================= -->
-        <!-- CATEGORÍA Y MARCA                         -->
-        <!-- ========================================= -->
+        <!-- CATEGORÍA Y MARCA -->
         <div class="card mb-4">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Categorización</h5>
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Categoría y Marca</h5>
             </div>
             <div class="card-body">
                 <div class="row">
@@ -512,44 +467,110 @@
             </div>
         </div>
 
-        <!-- ========================================= -->
-        <!-- IMÁGENES Y DESCRIPCIÓN                   -->
-        <!-- ========================================= -->
+        <!-- IMÁGENES DEL PRODUCTO -->
         <div class="card mb-4">
             <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0"><i class="fas fa-images me-2"></i>Imágenes y Descripción</h5>
+                <h5 class="mb-0"><i class="fas fa-images me-2"></i>Imágenes del Producto</h5>
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-6">
+                    <!-- IMAGEN PRINCIPAL -->
+                    <div class="col-md-12">
+                        <div class="form-group mb-3">
+                            <label for="imagen_principal" class="form-label fw-bold">
+                                <i class="fas fa-star text-warning me-1"></i>Imagen Principal <span class="text-danger">*</span>
+                            </label>
+                            <input type="file" name="imagen_principal" id="imagen_principal" 
+                                   class="form-control @error('imagen_principal') is-invalid @enderror" 
+                                   accept="image/jpeg,image/jpg,image/png"
+                                   required
+                                   onchange="previewImagenPrincipal(this)">
+                            @error('imagen_principal')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Esta será la imagen principal del producto (portada). Formatos: JPG, JPEG, PNG. Máximo 5MB.
+                            </small>
+                            
+                            <!-- Preview de imagen principal -->
+                            <div id="preview_principal_container" class="mt-2" style="display: none;">
+                                <div class="border rounded p-2 text-center bg-light">
+                                    <img id="preview_principal_img" src="#" 
+                                         class="img-thumbnail" 
+                                         style="max-width: 200px; max-height: 200px; object-fit: contain;"
+                                         alt="Preview imagen principal">
+                                    <div class="mt-2">
+                                        <small class="text-muted d-block">Imagen principal (portada)</small>
+                                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarImagenPrincipal()">
+                                            <i class="fas fa-times me-1"></i>Quitar imagen
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- IMÁGENES ADICIONALES DEL PRODUCTO -->
+                <div class="row mt-3">
+                    <div class="col-md-12">
                         <div class="form-group mb-3">
                             <label for="imagenes" class="form-label fw-bold">
-                                Imágenes del producto (Máximo 8)
+                                <i class="fas fa-images me-1"></i>Imágenes Adicionales del Producto (Máximo 8)
                             </label>
                             <input type="file" name="imagenes[]" id="imagenes" 
                                    class="form-control @error('imagenes') is-invalid @enderror" 
-                                   multiple accept="image/*"
+                                   multiple accept="image/jpeg,image/jpg,image/png,image/webp"
                                    onchange="handleImageSelection(event)">
                             @error('imagenes')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                             <small class="form-text text-muted">
-                                Formatos: JPG, JPEG, PNG, GIF, WEBP, JFIF, SVG. Máximo 5MB por imagen.
-                                Puedes seleccionar hasta 8 imágenes.
+                                Formatos: JPG, JPEG, PNG, WEBP. Máximo 5MB por imagen.
+                                Puedes seleccionar hasta 8 imágenes adicionales.
                             </small>
-                            
-                            <div class="mt-3">
-                                <h6 class="fw-bold mb-2">Imágenes seleccionadas:</h6>
-                                <div id="selected-images-container" class="row mb-3"></div>
-                                <div class="alert alert-info py-2">
-                                    <i class="fas fa-info-circle me-1"></i>
-                                    <small>Las imágenes seleccionadas se mantendrán aunque abras el selector nuevamente. 
-                                    Para eliminar una imagen, haz clic en la "X" en la esquina superior derecha.</small>
-                                </div>
+                            <div class="mt-2">
+                                <span class="badge bg-info" id="selected-images-count">0 archivos</span>
                             </div>
                         </div>
                     </div>
-                    
+                </div>
+                
+                <!-- Contador de imágenes del producto -->
+                <div class="alert alert-info py-2 mt-2">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <i class="fas fa-camera me-1"></i>
+                            <strong>Total de imágenes:</strong> 
+                            <span id="total-imagenes">0</span> de 9 (1 principal + 8 adicionales)
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <span class="badge bg-primary me-2" id="principal-count">Principal: 0</span>
+                            <span class="badge bg-secondary" id="adicionales-count">Adicionales: 0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Galería de imágenes adicionales seleccionadas -->
+                <div class="mt-3">
+                    <h6 class="fw-bold mb-2"><i class="fas fa-images me-2"></i>Imágenes adicionales seleccionadas:</h6>
+                    <div id="selected-images-container" class="row g-2"></div>
+                    <div class="alert alert-warning py-2" id="no-imagenes-msg">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <small>No hay imágenes adicionales seleccionadas</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DESCRIPCIÓN Y ETIQUETAS -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-align-left me-2"></i>Descripción y Etiquetas</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
                     <div class="col-md-6">
                         <div class="form-group mb-3">
                             <label for="tDescripcion_corta" class="form-label fw-bold">
@@ -562,6 +583,43 @@
                             @error('tDescripcion_corta')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">Etiquetas (Opcional)</label>
+                            <div class="row">
+                                @if(isset($etiquetas) && $etiquetas->count() > 0)
+                                    @foreach ($etiquetas as $etiqueta)
+                                        <div class="col-md-6 col-6 mb-2">
+                                            <div class="form-check">
+                                                <input type="checkbox" 
+                                                       name="etiquetas[]" 
+                                                       value="{{ $etiqueta->id_etiqueta }}" 
+                                                       class="form-check-input"
+                                                       {{ is_array(old('etiquetas')) && in_array($etiqueta->id_etiqueta, old('etiquetas', [])) ? 'checked' : '' }}
+                                                       id="etiqueta_{{ $etiqueta->id_etiqueta }}">
+                                                <label class="form-check-label" for="etiqueta_{{ $etiqueta->id_etiqueta }}">
+                                                    <span class="etiqueta-badge" style="background-color: {{ $etiqueta->color ?? '#007bff' }}; color: white;">
+                                                        {{ $etiqueta->vNombre }}
+                                                    </span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                @else
+                                    <div class="col-12">
+                                        <div class="alert alert-info py-2">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            No hay etiquetas disponibles. 
+                                            <button type="button" class="btn btn-link p-0 ms-1" onclick="activarTabEtiquetas()">
+                                                Crear etiquetas
+                                            </button>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -577,47 +635,22 @@
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
-                
-                <div class="form-group mb-3">
-                    <label class="form-label fw-bold">Etiquetas (Opcional)</label>
-                    <div class="row">
-                        @foreach ($etiquetas as $etiqueta)
-                            <div class="col-md-3 col-6 mb-2">
-                                <div class="form-check">
-                                    <input type="checkbox" 
-                                           name="etiquetas[]" 
-                                           value="{{ $etiqueta->id_etiqueta }}" 
-                                           class="form-check-input"
-                                           {{ is_array(old('etiquetas')) && in_array($etiqueta->id_etiqueta, old('etiquetas')) ? 'checked' : '' }}
-                                           id="etiqueta_{{ $etiqueta->id_etiqueta }}">
-                                    <label class="form-check-label" for="etiqueta_{{ $etiqueta->id_etiqueta }}">
-                                        <span class="etiqueta-badge" style="background-color: {{ $etiqueta->color ?? '#007bff' }}; color: white;">
-                                            {{ $etiqueta->vNombre }}
-                                        </span>
-                                    </label>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
             </div>
         </div>
 
-        <!-- ========================================= -->
-        <!-- ATRIBUTOS DEL PRODUCTO (SELECCIÓN)       -->
-        <!-- ========================================= -->
+        <!-- ATRIBUTOS DEL PRODUCTO (SELECCIÓN) -->
         <div class="card mb-4">
-            <div class="card-header bg-info text-white">
+            <div class="card-header" style="background-color: #45c973ff; color: white;">
                 <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Seleccionar Atributos para Variaciones</h5>
-                <small class="text-white-50">Selecciona los atributos y valores que quieres usar en tus variaciones</small>
             </div>
-            <div class="card-body">
-                @if($atributos->count() > 0)
-                    <div class="alert alert-info mb-4">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Instrucciones:</strong> Marca los atributos que deseas activar y selecciona los valores correspondientes. Luego ve a la sección <strong>"Variaciones del Producto"</strong> para configurar cada variación.
-                    </div>
-                    
+            <div class="card-body" style="background-color: #f8f9fa;">
+                <div class="alert alert-info mb-4" style="color: #0c5460; background-color: #d1ecf1; border-color: #bee5eb;">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong style="color: #0c5460;">Instrucciones:</strong> 
+                    <span style="color: #0c5460;">Marca los atributos que deseas activar y selecciona los valores correspondientes. Luego ve a la sección <strong>"Variaciones del Producto"</strong> para configurar cada variación.</span>
+                </div>
+                
+                @if(isset($atributos) && $atributos->count() > 0)
                     <div class="row">
                         @foreach($atributos as $atributo)
                         <div class="col-md-6 mb-4">
@@ -629,7 +662,7 @@
                                                id="atributo-activo-{{ $atributo->id_atributo }}"
                                                data-atributo-id="{{ $atributo->id_atributo }}"
                                                data-atributo-nombre="{{ $atributo->vNombre }}">
-                                        <label class="form-check-label fw-bold" for="atributo-activo-{{ $atributo->id_atributo }}">
+                                        <label class="form-check-label fw-bold" for="atributo-activo-{{ $atributo->id_atributo }}" style="color: #495057;">
                                             {{ $atributo->vNombre }}
                                             <span class="badge bg-secondary ms-2">{{ $atributo->valoresActivos->count() }} valores</span>
                                         </label>
@@ -639,7 +672,7 @@
                                     </span>
                                 </div>
                                 
-                                <div class="card-body atributo-valores-container" id="valores-container-{{ $atributo->id_atributo }}" style="display: none;">
+                                <div class="card-body atributo-valores-container" id="valores-container-{{ $atributo->id_atributo }}" style="display: none; background-color: white;">
                                     @if($atributo->valoresActivos->count() > 0)
                                         <div class="mb-3">
                                             <div class="form-check">
@@ -647,7 +680,7 @@
                                                        class="form-check-input seleccionar-todos-checkbox" 
                                                        id="seleccionar-todos-{{ $atributo->id_atributo }}"
                                                        data-atributo-id="{{ $atributo->id_atributo }}">
-                                                <label class="form-check-label" for="seleccionar-todos-{{ $atributo->id_atributo }}">
+                                                <label class="form-check-label" for="seleccionar-todos-{{ $atributo->id_atributo }}" style="color: #495057;">
                                                     <strong>Seleccionar todos</strong>
                                                 </label>
                                             </div>
@@ -666,7 +699,7 @@
                                                            data-atributo-nombre="{{ $atributo->vNombre }}"
                                                            data-valor-nombre="{{ $valor->vValor }}"
                                                            {{ is_array(old('atributos.'.$atributo->id_atributo)) && in_array($valor->id_atributo_valor, old('atributos.'.$atributo->id_atributo, [])) ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="valor-{{ $valor->id_atributo_valor }}">
+                                                    <label class="form-check-label" for="valor-{{ $valor->id_atributo_valor }}" style="color: #495057;">
                                                         {{ $valor->vValor }}
                                                         @if($valor->dPrecio_extra > 0)
                                                             <span class="badge bg-success ms-1">+${{ number_format($valor->dPrecio_extra, 2) }}</span>
@@ -696,7 +729,7 @@
                     
                     <!-- Resumen de atributos seleccionados -->
                     <div class="mt-4 p-3 bg-light border rounded" id="resumen-atributos" style="display: none;">
-                        <h6 class="fw-bold mb-3"><i class="fas fa-check-circle text-success me-2"></i>Atributos activados para variaciones:</h6>
+                        <h6 class="fw-bold mb-3" style="color: #495057;"><i class="fas fa-check-circle text-success me-2"></i>Atributos activados para variaciones:</h6>
                         <div id="atributos-activos-lista" class="d-flex flex-wrap gap-3"></div>
                     </div>
                     
@@ -713,23 +746,23 @@
             </div>
         </div>
 
-        <!-- ========================================= -->
-        <!-- VARIACIONES DEL PRODUCTO - PESTAÑAS POR VALOR -->
-        <!-- ========================================= -->
+        <!-- VARIACIONES DEL PRODUCTO -->
         <div class="card mb-4">
-            <div class="card-header bg-purple text-white d-flex justify-content-between align-items-center">
-                <div>
-                    <h5 class="mb-0"><i class="fas fa-cubes me-2"></i>Variaciones del Producto</h5>
-                    <small class="text-white-50">Cada valor seleccionado es una pestaña - Configura cada variación individualmente</small>
-                </div>
-                <div>
-                    <span class="badge bg-light text-dark me-2" id="total-atributos-activos-badge">0 atributos activos</span>
-                    <span class="badge bg-warning text-dark" id="total-valores-badge">0 valores</span>
+            <div class="card-header" style="background-color: #6f42c1; color: white;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0"><i class="fas fa-cubes me-2"></i>Variaciones del Producto</h5>
+                        <small style="color: rgba(255,255,255,0.9);">Cada valor seleccionado es una pestaña - Configura cada variación individualmente</small>
+                    </div>
+                    <div>
+                        <span class="badge bg-light text-dark me-2" id="total-atributos-activos-badge">0 atributos activos</span>
+                        <span class="badge bg-warning text-dark" id="total-valores-badge">0 valores</span>
+                    </div>
                 </div>
             </div>
             
-            <div class="card-body">
-                @if($atributos->count() > 0)
+            <div class="card-body" style="background-color: #f8f9fa;">
+                @if(isset($atributos) && $atributos->count() > 0)
                     <!-- Mensaje cuando no hay atributos activos -->
                     <div id="no-atributos-activos-message" class="text-center py-5">
                         <i class="fas fa-cubes fa-4x text-muted mb-3"></i>
@@ -743,10 +776,10 @@
                     <!-- PESTAÑAS DE VALORES -->
                     <div id="valores-activos-tabs-container" style="display: none;">
                         <!-- Cabecera de pestañas - Valores -->
-                        <ul class="nav nav-tabs valores-nav" id="valoresTab" role="tablist"></ul>
+                        <ul class="nav nav-tabs valores-nav" id="valoresTab" role="tablist" style="background-color: white;"></ul>
                         
                         <!-- Contenido de las pestañas - Formularios de variación -->
-                        <div class="tab-content p-4 border border-top-0 rounded-bottom bg-white" id="valoresTabContent"></div>
+                        <div class="tab-content p-4 border border-top-0 rounded-bottom" id="valoresTabContent" style="background-color: white;"></div>
                     </div>
                 @else
                     <div class="text-center py-5">
@@ -758,9 +791,7 @@
             </div>
         </div>
 
-        <!-- ========================================= -->
-        <!-- BOTONES DE ACCIÓN                        -->
-        <!-- ========================================= -->
+        <!-- BOTONES DE ACCIÓN -->
         <div class="d-flex gap-2 mb-4">
             <button type="submit" class="btn btn-success btn-lg px-4" id="btnSubmit">
                 <i class="fas fa-save me-2"></i> Guardar Producto
@@ -771,9 +802,7 @@
         </div>
     </form>
 
-    <!-- ========================================= -->
-    <!-- PANEL DE HERRAMIENTAS CON TABS           -->
-    <!-- ========================================= -->
+    <!-- PANEL DE HERRAMIENTAS CON TABS -->
     <div class="card mt-4 border">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
             <div>
@@ -785,7 +814,7 @@
             <!-- TABS DE NAVEGACIÓN -->
             <ul class="nav nav-tabs" id="toolsTabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="categorias-tab" data-bs-toggle="tab" 
+                    <button class="nav-link active" id="categorias-tab" data-bs-toggle="tab" 
                             data-bs-target="#categorias-content" type="button" role="tab">
                         <i class="fas fa-tags me-1"></i>Categorías
                     </button>
@@ -812,64 +841,124 @@
             
             <!-- CONTENIDO DE LOS TABS (FORMULARIOS RÁPIDOS) -->
             <div class="tab-content p-4">
-                <!-- TAB: CATEGORÍAS -->
-                <div class="tab-pane fade" id="categorias-content" role="tabpanel">
+                <!-- TAB: CATEGORÍAS (CORREGIDO) -->
+                <div class="tab-pane fade show active" id="categorias-content" role="tabpanel">
                     <div class="quick-form" id="quick-categoria-form">
                         <h5><i class="fas fa-tags me-2"></i>Crear Nueva Categoría</h5>
-                        <p class="text-muted small mb-3">Las categorías te ayudan a organizar tus productos. Pueden tener jerarquía (categoría padre > subcategoría).</p>
+                        <p class="text-muted small mb-3">Las categorías ayudan a organizar tus productos de forma jerárquica.</p>
                         
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="vNombre_cat" class="form-label fw-bold">Nombre de la Categoría *</label>
-                                <input type="text" class="form-control" id="vNombre_cat" 
+                        <form id="categoriaQuickForm" method="POST" enctype="multipart/form-data">
+                            @csrf
+                            
+                            <div class="mb-3">
+                                <label for="vNombre_categoria" class="form-label fw-bold">Nombre de la Categoría *</label>
+                                <input type="text" class="form-control" 
+                                       id="vNombre_categoria" name="vNombre" 
+                                       required
                                        placeholder="Ej: Tequila, Mezcal, Añejos..."
-                                       oninput="quickActualizarSlug(this.value, 'vSlug_cat')">
+                                       oninput="quickActualizarSlug(this.value, 'vSlug_categoria')">
+                                <small class="form-text text-muted">Nombre descriptivo para la categoría</small>
                             </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="vSlug_cat" class="form-label fw-bold">Slug (URL amigable)</label>
-                                <input type="text" class="form-control" id="vSlug_cat" 
+
+                            <div class="mb-3">
+                                <label for="vSlug_categoria" class="form-label fw-bold">Slug (URL amigable) *</label>
+                                <input type="text" class="form-control" 
+                                       id="vSlug_categoria" name="vSlug" 
+                                       required
                                        placeholder="tequila-reposado">
-                                <small class="text-muted">Se genera automáticamente desde el nombre</small>
+                                <small class="form-text text-muted">
+                                    URL para la categoría (ej: tequila-reposado). Se genera automáticamente desde el nombre.
+                                </small>
                             </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="id_categoria_padre_cat" class="form-label fw-bold">Categoría Padre</label>
-                                <select class="form-select" id="id_categoria_padre_cat">
-                                    <option value="">-- Sin categoría padre (Principal) --</option>
-                                    @foreach($categorias as $categoria)
-                                        @if(!$categoria->id_categoria_padre)
-                                            <option value="{{ $categoria->id_categoria }}">{{ $categoria->vNombre }}</option>
-                                            @foreach($categoria->hijos as $hijo)
-                                                <option value="{{ $hijo->id_categoria }}">↳ {{ $hijo->vNombre }}</option>
-                                            @endforeach
-                                        @endif
-                                    @endforeach
+
+                            <div class="mb-3">
+                                <label for="id_categoria_padre_quick" class="form-label fw-bold">Categoría Padre</label>
+                                <select class="form-control" id="id_categoria_padre_quick" name="id_categoria_padre">
+                                    <option value="">-- Seleccionar Categoría Padre (Opcional) --</option>
+                                    @php
+                                        function mostrarCategoriasParaQuick($categorias, $nivel = 0) {
+                                            foreach($categorias as $categoria) {
+                                                $prefijo = str_repeat('&nbsp;&nbsp;&nbsp;', $nivel);
+                                                $icono = $nivel == 0 ? '🏠 ' : '↳ ';
+                                                echo '<option value="' . $categoria->id_categoria . '">' .
+                                                     $prefijo . $icono . htmlspecialchars($categoria->vNombre) . 
+                                                     '</option>';
+                                                
+                                                if ($categoria->hijos && $categoria->hijos->count() > 0) {
+                                                    mostrarCategoriasParaQuick($categoria->hijos, $nivel + 1);
+                                                }
+                                            }
+                                        }
+                                        
+                                        $categoriasRaiz = $categorias->where('id_categoria_padre', null)->where('bActivo', true);
+                                    @endphp
+                                    
+                                    @php mostrarCategoriasParaQuick($categoriasRaiz, 0); @endphp
                                 </select>
+                                <small class="form-text text-muted">Selecciona si esta categoría pertenece a otra</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="tDescripcion_categoria" class="form-label fw-bold">Descripción</label>
+                                <textarea class="form-control" 
+                                          id="tDescripcion_categoria" name="tDescripcion" rows="3"
+                                          placeholder="Describe la categoría..."></textarea>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Estado</label>
+                                <div class="form-check mt-2">
+                                    <input type="checkbox" class="form-check-input" 
+                                           id="bActivo_categoria" name="bActivo" value="1" checked>
+                                    <label class="form-check-label" for="bActivo_categoria">
+                                        Categoría activa
+                                    </label>
+                                </div>
+                                <small class="form-text text-muted">Las categorías inactivas no estarán disponibles</small>
                             </div>
                             
-                            <div class="col-md-6 mb-3">
-                                <label for="bActivo_cat" class="form-label fw-bold d-block">Estado</label>
-                                <div class="form-check form-switch mt-2">
-                                    <input type="checkbox" class="form-check-input" id="bActivo_cat" checked>
-                                    <label class="form-check-label" for="bActivo_cat">Categoría activa</label>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Imagen de la Categoría</label>
+                                
+                                <!-- Preview de nueva imagen -->
+                                <div class="mb-3" id="categoriaImagePreview" style="display: none;">
+                                    <div class="border rounded p-3 text-center">
+                                        <img id="categoriaPreviewImg" src="#" 
+                                             class="img-thumbnail" 
+                                             style="max-width: 150px; max-height: 150px; object-fit: cover;"
+                                             alt="Preview">
+                                        <div class="mt-2">
+                                            <small class="text-muted d-block">Vista previa</small>
+                                            <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarImagenCategoria()">
+                                                <i class="fas fa-times me-1"></i>Cancelar imagen
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
+                                
+                                <div class="input-group">
+                                    <input type="file" class="form-control" 
+                                           id="vImagen_categoria" name="vImagen"
+                                           accept="image/jpeg,image/jpg,image/png,image/webp"
+                                           onchange="previewImagenCategoria(this)">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="resetearInputImagen()">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+                                </div>
+                                <small class="form-text text-muted">
+                                    Formatos: JPG, JPEG, PNG, WebP. Tamaño máximo: 2MB. La imagen es opcional.
+                                </small>
                             </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="tDescripcion_cat" class="form-label fw-bold">Descripción (Opcional)</label>
-                            <textarea class="form-control" id="tDescripcion_cat" rows="2" 
-                                      placeholder="Describe la categoría..."></textarea>
-                        </div>
-                        
-                        <div class="d-flex justify-content-end">
-                            <button type="button" class="btn btn-primary" onclick="crearCategoria()">
-                                <i class="fas fa-save me-1"></i> Crear Categoría
-                            </button>
-                        </div>
+
+                            <div class="d-flex justify-content-between">
+                                <button type="button" class="btn btn-secondary" onclick="limpiarFormularioCategoria()">
+                                    <i class="fas fa-undo me-1"></i> Limpiar
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i> Crear Categoría
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
                 
@@ -934,6 +1023,11 @@
                                       placeholder="Descripción de la etiqueta..."></textarea>
                         </div>
                         
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Nota:</strong> Después de crear la etiqueta, estará disponible en la sección "Etiquetas" del formulario.
+                        </div>
+                        
                         <div class="d-flex justify-content-end">
                             <button type="button" class="btn btn-primary" onclick="crearEtiqueta()">
                                 <i class="fas fa-save me-1"></i> Crear Etiqueta
@@ -990,9 +1084,6 @@
 
 @push('styles')
 <style>
-/* ========================================= */
-/* ESTILOS GENERALES                        */
-/* ========================================= */
 .etiqueta-badge {
     display: inline-block;
     padding: 4px 10px;
@@ -1005,9 +1096,6 @@
     background-color: #6f42c1 !important;
 }
 
-/* ========================================= */
-/* ESTILOS PARA PESTAÑAS DE VALORES         */
-/* ========================================= */
 .valores-nav {
     border-bottom: 2px solid #dee2e6;
     padding-left: 10px;
@@ -1081,9 +1169,6 @@
     font-size: 1.1rem;
 }
 
-/* ========================================= */
-/* ESTILOS PARA FORMULARIOS RÁPIDOS         */
-/* ========================================= */
 .quick-form {
     background: #f8f9fa;
     padding: 20px;
@@ -1099,9 +1184,70 @@
     border-bottom: 2px solid #2E8B57;
 }
 
-/* ========================================= */
-/* ESTILOS RESPONSIVE                       */
-/* ========================================= */
+.invalid-feedback {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #dc3545;
+}
+
+.variacion-precio-descuento.is-invalid {
+    border-color: #dc3545;
+    padding-right: calc(1.5em + 0.75rem);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.image-preview-card {
+    transition: transform 0.2s;
+    border: 2px solid transparent;
+}
+
+.image-preview-card:hover {
+    transform: scale(1.02);
+    border-color: #007bff;
+}
+
+.image-preview-card.principal {
+    border-color: #ffc107;
+    background-color: #fff3cd;
+}
+
+.principal-badge {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    background-color: #ffc107;
+    color: #000;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 2;
+}
+
+.selected-image-item {
+    position: relative;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 8px;
+    background: #fff;
+}
+
+.selected-image-item .remove-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: 50%;
+    z-index: 10;
+}
+
 @media (max-width: 768px) {
     .valores-nav .nav-link {
         padding: 8px 12px;
@@ -1116,16 +1262,202 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-// ============================================
-// VARIABLES GLOBALES
-// ============================================
+// Variables globales
 let selectedImages = [];
 let imageCounter = 0;
 let atributosActivos = {};
+let imagenPrincipalFile = null;
+let variacionCounter = 0;
+let variacionesImagenes = {};
 
-// ============================================
-// FUNCIONES DE VALIDACIÓN
-// ============================================
+// ============ FUNCIONES DE VALIDACIÓN ============
+
+function validarPrecioDescuentoProductoInstantaneo(input) {
+    const tieneDescuento = document.getElementById('bTiene_descuento');
+    if (!tieneDescuento || !tieneDescuento.checked) return true;
+    
+    const precioVenta = parseFloat(document.getElementById('dPrecio_venta').value) || 0;
+    const precioDescuento = parseFloat(input.value) || 0;
+    const errorDiv = document.getElementById('error-precio-descuento');
+    
+    if (precioDescuento >= precioVenta && precioDescuento > 0 && input.value !== '') {
+        input.classList.add('is-invalid');
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
+        return false;
+    } else {
+        input.classList.remove('is-invalid');
+        errorDiv.style.display = 'none';
+        return true;
+    }
+}
+
+function validarPrecioDescuentoProducto() {
+    const tieneDescuento = document.getElementById('bTiene_descuento');
+    if (!tieneDescuento || !tieneDescuento.checked) return true;
+    
+    const precioVenta = parseFloat(document.getElementById('dPrecio_venta').value) || 0;
+    const precioDescuento = parseFloat(document.getElementById('dPrecio_descuento').value) || 0;
+    const input = document.getElementById('dPrecio_descuento');
+    const errorDiv = document.getElementById('error-precio-descuento');
+    
+    if (precioDescuento >= precioVenta && precioDescuento > 0) {
+        input.classList.add('is-invalid');
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
+        return false;
+    } else {
+        input.classList.remove('is-invalid');
+        errorDiv.style.display = 'none';
+        return true;
+    }
+}
+
+function validarDimension(input, maxDecimales, maxValor) {
+    let value = input.value;
+    const cursorPos = input.selectionStart;
+    
+    if (value === '') {
+        input.classList.remove('is-invalid');
+        return;
+    }
+    
+    const lastCharWasDot = value.endsWith('.');
+    
+    value = value.replace(/[^0-9.]/g, '');
+    
+    const puntos = value.split('.').length - 1;
+    if (puntos > 1) {
+        const partes = value.split('.');
+        value = partes[0] + '.' + partes.slice(1).join('');
+    }
+    
+    if (value.startsWith('.')) {
+        value = '0' + value;
+    }
+    
+    const partesNumero = value.split('.');
+    let parteEntera = partesNumero[0];
+    let parteDecimal = partesNumero[1] || '';
+    
+    if (parteEntera.length > 3) {
+        parteEntera = parteEntera.substring(0, 3);
+    }
+    
+    if (parteDecimal.length > maxDecimales) {
+        parteDecimal = parteDecimal.substring(0, maxDecimales);
+    }
+    
+    value = parteEntera;
+    if (parteDecimal || lastCharWasDot) {
+        value += '.' + parteDecimal;
+    }
+    
+    if (value && !value.endsWith('.') && !isNaN(parseFloat(value))) {
+        let numValue = parseFloat(value);
+        if (numValue > maxValor) {
+            value = maxValor.toString();
+        }
+    }
+    
+    if (input.value !== value) {
+        const oldLength = input.value.length;
+        input.value = value;
+        const newLength = value.length;
+        
+        let newCursorPos = cursorPos;
+        if (oldLength > newLength) {
+            newCursorPos = Math.min(cursorPos, newLength);
+        } else if (oldLength < newLength) {
+            newCursorPos = cursorPos + (newLength - oldLength);
+        }
+        
+        setTimeout(() => {
+            input.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
+    }
+    
+    input.classList.remove('is-invalid');
+}
+
+function validarPeso(input) {
+    validarDimension(input, 3, 999.999);
+}
+
+function validarDimensionCm(input) {
+    validarDimension(input, 2, 999.99);
+}
+
+function formatearPeso(input) {
+    let value = input.value;
+    
+    if (!value || value === '.' || value.endsWith('.')) {
+        return;
+    }
+    
+    let num = parseFloat(value);
+    if (isNaN(num)) {
+        input.value = '';
+        return;
+    }
+    
+    if (num > 999.999) {
+        num = 999.999;
+    }
+    
+    input.value = num.toString();
+}
+
+function formatearDimensionCm(input) {
+    let value = input.value;
+    
+    if (!value || value === '.' || value.endsWith('.')) {
+        return;
+    }
+    
+    let num = parseFloat(value);
+    if (isNaN(num)) {
+        input.value = '';
+        return;
+    }
+    
+    if (num > 999.99) {
+        num = 999.99;
+    }
+    
+    input.value = num.toString();
+}
+
+function permitirBorrado(e) {
+    const teclasPermitidas = [
+        'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+        'Home', 'End', 'Tab', 'Enter'
+    ];
+    
+    if (e.ctrlKey || e.metaKey) {
+        return true;
+    }
+    
+    if (teclasPermitidas.includes(e.key)) {
+        return true;
+    }
+    
+    if (e.key >= '0' && e.key <= '9') {
+        return true;
+    }
+    
+    if (e.key === '.') {
+        if (e.target.value.includes('.')) {
+            e.preventDefault();
+            return false;
+        }
+        return true;
+    }
+    
+    e.preventDefault();
+    return false;
+}
+
 function validarSKU(input) {
     input.value = input.value.replace(/[^A-Za-z0-9]/g, '');
     if (input.value.length > 15) {
@@ -1178,17 +1510,10 @@ function validarPrecio(input) {
         }, 0);
     }
     input.classList.remove('is-invalid');
-}
-
-function validarPrecioOferta(input) {
-    validarPrecio(input);
-    const precioVenta = document.getElementById('dPrecio_venta').value;
-    const precioOferta = input.value;
-    if (precioVenta && precioOferta && parseFloat(precioOferta) >= parseFloat(precioVenta)) {
-        input.classList.add('is-invalid');
-        return false;
+    
+    if (input.id === 'dPrecio_descuento') {
+        validarPrecioDescuentoProductoInstantaneo(input);
     }
-    return true;
 }
 
 function validarStock(input) {
@@ -1208,77 +1533,148 @@ function validarStock(input) {
     input.classList.remove('is-invalid');
 }
 
-function validarDecimal(input, maxDecimales) {
-    let value = input.value;
-    const cursorPos = input.selectionStart;
+function toggleDescuentoFields() {
+    const descuentoFields = document.getElementById('descuentoFields');
+    const tieneDescuento = document.getElementById('bTiene_descuento').checked;
+    const precioDescuento = document.getElementById('dPrecio_descuento');
+    const fechaInicio = document.getElementById('dFecha_inicio_descuento');
+    const fechaFin = document.getElementById('dFecha_fin_descuento');
     
-    if (value === '') {
-        input.classList.remove('is-invalid');
-        return;
-    }
-    
-    value = value.replace(/[^0-9.]/g, '');
-    const puntos = value.split('.').length - 1;
-    if (puntos > 1) {
-        const partes = value.split('.');
-        value = partes[0] + '.' + partes.slice(1).join('');
-    }
-    value = value.replace(/\.{2,}/g, '.');
-    if (value.startsWith('.')) {
-        value = '0' + value;
-    }
-    if (value.includes('.')) {
-        const partes = value.split('.');
-        if (partes[1].length > maxDecimales) {
-            partes[1] = partes[1].substring(0, maxDecimales);
-            value = partes[0] + '.' + partes[1];
-        }
-    }
-    
-    if (input.value !== value) {
-        const oldValue = input.value;
-        input.value = value;
-        const cursorDiff = value.length - oldValue.length;
-        const newCursorPos = Math.max(0, Math.min(value.length, cursorPos + cursorDiff));
-        setTimeout(() => {
-            input.setSelectionRange(newCursorPos, newCursorPos);
-        }, 0);
-    }
-    input.classList.remove('is-invalid');
-}
-
-// ============================================
-// FUNCIONES PARA OFERTA
-// ============================================
-function toggleOfertaFields() {
-    const ofertaFields = document.getElementById('ofertaFields');
-    const tieneOferta = document.getElementById('bTiene_oferta').checked;
-    
-    if (tieneOferta) {
-        ofertaFields.style.display = 'block';
-        document.getElementById('dPrecio_oferta').required = true;
-        document.getElementById('dFecha_inicio_oferta').required = true;
-        document.getElementById('dFecha_fin_oferta').required = true;
+    if (tieneDescuento) {
+        descuentoFields.style.display = 'block';
+        precioDescuento.required = true;
+        fechaInicio.required = true;
+        fechaFin.required = true;
+        
+        setTimeout(() => validarPrecioDescuentoProducto(), 100);
     } else {
-        ofertaFields.style.display = 'none';
-        document.getElementById('dPrecio_oferta').required = false;
-        document.getElementById('dFecha_inicio_oferta').required = false;
-        document.getElementById('dFecha_fin_oferta').required = false;
+        descuentoFields.style.display = 'none';
+        precioDescuento.required = false;
+        fechaInicio.required = false;
+        fechaFin.required = false;
+        
+        precioDescuento.classList.remove('is-invalid');
+        document.getElementById('error-precio-descuento').style.display = 'none';
     }
 }
 
-// ============================================
-// FUNCIONES PARA IMÁGENES
-// ============================================
+// ============ FUNCIONES DE IMÁGENES DEL PRODUCTO PRINCIPAL ============
+
+function previewImagenPrincipal(input) {
+    const previewContainer = document.getElementById('preview_principal_container');
+    const previewImg = document.getElementById('preview_principal_img');
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        
+        if (!validTypes.includes(file.type)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Formato no válido',
+                text: 'La imagen principal solo acepta formatos JPG, JPEG y PNG'
+            });
+            input.value = '';
+            return;
+        }
+        
+        imagenPrincipalFile = file;
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewContainer.style.display = 'block';
+        }
+        
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        previewContainer.style.display = 'none';
+        imagenPrincipalFile = null;
+    }
+    
+    actualizarContadorImagenes();
+}
+
+function cancelarImagenPrincipal() {
+    const input = document.getElementById('imagen_principal');
+    const previewContainer = document.getElementById('preview_principal_container');
+    
+    input.value = '';
+    previewContainer.style.display = 'none';
+    imagenPrincipalFile = null;
+    actualizarContadorImagenes();
+}
+
+// Funciones para imágenes de categoría
+function previewImagenCategoria(input) {
+    const preview = document.getElementById('categoriaImagePreview');
+    const previewImg = document.getElementById('categoriaPreviewImg');
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        
+        if (!validTypes.includes(file.type)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Formato no válido',
+                text: 'Solo se permiten imágenes JPG, JPEG, PNG o WebP'
+            });
+            input.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            preview.style.display = 'block';
+        }
+        
+        reader.readAsDataURL(file);
+    }
+}
+
+function cancelarImagenCategoria() {
+    const preview = document.getElementById('categoriaImagePreview');
+    const fileInput = document.getElementById('vImagen_categoria');
+    
+    preview.style.display = 'none';
+    fileInput.value = '';
+}
+
+function resetearInputImagen() {
+    const fileInput = document.getElementById('vImagen_categoria');
+    fileInput.value = '';
+    document.getElementById('categoriaImagePreview').style.display = 'none';
+}
+
+function limpiarFormularioCategoria() {
+    document.getElementById('vNombre_categoria').value = '';
+    document.getElementById('vSlug_categoria').value = '';
+    document.getElementById('id_categoria_padre_quick').value = '';
+    document.getElementById('tDescripcion_categoria').value = '';
+    document.getElementById('bActivo_categoria').checked = true;
+    document.getElementById('vImagen_categoria').value = '';
+    document.getElementById('categoriaImagePreview').style.display = 'none';
+}
+
+function limpiarFormularioMarca() {
+    document.getElementById('vNombre_marca').value = '';
+    document.getElementById('tDescripcion_marca').value = '';
+}
+
 function handleImageSelection(event) {
     const files = event.target.files;
     const maxFiles = 8;
+    const currentCount = selectedImages.length;
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     
-    if (selectedImages.length + files.length > maxFiles) {
+    if (currentCount + files.length > maxFiles) {
         Swal.fire({
             icon: 'warning',
             title: 'Límite de imágenes',
-            text: `Solo puedes seleccionar máximo ${maxFiles} imágenes. Ya tienes ${selectedImages.length} seleccionadas.`
+            text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales. Ya tienes ${currentCount} seleccionadas.`
         });
         event.target.value = '';
         return;
@@ -1286,18 +1682,43 @@ function handleImageSelection(event) {
     
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        
+        if (!validTypes.includes(file.type)) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Formato no válido',
+                text: `El archivo "${file.name}" no es un formato válido. Formatos aceptados: JPG, JPEG, PNG, WEBP.`
+            });
+            continue;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Archivo demasiado grande',
+                text: `La imagen "${file.name}" excede el límite de 5MB.`
+            });
+            continue;
+        }
+        
         if (!isImageDuplicate(file)) {
             const imageId = 'img_' + Date.now() + '_' + imageCounter++;
+            const preview = URL.createObjectURL(file);
+            
             selectedImages.push({
                 id: imageId,
                 file: file,
-                preview: URL.createObjectURL(file)
+                preview: preview,
+                name: file.name,
+                size: file.size
             });
         }
     }
     
+    document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
     renderSelectedImages();
     event.target.value = '';
+    actualizarContadorImagenes();
 }
 
 function isImageDuplicate(newFile) {
@@ -1314,77 +1735,86 @@ function removeSelectedImage(imageId) {
         URL.revokeObjectURL(image.preview);
     }
     selectedImages = selectedImages.filter(img => img.id !== imageId);
+    
+    document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
     renderSelectedImages();
-    updateFileInput();
+    actualizarContadorImagenes();
 }
 
 function renderSelectedImages() {
     const container = document.getElementById('selected-images-container');
+    const noMsg = document.getElementById('no-imagenes-msg');
+    
+    if (!container) return;
+    
     container.innerHTML = '';
     
     if (selectedImages.length === 0) {
-        container.innerHTML = `
-            <div class="col-12 text-center py-3">
-                <i class="fas fa-images fa-2x text-muted mb-2"></i>
-                <p class="text-muted small mb-0">No hay imágenes seleccionadas</p>
-            </div>
-        `;
+        if (noMsg) noMsg.style.display = 'block';
         return;
     }
     
-    const counterInfo = document.createElement('div');
-    counterInfo.className = 'col-12 mb-2';
-    counterInfo.innerHTML = `
-        <div class="alert alert-secondary py-2 mb-0">
-            <i class="fas fa-camera me-1"></i>
-            <strong>${selectedImages.length}</strong> de 8 imágenes seleccionadas
-        </div>
-    `;
-    container.appendChild(counterInfo);
+    if (noMsg) noMsg.style.display = 'none';
     
     selectedImages.forEach((image, index) => {
         const col = document.createElement('div');
         col.className = 'col-6 col-md-3 mb-3';
-        col.innerHTML = `
-            <div class="card border position-relative">
-                <button type="button" 
-                        class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1"
-                        onclick="removeSelectedImage('${image.id}')"
-                        style="width: 28px; height: 28px; padding: 0; border-radius: 50%; z-index: 10;">
-                    <i class="fas fa-times"></i>
-                </button>
-                <img src="${image.preview}" 
-                     class="card-img-top" 
-                     style="height: 120px; object-fit: contain; background: #f8f9fa; padding: 8px;"
-                     alt="Imagen ${index + 1}">
-                <div class="card-body p-2 text-center">
-                    <small class="text-muted d-block" style="font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                        ${image.file.name.length > 15 ? image.file.name.substring(0, 15) + '...' : image.file.name}
-                    </small>
-                    <small class="text-muted d-block">
-                        ${(image.file.size / 1024).toFixed(2)} KB
-                    </small>
-                </div>
-            </div>
-        `;
+        
+        const card = document.createElement('div');
+        card.className = 'card border image-preview-card position-relative';
+        
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1 remove-btn';
+        btn.style.cssText = 'width: 28px; height: 28px; padding: 0; border-radius: 50%; z-index: 10;';
+        btn.onclick = function(e) { 
+            e.preventDefault();
+            removeSelectedImage(image.id); 
+        };
+        
+        const btnIcon = document.createElement('i');
+        btnIcon.className = 'fas fa-times';
+        btn.appendChild(btnIcon);
+        
+        const img = document.createElement('img');
+        img.src = image.preview;
+        img.className = 'card-img-top';
+        img.style.cssText = 'height: 120px; object-fit: contain; background: #f8f9fa; padding: 8px;';
+        img.alt = 'Imagen ' + (index + 1);
+        
+        const cardBody = document.createElement('div');
+        cardBody.className = 'card-body p-2 text-center';
+        
+        const small1 = document.createElement('small');
+        small1.className = 'text-muted d-block';
+        small1.style.cssText = 'font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+        small1.textContent = image.file.name.length > 20 ? image.file.name.substring(0, 20) + '...' : image.file.name;
+        
+        const small2 = document.createElement('small');
+        small2.className = 'text-muted d-block';
+        small2.textContent = (image.file.size / 1024).toFixed(2) + ' KB';
+        
+        cardBody.appendChild(small1);
+        cardBody.appendChild(small2);
+        
+        card.appendChild(btn);
+        card.appendChild(img);
+        card.appendChild(cardBody);
+        
+        col.appendChild(card);
         container.appendChild(col);
     });
 }
 
-function updateFileInput() {
-    const dataTransfer = new DataTransfer();
-    selectedImages.forEach(image => {
-        dataTransfer.items.add(image.file);
-    });
-    const fileInput = document.getElementById('imagenes');
-    fileInput.files = dataTransfer.files;
+function actualizarContadorImagenes() {
+    const total = (imagenPrincipalFile ? 1 : 0) + selectedImages.length;
+    document.getElementById('total-imagenes').textContent = total;
+    document.getElementById('principal-count').textContent = `Principal: ${imagenPrincipalFile ? 1 : 0}`;
+    document.getElementById('adicionales-count').textContent = `Adicionales: ${selectedImages.length}`;
 }
 
-// ============================================
-// FUNCIONES PARA ATRIBUTOS ACTIVOS
-// ============================================
+// ============ FUNCIONES DE ATRIBUTOS Y VARIACIONES ============
 
-// Manejar activación/desactivación de atributos
 document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
     checkbox.addEventListener('change', function() {
         const atributoId = this.dataset.atributoId;
@@ -1396,7 +1826,6 @@ document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
             valoresContainer.style.display = 'block';
             estadoBadge.style.display = 'inline-block';
             
-            // Inicializar atributo activo
             if (!atributosActivos[atributoId]) {
                 atributosActivos[atributoId] = {
                     id: atributoId,
@@ -1408,16 +1837,13 @@ document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
             valoresContainer.style.display = 'none';
             estadoBadge.style.display = 'none';
             
-            // Desmarcar todos los valores
             const checkboxes = valoresContainer.querySelectorAll('.valor-checkbox');
             checkboxes.forEach(cb => {
                 cb.checked = false;
             });
             
-            // Eliminar atributo activo
             delete atributosActivos[atributoId];
             
-            // Resetear seleccionar todos
             const seleccionarTodos = document.getElementById(`seleccionar-todos-${atributoId}`);
             if (seleccionarTodos) {
                 seleccionarTodos.checked = false;
@@ -1429,7 +1855,6 @@ document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
     });
 });
 
-// Manejar selección de todos los valores
 document.querySelectorAll('.seleccionar-todos-checkbox').forEach(checkbox => {
     checkbox.addEventListener('change', function() {
         const atributoId = this.dataset.atributoId;
@@ -1439,7 +1864,6 @@ document.querySelectorAll('.seleccionar-todos-checkbox').forEach(checkbox => {
         valorCheckboxes.forEach(cb => {
             cb.checked = this.checked;
             
-            // Actualizar atributos activos
             const atributoNombre = cb.dataset.atributoNombre;
             const valorId = cb.value;
             const valorNombre = cb.dataset.valorNombre;
@@ -1473,7 +1897,6 @@ document.querySelectorAll('.seleccionar-todos-checkbox').forEach(checkbox => {
     });
 });
 
-// Manejar selección individual de valores
 document.querySelectorAll('.valor-checkbox').forEach(checkbox => {
     checkbox.addEventListener('change', function() {
         const atributoId = this.dataset.atributoId;
@@ -1481,14 +1904,12 @@ document.querySelectorAll('.valor-checkbox').forEach(checkbox => {
         const valorId = this.value;
         const valorNombre = this.dataset.valorNombre;
         
-        // Asegurar que el atributo está activo
         const atributoActivo = document.getElementById(`atributo-activo-${atributoId}`);
         if (!atributoActivo.checked) {
             atributoActivo.checked = true;
             atributoActivo.dispatchEvent(new Event('change'));
         }
         
-        // Actualizar atributos activos
         if (!atributosActivos[atributoId]) {
             atributosActivos[atributoId] = {
                 id: atributoId,
@@ -1511,7 +1932,6 @@ document.querySelectorAll('.valor-checkbox').forEach(checkbox => {
             }
         }
         
-        // Actualizar seleccionar todos
         const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
         const valorCheckboxes = valoresContainer.querySelectorAll('.valor-checkbox');
         const seleccionarTodos = document.getElementById(`seleccionar-todos-${atributoId}`);
@@ -1535,7 +1955,6 @@ document.querySelectorAll('.valor-checkbox').forEach(checkbox => {
     });
 });
 
-// Actualizar resumen de atributos activos
 function actualizarResumenAtributos() {
     const resumenDiv = document.getElementById('resumen-atributos');
     const lista = document.getElementById('atributos-activos-lista');
@@ -1553,29 +1972,41 @@ function actualizarResumenAtributos() {
             
             const item = document.createElement('div');
             item.className = 'p-2 bg-white border rounded';
-            item.innerHTML = `
-                <span class="fw-bold text-primary">${atributo.nombre}:</span>
-                <span class="badge bg-success ms-2">${valoresArray.length} valores</span>
-                <div class="mt-1 small">
-                    ${valoresArray.map(v => `<span class="badge bg-light text-dark me-1">${v.nombre}</span>`).join('')}
-                </div>
-            `;
+            
+            const span1 = document.createElement('span');
+            span1.className = 'fw-bold text-primary';
+            span1.textContent = atributo.nombre + ': ';
+            
+            const span2 = document.createElement('span');
+            span2.className = 'badge bg-success ms-2';
+            span2.textContent = valoresArray.length + ' valores';
+            
+            const div = document.createElement('div');
+            div.className = 'mt-1 small';
+            
+            valoresArray.forEach(v => {
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-light text-dark me-1';
+                badge.textContent = v.nombre;
+                div.appendChild(badge);
+            });
+            
+            item.appendChild(span1);
+            item.appendChild(span2);
+            item.appendChild(div);
+            
             lista.appendChild(item);
         }
     });
     
     if (atributosCount > 0) {
         resumenDiv.style.display = 'block';
-        totalAtributosBadge.innerHTML = `${atributosCount} atributos activos (${totalValores} valores)`;
+        totalAtributosBadge.textContent = atributosCount + ' atributos activos (' + totalValores + ' valores)';
     } else {
         resumenDiv.style.display = 'none';
-        totalAtributosBadge.innerHTML = '0 atributos activos';
+        totalAtributosBadge.textContent = '0 atributos activos';
     }
 }
-
-// ============================================
-// FUNCIONES PARA PESTAÑAS DE VALORES (NUEVO SISTEMA)
-// ============================================
 
 function actualizarPestanasValores() {
     const tabsContainer = document.getElementById('valores-activos-tabs-container');
@@ -1586,7 +2017,6 @@ function actualizarPestanasValores() {
     
     if (!tabsContainer || !navTabs || !tabContent) return;
     
-    // Obtener todos los valores seleccionados de todos los atributos
     let todosLosValores = [];
     
     Object.values(atributosActivos).forEach(atributo => {
@@ -1602,62 +2032,53 @@ function actualizarPestanasValores() {
     if (todosLosValores.length === 0) {
         tabsContainer.style.display = 'none';
         noAtributosMsg.style.display = 'block';
-        if (totalValoresBadge) totalValoresBadge.innerHTML = '0 valores';
+        if (totalValoresBadge) totalValoresBadge.textContent = '0 valores';
         return;
     }
     
     tabsContainer.style.display = 'block';
     noAtributosMsg.style.display = 'none';
     if (totalValoresBadge) {
-        totalValoresBadge.innerHTML = `${todosLosValores.length} ${todosLosValores.length === 1 ? 'valor' : 'valores'}`;
+        totalValoresBadge.textContent = todosLosValores.length + ' ' + (todosLosValores.length === 1 ? 'valor' : 'valores');
     }
     
-    // Limpiar contenido actual
     navTabs.innerHTML = '';
     tabContent.innerHTML = '';
     
-    // Ordenar valores por atributo y nombre
-    todosLosValores.sort((a, b) => {
-        if (a.atributoNombre === b.atributoNombre) {
-            return a.nombre.localeCompare(b.nombre);
-        }
-        return a.atributoNombre.localeCompare(b.atributoNombre);
-    });
+    const productoSku = document.getElementById('vCodigo_barras')?.value || 'PROD';
     
-    // Crear pestañas y contenido para cada valor
     todosLosValores.forEach((valor, index) => {
         const valorId = valor.id;
         const valorKey = `${valor.atributoId}_${valorId}`;
         
-        // Crear pestaña
         const tabItem = document.createElement('li');
         tabItem.className = 'nav-item';
         tabItem.role = 'presentation';
-        tabItem.innerHTML = `
-            <button 
-                class="nav-link ${index === 0 ? 'active' : ''}" 
-                id="valor-tab-${valorKey}" 
-                data-bs-toggle="tab" 
-                data-bs-target="#valor-content-${valorKey}" 
-                type="button" 
-                role="tab"
-                data-valor-id="${valorId}"
-                data-atributo-id="${valor.atributoId}">
-                <i class="fas fa-cube me-1"></i>
-                ${valor.atributoNombre}: ${valor.nombre}
-                <span class="badge">${valor.atributoNombre}</span>
-            </button>
-        `;
+        
+        const tabButton = document.createElement('button');
+        tabButton.className = 'nav-link' + (index === 0 ? ' active' : '');
+        tabButton.id = 'valor-tab-' + valorKey;
+        tabButton.setAttribute('data-bs-toggle', 'tab');
+        tabButton.setAttribute('data-bs-target', '#valor-content-' + valorKey);
+        tabButton.type = 'button';
+        tabButton.role = 'tab';
+        tabButton.setAttribute('data-valor-id', valorId);
+        tabButton.setAttribute('data-atributo-id', valor.atributoId);
+        
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-cube me-1';
+        tabButton.appendChild(icon);
+        
+        tabButton.appendChild(document.createTextNode(' ' + valor.atributoNombre + ': ' + valor.nombre));
+        
+        tabItem.appendChild(tabButton);
         navTabs.appendChild(tabItem);
         
-        // Crear contenido de pestaña - FORMULARIO DE VARIACIÓN
         const contentPane = document.createElement('div');
-        contentPane.className = `tab-pane fade ${index === 0 ? 'show active' : ''}`;
-        contentPane.id = `valor-content-${valorKey}`;
+        contentPane.className = 'tab-pane fade' + (index === 0 ? ' show active' : '');
+        contentPane.id = 'valor-content-' + valorKey;
         contentPane.role = 'tabpanel';
         
-        // Generar SKU sugerido
-        const productoSku = document.getElementById('vCodigo_barras')?.value || 'PROD';
         const combinacion = [{
             atributoId: valor.atributoId,
             atributoNombre: valor.atributoNombre,
@@ -1666,15 +2087,8 @@ function actualizarPestanasValores() {
         }];
         const skuSugerido = generarSkuSugerido(productoSku, combinacion);
         
-        // Verificar si ya existe una variación guardada para este valor
-        const variacionGuardada = obtenerVariacionGuardada(valor.atributoId, valor.id);
-        
-        contentPane.innerHTML = `
-            <!-- ========================================= -->
-            <!-- FORMULARIO DE VARIACIÓN POR VALOR        -->
-            <!-- ========================================= -->
+        const formHtml = `
             <div class="variacion-form-container">
-                <!-- Header informativo -->
                 <div class="variacion-header-info mb-4">
                     <div class="row align-items-center">
                         <div class="col-md-8">
@@ -1696,13 +2110,11 @@ function actualizarPestanasValores() {
                     </div>
                 </div>
 
-                <!-- Campos ocultos para identificación -->
                 <input type="hidden" name="variaciones[${valorKey}][id_atributo]" value="${valor.atributoId}">
                 <input type="hidden" name="variaciones[${valorKey}][id_atributo_valor]" value="${valor.id}">
                 <input type="hidden" name="variaciones[${valorKey}][vNombre_variacion]" 
                        value="${valor.atributoNombre}: ${valor.nombre}">
 
-                <!-- Fila 1: SKU y Estado -->
                 <div class="row mb-3">
                     <div class="col-md-8">
                         <div class="form-group">
@@ -1717,7 +2129,7 @@ function actualizarPestanasValores() {
                                        name="variaciones[${valorKey}][vSKU]" 
                                        id="sku-${valorKey}" 
                                        class="form-control"
-                                       value="${variacionGuardada?.sku || skuSugerido}"
+                                       value="${skuSugerido}"
                                        maxlength="50"
                                        required
                                        oninput="validarSKU(this)"
@@ -1743,7 +2155,7 @@ function actualizarPestanasValores() {
                                        id="activo-${valorKey}" 
                                        class="form-check-input" 
                                        value="1"
-                                       ${variacionGuardada?.activo !== false ? 'checked' : ''}>
+                                       checked>
                                 <label class="form-check-label" for="activo-${valorKey}">
                                     Variación activa
                                 </label>
@@ -1755,7 +2167,6 @@ function actualizarPestanasValores() {
                     </div>
                 </div>
 
-                <!-- Fila 2: Precios y Stock -->
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <div class="form-group">
@@ -1768,7 +2179,7 @@ function actualizarPestanasValores() {
                                        name="variaciones[${valorKey}][dPrecio]" 
                                        id="precio-${valorKey}" 
                                        class="form-control"
-                                       value="${variacionGuardada?.precio || ''}"
+                                       value=""
                                        required
                                        oninput="validarPrecio(this)"
                                        placeholder="0.00"
@@ -1790,7 +2201,7 @@ function actualizarPestanasValores() {
                                        name="variaciones[${valorKey}][iStock]" 
                                        id="stock-${valorKey}" 
                                        class="form-control"
-                                       value="${variacionGuardada?.stock || '0'}"
+                                       value="0"
                                        required
                                        oninput="validarStock(this)"
                                        pattern="[0-9]{1,4}"
@@ -1811,17 +2222,17 @@ function actualizarPestanasValores() {
                                     id="clase-envio-${valorKey}" 
                                     class="form-select">
                                 <option value="">-- Por defecto --</option>
-                                <option value="estandar" ${variacionGuardada?.claseEnvio === 'estandar' ? 'selected' : ''}>Estándar</option>
-                                <option value="express" ${variacionGuardada?.claseEnvio === 'express' ? 'selected' : ''}>Express</option>
-                                <option value="fragil" ${variacionGuardada?.claseEnvio === 'fragil' ? 'selected' : ''}>Frágil</option>
-                                <option value="grandes_dimensiones" ${variacionGuardada?.claseEnvio === 'grandes_dimensiones' ? 'selected' : ''}>Grandes dimensiones</option>
+                                <option value="estandar">Estándar</option>
+                                <option value="express">Express</option>
+                                <option value="fragil">Frágil</option>
+                                <option value="grandes_dimensiones">Grandes dimensiones</option>
                             </select>
                             <small class="form-text text-muted">Dejar vacío para heredar del producto</small>
                         </div>
                     </div>
                 </div>
 
-                <!-- Fila 3: Dimensiones y Peso -->
+                <!-- CAMPOS DE DIMENSIONES PARA VARIACIONES -->
                 <div class="row mb-3">
                     <div class="col-md-3">
                         <div class="form-group">
@@ -1832,12 +2243,13 @@ function actualizarPestanasValores() {
                                    name="variaciones[${valorKey}][dPeso]" 
                                    id="peso-${valorKey}" 
                                    class="form-control"
-                                   value="${variacionGuardada?.peso || ''}"
-                                   oninput="validarDecimal(this, 3)"
+                                   value=""
+                                   oninput="validarPeso(this)"
+                                   onblur="formatearPeso(this)"
+                                   onkeydown="permitirBorrado(event)"
                                    placeholder="0.000"
-                                   title="Máximo: 999.999 kg"
+                                   title="Máximo: 999.999 kg (máximo 3 decimales)"
                                    autocomplete="off">
-                            <small class="form-text text-muted">Opcional</small>
                         </div>
                     </div>
                     <div class="col-md-3">
@@ -1849,12 +2261,13 @@ function actualizarPestanasValores() {
                                    name="variaciones[${valorKey}][dLargo_cm]" 
                                    id="largo-${valorKey}" 
                                    class="form-control"
-                                   value="${variacionGuardada?.largo || ''}"
-                                   oninput="validarDecimal(this, 2)"
+                                   value=""
+                                   oninput="validarDimensionCm(this)"
+                                   onblur="formatearDimensionCm(this)"
+                                   onkeydown="permitirBorrado(event)"
                                    placeholder="0.00"
-                                   title="Máximo: 999.99 cm"
+                                   title="Máximo: 999.99 cm (máximo 2 decimales)"
                                    autocomplete="off">
-                            <small class="form-text text-muted">Opcional</small>
                         </div>
                     </div>
                     <div class="col-md-3">
@@ -1866,12 +2279,13 @@ function actualizarPestanasValores() {
                                    name="variaciones[${valorKey}][dAncho_cm]" 
                                    id="ancho-${valorKey}" 
                                    class="form-control"
-                                   value="${variacionGuardada?.ancho || ''}"
-                                   oninput="validarDecimal(this, 2)"
+                                   value=""
+                                   oninput="validarDimensionCm(this)"
+                                   onblur="formatearDimensionCm(this)"
+                                   onkeydown="permitirBorrado(event)"
                                    placeholder="0.00"
-                                   title="Máximo: 999.99 cm"
+                                   title="Máximo: 999.99 cm (máximo 2 decimales)"
                                    autocomplete="off">
-                            <small class="form-text text-muted">Opcional</small>
                         </div>
                     </div>
                     <div class="col-md-3">
@@ -1883,17 +2297,17 @@ function actualizarPestanasValores() {
                                    name="variaciones[${valorKey}][dAlto_cm]" 
                                    id="alto-${valorKey}" 
                                    class="form-control"
-                                   value="${variacionGuardada?.alto || ''}"
-                                   oninput="validarDecimal(this, 2)"
+                                   value=""
+                                   oninput="validarDimensionCm(this)"
+                                   onblur="formatearDimensionCm(this)"
+                                   onkeydown="permitirBorrado(event)"
                                    placeholder="0.00"
-                                   title="Máximo: 999.99 cm"
+                                   title="Máximo: 999.99 cm (máximo 2 decimales)"
                                    autocomplete="off">
-                            <small class="form-text text-muted">Opcional</small>
                         </div>
                     </div>
                 </div>
 
-                <!-- Fila 4: Oferta para variación -->
                 <div class="row mb-3">
                     <div class="col-md-12">
                         <div class="card bg-light border">
@@ -1902,15 +2316,14 @@ function actualizarPestanasValores() {
                                     <div class="col-md-4">
                                         <div class="form-check form-switch">
                                             <input type="checkbox" 
-                                                   name="variaciones[${valorKey}][bTiene_oferta]" 
-                                                   id="oferta-${valorKey}" 
+                                                   name="variaciones[${valorKey}][bTiene_descuento]" 
+                                                   id="descuento-${valorKey}" 
                                                    class="form-check-input" 
                                                    value="1"
-                                                   ${variacionGuardada?.tieneOferta ? 'checked' : ''}
-                                                   onchange="document.querySelector('.oferta-fields-${valorKey}').style.display = this.checked ? 'flex' : 'none'">
-                                            <label class="form-check-label fw-bold" for="oferta-${valorKey}">
+                                                   onchange="toggleDescuentoVariacion(this, '${valorKey}')">
+                                            <label class="form-check-label fw-bold" for="descuento-${valorKey}">
                                                 <i class="fas fa-percentage me-1"></i>
-                                                Activar oferta para esta variación
+                                                Activar descuento para esta variación
                                             </label>
                                         </div>
                                         <small class="text-muted d-block mt-1">
@@ -1918,39 +2331,42 @@ function actualizarPestanasValores() {
                                         </small>
                                     </div>
                                     <div class="col-md-8">
-                                        <div class="row oferta-fields-${valorKey}" 
-                                             style="display: ${variacionGuardada?.tieneOferta ? 'flex' : 'none'};">
+                                        <div class="row descuento-fields-${valorKey}" style="display: none;">
                                             <div class="col-md-4 mb-2 mb-md-0">
                                                 <div class="input-group input-group-sm">
                                                     <span class="input-group-text">$</span>
                                                     <input type="text" 
-                                                           name="variaciones[${valorKey}][dPrecio_oferta]" 
-                                                           class="form-control"
-                                                           value="${variacionGuardada?.precioOferta || ''}"
-                                                           oninput="validarPrecio(this)"
-                                                           placeholder="Precio oferta"
+                                                           name="variaciones[${valorKey}][dPrecio_descuento]" 
+                                                           class="form-control variacion-precio-descuento"
+                                                           data-precio-normal-id="precio-${valorKey}"
+                                                           data-valor-key="${valorKey}"
+                                                           value=""
+                                                           oninput="validarPrecio(this); validarPrecioDescuentoVariacionInstantaneo(this);"
+                                                           onblur="validarPrecioDescuentoVariacion(this)"
+                                                           placeholder="Precio descuento"
                                                            autocomplete="off">
                                                 </div>
+                                                <div class="invalid-feedback" style="display: none;"></div>
                                             </div>
                                             <div class="col-md-3 mb-2 mb-md-0">
                                                 <input type="date" 
-                                                       name="variaciones[${valorKey}][dFecha_inicio_oferta]" 
-                                                       class="form-control form-control-sm"
-                                                       value="${variacionGuardada?.fechaInicio || ''}"
+                                                       name="variaciones[${valorKey}][dFecha_inicio_descuento]" 
+                                                       class="form-control form-control-sm fecha-inicio-${valorKey}"
+                                                       value=""
                                                        autocomplete="off">
                                             </div>
                                             <div class="col-md-3 mb-2 mb-md-0">
                                                 <input type="date" 
-                                                       name="variaciones[${valorKey}][dFecha_fin_oferta]" 
-                                                       class="form-control form-control-sm"
-                                                       value="${variacionGuardada?.fechaFin || ''}"
+                                                       name="variaciones[${valorKey}][dFecha_fin_descuento]" 
+                                                       class="form-control form-control-sm fecha-fin-${valorKey}"
+                                                       value=""
                                                        autocomplete="off">
                                             </div>
                                             <div class="col-md-2">
                                                 <input type="text" 
-                                                       name="variaciones[${valorKey}][vMotivo_oferta]" 
+                                                       name="variaciones[${valorKey}][vMotivo_descuento]" 
                                                        class="form-control form-control-sm"
-                                                       value="${variacionGuardada?.motivoOferta || ''}"
+                                                       value=""
                                                        placeholder="Motivo"
                                                        maxlength="255"
                                                        autocomplete="off">
@@ -1963,9 +2379,8 @@ function actualizarPestanasValores() {
                     </div>
                 </div>
 
-                <!-- Fila 5: Descripción e Imagen -->
                 <div class="row mb-3">
-                    <div class="col-md-9">
+                    <div class="col-md-12">
                         <div class="form-group">
                             <label for="descripcion-${valorKey}" class="form-label fw-bold">
                                 Descripción de la variación
@@ -1976,109 +2391,110 @@ function actualizarPestanasValores() {
                                       rows="2"
                                       placeholder="Descripción específica para esta variación (opcional)"
                                       maxlength="500"
-                                      autocomplete="off">${variacionGuardada?.descripcion || ''}</textarea>
+                                      autocomplete="off"></textarea>
                             <small class="form-text text-muted">
                                 Máximo 500 caracteres. Descripción específica para esta variación.
                             </small>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label for="imagen-${valorKey}" class="form-label fw-bold">
-                                Imagen específica
-                            </label>
-                            <input type="file" 
-                                   name="variaciones[${valorKey}][vImagen]" 
-                                   id="imagen-${valorKey}" 
-                                   class="form-control form-control-sm"
-                                   accept="image/*"
-                                   autocomplete="off">
-                            <small class="form-text text-muted">
-                                Opcional. Máx 2MB. JPG, PNG, WEBP
-                            </small>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Botones de acción -->
-                <div class="row mt-4">
-                    <div class="col-md-12">
-                        <hr class="my-2">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <span class="badge bg-secondary p-2">
-                                    <i class="fas fa-check-circle me-1"></i>
-                                    Configuración completada
-                                </span>
-                                <span class="badge bg-light text-dark p-2 ms-2">
-                                    <i class="fas fa-barcode me-1"></i>
-                                    SKU: <span id="sku-preview-${valorKey}">${variacionGuardada?.sku || skuSugerido}</span>
-                                </span>
-                            </div>
-                            <div>
-                                <button type="button" 
-                                        class="btn btn-sm btn-outline-danger" 
-                                        onclick="eliminarValorDeAtributo(${valor.atributoId}, ${valor.id})">
-                                    <i class="fas fa-trash-alt me-1"></i>
-                                    Quitar variación
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         `;
         
+        contentPane.innerHTML = formHtml;
         tabContent.appendChild(contentPane);
+        
+        variacionesImagenes[valorKey] = [];
+        document.getElementById(`selected-images-count-${valorKey}`).textContent = '0 archivos';
     });
 }
 
-// Función para obtener variación guardada
-function obtenerVariacionGuardada(atributoId, valorId) {
-    const inputs = document.querySelectorAll(`input[name*="[vSKU]"][data-atributo-id="${atributoId}"][data-valor-id="${valorId}"]`);
-    if (inputs.length > 0) {
-        const input = inputs[0];
-        const form = input.closest('.variacion-form-container');
-        
-        if (form) {
-            const precioInput = form.querySelector('input[name*="[dPrecio]"]');
-            const stockInput = form.querySelector('input[name*="[iStock]"]');
-            const activoCheckbox = form.querySelector('input[name*="[bActivo]"]');
-            const ofertaCheckbox = form.querySelector('input[name*="[bTiene_oferta]"]');
-            const precioOfertaInput = form.querySelector('input[name*="[dPrecio_oferta]"]');
-            const fechaInicioInput = form.querySelector('input[name*="[dFecha_inicio_oferta]"]');
-            const fechaFinInput = form.querySelector('input[name*="[dFecha_fin_oferta]"]');
-            const motivoInput = form.querySelector('input[name*="[vMotivo_oferta]"]');
-            const descripcionTextarea = form.querySelector('textarea[name*="[tDescripcion]"]');
-            const claseEnvioSelect = form.querySelector('select[name*="[vClase_envio]"]');
-            const pesoInput = form.querySelector('input[name*="[dPeso]"]');
-            const largoInput = form.querySelector('input[name*="[dLargo_cm]"]');
-            const anchoInput = form.querySelector('input[name*="[dAncho_cm]"]');
-            const altoInput = form.querySelector('input[name*="[dAlto_cm]"]');
-            
-            return {
-                sku: input.value,
-                precio: precioInput?.value,
-                stock: stockInput?.value,
-                activo: activoCheckbox?.checked,
-                tieneOferta: ofertaCheckbox?.checked,
-                precioOferta: precioOfertaInput?.value,
-                fechaInicio: fechaInicioInput?.value,
-                fechaFin: fechaFinInput?.value,
-                motivoOferta: motivoInput?.value,
-                descripcion: descripcionTextarea?.value,
-                claseEnvio: claseEnvioSelect?.value,
-                peso: pesoInput?.value,
-                largo: largoInput?.value,
-                ancho: anchoInput?.value,
-                alto: altoInput?.value
-            };
-        }
+function toggleDescuentoVariacion(checkbox, valorKey) {
+    const fields = document.querySelector(`.descuento-fields-${valorKey}`);
+    const precioDescuento = fields.querySelector('.variacion-precio-descuento');
+    const fechaInicio = fields.querySelector(`.fecha-inicio-${valorKey}`);
+    const fechaFin = fields.querySelector(`.fecha-fin-${valorKey}`);
+    
+    if (checkbox.checked) {
+        fields.style.display = 'flex';
+        precioDescuento.required = true;
+        fechaInicio.required = true;
+        fechaFin.required = true;
+    } else {
+        fields.style.display = 'none';
+        precioDescuento.required = false;
+        fechaInicio.required = false;
+        fechaFin.required = false;
+        precioDescuento.classList.remove('is-invalid');
     }
-    return null;
 }
 
-// Función para generar SKU sugerido
+function validarPrecioDescuentoVariacionInstantaneo(input) {
+    const precioNormalId = input.dataset.precioNormalId;
+    const precioNormal = document.getElementById(precioNormalId);
+    const valorKey = input.dataset.valorKey;
+    const checkbox = document.getElementById(`descuento-${valorKey}`);
+    
+    if (!checkbox || !checkbox.checked) return true;
+    
+    if (precioNormal && input.value) {
+        const precioNormalValor = parseFloat(precioNormal.value) || 0;
+        const precioDescuentoValor = parseFloat(input.value) || 0;
+        
+        let errorDiv = input.closest('.col-md-4').querySelector('.invalid-feedback');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback';
+            input.closest('.col-md-4').appendChild(errorDiv);
+        }
+        
+        if (precioDescuentoValor >= precioNormalValor && precioDescuentoValor > 0 && input.value !== '') {
+            input.classList.add('is-invalid');
+            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio normal';
+            errorDiv.style.display = 'block';
+            return false;
+        } else {
+            input.classList.remove('is-invalid');
+            errorDiv.style.display = 'none';
+            return true;
+        }
+    }
+    return true;
+}
+
+function validarPrecioDescuentoVariacion(input) {
+    const precioNormalId = input.dataset.precioNormalId;
+    const precioNormal = document.getElementById(precioNormalId);
+    const valorKey = input.dataset.valorKey;
+    const checkbox = document.getElementById(`descuento-${valorKey}`);
+    
+    if (!checkbox || !checkbox.checked) return true;
+    
+    if (precioNormal && input.value) {
+        const precioNormalValor = parseFloat(precioNormal.value) || 0;
+        const precioDescuentoValor = parseFloat(input.value) || 0;
+        
+        let errorDiv = input.closest('.col-md-4').querySelector('.invalid-feedback');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback';
+            input.closest('.col-md-4').appendChild(errorDiv);
+        }
+        
+        if (precioDescuentoValor >= precioNormalValor && precioDescuentoValor > 0) {
+            input.classList.add('is-invalid');
+            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio normal';
+            errorDiv.style.display = 'block';
+            return false;
+        } else {
+            input.classList.remove('is-invalid');
+            errorDiv.style.display = 'none';
+            return true;
+        }
+    }
+    return true;
+}
+
 function generarSkuSugerido(productoSku, combinacion) {
     let sku = productoSku || 'PROD';
     combinacion.forEach(item => {
@@ -2089,38 +2505,8 @@ function generarSkuSugerido(productoSku, combinacion) {
     return sku;
 }
 
-// Eliminar valor de atributo desde pestañas
-function eliminarValorDeAtributo(atributoId, valorId) {
-    Swal.fire({
-        title: '¿Eliminar variación?',
-        text: 'Esta acción eliminará la variación y todos sus datos configurados.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Desmarcar checkbox
-            const checkbox = document.getElementById(`valor-${valorId}`);
-            if (checkbox) {
-                checkbox.checked = false;
-                checkbox.dispatchEvent(new Event('change'));
-            }
-            
-            Swal.fire(
-                'Eliminado',
-                'La variación ha sido eliminada.',
-                'success'
-            );
-        }
-    });
-}
+// ============ FUNCIONES PARA FORMULARIOS RÁPIDOS ============
 
-// ============================================
-// FUNCIONES PARA FORMULARIOS RÁPIDOS
-// ============================================
 function quickGenerarSlug(texto, inputId) {
     if (!texto) return;
     let slug = texto.toLowerCase();
@@ -2138,112 +2524,78 @@ function quickGenerarSlug(texto, inputId) {
 }
 
 function quickActualizarSlug(nombre, slugId) {
-    if (!nombre) return;
-    let slug = nombre.toLowerCase();
-    slug = slug.replace(/á/gi, 'a');
-    slug = slug.replace(/é/gi, 'e');
-    slug = slug.replace(/í/gi, 'i');
-    slug = slug.replace(/ó/gi, 'o');
-    slug = slug.replace(/ú/gi, 'u');
-    slug = slug.replace(/ñ/gi, 'n');
-    slug = slug.replace(/[^a-z0-9]+/g, '-');
-    slug = slug.replace(/^-+/, '').replace(/-+$/, '');
-    document.getElementById(slugId).value = slug;
+    quickGenerarSlug(nombre, slugId);
 }
 
-function limpiarFormularioMarca() {
-    document.getElementById('vNombre_marca').value = '';
-    document.getElementById('tDescripcion_marca').value = '';
-}
+// ============ FUNCIONES PARA CREACIÓN RÁPIDA DE CATEGORÍA (CORREGIDAS) ============
 
-// ============================================
-// FUNCIONES AJAX PARA FORMULARIOS RÁPIDOS
-// ============================================
-function crearCategoria() {
-    const nombre = document.getElementById('vNombre_cat').value.trim();
-    const slug = document.getElementById('vSlug_cat').value.trim();
-    const padre = document.getElementById('id_categoria_padre_cat').value;
-    const descripcion = document.getElementById('tDescripcion_cat').value.trim();
-    const activa = document.getElementById('bActivo_cat').checked ? 1 : 0;
+function actualizarSelectCategoriaPadre(nuevaCategoria, nivel) {
+    const selectPadre = document.getElementById('id_categoria_padre_quick');
+    if (!selectPadre) return;
     
-    if (!nombre) {
-        Swal.fire('Error', 'El nombre de la categoría es obligatorio', 'error');
-        return;
-    }
-    
-    if (!slug) {
-        Swal.fire('Error', 'El slug de la categoría es obligatorio', 'error');
-        return;
-    }
-    
-    Swal.fire({
-        title: 'Creando categoría...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
-    
-    $.ajax({
-        url: '{{ route("categorias.quick-create") }}',
-        method: 'POST',
-        data: {
-            _token: '{{ csrf_token() }}',
-            vNombre: nombre,
-            vSlug: slug,
-            id_categoria_padre: padre || '',
-            tDescripcion: descripcion,
-            bActivo: activa
-        },
-        success: function(response) {
-            Swal.close();
-            if (response.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Éxito!',
-                    text: response.message,
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-                
-                document.getElementById('quick-categoria-form').reset();
-                
-                const select = document.getElementById('id_categoria');
-                const option = document.createElement('option');
-                option.value = response.categoria.id_categoria;
-                let prefijo = padre ? '↳ ' : '🏠 ';
-                option.text = prefijo + nombre;
-                select.appendChild(option);
-                select.value = response.categoria.id_categoria;
-                
-                const optionPadre = document.createElement('option');
-                optionPadre.value = response.categoria.id_categoria;
-                optionPadre.text = (padre ? prefijo : '') + nombre;
-                document.getElementById('id_categoria_padre_cat').appendChild(optionPadre);
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: response.message || 'Error al crear la categoría'
-                });
-            }
-        },
-        error: function(xhr) {
-            Swal.close();
-            let message = 'Error en la solicitud';
-            if (xhr.responseJSON && xhr.responseJSON.message) {
-                message = xhr.responseJSON.message;
-            } else if (xhr.responseJSON && xhr.responseJSON.errors) {
-                const errors = Object.values(xhr.responseJSON.errors).flat();
-                message = errors.join(', ');
-            }
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: message
-            });
+    let prefijo = '';
+    if (nivel === 0) {
+        prefijo = '🏠 ';
+    } else {
+        for (let i = 0; i < nivel; i++) {
+            prefijo += '↳ ';
         }
-    });
+    }
+    
+    const option = document.createElement('option');
+    option.value = nuevaCategoria.id_categoria;
+    option.innerHTML = prefijo + nuevaCategoria.vNombre;
+    
+    let inserted = false;
+    for (let i = 1; i < selectPadre.options.length; i++) {
+        const currentOption = selectPadre.options[i];
+        if (currentOption.innerHTML.localeCompare(option.innerHTML) > 0) {
+            selectPadre.insertBefore(option, currentOption);
+            inserted = true;
+            break;
+        }
+    }
+    
+    if (!inserted) {
+        selectPadre.appendChild(option);
+    }
 }
+
+function actualizarSelectCategoriaPrincipal(nuevaCategoria, nivel) {
+    const selectCategoria = document.getElementById('id_categoria');
+    if (!selectCategoria) return;
+    
+    let prefijo = '';
+    if (nivel === 0) {
+        prefijo = '🏠 ';
+    } else {
+        for (let i = 0; i < nivel; i++) {
+            prefijo += '↳ ';
+        }
+    }
+    
+    const option = document.createElement('option');
+    option.value = nuevaCategoria.id_categoria;
+    option.innerHTML = prefijo + nuevaCategoria.vNombre;
+    
+    let inserted = false;
+    for (let i = 1; i < selectCategoria.options.length; i++) {
+        const currentOption = selectCategoria.options[i];
+        if (currentOption.innerHTML.localeCompare(option.innerHTML) > 0) {
+            selectCategoria.insertBefore(option, currentOption);
+            inserted = true;
+            break;
+        }
+    }
+    
+    if (!inserted) {
+        selectCategoria.appendChild(option);
+    }
+    
+    selectCategoria.value = nuevaCategoria.id_categoria;
+}
+
+// ============ FUNCIONES PARA CREACIÓN RÁPIDA ============
 
 function crearMarca() {
     const nombre = document.getElementById('vNombre_marca').value.trim();
@@ -2355,7 +2707,9 @@ function crearEtiqueta() {
                 document.getElementById('color_text_eti').value = '#007bff';
                 document.getElementById('color_eti').value = '#007bff';
                 
-                agregarEtiquetaAlFormulario(response.etiqueta);
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
             } else {
                 Swal.fire({
                     icon: 'error',
@@ -2421,7 +2775,6 @@ function crearAtributo() {
                 
                 document.getElementById('quick-atributo-form').reset();
                 
-                // Recargar la página después de crear el atributo
                 setTimeout(() => {
                     location.reload();
                 }, 2000);
@@ -2451,27 +2804,6 @@ function crearAtributo() {
     });
 }
 
-function agregarEtiquetaAlFormulario(etiqueta) {
-    const container = document.querySelector('.form-group:has(.row) .row');
-    const col = document.createElement('div');
-    col.className = 'col-md-3 col-6 mb-2';
-    col.innerHTML = `
-        <div class="form-check">
-            <input type="checkbox" 
-                   name="etiquetas[]" 
-                   value="${etiqueta.id_etiqueta}" 
-                   class="form-check-input"
-                   id="etiqueta_${etiqueta.id_etiqueta}">
-            <label class="form-check-label" for="etiqueta_${etiqueta.id_etiqueta}">
-                <span class="etiqueta-badge" style="background-color: ${etiqueta.color || '#007bff'}; color: white;">
-                    ${etiqueta.vNombre}
-                </span>
-            </label>
-        </div>
-    `;
-    container.appendChild(col);
-}
-
 function activarTabAtributos() {
     const tab = document.getElementById('atributos-tab');
     if (tab) {
@@ -2480,30 +2812,145 @@ function activarTabAtributos() {
     }
 }
 
-// ============================================
-// EVENT LISTENERS INICIALES
-// ============================================
+function activarTabEtiquetas() {
+    const tab = document.getElementById('etiquetas-tab');
+    if (tab) {
+        tab.click();
+        tab.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+// ============ EVENT LISTENERS ============
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Mostrar campos de oferta si ya estaba activado
-    if (document.getElementById('bTiene_oferta')) {
-        if (document.getElementById('bTiene_oferta').checked) {
-            toggleOfertaFields();
+    const pesoInput = document.getElementById('dPeso');
+    if (pesoInput) {
+        pesoInput.addEventListener('blur', function() {
+            formatearPeso(this);
+        });
+    }
+    
+    const dimensionInputs = ['dLargo_cm', 'dAncho_cm', 'dAlto_cm'];
+    dimensionInputs.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.addEventListener('blur', function() {
+                formatearDimensionCm(this);
+            });
+        }
+    });
+
+    const precioVenta = document.getElementById('dPrecio_venta');
+    if (precioVenta) {
+        precioVenta.addEventListener('input', function() {
+            if (document.getElementById('bTiene_descuento')?.checked) {
+                validarPrecioDescuentoProducto();
+            }
+        });
+    }
+
+    // FORMULARIO DE CATEGORÍA (CORREGIDO)
+    const categoriaForm = document.getElementById('categoriaQuickForm');
+    
+    if (categoriaForm) {
+        categoriaForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            Swal.fire({
+                title: 'Creando categoría...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            
+            fetch('{{ route("categorias.store") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
+                return response.json();
+            })
+            .then(data => {
+                Swal.close();
+                
+                if (data.success) {
+                    const nuevaCategoria = data.categoria;
+                    const nivel = data.nivel || 0;
+                    
+                    actualizarSelectCategoriaPadre(nuevaCategoria, nivel);
+                    actualizarSelectCategoriaPrincipal(nuevaCategoria, nivel);
+                    
+                    limpiarFormularioCategoria();
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Categoría creada!',
+                        text: 'La categoría se ha creado y aparecerá en la posición correcta de la jerarquía',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                } else {
+                    let errorMessage = data.message || 'Error al crear la categoría';
+                    
+                    if (data.errors) {
+                        errorMessage = Object.values(data.errors).flat().join('<br>');
+                    }
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: errorMessage
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.close();
+                
+                let errorMessage = 'Error de conexión';
+                
+                if (error.errors) {
+                    errorMessage = Object.values(error.errors).flat().join('<br>');
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    html: errorMessage
+                });
+            });
+        });
+    }
+    
+    if (document.getElementById('bTiene_descuento')) {
+        if (document.getElementById('bTiene_descuento').checked) {
+            toggleDescuentoFields();
         }
     }
     
-    // Inicializar estados de checkboxes
     document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
         if (checkbox.checked) {
             checkbox.dispatchEvent(new Event('change'));
         }
     });
     
-    // Inicializar variaciones
+    document.getElementById('selected-images-count').textContent = '0 archivos';
+    
     renderSelectedImages();
     actualizarResumenAtributos();
     actualizarPestanasValores();
+    actualizarContadorImagenes();
     
-    // Sincronizar color picker
     const colorPicker = document.getElementById('color_eti');
     const colorText = document.getElementById('color_text_eti');
     
@@ -2520,46 +2967,92 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// ============================================
-// VALIDACIÓN DEL FORMULARIO PRINCIPAL
-// ============================================
+// Validación del formulario antes de enviar
 document.getElementById('productoForm').addEventListener('submit', function(e) {
     const btnSubmit = document.getElementById('btnSubmit');
     
-    // Validar precio de oferta si está activado
-    if (document.getElementById('bTiene_oferta') && document.getElementById('bTiene_oferta').checked) {
+    if (!imagenPrincipalFile) {
+        e.preventDefault();
+        Swal.fire({
+            icon: 'error',
+            title: 'Imagen principal requerida',
+            text: 'Debes seleccionar una imagen principal para el producto'
+        });
+        return false;
+    }
+    
+    if (document.getElementById('bTiene_descuento') && document.getElementById('bTiene_descuento').checked) {
         const precioVenta = parseFloat(document.getElementById('dPrecio_venta').value) || 0;
-        const precioOferta = parseFloat(document.getElementById('dPrecio_oferta').value) || 0;
+        const precioDescuento = parseFloat(document.getElementById('dPrecio_descuento').value) || 0;
         
-        if (precioOferta >= precioVenta) {
+        if (precioDescuento >= precioVenta) {
             e.preventDefault();
             Swal.fire({
                 icon: 'error',
-                title: 'Error en precio de oferta',
-                text: 'El precio de oferta debe ser menor al precio de venta'
+                title: 'Error en precio de descuento',
+                text: 'El precio de descuento debe ser menor que el precio de venta'
             });
-            document.getElementById('dPrecio_oferta').focus();
+            document.getElementById('dPrecio_descuento').focus();
+            return false;
+        }
+        
+        const fechaInicio = document.getElementById('dFecha_inicio_descuento').value;
+        const fechaFin = document.getElementById('dFecha_fin_descuento').value;
+        
+        if (!fechaInicio || !fechaFin) {
+            e.preventDefault();
+            Swal.fire({
+                icon: 'error',
+                title: 'Fechas requeridas',
+                text: 'Cuando el descuento está activo, las fechas de inicio y fin son obligatorias'
+            });
+            return false;
+        }
+        
+        if (new Date(fechaFin) < new Date(fechaInicio)) {
+            e.preventDefault();
+            Swal.fire({
+                icon: 'error',
+                title: 'Error en fechas de descuento',
+                text: 'La fecha de fin debe ser igual o posterior a la fecha de inicio'
+            });
             return false;
         }
     }
     
-    // Validar fechas de oferta
-    if (document.getElementById('bTiene_oferta') && document.getElementById('bTiene_oferta').checked) {
-        const fechaInicio = document.getElementById('dFecha_inicio_oferta').value;
-        const fechaFin = document.getElementById('dFecha_fin_oferta').value;
+    let errorVariaciones = [];
+    document.querySelectorAll('.variacion-precio-descuento').forEach(input => {
+        const valorKey = input.dataset.valorKey;
+        const checkbox = document.getElementById(`descuento-${valorKey}`);
         
-        if (fechaInicio && fechaFin && new Date(fechaFin) < new Date(fechaInicio)) {
-            e.preventDefault();
-            Swal.fire({
-                icon: 'error',
-                title: 'Error en fechas de oferta',
-                text: 'La fecha de fin debe ser posterior a la fecha de inicio'
-            });
-            return false;
+        if (checkbox && checkbox.checked && input.value) {
+            const precioNormalId = input.dataset.precioNormalId;
+            const precioNormal = document.getElementById(precioNormalId);
+            
+            if (precioNormal) {
+                const precioNormalValor = parseFloat(precioNormal.value) || 0;
+                const precioDescuentoValor = parseFloat(input.value) || 0;
+                
+                if (precioDescuentoValor >= precioNormalValor) {
+                    errorVariaciones.push(`En una variación, el precio de descuento debe ser menor que el precio normal`);
+                    input.classList.add('is-invalid');
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            }
         }
+    });
+    
+    if (errorVariaciones.length > 0) {
+        e.preventDefault();
+        Swal.fire({
+            icon: 'error',
+            title: 'Errores en precios de descuento',
+            html: errorVariaciones.join('<br>')
+        });
+        return false;
     }
     
-    // Validar que todas las variaciones tengan SKU
     const skuInputs = document.querySelectorAll('input[name*="[vSKU]"]');
     let variacionesValidas = true;
     
@@ -2580,10 +3073,6 @@ document.getElementById('productoForm').addEventListener('submit', function(e) {
         return false;
     }
     
-    // Actualizar input de archivos
-    updateFileInput();
-    
-    // Cambiar texto del botón
     if (btnSubmit) {
         btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Guardando...';
         btnSubmit.disabled = true;
@@ -2592,14 +3081,12 @@ document.getElementById('productoForm').addEventListener('submit', function(e) {
     return true;
 });
 
-// Remover clases de error al escribir
 document.querySelectorAll('input, select, textarea').forEach(elemento => {
     elemento.addEventListener('input', function() {
         this.classList.remove('is-invalid');
     });
 });
 
-// Prevenir comportamiento por defecto de botones dentro del formulario
 document.querySelectorAll('button[type="button"]').forEach(button => {
     button.addEventListener('click', function(e) {
         if (this.closest('form')) {

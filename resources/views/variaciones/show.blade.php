@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Valoraciones - ' . $producto->vNombre)
+@section('title', 'Variaciones - ' . $producto->vNombre)
 @section('content')
 <div class="container-fluid">
     <div class="card">
@@ -8,13 +8,13 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h2>{{ $producto->vNombre }}</h2>
-                    <p class="text-muted mb-0">Gestionar valoraciones del producto</p>
+                    <p class="text-muted mb-0">Gestionar variaciones del producto</p>
                 </div>
                 <div>
-                    <a href="{{ route('valoraciones.create', $producto->id_producto) }}" class="btn btn-success">
-                        <i class="fas fa-plus me-1"></i> Nueva Valoración
+                    <a href="{{ route('variaciones.create', $producto->id_producto) }}" class="btn btn-success">
+                        <i class="fas fa-plus me-1"></i> Nueva Variación
                     </a>
-                    <a href="{{ route('valoraciones.index') }}" class="btn btn-secondary">
+                    <a href="{{ route('variaciones.index') }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-left me-1"></i> Volver
                     </a>
                 </div>
@@ -69,14 +69,14 @@
                 <div class="row">
                     <div class="col-md-8">
                         <input type="text" name="search" class="form-control" 
-                               placeholder="Buscar valoraciones por SKU, precio o stock..." 
+                               placeholder="Buscar variaciones por SKU, precio o stock..." 
                                value="{{ request('search') }}">
                     </div>
                     <div class="col-md-2">
                         <button type="submit" class="btn btn-primary w-100">Buscar</button>
                     </div>
                     <div class="col-md-2">
-                        <a href="{{ route('valoraciones.show', $producto->id_producto) }}" class="btn btn-secondary w-100">Limpiar</a>
+                        <a href="{{ route('variaciones.show', $producto->id_producto) }}" class="btn btn-secondary w-100">Limpiar</a>
                     </div>
                 </div>
             </form>
@@ -247,7 +247,7 @@
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
-                                            <a href="{{ route('valoraciones.edit', ['producto_id' => $producto->id_producto, 'variacion_id' => $variacion->id_variacion]) }}" 
+                                            <a href="{{ route('variaciones.edit', ['producto_id' => $producto->id_producto, 'variacion_id' => $variacion->id_variacion]) }}" 
                                                class="btn btn-warning" title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </a>
@@ -258,7 +258,7 @@
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                             <form id="delete-form-{{ $variacion->id_variacion }}" 
-                                                  action="{{ route('valoraciones.destroyValoracion', ['producto_id' => $producto->id_producto, 'variacion_id' => $variacion->id_variacion]) }}" 
+                                                  action="{{ route('variaciones.destroy', ['producto_id' => $producto->id_producto, 'variacion_id' => $variacion->id_variacion]) }}" 
                                                   method="POST" class="d-none">
                                                 @csrf @method('DELETE')
                                             </form>
@@ -274,7 +274,7 @@
                 <div class="table-footer bg-primary text-white p-2 rounded">
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="text-start">
-                            <strong>Total valoraciones:</strong> {{ $variaciones->count() }}
+                            <strong>Total variaciones:</strong> {{ $variaciones->count() }}
                             @if(request('search'))
                                 <span class="ms-2">(filtradas)</span>
                             @endif
@@ -293,9 +293,9 @@
                 @else
                 <div class="text-center py-5">
                     <h4 class="text-muted">No se encontraron resultados</h4>
-                    <p class="text-muted">No hay valoraciones que coincidan con "{{ request('search') }}"</p>
-                    <a href="{{ route('valoraciones.show', $producto->id_producto) }}" class="btn btn-primary">
-                        Ver todas las valoraciones
+                    <p class="text-muted">No hay variaciones que coincidan con "{{ request('search') }}"</p>
+                    <a href="{{ route('variaciones.show', $producto->id_producto) }}" class="btn btn-primary">
+                        Ver todas las variaciones
                     </a>
                 </div>
                 @endif
@@ -303,10 +303,10 @@
             @else
                 <div class="text-center py-5">
                     <i class="fas fa-cubes fa-3x text-muted mb-2"></i>
-                    <h4 class="text-muted">No hay valoraciones registradas</h4>
-                    <p class="text-muted">Crea tu primera valoración para este producto</p>
-                    <a href="{{ route('valoraciones.create', $producto->id_producto) }}" class="btn btn-success">
-                        <i class="fas fa-plus me-1"></i> Crear Primera Valoración
+                    <h4 class="text-muted">No hay variaciones registradas</h4>
+                    <p class="text-muted">Crea tu primera variación para este producto</p>
+                    <a href="{{ route('variaciones.create', $producto->id_producto) }}" class="btn btn-success">
+                        <i class="fas fa-plus me-1"></i> Crear Primera Variación
                     </a>
                 </div>
             @endif

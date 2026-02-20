@@ -9,7 +9,7 @@ use App\Http\Controllers\MarcaController;
 use App\Http\Controllers\BusquedaController;
 use App\Http\Controllers\FavoritoController;
 use App\Http\Controllers\AtributoController;
-use App\Http\Controllers\ValoracionController;
+use App\Http\Controllers\VariacionController;
 
 // RUTA PRINCIPAL - redirige a la página de inicio real
 Route::get('/', function() {
@@ -93,41 +93,41 @@ Route::get('/productos/{id}/asignar-atributos', [ProductoController::class, 'asi
 Route::post('/productos/{id}/guardar-atributos', [ProductoController::class, 'guardarAtributos'])->name('productos.guardar-atributos');
 
 // =====================================================================
-// RUTAS PARA VALORACIONES (VARIACIONES) - CAMBIÉ EL NOMBRE A 'valoraciones' EN VEZ DE 'atributos'
+// RUTAS PARA VARIACIONES - AHORA USANDO VariacionController
 // =====================================================================
-Route::prefix('valoraciones')->name('valoraciones.')->group(function () {
-    // Listado de productos con valoraciones
-    Route::get('/', [ValoracionController::class, 'index'])->name('index');
+Route::prefix('variaciones')->name('variaciones.')->group(function () {
+    // Listado de productos con variaciones
+    Route::get('/', [VariacionController::class, 'index'])->name('index');
     
-    // Ver valoraciones de un producto específico
-    Route::get('/producto/{id}', [ValoracionController::class, 'show'])->name('show');
+    // Ver variaciones de un producto específico
+    Route::get('/producto/{id}', [VariacionController::class, 'show'])->name('show');
     
-    // Crear nueva valoración para un producto
-    Route::get('/producto/{producto_id}/crear', [ValoracionController::class, 'create'])->name('create');
-    Route::post('/producto/{producto_id}', [ValoracionController::class, 'store'])->name('store');
+    // Crear nueva variación para un producto
+    Route::get('/producto/{producto_id}/crear', [VariacionController::class, 'create'])->name('create');
+    Route::post('/producto/{producto_id}', [VariacionController::class, 'store'])->name('store');
     
-    // Editar valoración existente
-    Route::get('/producto/{producto_id}/editar/{variacion_id}', [ValoracionController::class, 'edit'])->name('edit');
-    Route::put('/producto/{producto_id}/{variacion_id}', [ValoracionController::class, 'update'])->name('update');
+    // Editar variación existente
+    Route::get('/producto/{producto_id}/editar/{variacion_id}', [VariacionController::class, 'edit'])->name('edit');
+    Route::put('/producto/{producto_id}/{variacion_id}', [VariacionController::class, 'update'])->name('update');
     
-    // Eliminar valoración - CAMBIÉ EL NOMBRE A 'destroyValoracion' para evitar conflicto
-    Route::delete('/producto/{producto_id}/{variacion_id}', [ValoracionController::class, 'destroy'])->name('destroyValoracion');
+    // Eliminar variación
+    Route::delete('/producto/{producto_id}/{variacion_id}', [VariacionController::class, 'destroy'])->name('destroy');
 });
 
 // Ruta alternativa para el sidebar (desde la navegación principal)
-Route::get('/productos/valoraciones', [ValoracionController::class, 'index'])->name('productos.valoraciones');
+Route::get('/productos/variaciones', [VariacionController::class, 'index'])->name('productos.variaciones');
 
-// Ruta alternativa para crear valoración desde productos
-Route::get('/productos/{id}/crear-valoracion', [ValoracionController::class, 'create'])
-    ->name('productos.crear-valoracion');
+// Ruta alternativa para crear variación desde productos
+Route::get('/productos/{id}/crear-variacion', [VariacionController::class, 'create'])
+    ->name('productos.crear-variacion');
 
 // =====================================================================
 // RUTAS ADICIONALES PARA GESTIÓN DE PRODUCTOS
 // =====================================================================
-// Ruta para ver las valoraciones de un producto específico
-Route::get('/productos/{id}/ver-valoraciones', function($id) {
-    return redirect()->route('valoraciones.show', $id);
-})->name('productos.ver-valoraciones');
+// Ruta para ver las variaciones de un producto específico
+Route::get('/productos/{id}/ver-variaciones', function($id) {
+    return redirect()->route('variaciones.show', $id);
+})->name('productos.ver-variaciones');
 
 // Ruta para generar combinaciones automáticas de atributos
 Route::get('/productos/{id}/generar-combinaciones-view', function($id) {

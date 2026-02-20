@@ -81,7 +81,7 @@ class CategoriaController extends Controller
             'id_categoria_padre' => 'nullable|exists:tbl_categorias,id_categoria',
             'tDescripcion' => 'nullable|max:500',
             'iOrden' => 'nullable|integer|min:0',
-            'vImagen' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:2048'
+            'vImagen' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048'
         ], [
             'vNombre.required' => 'El nombre de la categoría es obligatorio',
             'vNombre.unique' => 'Ya existe una categoría con este nombre',
@@ -94,7 +94,7 @@ class CategoriaController extends Controller
             'iOrden.integer' => 'El orden debe ser un número entero',
             'iOrden.min' => 'El orden no puede ser negativo',
             'vImagen.image' => 'El archivo debe ser una imagen válida',
-            'vImagen.mimes' => 'Las imágenes deben ser de tipo: jpg, jpeg, png, gif o webp',
+            'vImagen.mimes' => 'Las imágenes deben ser de tipo: jpg, jpeg, png o webp',
             'vImagen.max' => 'La imagen no debe pesar más de 2MB'
         ]);
 
@@ -120,7 +120,7 @@ class CategoriaController extends Controller
             
             $categoria->bActivo = $request->has('bActivo') ? 1 : 0;
             
-            // Manejar la imagen si se subió (IMAGEN ES OPCIONAL EN CREACIÓN)
+            // Manejar la imagen si se subió
             if ($request->hasFile('vImagen') && $request->file('vImagen')->isValid()) {
                 $imagen = $request->file('vImagen');
                 
@@ -141,17 +141,52 @@ class CategoriaController extends Controller
                 // Asignar nombre de imagen a la categoría
                 $categoria->vImagen = $nombreImagen;
             }
-            // Si no se sube imagen, $categoria->vImagen permanece como null (CORRECTO)
             
             $categoria->save();
             
             DB::commit();
+
+            // Verificar si es una petición AJAX
+            if ($request->ajax() || $request->wantsJson()) {
+                // Obtener la categoría con su padre para determinar el nivel jerárquico
+                $categoria->load('padre');
+                
+                // Calcular el nivel jerárquico para el prefijo
+                $nivel = 0;
+                $padreActual = $categoria->padre;
+                while ($padreActual) {
+                    $nivel++;
+                    $padreActual = $padreActual->padre;
+                }
+                
+                // Construir el prefijo según el nivel
+                $prefijo = '';
+                for ($i = 0; $i < $nivel; $i++) {
+                    $prefijo .= '↳ ';
+                }
+                
+                return response()->json([
+                    'success' => true,
+                    'categoria' => $categoria,
+                    'nivel' => $nivel,
+                    'prefijo' => $prefijo,
+                    'message' => 'Categoría creada exitosamente'
+                ]);
+            }
 
             return redirect()->route('categorias.index')
                 ->with('success', 'Categoría creada exitosamente');
                 
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al crear la categoría: ' . $e->getMessage(),
+                    'errors' => ['error' => [$e->getMessage()]]
+                ], 422);
+            }
             
             return redirect()->back()
                 ->with('error', 'Error al crear la categoría: ' . $e->getMessage())
@@ -189,7 +224,7 @@ class CategoriaController extends Controller
             'id_categoria_padre' => 'nullable|exists:tbl_categorias,id_categoria',
             'tDescripcion' => 'nullable|max:500',
             'iOrden' => 'nullable|integer|min:0',
-            'vImagen' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:2048'
+            'vImagen' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048'
         ], [
             'vNombre.required' => 'El nombre de la categoría es obligatorio',
             'vNombre.unique' => 'Ya existe una categoría con este nombre',
@@ -202,7 +237,7 @@ class CategoriaController extends Controller
             'iOrden.integer' => 'El orden debe ser un número entero',
             'iOrden.min' => 'El orden no puede ser negativo',
             'vImagen.image' => 'El archivo debe ser una imagen válida',
-            'vImagen.mimes' => 'Las imágenes deben ser de tipo: jpg, jpeg, png, gif o webp',
+            'vImagen.mimes' => 'Las imágenes deben ser de tipo: jpg, jpeg, png o webp',
             'vImagen.max' => 'La imagen no debe pesar más de 2MB'
         ]);
 
@@ -232,8 +267,7 @@ class CategoriaController extends Controller
             $categoria->iOrden = $request->iOrden;
             $categoria->bActivo = $request->has('bActivo') ? 1 : 0;
 
-            // MANEJO DE IMAGEN CORREGIDO:
-            // 1. Si se sube una NUEVA imagen (y es válida)
+            // Manejo de imagen - IMPORTANTE: Solo eliminar si se sube una nueva o se marca para eliminar
             if ($request->hasFile('vImagen') && $request->file('vImagen')->isValid()) {
                 // Eliminar imagen anterior si existe
                 if ($categoria->vImagen) {
@@ -261,9 +295,8 @@ class CategoriaController extends Controller
                 // Asignar nombre de imagen a la categoría
                 $categoria->vImagen = $nombreImagen;
             } 
-            // 2. Si NO se sube nueva imagen PERO se marca ELIMINAR
+            // Solo eliminar si se marca explícitamente para eliminar
             elseif ($request->has('eliminar_imagen') && $request->eliminar_imagen == '1') {
-                // Solo eliminar imagen si se marcó explícitamente el checkbox
                 if ($categoria->vImagen) {
                     $rutaImagen = public_path('storage/categorias/' . $categoria->vImagen);
                     if (file_exists($rutaImagen)) {
@@ -272,8 +305,8 @@ class CategoriaController extends Controller
                 }
                 $categoria->vImagen = null;
             }
-            // 3. Si NO se sube nueva imagen y NO se marca eliminar → MANTENER IMAGEN ACTUAL
-            // (no hacer nada, la imagen actual se mantiene automáticamente)
+            // Si no hay archivo nuevo y no se marca para eliminar, conservar la imagen existente
+            // No se hace nada, se mantiene $categoria->vImagen con su valor actual
 
             $categoria->save();
             

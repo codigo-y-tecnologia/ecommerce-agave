@@ -49,7 +49,7 @@
                 <div class="position-sticky pt-3">
                     <ul class="nav flex-column">
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->is('productos*') && !request()->is('productos/valoraciones') ? 'active' : '' }}" 
+                            <a class="nav-link {{ request()->is('productos*') && !request()->is('productos/variaciones') ? 'active' : '' }}" 
                                href="{{ route('productos.index') }}">
                                 <i class="fas fa-wine-bottle"></i> Productos
                             </a>
@@ -78,11 +78,11 @@
                                 <i class="fas fa-list-alt"></i> Atributos
                             </a>
                         </li>
-                        <!-- NUEVO ENLACE PARA VALORACIONES -->
+                        <!-- NUEVO ENLACE PARA VARIACIONES -->
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->is('valoraciones*') || request()->is('productos/valoraciones') ? 'active' : '' }}" 
-                               href="{{ route('valoraciones.index') }}">
-                                <i class="fas fa-cubes"></i> Valoraciones
+                            <a class="nav-link {{ request()->is('variaciones*') || request()->is('productos/variaciones') ? 'active' : '' }}" 
+                               href="{{ route('variaciones.index') }}">
+                                <i class="fas fa-cubes"></i> Variaciones
                             </a>
                         </li>
                     </ul>

@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Gestión de Valoraciones')
+@section('title', 'Gestión de Variaciones')
 @section('content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1><i class="fas fa-cubes me-2"></i>Gestión de Valoraciones</h1>
+            <h1><i class="fas fa-cubes me-2"></i>Gestión de Variaciones</h1>
             <p class="text-muted">Administra las variaciones de tus productos</p>
         </div>
         <div>
@@ -149,14 +149,14 @@
                                     <td>
                                         <div class="btn-group btn-group-sm">
                                             @if($variacionesCount > 0)
-                                                <a href="{{ route('valoraciones.show', $producto->id_producto) }}" 
-                                                   class="btn btn-primary" title="Ver valoraciones">
+                                                <a href="{{ route('variaciones.show', $producto->id_producto) }}" 
+                                                   class="btn btn-primary" title="Ver variaciones">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
                                             @endif
                                             
-                                            <a href="{{ route('valoraciones.create', $producto->id_producto) }}" 
-                                               class="btn btn-success" title="Crear valoración">
+                                            <a href="{{ route('variaciones.create', $producto->id_producto) }}" 
+                                               class="btn btn-success" title="Crear variación">
                                                 <i class="fas fa-plus"></i>
                                             </a>
                                         </div>
@@ -170,7 +170,7 @@
                 <div class="text-center py-5">
                     <i class="fas fa-wine-bottle fa-4x text-muted mb-3"></i>
                     <h4 class="text-muted">No hay productos registrados</h4>
-                    <p class="text-muted">Comienza agregando productos o creando valoraciones para productos existentes.</p>
+                    <p class="text-muted">Comienza agregando productos o creando variaciones para productos existentes.</p>
                     <div class="mt-3">
                         <a href="{{ route('productos.index') }}" class="btn btn-primary me-2">
                             <i class="fas fa-wine-bottle me-1"></i> Ir a Productos
