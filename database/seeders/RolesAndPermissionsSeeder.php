@@ -35,6 +35,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'gestionar_tienda',
             'gestionar_clientes',
             'mi_perfil_admin',
+            'gestionar_cupones',
+            'gestionar_impuestos',
 
             // Superadmin - sistema
             'configurar_sistema',
@@ -74,6 +76,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'gestionar_tienda',
             'gestionar_clientes',
             'mi_perfil_admin',
+            'gestionar_cupones',
+            'gestionar_impuestos',
         ]);
 
         $superadmin->syncPermissions(Permission::all());

@@ -333,12 +333,15 @@ Route::middleware(['auth', 'permission:mi_perfil_admin'])->group(function () {
         ->name('email.change.verify');
 });
 
-Route::middleware(['auth', 'permission:gestionar_tienda'])->group(function () {
+Route::middleware(['auth', 'permission:gestionar_cupones'])->group(function () {
 
-    // Gestión de la tienda
-    Route::get('/admin/settings', [SettingController::class, 'index'])->name('admin.settings.index');
-    Route::post('/admin/settings/auto-register', [SettingController::class, 'updateAutoRegister'])->name('admin.settings.auto-register');
-    Route::post('/admin/settings/allow-returns', [SettingController::class, 'updateAllowReturns'])->name('admin.settings.allow-returns');
+    // Gestión de cupones
+    Route::get('/cupones', [CuponesController::class, 'index'])->name('cupones.index');
+    Route::get('/cupones/create', [CuponesController::class, 'create'])->name('cupones.create');
+    Route::post('/cupones', [CuponesController::class, 'store'])->name('cupones.store');
+});
+
+Route::middleware(['auth', 'permission:gestionar_productos'])->group(function () {
 
     // RUTAS PARA ATRIBUTOS DE PRODUCTOS
     Route::get('/productos/{producto}/atributos', [ProductoController::class, 'atributos'])
@@ -356,10 +359,14 @@ Route::middleware(['auth', 'permission:gestionar_tienda'])->group(function () {
     // API para obtener opciones de atributos
     Route::get('/atributos/{atributo}/opciones', [ProductoAtributoController::class, 'getOpciones'])
         ->name('atributos.opciones');
+});
 
-    Route::get('/cupones', [CuponesController::class, 'index'])->name('cupones.index');
-    Route::get('/cupones/create', [CuponesController::class, 'create'])->name('cupones.create');
-    Route::post('/cupones', [CuponesController::class, 'store'])->name('cupones.store');
+Route::middleware(['auth', 'permission:gestionar_tienda'])->group(function () {
+
+    // Gestión de la tienda
+    Route::get('/admin/settings', [SettingController::class, 'index'])->name('admin.settings.index');
+    Route::post('/admin/settings/auto-register', [SettingController::class, 'updateAutoRegister'])->name('admin.settings.auto-register');
+    Route::post('/admin/settings/allow-returns', [SettingController::class, 'updateAllowReturns'])->name('admin.settings.allow-returns');
 
     Route::resource('impuestos', ImpuestosController::class);
 

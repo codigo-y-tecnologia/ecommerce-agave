@@ -41,10 +41,10 @@
                                     @can('ver_clientes')
                                         <li><a class="dropdown-item" href="{{ route('admin.usuarios') }}">Clientes registrados</a></li>
                                     @endcan
-                                    @can('gestionar_tienda')
+                                    @can('gestionar_cupones')
                                         <li><a class="dropdown-item" href="{{ route('cupones.index') }}">Cupones</a></li>
                                     @endcan
-                                    @can('gestionar_tienda')
+                                    @can('gestionar_impuestos')
                                         <li><a class="dropdown-item" href="{{ route('impuestos.index') }}">Impuestos</a></li>
                                     @endcan    
                                     @can('gestionar_productos')

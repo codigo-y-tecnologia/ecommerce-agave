@@ -57,7 +57,7 @@
             </a>
 
             <!-- BUSCADOR -->
-            @if(!auth()->check() || auth()->user()->eRol === 'cliente')
+            @if(!auth()->check() || auth()->user()->hasRole('cliente'))
                 <form action="{{ route('busqueda.resultados') }}" method="GET"
                       class="d-flex mx-3 flex-grow-1 search-box" style="max-width: 600px;">
                     <input type="search" name="q" class="form-control"
@@ -82,9 +82,10 @@
                         <i class="bi bi-person-circle fs-4 me-1"></i>
                         {{ Auth::user()->vNombre }}
                     </a>
-
+            @endauth
                     {{-- 👤 Cliente --}}
                     <ul class="dropdown-menu dropdown-menu-end shadow">
+                        <li><a class="dropdown-item" href="{{ route('carrito.index') }}">Mi Carrito</a></li>
                         @role('cliente')
                             @can('ver_perfil')
                             <li><a class="dropdown-item" href="{{ route('perfil.index') }}">Mi Perfil</a></li>
@@ -92,34 +93,65 @@
                             @can('ver_favoritos')
                             <li><a class="dropdown-item" href="{{ route('favoritos.index') }}">Mis Favoritos</a></li>    
                             @endcan
-                            @can('ver_carrito')
-                            <li><a class="dropdown-item" href="{{ route('carrito.index') }}">Mi Carrito</a></li>
-                            @endcan
                             @can('ver_pedidos_propios')
                             <li><a class="dropdown-item" href="{{ route('pedidos.index') }}">Mis Pedidos</a></li>    
                             @endcan
                         @endrole
-
+                    @auth
                         {{-- ⚙️ Admin --}}
                         @role('admin')
                             @can('mi_perfil_admin')
                             <li><a class="dropdown-item" href="{{ route('admin.perfil.index') }}">Mi Perfil</a></li>
-                            @endcan  
+                            @endcan
+                            @can('ver_clientes')  
                             <li><a class="dropdown-item" href="{{ route('admin.usuarios') }}">Clientes Registrados</a></li>
+                            @endcan
+                            @can('gestionar_cupones')
                             <li><a class="dropdown-item" href="{{ route('cupones.index') }}">Cupones</a></li>
+                            @endcan
+                            @can('gestionar_impuestos')
                             <li><a class="dropdown-item" href="{{ route('impuestos.index') }}">Impuestos</a></li>
+                            @endcan
+                            @can('gestionar_productos')
                             <li><a class="dropdown-item" href="{{ route('productos.index') }}">Productos</a></li>
-                            <li><a class="dropdown-item" href="#">Pedidos</a></li>
-                            <li><a class="dropdown-item" href="{{ route('ventas.index') }}">Reportes</a></li>
+                            @endcan
+                            @can('ver_pedidos')  
+                            <li><a class="dropdown-item" href="{{ route('admin.pedidos.index') }}">Pedidos</a></li>
+                            @endcan
+                            @can('ver_reportes')
+                            <li><a class="dropdown-item" href="{{ route('reportes.index') }}">Reportes</a></li>
+                            @endcan
+                            @can('gestionar_tienda')
+                            <li><a class="dropdown-item" href="{{ route('admin.postventa.index') }}">Postventa</a></li>
+                            @endcan
+                            @can('procesar_reembolsos')
+                            <li><a class="dropdown-item" href="{{ route('reembolsos.index') }}">Reembolsos</a></li>
+                            @endcan
+                            @can('gestionar_tienda')
+                            <li><a class="dropdown-item" href="{{ route('admin.settings.index') }}">Ajustes de la tienda</a></li>
+                            @endcan
                         @endrole
 
                         {{-- 👑 Superadmin --}}
                         @role('superadmin')
+                        @can('mi_perfil_superadmin')
+                            <li><a class="dropdown-item" href="{{ route('superadmin.perfil.index') }}">Mi Perfil</a></li>
+                        @endcan
+                        @can('gestionar_administradores')
                             <li><a class="dropdown-item" href="{{ route('superadmin.admins.index') }}">Gestión de Administradores</a></li>
+                        @endcan
+                        @can('ver_monitoreo')    
                             <li><a class="dropdown-item" href="#">Monitoreo del sistema</a></li>
+                        @endcan
+                        @can('ver_logs_seguridad')
                             <li><a class="dropdown-item" href="#">Logs de seguridad</a></li>
+                        @endcan
+                        @can('configurar_sistema')
                             <li><a class="dropdown-item" href="#">Configuración Global</a></li>
-                            <li><a class="dropdown-item" href="#">Gestión de permisos</a></li>
+                        @endcan
+                        @can('gestionar_permisos')
+                            <li><a class="dropdown-item" href="{{ route('roles.permisos') }}">Gestión de permisos y roles</a></li>
+                        @endcan
                         @endrole
 
                         <li><hr class="dropdown-divider"></li>
@@ -149,13 +181,13 @@
                 </a>
             @endguest
 
+            <a class="nav-link text-dark" href="{{ route('carrito.index') }}">
+                        🛒 Carrito
+                </a>
             @auth
                 @role('cliente')
                     <a class="nav-link text-dark" href="{{ route('favoritos.index') }}">
                         ❤️ Mis Favoritos
-                    </a>
-                    <a class="nav-link text-dark" href="{{ route('carrito.index') }}">
-                        🛒 Carrito
                     </a>
                     <a class="nav-link text-dark" href="{{ route('pedidos.index') }}">
                         📦 Mis Pedidos
