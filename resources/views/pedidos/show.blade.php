@@ -195,26 +195,57 @@ Tu solicitud fue aprobada y el reembolso fue procesado.
                 Dirección de envío
             </div>
             <div class="card-body">
-                @if($pedido->direccion)
-                    <p class="mb-1">
-                        {{ $pedido->direccion->vCalle }}
-                        {{ $pedido->direccion->vNumero ?? '' }}
-                    </p>
-                    <p class="mb-1">
-                        {{ $pedido->direccion->vColonia }},
-                        {{ $pedido->direccion->vCiudad }}
-                    </p>
-                    <p class="mb-0">
-                        {{ $pedido->direccion->vEstado }},
-                        {{ $pedido->direccion->vCodigo_postal }}
-                    </p>
-                @else
-                    <p class="text-muted mb-0">
-                        Dirección no disponible
-                    </p>
-                @endif
+                @if($pedido->env_calle)
+    <p class="mb-1">
+        {{ $pedido->env_calle }}
+        {{ $pedido->env_numero_exterior }}
+        {{ $pedido->env_numero_interior ?? '' }}
+    </p>
+    <p class="mb-1">
+        {{ $pedido->env_colonia }},
+        {{ $pedido->env_ciudad }}
+    </p>
+    <p class="mb-0">
+        {{ $pedido->env_estado }},
+        {{ $pedido->env_codigo_postal }}
+    </p>
+@else
+    <p class="text-muted mb-0">
+        Dirección no disponible
+    </p>
+@endif
             </div>
         </div>
+
+        {{-- DIRECCIÓN DE FACTURACIÓN --}}
+        @if($pedido->fac_calle)
+    <div class="card shadow-sm mb-3">
+        <div class="card-header fw-bold">
+            Dirección de facturación
+        </div>
+        <div class="card-body">
+            <p class="mb-1">
+                {{ $pedido->fac_calle }}
+                {{ $pedido->fac_numero_exterior }}
+                {{ $pedido->fac_numero_interior ?? '' }}
+            </p>
+            <p class="mb-1">
+                {{ $pedido->fac_colonia }},
+                {{ $pedido->fac_ciudad }}
+            </p>
+            <p class="mb-0">
+                {{ $pedido->fac_estado }},
+                {{ $pedido->fac_codigo_postal }}
+            </p>
+
+            @if($pedido->vRFC)
+                <p class="mt-2 mb-0">
+                    RFC: <strong>{{ $pedido->vRFC }}</strong>
+                </p>
+            @endif
+        </div>
+    </div>
+@endif
 
         {{-- PAGO --}}
         <div class="card shadow-sm">

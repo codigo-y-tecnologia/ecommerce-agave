@@ -9,58 +9,72 @@ use Illuminate\Support\Facades\Auth;
 
 class MisPedidosController extends Controller
 {
-    public function index(Request $request)
-{
-    $fechaFiltro = $request->get('fecha', '30d');
 
-    $query = Pedido::where('id_usuario', Auth::id());
+    private function queryPedidosBase()
+    {
+        if (Auth::check()) {
+            return Pedido::where('id_usuario', Auth::id());
+        }
 
-    switch ($fechaFiltro) {
+        $guestToken = session('guest_token');
 
-        case '3m':
-            $query->where('tFecha_pedido', '>=', now()->subMonths(3));
-            break;
+        if (!$guestToken) {
+            abort(403, 'No autorizado');
+        }
 
-        case '30d':
-            $query->where('tFecha_pedido', '>=', now()->subDays(30));
-            break;
-
-        default:
-            // Año (ej: 2025, 2024, etc.)
-            if (is_numeric($fechaFiltro)) {
-                $query->whereYear('tFecha_pedido', $fechaFiltro);
-            }
-            break;
+        return Pedido::where('vGuest_token', $guestToken);
     }
 
-    $pedidos = $query
-        ->with('ultimaSolicitudPostventa')
-        ->orderByDesc('tFecha_pedido')
-        ->paginate(10)
-        ->withQueryString();
+    public function index(Request $request)
+    {
+        $fechaFiltro = $request->get('fecha', '30d');
 
-    // Años disponibles (como Amazon)
-    $years = Pedido::where('id_usuario', Auth::id())
-        ->selectRaw('YEAR(tFecha_pedido) as year')
-        ->distinct()
-        ->orderByDesc('year')
-        ->pluck('year');
+        $query = $this->queryPedidosBase();
 
-    return view('pedidos.index', compact('pedidos', 'fechaFiltro', 'years'));
-}
+        switch ($fechaFiltro) {
+
+            case '3m':
+                $query->where('tFecha_pedido', '>=', now()->subMonths(3));
+                break;
+
+            case '30d':
+                $query->where('tFecha_pedido', '>=', now()->subDays(30));
+                break;
+
+            default:
+                // Año (ej: 2025, 2024, etc.)
+                if (is_numeric($fechaFiltro)) {
+                    $query->whereYear('tFecha_pedido', $fechaFiltro);
+                }
+                break;
+        }
+
+        $pedidos = $query
+            ->with('ultimaSolicitudPostventa')
+            ->orderByDesc('tFecha_pedido')
+            ->paginate(10)
+            ->withQueryString();
+
+        // Años disponibles para el filtro
+        $years = $this->queryPedidosBase()
+            ->selectRaw('YEAR(tFecha_pedido) as year')
+            ->distinct()
+            ->orderByDesc('year')
+            ->pluck('year');
+
+        return view('pedidos.index', compact('pedidos', 'fechaFiltro', 'years'));
+    }
 
     public function show($id)
     {
-        $pedido = Pedido::with([
+        $pedido = $this->queryPedidosBase()
+            ->with([
                 'detalles.producto',
-                'direccion',
-                'direccionFacturacion',
                 'pago',
                 'venta',
                 'envio',
                 'ultimaSolicitudPostventa',
             ])
-            ->where('id_usuario', Auth::id())
             ->findOrFail($id);
 
         /**
@@ -80,11 +94,11 @@ class MisPedidosController extends Controller
         // Costo de envío real (si existe)
         $envio = $pedido->venta->dCosto_envio ?? 0;
 
-        return view('pedidos.show', [
-            'pedido'    => $pedido,
-            'subtotal'  => $subtotal,
-            'envio'     => $envio,
-            'descuento' => $descuento,
-        ]);
+        return view('pedidos.show', compact(
+            'pedido',
+            'subtotal',
+            'descuento',
+            'envio'
+        ));
     }
 }
