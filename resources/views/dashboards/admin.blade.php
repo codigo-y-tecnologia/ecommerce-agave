@@ -10,12 +10,24 @@
 
 <div class="row g-4">
     <div class="col-md-4">
+        <div class="card border-danger shadow-sm">
+            <div class="card-body text-center">
+                <h5>🧑‍💼 Mi perfil</h5>
+                <p>Consulta, edita o elimina usuarios.</p>
+                @can('mi_perfil_admin')
+                    <a href="{{ route('admin.perfil.index') }}" class="btn btn-danger w-100">Ver perfil</a>
+                @endcan
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
         <div class="card border-warning shadow-sm">
             <div class="card-body text-center">
-                <h5>👥 Usuarios Registrados</h5>
+                <h5>👥 Clientes Registrados</h5>
                 <p>Consulta, edita o elimina usuarios.</p>
                 @can('ver_clientes')
-                    <a href="{{ route('admin.usuarios') }}" class="btn btn-warning w-100">Ver usuarios</a>
+                    <a href="{{ route('admin.usuarios') }}" class="btn btn-warning w-100">Ver clientes</a>
                 @endcan
             </div>
         </div>

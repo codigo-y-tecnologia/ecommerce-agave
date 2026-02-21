@@ -24,18 +24,22 @@ class DashboardController extends Controller
 
         // Si el usuario está autenticado, lo redirigimos a su panel correspondiente
         if (Auth::check()) {
-            $rol = Auth::user()->eRol;
+            $user = Auth::user();
 
-            switch ($rol) {
-                case 'cliente':
-                    return view('dashboards.cliente', compact('productos'));
-                case 'admin':
-                    return view('dashboards.admin');
-                case 'superadmin':
-                    return view('dashboards.superadmin');
-                default:
-                    return view('dashboards.cliente', compact('productos'));
+            if ($user->hasRole('superadmin')) {
+                return view('dashboards.superadmin');
             }
+
+            if ($user->hasRole('admin')) {
+                return view('dashboards.admin');
+            }
+
+            if ($user->hasRole('cliente')) {
+                return view('dashboards.cliente', compact('productos'));
+            }
+
+            // Fallback de seguridad
+            return view('dashboards.cliente', compact('productos'));
         }
 
         // Si no está autenticado, mostramos la vista pública (cliente como visitante)

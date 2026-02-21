@@ -433,7 +433,7 @@ Route::get('/superadmin/panel', function () {
 Route::middleware(['auth', 'permission:gestionar_administradores'])->group(function () {
 
     // Gestión de administradores
-    Route::get('/admins', [SuperadminController::class, 'index'])->name('superadmin.admins.index');
+    Route::get('/superadmin/admins', [SuperadminController::class, 'index'])->name('superadmin.admins.index');
     Route::get('/superadmin/admins/create', [SuperadminController::class, 'create'])->name('superadmin.admins.create');
     Route::post('/superadmin/admins', [SuperadminController::class, 'store'])->name('superadmin.admins.store');
     Route::post('/admins/promote/{id}', [SuperadminController::class, 'promoteToAdmin'])->name('superadmin.admins.promote');

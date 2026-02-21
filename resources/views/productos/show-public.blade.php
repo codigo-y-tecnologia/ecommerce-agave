@@ -615,6 +615,7 @@
                 <div class="action-buttons">
                     <form action="{{ route('carrito.store', $producto->id_producto) }}" method="POST">
                     @csrf
+                    <input type="hidden" name="cantidad" value="1">
                     <button type="submit" class="btn-comprar">🛒 Comprar Ahora</button>
                 </form>
                 </div>
