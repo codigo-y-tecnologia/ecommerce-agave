@@ -10,15 +10,29 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class FacturaController extends Controller
 {
+
+    private function queryPedidoBase()
+    {
+        if (Auth::check()) {
+            return Pedido::where('id_usuario', Auth::id());
+        }
+
+        $guestToken = session('guest_token');
+
+        if (!$guestToken) {
+            abort(403, 'No autorizado');
+        }
+
+        return Pedido::where('vGuest_token', $guestToken);
+    }
+
     public function download($id)
     {
-        $pedido = Pedido::with([
+        $pedido = $this->queryPedidoBase()
+            ->with([
                 'detalles.producto',
-                'direccion',
                 'venta',
-                'usuario'
             ])
-            ->where('id_usuario', Auth::id())
             ->findOrFail($id);
 
         /**

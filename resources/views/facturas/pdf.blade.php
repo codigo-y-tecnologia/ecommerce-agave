@@ -51,22 +51,46 @@
 
 <h3>Cliente</h3>
 <p>
-    {{ 
-        trim(
-            optional($pedido->usuario)->vNombre . ' ' .
-            optional($pedido->usuario)->vApaterno . ' ' .
-            optional($pedido->usuario)->vAmaterno
-        ) ?: 'Cliente'
-    }}
+    <strong>
+        {{ $pedido->vNombre }}
+        {{ $pedido->vApaterno }}
+        {{ $pedido->vAmaterno }}
+    </strong>
     <br>
-    @if($pedido->direccion)
-    {{ $pedido->direccion->vCiudad }},
-    {{ $pedido->direccion->vEstado }}
-@else
-    —
-@endif
 
+    {{ $pedido->vEmail }}
+    <br>
+
+    @if($pedido->vRFC)
+        RFC: {{ $pedido->vRFC }}<br>
+    @endif
+
+    {{ $pedido->env_ciudad }},
+    {{ $pedido->env_estado }}
 </p>
+
+<h3>Dirección de envío</h3>
+<p>
+    {{ $pedido->env_calle }} {{ $pedido->env_numero_exterior }}
+    {{ $pedido->env_numero_interior ?? '' }}<br>
+
+    {{ $pedido->env_colonia }}<br>
+
+    {{ $pedido->env_ciudad }},
+    {{ $pedido->env_estado }}<br>
+
+    CP {{ $pedido->env_codigo_postal }}
+</p>
+
+@if($pedido->fac_calle)
+    <h3>Dirección de facturación</h3>
+    <p>
+        {{ $pedido->fac_calle }} {{ $pedido->fac_numero_exterior }}<br>
+        {{ $pedido->fac_colonia }}<br>
+        {{ $pedido->fac_ciudad }}, {{ $pedido->fac_estado }}<br>
+        CP {{ $pedido->fac_codigo_postal }}
+    </p>
+@endif
 
 <h3>Productos</h3>
 

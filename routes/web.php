@@ -50,6 +50,7 @@ use App\Http\Controllers\Superadmin\SpatieRolePermissionController;
 use App\Http\Controllers\Superadmin\UsuarioRolController;
 use App\Http\Controllers\Superadmin\SuperadminPerfilController;
 use App\Http\Controllers\Superadmin\CambiarEmailController;
+use App\Http\Controllers\Pedidos\ConsultaPedidoController;
 
 Route::get('/', [DashboardController::class, 'index'])->name('home');
 
@@ -145,6 +146,13 @@ Route::post(
     '/cuenta/reenviar-creacion-password',
     [AuthController::class, 'reenviarCorreo']
 )->name('cuenta.reenviar-password');
+
+// Rutas para consulta de pedidos sin necesidad de login
+Route::get('/consulta-pedido', [ConsultaPedidoController::class, 'form'])
+    ->name('consulta.pedido.form');
+
+Route::post('/consulta-pedido', [ConsultaPedidoController::class, 'buscar'])
+    ->name('consulta.pedido.buscar');
 
 // Rutas públicas para la gestión de productos, categorías, marcas, etiquetas y atributos
 Route::resource('/categorias', CategoriaController::class);

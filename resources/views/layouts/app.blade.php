@@ -179,6 +179,7 @@
                 <a class="nav-link text-dark" href="{{ route('login') }}">
                     <i class="bi bi-box-arrow-in-right"></i> Ingresar
                 </a>
+                <a class="nav-link text-dark" href="{{ route('consulta.pedido.form') }}"><i class="bi bi-search"></i>Consultar pedido</a>
             @endguest
 
             <a class="nav-link text-dark" href="{{ route('carrito.index') }}">
