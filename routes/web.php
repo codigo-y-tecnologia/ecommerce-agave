@@ -70,6 +70,8 @@ Route::middleware('auth')->group(function () {
 // =====================================================================
 // RUTAS PARA ATRIBUTOS DE PRODUCTOS
 // =====================================================================
+// Ruta para crear valores de atributos rápidamente (DEBE IR ANTES de las rutas con parámetros)
+Route::post('/atributos/{atributo}/valores-quick', [AtributoController::class, 'quickCreateValor'])->name('atributos.valores-quick');
 Route::get('/productos/{id}/atributos', [ProductoController::class, 'atributos'])->name('productos.atributos');
 Route::post('/productos/{id}/guardar-variaciones', [ProductoController::class, 'guardarVariaciones'])->name('productos.guardar-variaciones');
 Route::post('/productos/{id}/generar-combinaciones', [ProductoController::class, 'generarCombinaciones'])->name('productos.generar-combinaciones');
@@ -135,21 +137,19 @@ Route::get('/productos/{id}/generar-combinaciones-view', function($id) {
 })->name('productos.generar-combinaciones-view');
 
 // =====================================================================
-// NUEVAS RUTAS PARA PANEL DE GESTIÓN (TIPO WORDPRESS)
+// NUEVAS RUTAS PARA PANEL DE GESTIÓN (TIPO WORDPRESS) - SIN AUTENTICACIÓN
 // =====================================================================
-Route::middleware('auth')->group(function () {
-    // Rutas para gestión rápida desde productos
-    Route::post('/categorias/quick-create', [CategoriaController::class, 'quickCreate'])->name('categorias.quick-create');
-    Route::post('/marcas/quick-create', [MarcaController::class, 'quickCreate'])->name('marcas.quick-create');
-    Route::post('/etiquetas/quick-create', [EtiquetaController::class, 'quickCreate'])->name('etiquetas.quick-create');
-    Route::post('/atributos/quick-create', [AtributoController::class, 'quickCreate'])->name('atributos.quick-create');
-    
-    // Rutas para obtener datos en formato JSON
-    Route::get('/categorias/json', [CategoriaController::class, 'getJson'])->name('categorias.json');
-    Route::get('/marcas/json', [MarcaController::class, 'getJson'])->name('marcas.json');
-    Route::get('/etiquetas/json', [EtiquetaController::class, 'getJson'])->name('etiquetas.json');
-    Route::get('/atributos/json', [AtributoController::class, 'getJson'])->name('atributos.json');
-});
+// Rutas para gestión rápida desde productos - PÚBLICAS
+Route::post('/categorias/quick-create', [CategoriaController::class, 'quickCreate'])->name('categorias.quick-create');
+Route::post('/marcas/quick-create', [MarcaController::class, 'quickCreate'])->name('marcas.quick-create');
+Route::post('/etiquetas/quick-create', [EtiquetaController::class, 'quickCreate'])->name('etiquetas.quick-create');
+Route::post('/atributos/quick-create', [AtributoController::class, 'quickCreate'])->name('atributos.quick-create');
+
+// Rutas para obtener datos en formato JSON - PÚBLICAS
+Route::get('/categorias/json', [CategoriaController::class, 'getJson'])->name('categorias.json');
+Route::get('/marcas/json', [MarcaController::class, 'getJson'])->name('marcas.json');
+Route::get('/etiquetas/json', [EtiquetaController::class, 'getJson'])->name('etiquetas.json');
+Route::get('/atributos/json', [AtributoController::class, 'getJson'])->name('atributos.json');
 
 // =====================================================================
 // RUTAS DE FALLBACK (si ninguna ruta coincide)

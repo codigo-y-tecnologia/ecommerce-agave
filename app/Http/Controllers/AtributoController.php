@@ -153,17 +153,30 @@ class AtributoController extends Controller
     {
         $request->validate([
             'vValor' => 'required|max:100',
-            'vSlug' => 'nullable|max:100|unique:tbl_atributo_valores,vSlug',
+            'vSlug' => 'nullable|max:100',
             'dPrecio_extra' => 'nullable|numeric|min:0',
             'iStock' => 'nullable|integer|min:0',
             'iOrden' => 'nullable|integer|min:0'
         ]);
 
         try {
+            // Verificar si ya existe un valor con el mismo slug para este atributo
+            $slug = $request->vSlug ?? Str::slug($request->vValor);
+            
+            $exists = AtributoValor::where('id_atributo', $atributo->id_atributo)
+                ->where('vSlug', $slug)
+                ->exists();
+                
+            if ($exists) {
+                return redirect()->back()
+                    ->with('error', 'Ya existe un valor con este slug para este atributo.')
+                    ->withInput();
+            }
+
             AtributoValor::create([
                 'id_atributo' => $atributo->id_atributo,
                 'vValor' => $request->vValor,
-                'vSlug' => $request->vSlug ?? Str::slug($request->vValor),
+                'vSlug' => $slug,
                 'dPrecio_extra' => $request->dPrecio_extra ?? 0,
                 'iStock' => $request->iStock ?? 0,
                 'iOrden' => $request->iOrden ?? 0,
@@ -189,16 +202,30 @@ class AtributoController extends Controller
     {
         $request->validate([
             'vValor' => 'required|max:100',
-            'vSlug' => 'nullable|max:100|unique:tbl_atributo_valores,vSlug,' . $valor->id_atributo_valor . ',id_atributo_valor',
+            'vSlug' => 'nullable|max:100',
             'dPrecio_extra' => 'nullable|numeric|min:0',
             'iStock' => 'nullable|integer|min:0',
             'iOrden' => 'nullable|integer|min:0'
         ]);
 
         try {
+            $slug = $request->vSlug ?? Str::slug($request->vValor);
+            
+            // Verificar si ya existe otro valor con el mismo slug para este atributo
+            $exists = AtributoValor::where('id_atributo', $atributo->id_atributo)
+                ->where('vSlug', $slug)
+                ->where('id_atributo_valor', '!=', $valor->id_atributo_valor)
+                ->exists();
+                
+            if ($exists) {
+                return redirect()->back()
+                    ->with('error', 'Ya existe otro valor con este slug para este atributo.')
+                    ->withInput();
+            }
+
             $valor->update([
                 'vValor' => $request->vValor,
-                'vSlug' => $request->vSlug ?? Str::slug($request->vValor),
+                'vSlug' => $slug,
                 'dPrecio_extra' => $request->dPrecio_extra ?? 0,
                 'iStock' => $request->iStock ?? 0,
                 'iOrden' => $request->iOrden ?? 0,
@@ -285,14 +312,14 @@ class AtributoController extends Controller
 
     /**
      * Creación rápida de valor de atributo desde AJAX
+     * CORREGIDO: Validación por atributo
      */
     public function quickCreateValor(Request $request, Atributo $atributo)
     {
         $validator = Validator::make($request->all(), [
             'vValor' => 'required|max:100',
             'vSlug' => 'nullable|max:100',
-            'dPrecio_extra' => 'nullable|numeric|min:0',
-            'iStock' => 'nullable|integer|min:0'
+            'bActivo' => 'nullable|boolean'
         ]);
 
         if ($validator->fails()) {
@@ -304,18 +331,46 @@ class AtributoController extends Controller
         }
 
         try {
+            // CORREGIDO: Convertir a string si es numérico
+            $valorOriginal = (string)$request->vValor;
+            
+            // Generar slug si no se proporciona
+            $slug = $request->vSlug ? (string)$request->vSlug : Str::slug($valorOriginal);
+            
+            // Verificar unicidad del slug SOLO para este atributo
+            $slugOriginal = $slug;
+            $contador = 1;
+            
+            while (AtributoValor::where('id_atributo', $atributo->id_atributo)
+                               ->where('vSlug', $slug)
+                               ->exists()) {
+                $slug = $slugOriginal . '-' . $contador;
+                $contador++;
+            }
+            
+            // Verificar unicidad del valor SOLO para este atributo
+            $valorFinal = $valorOriginal;
+            $contadorValor = 1;
+            
+            while (AtributoValor::where('id_atributo', $atributo->id_atributo)
+                               ->where('vValor', $valorFinal)
+                               ->exists()) {
+                $valorFinal = $valorOriginal . ' ' . $contadorValor;
+                $contadorValor++;
+            }
+            
             // Obtener el último orden para este atributo
             $ultimoOrden = AtributoValor::where('id_atributo', $atributo->id_atributo)
                                         ->max('iOrden');
             
             $valor = AtributoValor::create([
                 'id_atributo' => $atributo->id_atributo,
-                'vValor' => $request->vValor,
-                'vSlug' => $request->vSlug ?? Str::slug($request->vValor),
-                'dPrecio_extra' => $request->dPrecio_extra ?? 0,
-                'iStock' => $request->iStock ?? 0,
+                'vValor' => $valorFinal,
+                'vSlug' => $slug,
+                'dPrecio_extra' => 0,
+                'iStock' => 0,
                 'iOrden' => $ultimoOrden ? $ultimoOrden + 1 : 0,
-                'bActivo' => true
+                'bActivo' => $request->has('bActivo') ? 1 : 1
             ]);
 
             return response()->json([

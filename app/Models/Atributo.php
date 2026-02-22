@@ -19,6 +19,7 @@ class Atributo extends Model
         'vNombre',
         'vSlug',
         'tDescripcion',
+        'iOrden',
         'bActivo'
     ];
 
@@ -36,5 +37,14 @@ class Atributo extends Model
         return $this->hasMany(AtributoValor::class, 'id_atributo')
                     ->where('bActivo', true)
                     ->orderBy('iOrden');
+    }
+
+    /**
+     * Relación con productos a través de la tabla pivote
+     */
+    public function productos()
+    {
+        return $this->belongsToMany(Producto::class, 'tbl_producto_atributos', 'id_atributo', 'id_producto')
+                    ->withPivot('id_atributo_valor', 'dPrecio_extra');
     }
 }

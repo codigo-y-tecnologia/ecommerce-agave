@@ -53,6 +53,53 @@
                     </div>
                 </div>
 
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="dPrecio_extra">Precio extra ($)</label>
+                            <input type="text" name="dPrecio_extra" id="dPrecio_extra" 
+                                   class="form-control @error('dPrecio_extra') is-invalid @enderror"
+                                   value="{{ old('dPrecio_extra', '0.00') }}"
+                                   oninput="validarPrecio(this)"
+                                   placeholder="0.00"
+                                   autocomplete="off">
+                            @error('dPrecio_extra')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="iStock">Stock específico</label>
+                            <input type="text" name="iStock" id="iStock" 
+                                   class="form-control @error('iStock') is-invalid @enderror"
+                                   value="{{ old('iStock', '0') }}"
+                                   oninput="validarStock(this)"
+                                   placeholder="0"
+                                   autocomplete="off">
+                            @error('iStock')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="iOrden">Orden</label>
+                            <input type="text" name="iOrden" id="iOrden" 
+                                   class="form-control @error('iOrden') is-invalid @enderror"
+                                   value="{{ old('iOrden', '0') }}"
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                                   placeholder="0"
+                                   autocomplete="off">
+                            @error('iOrden')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-group mb-3">
                     <div class="form-check">
                         <input type="checkbox" name="bActivo" id="bActivo" 
@@ -79,14 +126,78 @@
 </div>
 
 <script>
+// Función para validar precio
+function validarPrecio(input) {
+    let value = input.value;
+    const cursorPos = input.selectionStart;
+    
+    if (value === '') {
+        input.value = '0.00';
+        return;
+    }
+    
+    // Permitir solo números y punto
+    value = value.replace(/[^0-9.]/g, '');
+    
+    // Evitar múltiples puntos
+    const puntos = value.split('.').length - 1;
+    if (puntos > 1) {
+        const partes = value.split('.');
+        value = partes[0] + '.' + partes.slice(1).join('');
+    }
+    
+    // Si empieza con punto, agregar 0
+    if (value.startsWith('.')) {
+        value = '0' + value;
+    }
+    
+    // Limitar parte entera a 7 dígitos
+    const partesNumero = value.split('.');
+    const parteEntera = partesNumero[0];
+    if (parteEntera.length > 7) {
+        partesNumero[0] = parteEntera.substring(0, 7);
+        value = partesNumero.join('.');
+    }
+    
+    // Limitar parte decimal a 2 dígitos
+    if (partesNumero[1] && partesNumero[1].length > 2) {
+        partesNumero[1] = partesNumero[1].substring(0, 2);
+        value = partesNumero[0] + '.' + partesNumero[1];
+    }
+    
+    input.value = value;
+    
+    // Restaurar posición del cursor
+    const newLength = input.value.length;
+    const newCursorPos = Math.min(cursorPos, newLength);
+    setTimeout(() => {
+        input.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+}
+
+// Función para validar stock
+function validarStock(input) {
+    input.value = input.value.replace(/[^0-9]/g, '');
+    if (input.value.length > 6) {
+        input.value = input.value.substring(0, 6);
+    }
+    if (input.value && parseInt(input.value) < 0) {
+        input.value = '0';
+    }
+    if (input.value === '') {
+        input.value = '0';
+    }
+}
+
 // Función para generar slug
 function generarSlug(texto) {
     return texto
         .toLowerCase()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // quitar acentos
-        .replace(/[^a-z0-9\s]/g, '') // quitar caracteres especiales
-        .replace(/\s+/g, '-') // espacios por guiones
-        .replace(/-+/g, '-') // guiones múltiples por uno solo
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
         .trim();
 }
 
@@ -99,7 +210,6 @@ document.getElementById('vValor').addEventListener('input', function() {
     const valor = this.value.trim();
     const slugInput = document.getElementById('vSlug');
     
-    // Solo actualizar si el slug no ha sido editado manualmente
     if (!slugEditadoManualmente) {
         if (valor) {
             const nuevoSlug = generarSlug(valor);
@@ -117,7 +227,6 @@ document.getElementById('vSlug').addEventListener('focus', function() {
     const valorInput = document.getElementById('vValor');
     const valorSlug = generarSlug(valorInput.value.trim());
     
-    // Si el slug actual es igual al que se generaría automáticamente
     if (this.value === valorSlug) {
         slugEditadoManualmente = false;
     } else {
@@ -127,20 +236,17 @@ document.getElementById('vSlug').addEventListener('focus', function() {
 
 // Cuando se escribe en el slug
 document.getElementById('vSlug').addEventListener('input', function() {
-    // Marcar como editado manualmente
     slugEditadoManualmente = true;
     
-    // Limpiar el slug: solo letras, números y guiones
     this.value = this.value
         .toLowerCase()
-        .replace(/[^a-z0-9-]/g, '-') // caracteres no permitidos por guiones
-        .replace(/-+/g, '-') // guiones múltiples por uno solo
-        .replace(/^-|-$/g, ''); // quitar guiones al inicio y final
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
 });
 
 // Cuando se pierde el focus del slug
 document.getElementById('vSlug').addEventListener('blur', function() {
-    // Si el campo está vacío y no fue editado manualmente, regenerar
     if (this.value.trim() === '' && !slugEditadoManualmente) {
         const valorInput = document.getElementById('vValor');
         const valor = valorInput.value.trim();
@@ -155,7 +261,6 @@ document.getElementById('vSlug').addEventListener('blur', function() {
 
 // Botón para regenerar slug
 document.addEventListener('DOMContentLoaded', function() {
-    // Crear botón para regenerar slug
     const slugGroup = document.querySelector('.form-group:has(#vSlug)');
     const regenerarBtn = document.createElement('button');
     regenerarBtn.type = 'button';
@@ -165,7 +270,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     slugGroup.appendChild(regenerarBtn);
     
-    // Evento del botón regenerar
     document.getElementById('regenerarSlugBtn').addEventListener('click', function() {
         const valorInput = document.getElementById('vValor');
         const slugInput = document.getElementById('vSlug');
@@ -177,7 +281,6 @@ document.addEventListener('DOMContentLoaded', function() {
             ultimoSlugGenerado = nuevoSlug;
             slugEditadoManualmente = false;
             
-            // Feedback visual
             const originalText = this.innerHTML;
             this.innerHTML = '<i class="fas fa-check me-1"></i> ¡Regenerado!';
             this.classList.remove('btn-outline-secondary');

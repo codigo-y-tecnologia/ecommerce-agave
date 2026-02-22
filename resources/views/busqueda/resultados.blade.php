@@ -171,34 +171,83 @@
             margin-bottom: 30px;
         }
         
+        /* PAGINACIÓN PERSONALIZADA - SOLO FLECHAS Y NÚMEROS */
         .paginacion {
-            text-align: center;
-            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            margin: 30px 0 20px;
         }
-        
-        .paginacion .pagination {
-            display: inline-flex;
+
+        .pagination {
+            display: flex;
             list-style: none;
-            gap: 5px;
+            gap: 8px;
+            padding: 0;
+            margin: 0;
         }
-        
-        .paginacion .pagination li {
-            display: inline;
+
+        .pagination li {
+            display: inline-flex;
         }
-        
-        .paginacion .pagination li a,
-        .paginacion .pagination li span {
-            padding: 8px 12px;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
+
+        .pagination li a,
+        .pagination li span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+            height: 40px;
+            padding: 0 8px;
+            border-radius: 8px;
             text-decoration: none;
+            color: #495057;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            background-color: white;
+            border: 1px solid #dee2e6;
+        }
+
+        .pagination li a:hover {
+            background-color: #e9ecef;
+            border-color: #adb5bd;
             color: #007bff;
         }
-        
-        .paginacion .pagination li.active span {
+
+        .pagination li.active span {
             background: #007bff;
             color: white;
             border-color: #007bff;
+        }
+
+        /* Estilos específicos para los botones de anterior/siguiente */
+        .pagination li:first-child a,
+        .pagination li:last-child a {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .pagination li.disabled span {
+            color: #adb5bd;
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
+            cursor: not-allowed;
+        }
+
+        /* Ocultar el texto "Previous" y "Next" pero mantener las flechas */
+        .pagination li:first-child a span,
+        .pagination li:last-child a span {
+            display: none;
+        }
+
+        .pagination li:first-child a::before {
+            content: "←";
+            font-size: 18px;
+        }
+
+        .pagination li:last-child a::before {
+            content: "→";
+            font-size: 18px;
         }
         
         .sin-resultados {
@@ -342,7 +391,7 @@
             background: #545b62;
         }
 
-        /* Corazón de favoritos - ESTILO MEJORADO */
+        /* Corazón de favoritos */
         .corazon-favorito {
             position: absolute;
             top: 15px;
@@ -360,21 +409,18 @@
             font-size: 20px;
             transition: all 0.3s ease;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-            backdrop-filter: blur(10px);
         }
 
         .corazon-favorito:hover {
             background: rgba(255, 255, 255, 1);
             transform: scale(1.15);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-            border-color: rgba(52, 131, 250, 0.3);
         }
 
         .corazon-favorito.activo {
             color: #3483fa;
             background: rgba(52, 131, 250, 0.1);
             border-color: #3483fa;
-            animation: latido 0.5s ease;
         }
 
         .corazon-favorito.inactivo {
@@ -387,14 +433,6 @@
 
         .corazon-favorito.inactivo::before {
             content: '🤍';
-        }
-
-        @keyframes latido {
-            0% { transform: scale(1); }
-            25% { transform: scale(1.3); }
-            50% { transform: scale(1.1); }
-            75% { transform: scale(1.25); }
-            100% { transform: scale(1); }
         }
 
         /* Badge de descuento */
@@ -479,7 +517,6 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            border-left: 5px solid #00ff88;
             max-width: 350px;
             transform: translateX(120%);
         }
@@ -511,6 +548,17 @@
             .barra-busqueda-principal input[type="text"] {
                 width: 60%;
             }
+
+            .pagination {
+                gap: 5px;
+            }
+            
+            .pagination li a,
+            .pagination li span {
+                min-width: 36px;
+                height: 36px;
+                font-size: 13px;
+            }
         }
 
         @media (max-width: 480px) {
@@ -533,6 +581,13 @@
             
             .productos-grid {
                 grid-template-columns: 1fr;
+            }
+            
+            .pagination li a,
+            .pagination li span {
+                min-width: 32px;
+                height: 32px;
+                font-size: 12px;
             }
         }
     </style>
@@ -634,7 +689,7 @@
                     @endforeach
                 </div>
 
-                <!-- Filtro de Precio MEJORADO -->
+                <!-- Filtro de Precio -->
                 <div class="filtro-grupo">
                     <div class="filtro-titulo">Rango de Precio</div>
                     <div class="precio-inputs">
@@ -802,9 +857,42 @@
                     @endforeach
                 </div>
 
-                <!-- Paginación -->
+                <!-- PAGINACIÓN PERSONALIZADA - SOLO FLECHAS Y NÚMEROS -->
                 <div class="paginacion">
-                    {{ $productos->appends(request()->query())->links() }}
+                    @if ($productos->hasPages())
+                        <ul class="pagination">
+                            {{-- Flecha Anterior --}}
+                            @if ($productos->onFirstPage())
+                                <li class="disabled" aria-disabled="true">
+                                    <span></span>
+                                </li>
+                            @else
+                                <li>
+                                    <a href="{{ $productos->previousPageUrl() }}" rel="prev" aria-label="Anterior"></a>
+                                </li>
+                            @endif
+
+                            {{-- Números de página --}}
+                            @foreach ($productos->getUrlRange(max(1, $productos->currentPage() - 2), min($productos->lastPage(), $productos->currentPage() + 2)) as $page => $url)
+                                @if ($page == $productos->currentPage())
+                                    <li class="active" aria-current="page"><span>{{ $page }}</span></li>
+                                @else
+                                    <li><a href="{{ $url }}">{{ $page }}</a></li>
+                                @endif
+                            @endforeach
+
+                            {{-- Flecha Siguiente --}}
+                            @if ($productos->hasMorePages())
+                                <li>
+                                    <a href="{{ $productos->nextPageUrl() }}" rel="next" aria-label="Siguiente"></a>
+                                </li>
+                            @else
+                                <li class="disabled" aria-disabled="true">
+                                    <span></span>
+                                </li>
+                            @endif
+                        </ul>
+                    @endif
                 </div>
             @else
                 <div class="sin-resultados">

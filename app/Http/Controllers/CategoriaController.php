@@ -384,33 +384,48 @@ class CategoriaController extends Controller
      */
     public function quickCreate(Request $request)
     {
-        $request->validate([
-            'vNombre' => 'required|max:100',
-            'id_categoria_padre' => 'nullable|exists:tbl_categorias,id_categoria'
+         $validator = Validator::make($request->all(), [
+        'vNombre' => 'required|max:100|unique:tbl_categorias,vNombre',
+        'vSlug' => 'required|max:100|unique:tbl_categorias,vSlug',
+        'id_categoria_padre' => 'nullable|exists:tbl_categorias,id_categoria',
+        'tDescripcion' => 'nullable|string',
+        'bActivo' => 'nullable|boolean'
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error de validación',
+            'errors' => $validator->errors()
+        ], 422);
+    }
+
+    try {
+        $categoria = new Categoria();
+        $categoria->vNombre = $request->vNombre;
+        $categoria->vSlug = $request->vSlug;
+        $categoria->id_categoria_padre = $request->id_categoria_padre;
+        $categoria->tDescripcion = $request->tDescripcion;
+        $categoria->bActivo = $request->has('bActivo') ? $request->bActivo : true;
+        
+        $ultimoOrden = Categoria::where('id_categoria_padre', $request->id_categoria_padre)->max('iOrden');
+        $categoria->iOrden = $ultimoOrden ? $ultimoOrden + 1 : 0;
+        
+        $categoria->save();
+
+        return response()->json([
+            'success' => true,
+            'categoria' => $categoria,
+            'message' => 'Categoría creada exitosamente'
         ]);
 
-        try {
-            $categoria = Categoria::create([
-                'vNombre' => $request->vNombre,
-                'vSlug' => Str::slug($request->vNombre),
-                'id_categoria_padre' => $request->id_categoria_padre,
-                'bActivo' => true,
-                'iOrden' => 0
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'categoria' => $categoria,
-                'message' => 'Categoría creada exitosamente'
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al crear categoría: ' . $e->getMessage()
-            ], 500);
-        }
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error al crear categoría: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     /**
      * Obtener categorías en formato JSON

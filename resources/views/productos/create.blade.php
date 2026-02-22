@@ -711,7 +711,7 @@
             </div>
         </div>
 
-        <!-- ATRIBUTOS DEL PRODUCTO (SELECCIÓN) -->
+        <!-- ATRIBUTOS DEL PRODUCTO (SELECCIÓN Y CREACIÓN DE VALORES) -->
         <div class="card mb-4">
             <div class="card-header" style="background-color: #45c973ff; color: white;">
                 <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Seleccionar Atributos para Variaciones</h5>
@@ -720,7 +720,7 @@
                 <div class="alert alert-info mb-4" style="color: #0c5460; background-color: #d1ecf1; border-color: #bee5eb;">
                     <i class="fas fa-info-circle me-2"></i>
                     <strong style="color: #0c5460;">Instrucciones:</strong> 
-                    <span style="color: #0c5460;">Marca los atributos que deseas activar y selecciona los valores correspondientes. Luego ve a la sección <strong>"Variaciones del Producto"</strong> para configurar cada variación.</span>
+                    <span style="color: #0c5460;">Marca los atributos que deseas activar y selecciona los valores correspondientes. También puedes crear nuevos valores para atributos existentes haciendo clic en "Agregar Valor".</span>
                 </div>
                 
                 @if(isset($atributos) && $atributos->count() > 0)
@@ -740,9 +740,14 @@
                                             <span class="badge bg-secondary ms-2">{{ $atributo->valoresActivos->count() }} valores</span>
                                         </label>
                                     </div>
-                                    <span class="badge bg-warning text-dark atributo-estado-badge" id="estado-{{ $atributo->id_atributo }}" style="display: none;">
-                                        <i class="fas fa-check-circle me-1"></i>Activo
-                                    </span>
+                                    <div>
+                                        <span class="badge bg-warning text-dark atributo-estado-badge" id="estado-{{ $atributo->id_atributo }}" style="display: none;">
+                                            <i class="fas fa-check-circle me-1"></i>Activo
+                                        </span>
+                                        <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="mostrarFormularioValor({{ $atributo->id_atributo }}, '{{ $atributo->vNombre }}')">
+                                            <i class="fas fa-plus-circle me-1"></i>Agregar Valor
+                                        </button>
+                                    </div>
                                 </div>
                                 
                                 <div class="card-body atributo-valores-container" id="valores-container-{{ $atributo->id_atributo }}" style="display: none; background-color: white;">
@@ -789,8 +794,8 @@
                                         <div class="alert alert-warning mb-0">
                                             <i class="fas fa-exclamation-triangle me-2"></i>
                                             Este atributo no tiene valores. 
-                                            <button type="button" class="btn btn-link p-0 ms-1" onclick="activarTabAtributos()">
-                                                Crear valores
+                                            <button type="button" class="btn btn-link p-0 ms-1" onclick="mostrarFormularioValor({{ $atributo->id_atributo }}, '{{ $atributo->vNombre }}')">
+                                                Crear primer valor
                                             </button>
                                         </div>
                                     @endif
@@ -1140,7 +1145,7 @@
                         
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle me-2"></i>
-                            <strong>Nota:</strong> Después de crear el atributo, podrás agregar valores específicos en la sección <strong>"Seleccionar Atributos para Variaciones"</strong>.
+                            <strong>Nota:</strong> Después de crear el atributo, podrás agregar valores específicos en la sección <strong>"Seleccionar Atributos para Variaciones"</strong> usando el botón "Agregar Valor" junto a cada atributo.
                         </div>
                         
                         <div class="d-flex justify-content-end">
@@ -1150,6 +1155,56 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PARA CREAR VALOR DE ATRIBUTO -->
+<div class="modal fade" id="crearValorModal" tabindex="-1" aria-labelledby="crearValorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="crearValorModalLabel">
+                    <i class="fas fa-plus-circle me-2"></i>Crear Nuevo Valor para <span id="atributoNombreModal"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="valorQuickForm">
+                    @csrf
+                    <input type="hidden" id="valor_atributo_id" name="atributo_id">
+                    
+                    <div class="mb-3">
+                        <label for="vValor_modal" class="form-label fw-bold">Valor <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="vValor_modal" name="vValor" required
+                               placeholder="Ej: 750ml, Rojo, Joven, 6 meses"
+                               oninput="generarSlugValor(this.value)">
+                        <small class="form-text text-muted">El valor que aparecerá en las opciones del producto</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="vSlug_valor_modal" class="form-label fw-bold">Slug (URL amigable)</label>
+                        <input type="text" class="form-control" id="vSlug_valor_modal" name="vSlug"
+                               placeholder="Se genera automáticamente">
+                        <small class="form-text text-muted">Versión para URL del valor</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="bActivo_valor_modal" name="bActivo" value="1" checked>
+                            <label class="form-check-label" for="bActivo_valor_modal">Activo</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" onclick="guardarValorAtributo()">
+                    <i class="fas fa-save me-1"></i>Guardar Valor
+                </button>
             </div>
         </div>
     </div>
@@ -1352,9 +1407,15 @@ let variacionCounter = 0;
 let variacionesImagenes = {};
 let variacionesVideos = {};
 let variacionesGifs = {};
+let valorModal = null;
 
 // Variable para almacenar la imagen de categoría seleccionada
 let categoriaImagenFile = null;
+
+// Inicializar modal cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    valorModal = new bootstrap.Modal(document.getElementById('crearValorModal'));
+});
 
 // ============ FUNCIONES DE VALIDACIÓN ============
 
@@ -1767,13 +1828,12 @@ function cancelarGif() {
     actualizarContadorImagenes();
 }
 
-// ============ FUNCIONES PARA IMÁGENES DE CATEGORÍA - CORREGIDAS ============
+// ============ FUNCIONES PARA IMÁGENES DE CATEGORÍA ============
 
 function previewImagenCategoria(input) {
     const preview = document.getElementById('categoriaImagePreview');
     const previewImg = document.getElementById('categoriaPreviewImg');
     
-    // SOLO actualizar si hay un archivo seleccionado
     if (input.files && input.files.length > 0) {
         const file = input.files[0];
         const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -1788,7 +1848,6 @@ function previewImagenCategoria(input) {
             return;
         }
         
-        // Guardar el archivo en la variable global
         categoriaImagenFile = file;
         
         const reader = new FileReader();
@@ -1800,7 +1859,6 @@ function previewImagenCategoria(input) {
         
         reader.readAsDataURL(file);
     }
-    // Si no hay archivo (usuario canceló), NO HACER NADA - mantener la imagen anterior
 }
 
 function cancelarImagenCategoria() {
@@ -1833,6 +1891,131 @@ function limpiarFormularioCategoria() {
 function limpiarFormularioMarca() {
     document.getElementById('vNombre_marca').value = '';
     document.getElementById('tDescripcion_marca').value = '';
+}
+
+// ============ FUNCIÓN PARA LIMPIAR FORMULARIO DE ETIQUETAS ============
+function limpiarFormularioEtiqueta() {
+    document.getElementById('vNombre_eti').value = '';
+    document.getElementById('tDescripcion_eti').value = '';
+    document.getElementById('color_eti').value = '#007bff';
+    document.getElementById('color_text_eti').value = '#007bff';
+}
+
+// ============ FUNCIONES PARA VALORES DE ATRIBUTOS ============
+
+function mostrarFormularioValor(atributoId, atributoNombre) {
+    document.getElementById('atributoNombreModal').textContent = atributoNombre;
+    document.getElementById('valor_atributo_id').value = atributoId;
+    document.getElementById('vValor_modal').value = '';
+    document.getElementById('vSlug_valor_modal').value = '';
+    document.getElementById('bActivo_valor_modal').checked = true;
+    
+    valorModal.show();
+}
+
+function generarSlugValor(valor) {
+    if (!valor) {
+        document.getElementById('vSlug_valor_modal').value = '';
+        return;
+    }
+    
+    let slug = valor.toLowerCase();
+    slug = slug.replace(/á/gi, 'a');
+    slug = slug.replace(/é/gi, 'e');
+    slug = slug.replace(/í/gi, 'i');
+    slug = slug.replace(/ó/gi, 'o');
+    slug = slug.replace(/ú/gi, 'u');
+    slug = slug.replace(/ñ/gi, 'n');
+    slug = slug.replace(/[^a-z0-9\s]/g, '');
+    slug = slug.replace(/\s+/g, '-');
+    slug = slug.replace(/-+/g, '-');
+    slug = slug.replace(/^-+/, '').replace(/-+$/, '');
+    
+    document.getElementById('vSlug_valor_modal').value = slug;
+}
+
+function guardarValorAtributo() {
+    const atributoId = document.getElementById('valor_atributo_id').value;
+    const vValor = document.getElementById('vValor_modal').value.trim();
+    const vSlug = document.getElementById('vSlug_valor_modal').value.trim();
+    const bActivo = document.getElementById('bActivo_valor_modal').checked ? 1 : 0;
+    
+    if (!vValor) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'El valor es obligatorio'
+        });
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Creando valor...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+    
+    fetch(`/atributos/${atributoId}/valores-quick`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            vValor: vValor,
+            vSlug: vSlug,
+            bActivo: bActivo
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
+    .then(data => {
+        Swal.close();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message || 'Valor creado exitosamente',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            valorModal.hide();
+            
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.message || 'Error al crear el valor'
+            });
+        }
+    })
+    .catch(error => {
+        Swal.close();
+        
+        let errorMessage = 'Error en la solicitud';
+        if (error.errors) {
+            errorMessage = Object.values(error.errors).flat().join(', ');
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: errorMessage
+        });
+    });
 }
 
 function handleImageSelection(event) {
@@ -3200,56 +3383,64 @@ function crearMarca() {
         didOpen: () => { Swal.showLoading(); }
     });
     
-    $.ajax({
-        url: '{{ route("marcas.quick-create") }}',
+    fetch('{{ route("marcas.quick-create") }}', {
         method: 'POST',
-        data: {
-            _token: '{{ csrf_token() }}',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
             vNombre: nombre,
             tDescripcion: descripcion
-        },
-        success: function(response) {
-            Swal.close();
-            if (response.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Éxito!',
-                    text: response.message,
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-                
-                limpiarFormularioMarca();
-                
-                const select = document.getElementById('id_marca');
-                const option = document.createElement('option');
-                option.value = response.marca.id_marca;
-                option.text = nombre;
-                select.appendChild(option);
-                select.value = response.marca.id_marca;
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: response.message || 'Error al crear la marca'
-                });
-            }
-        },
-        error: function(xhr) {
-            Swal.close();
-            let message = 'Error en la solicitud';
-            if (xhr.responseJSON && xhr.responseJSON.message) {
-                message = xhr.responseJSON.message;
-            } else if (xhr.responseJSON && xhr.responseJSON.errors) {
-                const errors = Object.values(xhr.responseJSON.errors).flat();
-                message = errors.join(', ');
-            }
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
+    .then(data => {
+        Swal.close();
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            limpiarFormularioMarca();
+            
+            const select = document.getElementById('id_marca');
+            const option = document.createElement('option');
+            option.value = data.marca.id_marca;
+            option.text = nombre;
+            select.appendChild(option);
+            select.value = data.marca.id_marca;
+        } else {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: message
+                text: data.message || 'Error al crear la marca'
             });
         }
+    })
+    .catch(error => {
+        Swal.close();
+        let message = 'Error en la solicitud';
+        if (error.errors) {
+            message = Object.values(error.errors).flat().join(', ');
+        } else if (error.message) {
+            message = error.message;
+        }
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: message
+        });
     });
 }
 
@@ -3270,56 +3461,63 @@ function crearEtiqueta() {
         didOpen: () => { Swal.showLoading(); }
     });
     
-    $.ajax({
-        url: '{{ route("etiquetas.quick-create") }}',
+    fetch('{{ route("etiquetas.quick-create") }}', {
         method: 'POST',
-        data: {
-            _token: '{{ csrf_token() }}',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
             vNombre: nombre,
             color: color,
             tDescripcion: descripcion
-        },
-        success: function(response) {
-            Swal.close();
-            if (response.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Éxito!',
-                    text: response.message,
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-                
-                document.getElementById('quick-etiqueta-form').reset();
-                document.getElementById('color_text_eti').value = '#007bff';
-                document.getElementById('color_eti').value = '#007bff';
-                
-                setTimeout(() => {
-                    location.reload();
-                }, 2000);
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: response.message || 'Error al crear la etiqueta'
-                });
-            }
-        },
-        error: function(xhr) {
-            Swal.close();
-            let message = 'Error en la solicitud';
-            if (xhr.responseJSON && xhr.responseJSON.message) {
-                message = xhr.responseJSON.message;
-            } else if (xhr.responseJSON && xhr.responseJSON.errors) {
-                const errors = Object.values(xhr.responseJSON.errors).flat();
-                message = errors.join(', ');
-            }
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
+    .then(data => {
+        Swal.close();
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            // Usar la función específica para limpiar el formulario de etiquetas
+            limpiarFormularioEtiqueta();
+            
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        } else {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: message
+                text: data.message || 'Error al crear la etiqueta'
             });
         }
+    })
+    .catch(error => {
+        Swal.close();
+        let message = 'Error en la solicitud';
+        if (error.errors) {
+            message = Object.values(error.errors).flat().join(', ');
+        } else if (error.message) {
+            message = error.message;
+        }
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: message
+        });
     });
 }
 
@@ -3340,54 +3538,64 @@ function crearAtributo() {
         didOpen: () => { Swal.showLoading(); }
     });
     
-    $.ajax({
-        url: '{{ route("atributos.quick-create") }}',
+    fetch('{{ route("atributos.quick-create") }}', {
         method: 'POST',
-        data: {
-            _token: '{{ csrf_token() }}',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
             vNombre: nombre,
             vSlug: slug,
             tDescripcion: descripcion
-        },
-        success: function(response) {
-            Swal.close();
-            if (response.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Éxito!',
-                    text: response.message,
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-                
-                document.getElementById('quick-atributo-form').reset();
-                
-                setTimeout(() => {
-                    location.reload();
-                }, 2000);
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: response.message || 'Error al crear el atributo'
-                });
-            }
-        },
-        error: function(xhr) {
-            Swal.close();
-            let message = 'Error en la solicitud';
-            if (xhr.responseJSON && xhr.responseJSON.message) {
-                message = xhr.responseJSON.message;
-            } else if (xhr.responseJSON && xhr.responseJSON.errors) {
-                const errors = Object.values(xhr.responseJSON.errors).flat();
-                message = errors.join(', ');
-            }
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
+    .then(data => {
+        Swal.close();
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            document.getElementById('vNombre_attr').value = '';
+            document.getElementById('vSlug_attr').value = '';
+            document.getElementById('tDescripcion_attr').value = '';
+            
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        } else {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: message
+                text: data.message || 'Error al crear el atributo'
             });
         }
+    })
+    .catch(error => {
+        Swal.close();
+        let message = 'Error en la solicitud';
+        if (error.errors) {
+            message = Object.values(error.errors).flat().join(', ');
+        } else if (error.message) {
+            message = error.message;
+        }
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: message
+        });
     });
 }
 

@@ -38,4 +38,21 @@ class AtributoValor extends Model
     {
         return $this->belongsTo(Atributo::class, 'id_atributo');
     }
+
+    /**
+     * Relación con productos a través de la tabla pivote
+     */
+    public function productos()
+    {
+        return $this->belongsToMany(Producto::class, 'tbl_producto_atributos', 'id_atributo_valor', 'id_producto')
+                    ->withPivot('dPrecio_extra');
+    }
+
+    /**
+     * Scope para filtrar por atributo
+     */
+    public function scopePorAtributo($query, $atributoId)
+    {
+        return $query->where('id_atributo', $atributoId);
+    }
 }
