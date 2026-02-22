@@ -34,20 +34,24 @@
 @if($pedido->fac_calle)
 <h4>Dirección de facturación</h4>
 <p>
-    {{ $pedido->fact_calle }} {{ $pedido->fact_numero_exterior }}<br>
-    {{ $pedido->fact_colonia }}<br>
-    {{ $pedido->fact_ciudad }}, {{ $pedido->fact_estado }}<br>
-    CP {{ $pedido->fact_codigo_postal }}
+    {{ $pedido->fac_calle }} {{ $pedido->fac_numero_exterior }}<br>
+    {{ $pedido->fac_colonia }}<br>
+    {{ $pedido->fac_ciudad }}, {{ $pedido->fac_estado }}<br>
+    CP {{ $pedido->fac_codigo_postal }}<br>
+    @if($pedido->vRFC)
+    RFC: {{ $pedido->vRFC }}
+    @endif
 </p>
 @endif
 
-<h4>Productos</h4>
+<h4 class="mt-4">Productos</h4>
 
 <table class="table">
     <thead>
         <tr>
             <th>Producto</th>
             <th>Cantidad</th>
+            <th class="text-end">Precio Unitario</th>
             <th class="text-end">Total</th>
         </tr>
     </thead>
@@ -57,11 +61,64 @@
                 <td>{{ optional($det->producto)->vNombre }}</td>
                 <td>{{ $det->iCantidad }}</td>
                 <td class="text-end">
-                    ${{ number_format($det->iCantidad * $det->dPrecio_unitario, 2) }}
+                    ${{ number_format($det->dPrecio_unitario, 2) }}
+                </td>
+                <td class="text-end">
+                    ${{ number_format($det->dSubtotal, 2) }}
                 </td>
             </tr>
         @endforeach
     </tbody>
 </table>
+
+@php
+    $subtotal = $pedido->detalles->sum('dSubtotal');
+    $descuento = optional($pedido->venta)->dDescuento ?? 0;
+    $envio = optional($pedido->venta)->dCosto_envio ?? 0;
+    $total = optional($pedido->venta)->dTotal ?? $subtotal;
+@endphp
+
+<div class="card mt-4">
+    <div class="card-body">
+
+        <div class="d-flex justify-content-between">
+            <span>Subtotal:</span>
+            <strong>${{ number_format($subtotal, 2) }}</strong>
+        </div>
+
+        @if($descuento > 0)
+            <div class="d-flex justify-content-between text-success">
+                <span>Descuento:</span>
+                <strong>- ${{ number_format($descuento, 2) }}</strong>
+            </div>
+        @endif
+
+        <div class="d-flex justify-content-between">
+            <span>Envío:</span>
+            <strong>
+                @if($envio == 0)
+                    Gratis
+                @else
+                    ${{ number_format($envio, 2) }}
+                @endif
+            </strong>
+        </div>
+
+        <hr>
+
+        <div class="d-flex justify-content-between fs-5">
+            <span><strong>Total pagado:</strong></span>
+            <strong>${{ number_format($total, 2) }}</strong>
+        </div>
+
+        @if($pedido->venta)
+            <div class="mt-3">
+                <strong>Método de pago:</strong>
+                {{ strtoupper($pedido->venta->eMetodo_pago) }}
+            </div>
+        @endif
+
+    </div>
+</div>
 
 @endsection

@@ -12,6 +12,7 @@ use Exception;
 use Carbon\Carbon;
 use App\Helpers\CarritoHelper;
 use App\Services\Stock\LiberarReservaPorCarritoService;
+use Illuminate\Support\Facades\Log;
 
 class CheckoutController extends Controller
 {
@@ -691,6 +692,7 @@ class CheckoutController extends Controller
                 'errors' => $e->errors()
             ], 422);
         } catch (\Throwable $e) {
+            Log::error('Error al aplicar cupón: ' . $e->getMessage(), ['exception' => $e]);
             return response()->json([
                 'success' => false,
                 'message' => 'Error al aplicar el cupón',
