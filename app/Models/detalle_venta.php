@@ -9,9 +9,9 @@ class detalle_venta extends Model
 {
     use HasFactory;
 
-    protected $table = 'tbl_detalle_ventas';
+    protected $table = 'tbl_detalle_ventas';  // ✅ CON "S" al final
     protected $primaryKey = 'id_detalle_venta';
-    public $timestamps = false;
+    public $timestamps = true;
     
     protected $fillable = [
         'id_venta',
@@ -43,3 +43,34 @@ class detalle_venta extends Model
         return $this->belongsTo(Producto::class, 'id_producto', 'id_producto');
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

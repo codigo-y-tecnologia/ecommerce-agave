@@ -28,26 +28,6 @@
                         </a>
                     </li>
                 </ul>
-                
-                <!-- Buscador integrado -->
-                <form action="{{ route('detalle_venta.index') }}" method="GET" class="d-flex mx-2" style="min-width: 300px; max-width: 400px;">
-                    <div class="input-group shadow-sm">
-                        <input type="text" 
-                               name="search" 
-                               class="form-control" 
-                               value="{{ request('search') }}" 
-                               placeholder="Buscar"
-                               aria-label="Buscar detalles">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i>
-                        </button>
-                        @if(request('search'))
-                            <a href="{{ route('detalle_venta.index') }}" class="btn btn-outline-light">
-                                <i class="fas fa-times"></i>
-                            </a>
-                        @endif
-                    </div>
-                </form>
             </div>
         </div>
     </nav>

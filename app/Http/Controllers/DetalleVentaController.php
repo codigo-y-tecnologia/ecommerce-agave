@@ -12,37 +12,152 @@ class DetalleVentaController extends Controller
 {
     public function index(Request $request)
     {
-        $query = detalle_venta::with(['venta', 'producto'])
-            ->orderBy('id_detalle_venta', 'desc');
+        // Query principal con LEFT JOINs para enriquecer datos
+        // MODIFICADO: Ahora agrupa por id_venta para evitar duplicados
+        $query = detalle_venta::selectRaw('
+            MIN(tbl_detalle_ventas.id_detalle_venta) as id_detalle_venta,
+            tbl_detalle_ventas.id_venta,
+            tbl_ventas.id_usuario,
+            GROUP_CONCAT(DISTINCT tbl_productos.vNombre SEPARATOR ", ") as nombre_producto,
+            SUM(tbl_detalle_ventas.iCantidad) as iCantidad,
+            AVG(tbl_detalle_ventas.dPrecio_unitario) as dPrecio_unitario,
+            SUM(tbl_detalle_ventas.dSubtotal) as dSubtotal,
+            COALESCE(tbl_usuarios.vNombre, "Sin usuario") as usuario_nombre,
+            COALESCE(tbl_usuarios.vApaterno, "") as usuario_apellido1,
+            COALESCE(tbl_usuarios.vAmaterno, "") as usuario_apellido2,
+            COALESCE(tbl_usuarios.vEmail, "No especificado") as usuario_email,
+            COALESCE(MIN(tbl_direcciones.vTelefono_contacto), "No registrado") as usuario_telefono,
+            COALESCE(MIN(tbl_direcciones.vCiudad), "No especificada") as vCiudad,
+            COALESCE(MIN(tbl_direcciones.vEstado), "No especificado") as vEstado,
+            COALESCE(tbl_ventas.dTotal, 0) as total_venta,
+            tbl_ventas.tFecha_venta as fecha_venta,
+            COALESCE(tbl_ventas.eEstado, "completada") as eEstado,
+            YEAR(tbl_ventas.tFecha_venta) as año_venta,
+            MONTH(tbl_ventas.tFecha_venta) as mes_venta,
+            WEEK(tbl_ventas.tFecha_venta) as semana_venta,
+            COUNT(DISTINCT tbl_detalle_ventas.id_producto) as num_productos
+        ')
+        ->leftJoin('tbl_ventas', 'tbl_detalle_ventas.id_venta', '=', 'tbl_ventas.id_venta')
+        ->leftJoin('tbl_usuarios', 'tbl_ventas.id_usuario', '=', 'tbl_usuarios.id_usuario')
+        ->leftJoin('tbl_direcciones', function($join) {
+            $join->on('tbl_usuarios.id_usuario', '=', 'tbl_direcciones.id_usuario');
+        })
+        ->leftJoin('tbl_productos', 'tbl_detalle_ventas.id_producto', '=', 'tbl_productos.id_producto')
+        ->groupBy(
+            'tbl_detalle_ventas.id_venta',
+            'tbl_ventas.id_usuario',
+            'tbl_usuarios.vNombre',
+            'tbl_usuarios.vApaterno',
+            'tbl_usuarios.vAmaterno',
+            'tbl_usuarios.vEmail',
+            'tbl_ventas.dTotal',
+            'tbl_ventas.tFecha_venta',
+            'tbl_ventas.eEstado'
+        )
+        ->orderBy('tbl_detalle_ventas.id_venta', 'desc');
 
-        // Agregar búsqueda por ID
+        // Agregar búsqueda
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
             
-            // Búsqueda SEGURA - solo en campos numéricos
             $query->where(function($q) use ($search) {
-                // Buscar solo por IDs y números
                 if (is_numeric($search)) {
-                    $q->where('id_detalle_venta', $search)
-                      ->orWhere('id_venta', $search)
-                      ->orWhere('id_producto', $search)
-                      ->orWhere('iCantidad', $search)
-                      ->orWhere('dprecio_unitario', $search)
-                      ->orWhere('dSubtotal', $search);
-                      
-                      ;
+                    $q->where('tbl_detalle_ventas.id_venta', $search);
                 } else {
-                    // Si no es numérico, solo buscar en campos de texto si existen
-                    $q->where('id_detalle_venta', 'like', "%{$search}%")
-                      ->orWhere('id_venta', 'like', "%{$search}%")
-                      ->orWhere('id_producto', 'like', "%{$search}%");
+                    $q->where('tbl_usuarios.vNombre', 'like', "%{$search}%")
+                      ->orWhere('tbl_usuarios.vEmail', 'like', "%{$search}%")
+                      ->orWhere('tbl_productos.vNombre', 'like', "%{$search}%");
                 }
             });
         }
 
-        $detallesVenta = $query->paginate(10);
+        // Filtro por nombre de cliente
+        if ($request->filled('cliente')) {
+            $cliente = $request->cliente;
+            $query->where(function($q) use ($cliente) {
+                $q->where('tbl_usuarios.vNombre', 'LIKE', "%{$cliente}%")
+                  ->orWhere('tbl_usuarios.vApaterno', 'LIKE', "%{$cliente}%")
+                  ->orWhere('tbl_usuarios.vAmaterno', 'LIKE', "%{$cliente}%")
+                  ->orWhereRaw("CONCAT(tbl_usuarios.vNombre, ' ', tbl_usuarios.vApaterno, ' ', tbl_usuarios.vAmaterno) LIKE ?", ["%{$cliente}%"]);
+            });
+        }
+
+        // Filtro por estado
+        if ($request->filled('estado')) {
+            $query->havingRaw('MIN(tbl_direcciones.vEstado) LIKE ?', ["%{$request->estado}%"]);
+        }
+
+        // Filtro por producto
+        if ($request->filled('producto')) {
+            $query->havingRaw('GROUP_CONCAT(DISTINCT tbl_productos.vNombre SEPARATOR ", ") LIKE ?', ["%{$request->producto}%"]);
+        }
+
+        // Filtro por fecha
+        if ($request->filled('fecha')) {
+            $query->whereDate('tbl_ventas.tFecha_venta', $request->fecha);
+        }
+
+        $detallesVenta = $query->paginate(10)->appends($request->all());
         
-        return view('detalle_venta.index', compact('detallesVenta'));
+        // Datos para gráficas - Productos más vendidos
+        $productosData = detalle_venta::selectRaw('
+            tbl_productos.vNombre as producto,
+            SUM(tbl_detalle_ventas.iCantidad) as total_vendido,
+            SUM(tbl_detalle_ventas.dSubtotal) as ingresos
+        ')
+        ->leftJoin('tbl_productos', 'tbl_detalle_ventas.id_producto', '=', 'tbl_productos.id_producto')
+        ->groupBy('tbl_productos.id_producto', 'tbl_productos.vNombre')
+        ->orderByDesc('total_vendido')
+        ->limit(10)
+        ->get();
+
+        // Datos para gráficas - Ciudades con más ventas
+        $ciudadesData = detalle_venta::selectRaw('
+            COALESCE(tbl_direcciones.vCiudad, "Sin Ciudad") as ciudad,
+            COUNT(*) as total_ventas,
+            SUM(tbl_detalle_ventas.dSubtotal) as ingresos,
+            SUM(tbl_detalle_ventas.iCantidad) as unidades_vendidas
+        ')
+        ->leftJoin('tbl_ventas', 'tbl_detalle_ventas.id_venta', '=', 'tbl_ventas.id_venta')
+        ->leftJoin('tbl_usuarios', 'tbl_ventas.id_usuario', '=', 'tbl_usuarios.id_usuario')
+        ->leftJoin('tbl_direcciones', 'tbl_usuarios.id_usuario', '=', 'tbl_direcciones.id_usuario')
+        ->groupBy('tbl_direcciones.vCiudad')
+        ->orderByDesc('total_ventas')
+        ->limit(15)
+        ->get();
+
+        // Datos para gráficas - Ventas mensuales (CORREGIDO)
+        $ventasMensuales = detalle_venta::selectRaw('
+            YEAR(tbl_ventas.tFecha_venta) as año,
+            MONTH(tbl_ventas.tFecha_venta) as mes,
+            COUNT(*) as total_ventas,
+            SUM(tbl_detalle_ventas.dSubtotal) as ingresos
+        ')
+        ->leftJoin('tbl_ventas', 'tbl_detalle_ventas.id_venta', '=', 'tbl_ventas.id_venta')
+        ->groupByRaw('YEAR(tbl_ventas.tFecha_venta), MONTH(tbl_ventas.tFecha_venta)')
+        ->orderByRaw('YEAR(tbl_ventas.tFecha_venta), MONTH(tbl_ventas.tFecha_venta)')
+        ->get();
+
+        // Datos para gráficas - Ventas por estado
+        $ventasPorEstado = detalle_venta::selectRaw('
+            COALESCE(tbl_direcciones.vEstado, "Sin Estado") as estado,
+            COUNT(*) as total_ventas,
+            SUM(tbl_detalle_ventas.dSubtotal) as ingresos
+        ')
+        ->leftJoin('tbl_ventas', 'tbl_detalle_ventas.id_venta', '=', 'tbl_ventas.id_venta')
+        ->leftJoin('tbl_usuarios', 'tbl_ventas.id_usuario', '=', 'tbl_usuarios.id_usuario')
+        ->leftJoin('tbl_direcciones', 'tbl_usuarios.id_usuario', '=', 'tbl_direcciones.id_usuario')
+        ->groupBy('tbl_direcciones.vEstado')
+        ->orderByDesc('total_ventas')
+        ->get();
+        
+        return view('detalle_venta.index', compact(
+            'detallesVenta',
+            'productosData',
+            'ciudadesData',
+            'ventasMensuales',
+            'ventasPorEstado'
+        ));
     }
 
     public function create()
@@ -56,8 +171,8 @@ class DetalleVentaController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'id_venta' => 'required|exists:ventas,id_venta',
-            'id_producto' => 'required|exists:productos,id_producto',
+            'id_venta' => 'required|exists:tbl_ventas,id_venta',
+            'id_producto' => 'required|exists:tbl_productos,id_producto',
             'iCantidad' => 'required|integer|min:1',
             'dPrecio_unitario' => 'required|numeric|min:0',
         ]);
@@ -78,7 +193,40 @@ class DetalleVentaController extends Controller
 
     public function show($id)
     {
-        $detalleVenta = detalle_venta::with(['venta', 'producto'])->findOrFail($id);
+        // Obtenemos el detalle de venta con todos los datos enriquecidos
+        $detalleVenta = detalle_venta::selectRaw('
+            tbl_detalle_ventas.id_detalle_venta,
+            tbl_detalle_ventas.id_venta,
+            tbl_detalle_ventas.id_producto,
+            tbl_detalle_ventas.iCantidad,
+            tbl_detalle_ventas.dPrecio_unitario,
+            tbl_detalle_ventas.dSubtotal,
+            COALESCE(tbl_usuarios.vNombre, "Sin usuario") as usuario_nombre,
+            COALESCE(tbl_usuarios.vApaterno, "") as usuario_apellido1,
+            COALESCE(tbl_usuarios.vAmaterno, "") as usuario_apellido2,
+            COALESCE(tbl_usuarios.vEmail, "No especificado") as usuario_email,
+            COALESCE(tbl_direcciones.vTelefono_contacto, "No registrado") as usuario_telefono,
+            COALESCE(tbl_direcciones.vCalle, "") as vCalle,
+            COALESCE(tbl_direcciones.vNumero_exterior, "") as vNumero_exterior,
+            COALESCE(tbl_direcciones.vCiudad, "No especificada") as vCiudad,
+            COALESCE(tbl_direcciones.vEstado, "No especificado") as vEstado,
+            COALESCE(tbl_productos.vNombre, "Producto no encontrado") as nombre_producto,
+            COALESCE(tbl_productos.vCodigo_barras, "") as codigo_barras,
+            COALESCE(tbl_ventas.dTotal, 0) as total_venta,
+            COALESCE(tbl_ventas.eMetodo_pago, "") as metodo_pago,
+            COALESCE(tbl_ventas.eEstado, "") as estado_venta,
+            YEAR(tbl_ventas.tFecha_venta) as año_venta,
+            MONTH(tbl_ventas.tFecha_venta) as mes_venta,
+            WEEK(tbl_ventas.tFecha_venta) as semana_venta,
+            tbl_ventas.tFecha_venta
+        ')
+        ->leftJoin('tbl_ventas', 'tbl_detalle_ventas.id_venta', '=', 'tbl_ventas.id_venta')
+        ->leftJoin('tbl_usuarios', 'tbl_ventas.id_usuario', '=', 'tbl_usuarios.id_usuario')
+        ->leftJoin('tbl_direcciones', 'tbl_usuarios.id_usuario', '=', 'tbl_direcciones.id_usuario')
+        ->leftJoin('tbl_productos', 'tbl_detalle_ventas.id_producto', '=', 'tbl_productos.id_producto')
+        ->where('tbl_detalle_ventas.id_detalle_venta', $id)
+        ->firstOrFail();
+        
         return view('detalle_venta.show', compact('detalleVenta'));
     }
 
@@ -93,8 +241,8 @@ class DetalleVentaController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'id_venta' => 'required|exists:ventas,id_venta',
-            'id_producto' => 'required|exists:productos,id_producto',
+            'id_venta' => 'required|exists:tbl_ventas,id_venta',
+            'id_producto' => 'required|exists:tbl_productos,id_producto',
             'iCantidad' => 'required|integer|min:1',
             'dPrecio_unitario' => 'required|numeric|min:0',
         ]);
@@ -123,10 +271,11 @@ class DetalleVentaController extends Controller
         return redirect()->route('detalle_venta.index')
             ->with('success', 'Detalle de venta eliminado correctamente.');
     }
+    
     public function generarPDF($id)
-{
-    $detalle = detalle_venta::findOrFail($id); // ← Cambia aquí
-    $pdf = PDF::loadView('detalles.pdf', compact('detalle'));
-    return $pdf->download("detalle-{$id}.pdf");
-}
+    {
+        $detalle = detalle_venta::findOrFail($id);
+        $pdf = PDF::loadView('detalles.pdf', compact('detalle'));
+        return $pdf->download("detalle-{$id}.pdf");
+    }
 }

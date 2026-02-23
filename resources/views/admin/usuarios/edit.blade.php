@@ -3,7 +3,7 @@
 @section('title', 'Editar Cliente')
 
 @push('scripts')
-    @vite(['resources/js/admin/editar-usuario.js'])
+    <script src="{{ asset('js/admin/editar-usuario.js') }}" defer></script>
 @endpush
 
 @section('content')
