@@ -94,7 +94,7 @@
                     <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="dPrecio_venta" class="form-label fw-bold">
-                                Precio de venta <span class="text-danger">*</span>
+                                Precio de venta (sin impuesto) <span class="text-danger">*</span>
                             </label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
@@ -104,7 +104,7 @@
                                        class="form-control @error('dPrecio_venta') is-invalid @enderror"
                                        value="{{ old('dPrecio_venta') }}" 
                                        required 
-                                       oninput="validarPrecio(this)"
+                                       oninput="validarPrecio(this); actualizarPrecioFinal();"
                                        placeholder="0.00"
                                        title="Máximo: 9,999,999.99 (7 dígitos enteros, 2 decimales)"
                                        autocomplete="off">
@@ -382,14 +382,14 @@
             </div>
         </div>
 
-        <!-- CATEGORÍA Y MARCA -->
+        <!-- CATEGORÍA, MARCA E IMPUESTO -->
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Categoría y Marca</h5>
+                <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Categoría, Marca e Impuesto</h5>
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="id_categoria" class="form-label fw-bold">
                                 Categoría <span class="text-danger">*</span>
@@ -442,7 +442,7 @@
                         </div>
                     </div>
                     
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="id_marca" class="form-label fw-bold">
                                 Marca <span class="text-danger">*</span>
@@ -461,6 +461,44 @@
                             @error('id_marca')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                        </div>
+                    </div>
+
+                    <!-- SECCIÓN DE IMPUESTO (SELECTOR ÚNICO) -->
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="id_impuesto" class="form-label fw-bold">
+                                <i class="fas fa-file-invoice-dollar me-1"></i>Impuesto Aplicable
+                            </label>
+                            @if(isset($impuestos) && $impuestos->count() > 0)
+                                <select name="id_impuesto" id="id_impuesto" 
+                                        class="form-select @error('id_impuesto') is-invalid @enderror"
+                                        onchange="actualizarPrecioFinal()">
+                                    <option value="">-- Sin impuesto --</option>
+                                    @foreach($impuestos as $impuesto)
+                                        <option value="{{ $impuesto->id_impuesto }}" 
+                                            data-porcentaje="{{ $impuesto->dPorcentaje }}"
+                                            data-tipo="{{ $impuesto->eTipo }}"
+                                            {{ old('id_impuesto') == $impuesto->id_impuesto ? 'selected' : '' }}>
+                                            {{ $impuesto->vNombre }} ({{ $impuesto->eTipo }} - {{ number_format($impuesto->dPorcentaje, 2) }}%)
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('id_impuesto')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <small class="form-text text-muted mt-2">
+                                    Selecciona el impuesto que aplica a este producto (opcional)
+                                </small>
+                            @else
+                                <div class="alert alert-warning mb-0">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    No hay impuestos disponibles. 
+                                    <button type="button" class="btn btn-link p-0 ms-1" onclick="activarTabImpuestos()">
+                                        Crear impuestos
+                                    </button>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -711,6 +749,43 @@
             </div>
         </div>
 
+        <!-- SECCIÓN DE PRECIO FINAL CON IMPUESTO -->
+        <div class="card mb-4 bg-info text-white">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Precio Final con Impuesto</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card bg-white text-dark">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted">Precio base (sin impuesto)</h6>
+                                <h3 class="fw-bold" id="precio-base-display">$0.00</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-white text-dark">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted">Impuesto</h6>
+                                <h3 class="fw-bold" id="total-impuestos-display">$0.00</h3>
+                                <small id="porcentaje-impuestos-display">0%</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <h6>Precio final (con impuesto)</h6>
+                                <h2 class="fw-bold" id="precio-final-display">$0.00</h2>
+                                <small>Este es el precio que verá el cliente</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- ATRIBUTOS DEL PRODUCTO (SELECCIÓN Y CREACIÓN DE VALORES) -->
         <div class="card mb-4">
             <div class="card-header" style="background-color: #45c973ff; color: white;">
@@ -913,6 +988,12 @@
                     <button class="nav-link" id="atributos-tab" data-bs-toggle="tab" 
                             data-bs-target="#atributos-content" type="button" role="tab">
                         <i class="fas fa-list-alt me-1"></i>Atributos
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="impuestos-tab" data-bs-toggle="tab" 
+                            data-bs-target="#impuestos-content" type="button" role="tab">
+                        <i class="fas fa-file-invoice-dollar me-1"></i>Impuestos
                     </button>
                 </li>
             </ul>
@@ -1151,6 +1232,73 @@
                         <div class="d-flex justify-content-end">
                             <button type="button" class="btn btn-primary" onclick="crearAtributo()">
                                 <i class="fas fa-save me-1"></i> Crear Atributo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: IMPUESTOS -->
+                <div class="tab-pane fade" id="impuestos-content" role="tabpanel">
+                    <div class="quick-form" id="quick-impuesto-form">
+                        <h5><i class="fas fa-file-invoice-dollar me-2"></i>Crear Nuevo Impuesto</h5>
+                        <p class="text-muted small mb-3">Los impuestos se aplicarán automáticamente al precio de venta del producto.</p>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="vNombre_impuesto" class="form-label fw-bold">Nombre del Impuesto *</label>
+                                <input type="text" class="form-control" id="vNombre_impuesto" 
+                                       placeholder="Ej: IVA, IEPS, ISR">
+                                <small class="text-muted">Nombre identificador del impuesto</small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="eTipo_impuesto" class="form-label fw-bold">Tipo de Impuesto *</label>
+                                <select class="form-select" id="eTipo_impuesto">
+                                    <option value="">Seleccionar tipo</option>
+                                    <option value="IVA">IVA (Impuesto al Valor Agregado)</option>
+                                    <option value="IEPS">IEPS (Impuesto Especial)</option>
+                                    <option value="ISR">ISR (Impuesto Sobre la Renta)</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="dPorcentaje_impuesto" class="form-label fw-bold">Porcentaje *</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="dPorcentaje_impuesto" 
+                                           placeholder="16.00"
+                                           oninput="validarPrecio(this)">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <small class="text-muted">Ej: 16 para IVA 16%</small>
+                            </div>
+                            
+                            <div class="col-md-8 mb-3">
+                                <label for="tDescripcion_impuesto" class="form-label fw-bold">Descripción (Opcional)</label>
+                                <input type="text" class="form-control" id="tDescripcion_impuesto" 
+                                       placeholder="Descripción del impuesto">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="bActivo_impuesto" checked>
+                                <label class="form-check-label" for="bActivo_impuesto">
+                                    Impuesto activo
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Nota:</strong> Después de crear el impuesto, estará disponible en el selector de impuestos del producto y se calculará automáticamente el precio final.
+                        </div>
+                        
+                        <div class="d-flex justify-content-end">
+                            <button type="button" class="btn btn-primary" onclick="crearImpuesto()">
+                                <i class="fas fa-save me-1"></i> Crear Impuesto
                             </button>
                         </div>
                     </div>
@@ -1404,9 +1552,6 @@ let imagenPrincipalFile = null;
 let videoFile = null;
 let gifFile = null;
 let variacionCounter = 0;
-let variacionesImagenes = {};
-let variacionesVideos = {};
-let variacionesGifs = {};
 let valorModal = null;
 
 // Variable para almacenar la imagen de categoría seleccionada
@@ -1416,6 +1561,47 @@ let categoriaImagenFile = null;
 document.addEventListener('DOMContentLoaded', function() {
     valorModal = new bootstrap.Modal(document.getElementById('crearValorModal'));
 });
+
+// ============ FUNCIÓN DE CÁLCULO DE IMPUESTO Y PRECIO FINAL ============
+
+function actualizarPrecioFinal() {
+    const precioVentaInput = document.getElementById('dPrecio_venta');
+    const impuestoSelect = document.getElementById('id_impuesto');
+    
+    if (!precioVentaInput) return;
+    
+    const precioVenta = parseFloat(precioVentaInput.value) || 0;
+    
+    // Mostrar precio base
+    document.getElementById('precio-base-display').textContent = '$' + precioVenta.toFixed(2);
+    
+    // Obtener impuesto seleccionado
+    let totalImpuestos = 0;
+    let porcentaje = 0;
+    let nombreImpuesto = '';
+    let tipoImpuesto = '';
+    
+    if (impuestoSelect && impuestoSelect.value) {
+        const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
+        porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
+        tipoImpuesto = selectedOption.dataset.tipo || '';
+        nombreImpuesto = selectedOption.text.split('(')[0].trim();
+        
+        totalImpuestos = precioVenta * (porcentaje / 100);
+    }
+    
+    const precioFinal = precioVenta + totalImpuestos;
+    
+    // Mostrar resultados
+    document.getElementById('total-impuestos-display').textContent = '$' + totalImpuestos.toFixed(2);
+    document.getElementById('precio-final-display').textContent = '$' + precioFinal.toFixed(2);
+    
+    if (porcentaje > 0) {
+        document.getElementById('porcentaje-impuestos-display').textContent = porcentaje.toFixed(2) + '%';
+    } else {
+        document.getElementById('porcentaje-impuestos-display').textContent = '0%';
+    }
+}
 
 // ============ FUNCIONES DE VALIDACIÓN ============
 
@@ -1606,9 +1792,9 @@ function permitirBorrado(e) {
 }
 
 function validarSKU(input) {
-    input.value = input.value.replace(/[^A-Za-z0-9]/g, '');
-    if (input.value.length > 15) {
-        input.value = input.value.substring(0, 15);
+    input.value = input.value.replace(/[^A-Za-z0-9-]/g, '');
+    if (input.value.length > 50) {
+        input.value = input.value.substring(0, 50);
     }
     input.value = input.value.toUpperCase();
     input.classList.remove('is-invalid');
@@ -1660,6 +1846,11 @@ function validarPrecio(input) {
     
     if (input.id === 'dPrecio_descuento') {
         validarPrecioDescuentoProductoInstantaneo(input);
+    }
+    
+    // Actualizar precio final cuando cambia el precio de venta
+    if (input.id === 'dPrecio_venta') {
+        actualizarPrecioFinal();
     }
 }
 
@@ -1899,6 +2090,15 @@ function limpiarFormularioEtiqueta() {
     document.getElementById('tDescripcion_eti').value = '';
     document.getElementById('color_eti').value = '#007bff';
     document.getElementById('color_text_eti').value = '#007bff';
+}
+
+// ============ FUNCIONES PARA LIMPIAR FORMULARIO DE IMPUESTOS ============
+function limpiarFormularioImpuesto() {
+    document.getElementById('vNombre_impuesto').value = '';
+    document.getElementById('eTipo_impuesto').value = '';
+    document.getElementById('dPorcentaje_impuesto').value = '';
+    document.getElementById('tDescripcion_impuesto').value = '';
+    document.getElementById('bActivo_impuesto').checked = true;
 }
 
 // ============ FUNCIONES PARA VALORES DE ATRIBUTOS ============
@@ -2484,166 +2684,6 @@ function actualizarPestanasValores() {
                 <input type="hidden" name="variaciones[${valorKey}][vNombre_variacion]" 
                        value="${valor.atributoNombre}: ${valor.nombre}">
 
-                <!-- SECCIÓN MULTIMEDIA DE LA VARIACIÓN -->
-                <div class="card mb-4 border-primary">
-                    <div class="card-header bg-primary text-white">
-                        <h6 class="mb-0"><i class="fas fa-images me-2"></i>Multimedia de la Variación</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <!-- IMAGEN PRINCIPAL DE LA VARIACIÓN -->
-                            <div class="col-md-4">
-                                <div class="form-group mb-3">
-                                    <label for="imagen_principal_${valorKey}" class="form-label fw-bold">
-                                        <i class="fas fa-star text-warning me-1"></i>Imagen Principal de la Variación <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="file" 
-                                           name="variaciones[${valorKey}][imagen_principal]" 
-                                           id="imagen_principal_${valorKey}" 
-                                           class="form-control variacion-imagen-principal"
-                                           accept="image/jpeg,image/jpg,image/png"
-                                           required
-                                           onchange="previewImagenPrincipalVariacion(this, '${valorKey}')">
-                                    <small class="form-text text-muted">
-                                        Formatos: JPG, JPEG, PNG. Máximo 5MB.
-                                    </small>
-                                    
-                                    <!-- Preview de imagen principal de variación -->
-                                    <div id="preview_principal_variacion_${valorKey}_container" class="mt-2" style="display: none;">
-                                        <div class="border rounded p-2 text-center bg-light">
-                                            <img id="preview_principal_variacion_${valorKey}" src="#" 
-                                                 class="img-thumbnail" 
-                                                 style="max-width: 150px; max-height: 150px; object-fit: contain;"
-                                                 alt="Preview imagen principal variación">
-                                            <div class="mt-2">
-                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelarImagenPrincipalVariacion('${valorKey}')">
-                                                    <i class="fas fa-times me-1"></i>Quitar
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- VIDEO DE LA VARIACIÓN (OPCIONAL) -->
-                            <div class="col-md-4">
-                                <div class="form-group mb-3">
-                                    <label for="video_${valorKey}" class="form-label fw-bold">
-                                        <i class="fas fa-video text-danger me-1"></i>Video de la Variación (Opcional)
-                                    </label>
-                                    <input type="file" 
-                                           name="variaciones[${valorKey}][vVideo]" 
-                                           id="video_${valorKey}" 
-                                           class="form-control"
-                                           accept="video/mp4,video/webm,video/ogg,video/avi,video/mov,video/mkv"
-                                           onchange="previewVideoVariacion(this, '${valorKey}')">
-                                    <small class="form-text text-muted">
-                                        Formatos: MP4, WebM, OGG, AVI, MOV, MKV. Máximo 50MB.
-                                    </small>
-                                    
-                                    <!-- Preview de video para variación -->
-                                    <div id="preview_video_${valorKey}_container" class="mt-2" style="display: none;">
-                                        <div class="border rounded p-2 text-center bg-light">
-                                            <video id="preview_video_${valorKey}" controls style="max-width: 100%; max-height: 150px;">
-                                                <source src="#" type="video/mp4">
-                                                Tu navegador no soporta el elemento de video.
-                                            </video>
-                                            <div class="mt-2">
-                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelarVideoVariacion('${valorKey}')">
-                                                    <i class="fas fa-times me-1"></i>Quitar video
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- GIF DE LA VARIACIÓN (OPCIONAL) -->
-                            <div class="col-md-4">
-                                <div class="form-group mb-3">
-                                    <label for="gif_${valorKey}" class="form-label fw-bold">
-                                        <i class="fas fa-file-image text-success me-1"></i>GIF Animado de la Variación (Opcional)
-                                    </label>
-                                    <input type="file" 
-                                           name="variaciones[${valorKey}][vGif]" 
-                                           id="gif_${valorKey}" 
-                                           class="form-control"
-                                           accept="image/gif"
-                                           onchange="previewGifVariacion(this, '${valorKey}')">
-                                    <small class="form-text text-muted">
-                                        Formatos: GIF. Máximo 10MB. Animación de la variación.
-                                    </small>
-                                    
-                                    <!-- Preview de GIF para variación -->
-                                    <div id="preview_gif_${valorKey}_container" class="mt-2" style="display: none;">
-                                        <div class="border rounded p-2 text-center bg-light">
-                                            <img id="preview_gif_${valorKey}" src="#" 
-                                                 class="img-thumbnail" 
-                                                 style="max-width: 150px; max-height: 150px; object-fit: contain;"
-                                                 alt="Preview GIF variación">
-                                            <div class="mt-2">
-                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelarGifVariacion('${valorKey}')">
-                                                    <i class="fas fa-times me-1"></i>Quitar GIF
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- IMÁGENES ADICIONALES DE LA VARIACIÓN -->
-                        <div class="row mt-3">
-                            <div class="col-md-12">
-                                <div class="form-group mb-3">
-                                    <label for="imagenes_${valorKey}" class="form-label fw-bold">
-                                        <i class="fas fa-images me-1"></i>Imágenes Adicionales de la Variación (Máximo 7)
-                                    </label>
-                                    <input type="file" 
-                                           name="variaciones[${valorKey}][imagenes][]" 
-                                           id="imagenes_${valorKey}" 
-                                           class="form-control"
-                                           multiple accept="image/jpeg,image/jpg,image/png,image/webp"
-                                           onchange="handleVariacionImageSelection(this, '${valorKey}')">
-                                    <small class="form-text text-muted">
-                                        Formatos: JPG, JPEG, PNG, WEBP. Máximo 5MB por imagen.
-                                        Puedes seleccionar hasta 7 imágenes adicionales.
-                                    </small>
-                                    <div class="mt-2">
-                                        <span class="badge bg-info" id="selected-images-count-${valorKey}">0 archivos</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Contador de imágenes de la variación -->
-                        <div class="alert alert-info py-2 mt-2" id="contador_variacion_${valorKey}">
-                            <div class="row align-items-center">
-                                <div class="col-md-6">
-                                    <i class="fas fa-camera me-1"></i>
-                                    <strong>Total de imágenes de esta variación:</strong> 
-                                    <span id="total_imagenes_variacion_${valorKey}">0</span> de 9 (1 principal + 1 GIF + 7 adicionales)
-                                </div>
-                                <div class="col-md-6 text-end">
-                                    <span class="badge bg-primary me-2" id="principal_count_variacion_${valorKey}">Principal: 0</span>
-                                    <span class="badge bg-success me-2" id="gif_count_variacion_${valorKey}">GIF: 0</span>
-                                    <span class="badge bg-secondary" id="adicionales_count_variacion_${valorKey}">Adicionales: 0</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Galería de imágenes adicionales de la variación -->
-                        <div class="mt-3">
-                            <h6 class="fw-bold mb-2">Imágenes adicionales seleccionadas para esta variación:</h6>
-                            <div id="variacion_images_${valorKey}_container" class="row g-2"></div>
-                            <div class="alert alert-warning py-2" id="no_imagenes_variacion_${valorKey}_msg">
-                                <i class="fas fa-info-circle me-1"></i>
-                                <small>No hay imágenes adicionales seleccionadas para esta variación</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="row mb-3">
                     <div class="col-md-8">
                         <div class="form-group">
@@ -2932,319 +2972,17 @@ function actualizarPestanasValores() {
         
         contentPane.innerHTML = formHtml;
         tabContent.appendChild(contentPane);
-        
-        // Inicializar arrays para esta variación
-        variacionesImagenes[valorKey] = [];
-        variacionesVideos[valorKey] = null;
-        variacionesGifs[valorKey] = null;
-        
-        // Inicializar contador de imágenes
-        document.getElementById(`selected-images-count-${valorKey}`).textContent = '0 archivos';
     });
 }
 
-// ============ FUNCIONES PARA MULTIMEDIA DE VARIACIONES ============
-
-function previewImagenPrincipalVariacion(input, valorKey) {
-    const previewContainer = document.getElementById(`preview_principal_variacion_${valorKey}_container`);
-    const previewImg = document.getElementById(`preview_principal_variacion_${valorKey}`);
-    
-    if (input.files && input.files[0]) {
-        // Validar formato
-        const file = input.files[0];
-        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-        
-        if (!validTypes.includes(file.type)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Formato no válido',
-                text: 'La imagen principal de la variación solo acepta formatos JPG, JPEG y PNG'
-            });
-            input.value = '';
-            return;
-        }
-        
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-            previewImg.src = e.target.result;
-            previewContainer.style.display = 'block';
-        }
-        
-        reader.readAsDataURL(input.files[0]);
-        
-        // Actualizar contador
-        actualizarContadorImagenesVariacion(valorKey);
-    } else {
-        previewContainer.style.display = 'none';
-        actualizarContadorImagenesVariacion(valorKey);
-    }
-}
-
-function cancelarImagenPrincipalVariacion(valorKey) {
-    const input = document.getElementById(`imagen_principal_${valorKey}`);
-    const previewContainer = document.getElementById(`preview_principal_variacion_${valorKey}_container`);
-    
-    input.value = '';
-    previewContainer.style.display = 'none';
-    actualizarContadorImagenesVariacion(valorKey);
-}
-
-function previewVideoVariacion(input, valorKey) {
-    const previewContainer = document.getElementById(`preview_video_${valorKey}_container`);
-    const previewVideo = document.getElementById(`preview_video_${valorKey}`);
-    const source = previewVideo.querySelector('source');
-    
-    if (input.files && input.files[0]) {
-        variacionesVideos[valorKey] = input.files[0];
-        const url = URL.createObjectURL(input.files[0]);
-        source.src = url;
-        source.type = input.files[0].type;
-        previewVideo.load();
-        previewContainer.style.display = 'block';
-    } else {
-        previewContainer.style.display = 'none';
-        variacionesVideos[valorKey] = null;
-        source.src = '#';
-    }
-}
-
-function cancelarVideoVariacion(valorKey) {
-    const input = document.getElementById(`video_${valorKey}`);
-    const previewContainer = document.getElementById(`preview_video_${valorKey}_container`);
-    const previewVideo = document.getElementById(`preview_video_${valorKey}`);
-    const source = previewVideo.querySelector('source');
-    
-    input.value = '';
-    previewContainer.style.display = 'none';
-    source.src = '#';
-    variacionesVideos[valorKey] = null;
-}
-
-function previewGifVariacion(input, valorKey) {
-    const previewContainer = document.getElementById(`preview_gif_${valorKey}_container`);
-    const previewImg = document.getElementById(`preview_gif_${valorKey}`);
-    
-    if (input.files && input.files[0]) {
-        // Validar formato
-        const file = input.files[0];
-        
-        if (file.type !== 'image/gif') {
-            Swal.fire({
-                icon: 'error',
-                title: 'Formato no válido',
-                text: 'El campo GIF solo acepta archivos con formato GIF'
-            });
-            input.value = '';
-            return;
-        }
-        
-        variacionesGifs[valorKey] = input.files[0];
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-            previewImg.src = e.target.result;
-            previewContainer.style.display = 'block';
-        }
-        
-        reader.readAsDataURL(input.files[0]);
-        
-        actualizarContadorImagenesVariacion(valorKey);
-    } else {
-        previewContainer.style.display = 'none';
-        variacionesGifs[valorKey] = null;
-        actualizarContadorImagenesVariacion(valorKey);
-    }
-}
-
-function cancelarGifVariacion(valorKey) {
-    const input = document.getElementById(`gif_${valorKey}`);
-    const previewContainer = document.getElementById(`preview_gif_${valorKey}_container`);
-    
-    input.value = '';
-    previewContainer.style.display = 'none';
-    variacionesGifs[valorKey] = null;
-    actualizarContadorImagenesVariacion(valorKey);
-}
-
-function handleVariacionImageSelection(input, valorKey) {
-    const files = input.files;
-    const maxFiles = 7;
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    
-    if (!variacionesImagenes[valorKey]) {
-        variacionesImagenes[valorKey] = [];
-    }
-    
-    const currentCount = variacionesImagenes[valorKey].length;
-    
-    // Verificar límite total
-    if (currentCount + files.length > maxFiles) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Límite de imágenes',
-            text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales para esta variación. Ya tienes ${currentCount} seleccionadas.`
-        });
-        input.value = '';
-        return;
-    }
-    
-    // Procesar cada archivo
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        
-        // Validar tipo de archivo
-        if (!validTypes.includes(file.type)) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Formato no válido',
-                text: `El archivo "${file.name}" no es un formato válido. Formatos aceptados: JPG, JPEG, PNG, WEBP.`
-            });
-            continue;
-        }
-        
-        // Validar tamaño (5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Archivo demasiado grande',
-                text: `La imagen "${file.name}" excede el límite de 5MB.`
-            });
-            continue;
-        }
-        
-        // Evitar duplicados
-        if (!isVariacionImageDuplicate(file, valorKey)) {
-            const imageId = 'varimg_' + Date.now() + '_' + variacionCounter++;
-            const preview = URL.createObjectURL(file);
-            
-            variacionesImagenes[valorKey].push({
-                id: imageId,
-                file: file,
-                preview: preview,
-                name: file.name,
-                size: file.size
-            });
-        }
-    }
-    
-    // Actualizar contador
-    document.getElementById(`selected-images-count-${valorKey}`).textContent = variacionesImagenes[valorKey].length + ' archivos';
-    
-    // Renderizar las imágenes
-    renderVariacionImages(valorKey);
-    
-    // Limpiar input
-    input.value = '';
-    
-    // Actualizar contador total
-    actualizarContadorImagenesVariacion(valorKey);
-}
-
-function isVariacionImageDuplicate(newFile, valorKey) {
-    return variacionesImagenes[valorKey] && variacionesImagenes[valorKey].some(img => 
-        img.file.name === newFile.name && 
-        img.file.size === newFile.size && 
-        img.file.lastModified === newFile.lastModified
-    );
-}
-
-function removeVariacionImage(valorKey, imageId) {
-    const imageIndex = variacionesImagenes[valorKey].findIndex(img => img.id === imageId);
-    if (imageIndex !== -1) {
-        const image = variacionesImagenes[valorKey][imageIndex];
-        if (image && image.preview) {
-            URL.revokeObjectURL(image.preview);
-        }
-        variacionesImagenes[valorKey].splice(imageIndex, 1);
-        
-        // Actualizar contador
-        document.getElementById(`selected-images-count-${valorKey}`).textContent = variacionesImagenes[valorKey].length + ' archivos';
-        
-        renderVariacionImages(valorKey);
-        actualizarContadorImagenesVariacion(valorKey);
-    }
-}
-
-function renderVariacionImages(valorKey) {
-    const container = document.getElementById(`variacion_images_${valorKey}_container`);
-    const noMsg = document.getElementById(`no_imagenes_variacion_${valorKey}_msg`);
-    
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    if (!variacionesImagenes[valorKey] || variacionesImagenes[valorKey].length === 0) {
-        if (noMsg) noMsg.style.display = 'block';
-        return;
-    }
-    
-    if (noMsg) noMsg.style.display = 'none';
-    
-    variacionesImagenes[valorKey].forEach((image, index) => {
-        const col = document.createElement('div');
-        col.className = 'col-6 col-md-3 mb-3';
-        
-        const card = document.createElement('div');
-        card.className = 'card border image-preview-card position-relative';
-        
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1 remove-btn';
-        btn.style.cssText = 'width: 24px; height: 24px; padding: 0; border-radius: 50%; z-index: 10;';
-        btn.onclick = function(e) {
-            e.preventDefault();
-            removeVariacionImage(valorKey, image.id); 
-        };
-        
-        const btnIcon = document.createElement('i');
-        btnIcon.className = 'fas fa-times';
-        btnIcon.style.fontSize = '12px';
-        btn.appendChild(btnIcon);
-        
-        const img = document.createElement('img');
-        img.src = image.preview;
-        img.className = 'card-img-top';
-        img.style.cssText = 'height: 100px; object-fit: contain; background: #f8f9fa; padding: 5px;';
-        img.alt = 'Imagen ' + (index + 1);
-        
-        const cardBody = document.createElement('div');
-        cardBody.className = 'card-body p-1 text-center';
-        
-        const small = document.createElement('small');
-        small.className = 'text-muted d-block';
-        small.style.cssText = 'font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
-        small.textContent = image.file.name.length > 15 ? image.file.name.substring(0, 15) + '...' : image.file.name;
-        
-        cardBody.appendChild(small);
-        
-        card.appendChild(btn);
-        card.appendChild(img);
-        card.appendChild(cardBody);
-        
-        col.appendChild(card);
-        container.appendChild(col);
+function generarSkuSugerido(productoSku, combinacion) {
+    let sku = productoSku || 'PROD';
+    combinacion.forEach(item => {
+        const attrCode = item.atributoNombre.substring(0, 3).toUpperCase();
+        const valCode = item.valorNombre.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase();
+        sku += `-${attrCode}${valCode}`;
     });
-}
-
-function actualizarContadorImagenesVariacion(valorKey) {
-    const inputPrincipal = document.getElementById(`imagen_principal_${valorKey}`);
-    const tienePrincipal = inputPrincipal && inputPrincipal.files && inputPrincipal.files.length > 0;
-    
-    const tieneGif = variacionesGifs[valorKey] !== null && variacionesGifs[valorKey] !== undefined;
-    
-    const adicionalesCount = variacionesImagenes[valorKey] ? variacionesImagenes[valorKey].length : 0;
-    const total = (tienePrincipal ? 1 : 0) + (tieneGif ? 1 : 0) + adicionalesCount;
-    
-    const totalSpan = document.getElementById(`total_imagenes_variacion_${valorKey}`);
-    const principalSpan = document.getElementById(`principal_count_variacion_${valorKey}`);
-    const gifSpan = document.getElementById(`gif_count_variacion_${valorKey}`);
-    const adicionalesSpan = document.getElementById(`adicionales_count_variacion_${valorKey}`);
-    
-    if (totalSpan) totalSpan.textContent = total;
-    if (principalSpan) principalSpan.textContent = `Principal: ${tienePrincipal ? 1 : 0}`;
-    if (gifSpan) gifSpan.textContent = `GIF: ${tieneGif ? 1 : 0}`;
-    if (adicionalesSpan) adicionalesSpan.textContent = `Adicionales: ${adicionalesCount}`;
+    return sku;
 }
 
 function toggleDescuentoVariacion(checkbox, valorKey) {
@@ -3331,16 +3069,6 @@ function validarPrecioDescuentoVariacion(input) {
         }
     }
     return true;
-}
-
-function generarSkuSugerido(productoSku, combinacion) {
-    let sku = productoSku || 'PROD';
-    combinacion.forEach(item => {
-        const attrCode = item.atributoNombre.substring(0, 3).toUpperCase();
-        const valCode = item.valorNombre.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase();
-        sku += `-${attrCode}${valCode}`;
-    });
-    return sku;
 }
 
 // ============ FUNCIONES PARA FORMULARIOS RÁPIDOS ============
@@ -3491,7 +3219,6 @@ function crearEtiqueta() {
                 showConfirmButton: false
             });
             
-            // Usar la función específica para limpiar el formulario de etiquetas
             limpiarFormularioEtiqueta();
             
             setTimeout(() => {
@@ -3599,6 +3326,115 @@ function crearAtributo() {
     });
 }
 
+function crearImpuesto() {
+    const nombre = document.getElementById('vNombre_impuesto').value.trim();
+    const tipo = document.getElementById('eTipo_impuesto').value;
+    const porcentaje = document.getElementById('dPorcentaje_impuesto').value.trim();
+    const descripcion = document.getElementById('tDescripcion_impuesto').value.trim();
+    const activo = document.getElementById('bActivo_impuesto').checked ? 1 : 0;
+    
+    if (!nombre) {
+        Swal.fire('Error', 'El nombre del impuesto es obligatorio', 'error');
+        return;
+    }
+    
+    if (!tipo) {
+        Swal.fire('Error', 'Debes seleccionar un tipo de impuesto', 'error');
+        return;
+    }
+    
+    if (!porcentaje) {
+        Swal.fire('Error', 'El porcentaje es obligatorio', 'error');
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Creando impuesto...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+    
+    fetch('{{ route("impuestos.quick-create") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            vNombre: nombre,
+            eTipo: tipo,
+            dPorcentaje: porcentaje,
+            tDescripcion: descripcion,
+            bActivo: activo
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
+    .then(data => {
+        Swal.close();
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            limpiarFormularioImpuesto();
+            
+            // Agregar el nuevo impuesto al select
+            const select = document.getElementById('id_impuesto');
+            const option = document.createElement('option');
+            option.value = data.impuesto.id_impuesto;
+            option.setAttribute('data-porcentaje', data.impuesto.dPorcentaje);
+            option.setAttribute('data-tipo', data.impuesto.eTipo);
+            option.text = data.impuesto.vNombre + ' (' + data.impuesto.eTipo + ' - ' + parseFloat(data.impuesto.dPorcentaje).toFixed(2) + '%)';
+            select.appendChild(option);
+            
+            // Seleccionar el nuevo impuesto
+            select.value = data.impuesto.id_impuesto;
+            
+            // Actualizar precio final
+            actualizarPrecioFinal();
+            
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: 'Impuesto creado y seleccionado automáticamente',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.message || 'Error al crear el impuesto'
+            });
+        }
+    })
+    .catch(error => {
+        Swal.close();
+        let message = 'Error en la solicitud';
+        if (error.errors) {
+            message = Object.values(error.errors).flat().join(', ');
+        } else if (error.message) {
+            message = error.message;
+        }
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: message
+        });
+    });
+}
+
 function activarTabAtributos() {
     const tab = document.getElementById('atributos-tab');
     if (tab) {
@@ -3609,6 +3445,14 @@ function activarTabAtributos() {
 
 function activarTabEtiquetas() {
     const tab = document.getElementById('etiquetas-tab');
+    if (tab) {
+        tab.click();
+        tab.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+function activarTabImpuestos() {
+    const tab = document.getElementById('impuestos-tab');
     if (tab) {
         tab.click();
         tab.scrollIntoView({ behavior: 'smooth' });
@@ -3696,164 +3540,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     limpiarFormularioCategoria();
                     
-                    // Obtener la categoría recién creada con información jerárquica
-                    const nuevaCategoria = data.categoria;
-                    
-                    // CONSTRUIR EL NOMBRE CON FLECHAS PARA MOSTRAR
-                    let nombreConJerarquia = '';
-                    
-                    // Calcular el nivel jerárquico
-                    let nivel = 0;
-                    if (nuevaCategoria.padre) {
-                        nivel = nuevaCategoria.nivel || 1;
-                    }
-                    
-                    // Construir el nombre con los prefijos correctos
-                    if (nivel === 0) {
-                        // Es categoría raíz
-                        nombreConJerarquia = '🏠 ' + nuevaCategoria.vNombre;
-                    } else {
-                        // Es subcategoría - agregar espacios y flechas
-                        let espacios = '';
-                        for (let i = 0; i < nivel; i++) {
-                            espacios += '&nbsp;&nbsp;&nbsp;';
-                        }
-                        nombreConJerarquia = espacios + '↳ ' + nuevaCategoria.vNombre;
-                    }
-                    
-                    // Actualizar select principal de categorías (id_categoria)
-                    const selectCategoria = document.getElementById('id_categoria');
-                    if (selectCategoria) {
-                        const option = document.createElement('option');
-                        option.value = nuevaCategoria.id_categoria;
-                        option.innerHTML = nombreConJerarquia;
-                        option.setAttribute('data-padre-id', nuevaCategoria.id_categoria_padre || '');
-                        option.setAttribute('data-nivel', nivel);
-                        
-                        // Insertar en la posición correcta según jerarquía
-                        const options = Array.from(selectCategoria.options);
-                        let inserted = false;
-                        const padreId = nuevaCategoria.id_categoria_padre;
-                        
-                        if (padreId) {
-                            // Buscar dónde insertar: después del padre y después de todos sus hijos
-                            let padreIndex = -1;
-                            let ultimoHijoIndex = -1;
-                            
-                            for (let i = 0; i < options.length; i++) {
-                                if (options[i].value == padreId) {
-                                    padreIndex = i;
-                                }
-                                
-                                // Si ya encontramos el padre y el índice es mayor que padreIndex
-                                if (padreIndex !== -1 && i > padreIndex) {
-                                    const optionPadreId = options[i].getAttribute('data-padre-id');
-                                    // Si esta opción tiene como padre el ID que buscamos, es un hijo
-                                    if (optionPadreId == padreId) {
-                                        ultimoHijoIndex = i;
-                                    } else if (optionPadreId && optionPadreId !== padreId) {
-                                        // Si encontramos una opción con otro padre, ya pasamos la sección de hijos
-                                        break;
-                                    }
-                                }
-                            }
-                            
-                            if (ultimoHijoIndex !== -1) {
-                                // Insertar después del último hijo
-                                selectCategoria.insertBefore(option, options[ultimoHijoIndex + 1] || null);
-                                inserted = true;
-                            } else if (padreIndex !== -1) {
-                                // No hay hijos, insertar después del padre
-                                selectCategoria.insertBefore(option, options[padreIndex + 1] || null);
-                                inserted = true;
-                            }
-                        } else {
-                            // Es raíz, insertar al final de las raíces
-                            // Buscar el índice del último elemento raíz (sin data-padre-id o con data-padre-id vacío)
-                            let ultimaRaizIndex = -1;
-                            for (let i = 0; i < options.length; i++) {
-                                const optionPadreId = options[i].getAttribute('data-padre-id');
-                                if (!optionPadreId || optionPadreId === '') {
-                                    ultimaRaizIndex = i;
-                                }
-                            }
-                            
-                            if (ultimaRaizIndex !== -1) {
-                                // Insertar después de la última raíz
-                                selectCategoria.insertBefore(option, options[ultimaRaizIndex + 1] || null);
-                                inserted = true;
-                            }
-                        }
-                        
-                        // Si no se pudo insertar en una posición específica, agregar al final
-                        if (!inserted) {
-                            selectCategoria.appendChild(option);
-                        }
-                        
-                        // Seleccionar la nueva categoría
-                        selectCategoria.value = nuevaCategoria.id_categoria;
-                    }
-                    
-                    // Actualizar select de categoría padre en el formulario rápido
-                    const selectPadre = document.getElementById('id_categoria_padre_quick');
-                    if (selectPadre) {
-                        const option = document.createElement('option');
-                        option.value = nuevaCategoria.id_categoria;
-                        option.innerHTML = nombreConJerarquia;
-                        option.setAttribute('data-padre-id', nuevaCategoria.id_categoria_padre || '');
-                        option.setAttribute('data-nivel', nivel);
-                        
-                        // Insertar en la posición correcta (misma lógica que arriba)
-                        const options = Array.from(selectPadre.options);
-                        let inserted = false;
-                        const padreId = nuevaCategoria.id_categoria_padre;
-                        
-                        if (padreId) {
-                            let padreIndex = -1;
-                            let ultimoHijoIndex = -1;
-                            
-                            for (let i = 0; i < options.length; i++) {
-                                if (options[i].value == padreId) {
-                                    padreIndex = i;
-                                }
-                                
-                                if (padreIndex !== -1 && i > padreIndex) {
-                                    const optionPadreId = options[i].getAttribute('data-padre-id');
-                                    if (optionPadreId == padreId) {
-                                        ultimoHijoIndex = i;
-                                    } else if (optionPadreId && optionPadreId !== padreId) {
-                                        break;
-                                    }
-                                }
-                            }
-                            
-                            if (ultimoHijoIndex !== -1) {
-                                selectPadre.insertBefore(option, options[ultimoHijoIndex + 1] || null);
-                                inserted = true;
-                            } else if (padreIndex !== -1) {
-                                selectPadre.insertBefore(option, options[padreIndex + 1] || null);
-                                inserted = true;
-                            }
-                        } else {
-                            let ultimaRaizIndex = -1;
-                            for (let i = 0; i < options.length; i++) {
-                                const optionPadreId = options[i].getAttribute('data-padre-id');
-                                if (!optionPadreId || optionPadreId === '') {
-                                    ultimaRaizIndex = i;
-                                }
-                            }
-                            
-                            if (ultimaRaizIndex !== -1) {
-                                selectPadre.insertBefore(option, options[ultimaRaizIndex + 1] || null);
-                                inserted = true;
-                            }
-                        }
-                        
-                        if (!inserted) {
-                            selectPadre.appendChild(option);
-                        }
-                    }
-                    
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
                 } else {
                     let errorMessage = data.message || 'Error al crear la categoría';
                     
@@ -3907,6 +3596,7 @@ document.addEventListener('DOMContentLoaded', function() {
     actualizarResumenAtributos();
     actualizarPestanasValores();
     actualizarContadorImagenes();
+    actualizarPrecioFinal();
     
     const colorPicker = document.getElementById('color_eti');
     const colorText = document.getElementById('color_text_eti');
@@ -3922,6 +3612,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Agregar evento al select de impuestos
+    document.getElementById('id_impuesto')?.addEventListener('change', actualizarPrecioFinal);
 });
 
 // Validación del formulario antes de enviar

@@ -19,6 +19,7 @@ return new class extends Migration
             $table->text('tDescripcion_larga')->nullable();
             $table->decimal('dPrecio_compra', 10, 2)->nullable();
             $table->decimal('dPrecio_venta', 10, 2);
+            $table->decimal('dPrecio_final', 10, 2)->nullable()->comment('Precio con impuestos incluidos');
             $table->unsignedInteger('iStock')->default(0);
             $table->foreignId('id_marca')->nullable()->constrained('tbl_marcas')->onDelete('set null');
             $table->foreignId('id_categoria')->nullable()->constrained('tbl_categorias')->onDelete('set null');

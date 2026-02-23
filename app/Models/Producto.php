@@ -25,6 +25,7 @@ class Producto extends Model
         'tDescripcion_larga',
         'dPrecio_compra',
         'dPrecio_venta',
+        'dPrecio_final',
         'iStock',
         'id_marca',
         'id_categoria',
@@ -50,6 +51,7 @@ class Producto extends Model
         'bActivo' => 'boolean',
         'dPrecio_compra' => 'decimal:2',
         'dPrecio_venta' => 'decimal:2',
+        'dPrecio_final' => 'decimal:2',
         'iStock' => 'integer',
         // NUEVOS CAMPOS
         'dPeso' => 'decimal:3',
@@ -66,7 +68,7 @@ class Producto extends Model
         'dFecha_fin_oferta' => 'date'
     ];
 
-    // Mutador para bTiene_oferta (CORREGIDO)
+    // Mutador para bTiene_oferta
     public function setBTieneOfertaAttribute($value)
     {
         if ($value === '1' || $value === 1 || $value === true || $value === 'on') {
@@ -86,17 +88,54 @@ class Producto extends Model
             if (empty($producto->tFecha_registro)) {
                 $producto->tFecha_registro = now();
             }
+            
+            // Calcular precio final antes de guardar
+            $producto->calcularPrecioFinal();
         });
 
-        // Al actualizar un producto, establecer fecha de actualización
+        // Al actualizar un producto, establecer fecha de actualización y recalcular precio final
         static::updating(function ($producto) {
             $producto->tFecha_actualizacion = now();
+            $producto->calcularPrecioFinal();
         });
 
         static::deleting(function ($producto) {
             $producto->favoritos()->delete();
             $producto->eliminarTodasLasImagenes();
+            // Eliminar relaciones con impuestos
+            $producto->impuestos()->detach();
         });
+    }
+
+    /**
+     * Calcular el precio final con impuestos incluidos
+     */
+    public function calcularPrecioFinal()
+    {
+        $precioBase = $this->attributes['dPrecio_venta'] ?? 0;
+        $totalImpuestos = 0;
+        
+        // Si el producto ya tiene ID, obtenemos los impuestos de la relación
+        if ($this->exists && $this->id_producto) {
+            $impuestos = $this->impuestos()->where('bActivo', true)->get();
+            
+            foreach ($impuestos as $impuesto) {
+                $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+            }
+        }
+        
+        $this->attributes['dPrecio_final'] = $precioBase + $totalImpuestos;
+        
+        return $this->attributes['dPrecio_final'];
+    }
+
+    /**
+     * Recalcular precio final después de sincronizar impuestos
+     */
+    public function recalcularPrecioFinal()
+    {
+        $this->calcularPrecioFinal();
+        $this->saveQuietly(); // Guardar sin disparar eventos para evitar bucles
     }
 
     // Accesor para imágenes
@@ -122,7 +161,7 @@ class Producto extends Model
         return [];
     }
 
-    // Guardar imágenes NUEVO - CORREGIDO
+    // Guardar imágenes
     public function guardarImagenes($imagenes)
     {
         if (!$this->id_producto) {
@@ -149,7 +188,7 @@ class Producto extends Model
         
         $imagenesGuardadas = [];
         $contador = 0;
-        $maxImagenes = 8; // Cambiado a 8 según tu requerimiento
+        $maxImagenes = 8;
         
         foreach ($imagenes as $imagen) {
             // Verificar límite máximo
@@ -257,6 +296,84 @@ class Producto extends Model
     {
         return $this->belongsToMany(AtributoValor::class, 'tbl_producto_atributos', 'id_producto', 'id_atributo_valor')
                     ->withPivot(['id_atributo', 'dPrecio_extra']);
+    }
+
+    /**
+     * Relación con impuestos (muchos a muchos)
+     */
+    public function impuestos()
+    {
+        return $this->belongsToMany(Impuesto::class, 'tbl_producto_impuestos', 'id_producto', 'id_impuesto')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Obtener impuestos activos del producto
+     */
+    public function getImpuestosActivosAttribute()
+    {
+        return $this->impuestos()->where('bActivo', true)->get();
+    }
+
+    /**
+     * Calcular el total de impuestos aplicados al producto
+     */
+    public function getTotalImpuestosAttribute()
+    {
+        $precioBase = $this->attributes['dPrecio_venta'] ?? 0;
+        $total = 0;
+        
+        foreach ($this->impuestosActivos as $impuesto) {
+            $total += $precioBase * ($impuesto->dPorcentaje / 100);
+        }
+        
+        return $total;
+    }
+
+    /**
+     * Obtener el porcentaje total de impuestos
+     */
+    public function getPorcentajeImpuestosAttribute()
+    {
+        $total = 0;
+        
+        foreach ($this->impuestosActivos as $impuesto) {
+            $total += $impuesto->dPorcentaje;
+        }
+        
+        return $total;
+    }
+
+    /**
+     * Formatear el precio final para mostrar
+     */
+    public function getPrecioFinalFormateadoAttribute()
+    {
+        if ($this->dPrecio_final) {
+            return '$' . number_format($this->dPrecio_final, 2);
+        }
+        return '$0.00';
+    }
+
+    /**
+     * Formatear el detalle de impuestos
+     */
+    public function getDetalleImpuestosAttribute()
+    {
+        $detalle = [];
+        
+        foreach ($this->impuestosActivos as $impuesto) {
+            $monto = $this->dPrecio_venta * ($impuesto->dPorcentaje / 100);
+            $detalle[] = [
+                'nombre' => $impuesto->vNombre,
+                'tipo' => $impuesto->eTipo,
+                'porcentaje' => $impuesto->dPorcentaje,
+                'monto' => $monto,
+                'monto_formateado' => '$' . number_format($monto, 2)
+            ];
+        }
+        
+        return $detalle;
     }
 
     // Método para obtener atributos agrupados
@@ -410,7 +527,7 @@ class Producto extends Model
         return $this->variaciones()->count() > 0;
     }
 
-    // Accesor CORREGIDO para precio de venta (siempre devuelve el valor numérico de la BD)
+    // Accesor para precio de venta
     public function getDPrecioVentaAttribute()
     {
         return $this->attributes['dPrecio_venta'];
@@ -473,7 +590,7 @@ class Producto extends Model
         return $this->attributes['dPrecio_venta'];
     }
 
-    // NUEVO: Accesor para dimensiones
+    // Accesor para dimensiones
     public function getDimensionesFormateadasAttribute()
     {
         if ($this->dLargo_cm && $this->dAncho_cm && $this->dAlto_cm) {
@@ -484,7 +601,7 @@ class Producto extends Model
         return 'No especificado';
     }
 
-    // NUEVO: Accesor para peso formateado
+    // Accesor para peso formateado
     public function getPesoFormateadoAttribute()
     {
         if ($this->dPeso) {
@@ -493,7 +610,7 @@ class Producto extends Model
         return 'No especificado';
     }
 
-    // NUEVO: Accesor para volumen (largo × ancho × alto)
+    // Accesor para volumen (largo × ancho × alto)
     public function getVolumenAttribute()
     {
         if ($this->dLargo_cm && $this->dAncho_cm && $this->dAlto_cm) {
@@ -502,7 +619,7 @@ class Producto extends Model
         return null;
     }
 
-    // NUEVO: Accesor para volumen formateado
+    // Accesor para volumen formateado
     public function getVolumenFormateadoAttribute()
     {
         if ($this->volumen) {
@@ -511,13 +628,13 @@ class Producto extends Model
         return 'No calculable';
     }
 
-    // NUEVO: Método para verificar si tiene dimensiones completas
+    // Método para verificar si tiene dimensiones completas
     public function tieneDimensionesCompletas()
     {
         return $this->dLargo_cm && $this->dAncho_cm && $this->dAlto_cm;
     }
 
-    // NUEVO: Accesor para clase de envío formateada
+    // Accesor para clase de envío formateada
     public function getClaseEnvioFormateadaAttribute()
     {
         switch ($this->vClase_envio) {
@@ -534,7 +651,7 @@ class Producto extends Model
         }
     }
 
-    // NUEVO: Accesor para badge de clase de envío
+    // Accesor para badge de clase de envío
     public function getClaseEnvioBadgeAttribute()
     {
         switch ($this->vClase_envio) {
@@ -551,7 +668,7 @@ class Producto extends Model
         }
     }
 
-    // NUEVO: Método para calcular peso volumétrico
+    // Método para calcular peso volumétrico
     public function getPesoVolumetricoAttribute()
     {
         if ($this->volumen) {
@@ -561,7 +678,7 @@ class Producto extends Model
         return null;
     }
 
-    // NUEVO: Accesor para peso volumétrico formateado
+    // Accesor para peso volumétrico formateado
     public function getPesoVolumetricoFormateadoAttribute()
     {
         if ($this->peso_volumetrico) {
@@ -570,7 +687,7 @@ class Producto extends Model
         return 'No calculable';
     }
 
-    // NUEVO: Método para determinar el peso facturable (el mayor entre peso real y volumétrico)
+    // Método para determinar el peso facturable (el mayor entre peso real y volumétrico)
     public function getPesoFacturableAttribute()
     {
         $pesoReal = $this->dPeso ?: 0;
@@ -579,7 +696,7 @@ class Producto extends Model
         return max($pesoReal, $pesoVolumetrico);
     }
 
-    // NUEVO: Método para buscar productos por nombre o SKU
+    // Método para buscar productos por nombre o SKU
     public static function buscarPorNombreOSKU($busqueda)
     {
         return self::where(function($query) use ($busqueda) {
@@ -588,7 +705,7 @@ class Producto extends Model
         })->where('bActivo', true);
     }
 
-    // NUEVO: Método para productos con dimensiones
+    // Scope para productos con dimensiones
     public function scopeConDimensiones($query)
     {
         return $query->whereNotNull('dLargo_cm')
@@ -596,14 +713,14 @@ class Producto extends Model
                      ->whereNotNull('dAlto_cm');
     }
 
-    // NUEVO: Método para productos con peso
+    // Scope para productos con peso
     public function scopeConPeso($query)
     {
         return $query->whereNotNull('dPeso')
                      ->where('dPeso', '>', 0);
     }
 
-    // NUEVO: Método para productos por clase de envío
+    // Scope para productos por clase de envío
     public function scopePorClaseEnvio($query, $clase)
     {
         return $query->where('vClase_envio', $clase);

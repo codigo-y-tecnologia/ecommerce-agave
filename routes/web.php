@@ -10,6 +10,8 @@ use App\Http\Controllers\BusquedaController;
 use App\Http\Controllers\FavoritoController;
 use App\Http\Controllers\AtributoController;
 use App\Http\Controllers\VariacionController;
+use App\Http\Controllers\ImpuestoController;
+
 
 // RUTA PRINCIPAL - redirige a la página de inicio real
 Route::get('/', function() {
@@ -157,3 +159,8 @@ Route::get('/atributos/json', [AtributoController::class, 'getJson'])->name('atr
 Route::fallback(function () {
     return redirect()->route('inicio.real');
 });
+
+// Rutas para impuestos
+Route::resource('impuestos', ImpuestoController::class);
+Route::post('/impuestos/quick-create', [ImpuestoController::class, 'quickCreate'])->name('impuestos.quick-create');
+Route::get('/impuestos/json', [ImpuestoController::class, 'getJson'])->name('impuestos.json');
