@@ -125,6 +125,20 @@
     </tr>
 </table>
 
+<!-- Portal de consulta -->
+    <div style="margin-top:35px; text-align:center;">
+        <a href="{{ route('consulta.pedido.form') }}" class="btn">
+            Consultar estado de mi pedido
+        </a>
+    </div>
+
+    <p style="margin-top:20px; font-size:14px; color:#555;">
+        Para consultar tu pedido más adelante, visita el portal e ingresa:
+        <br><br>
+        <strong>Número de pedido:</strong> #{{ $pedido->id_pedido }}<br>
+        <strong>Correo electrónico:</strong> {{ $pedido->vEmail }}
+    </p>
+
     <p style="margin-top:25px;">
         Puedes ver los detalles en tu cuenta o responder este correo si necesitas ayuda.
     </p>

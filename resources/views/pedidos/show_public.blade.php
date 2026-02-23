@@ -121,4 +121,21 @@
     </div>
 </div>
 
+{{-- Botón descargar factura --}}
+@if($pedido->venta && $pedido->venta->eEstado === 'completada')
+    <div class="mt-4 text-end">
+        @php
+    $signedUrl = URL::temporarySignedRoute(
+        'descargar.factura',
+        now()->addMinutes(60), // puedes cambiar duración
+        ['id' => $pedido->id_pedido]
+    );
+@endphp
+
+<a href="{{ $signedUrl }}" class="btn btn-outline-secondary">
+    Descargar factura PDF
+</a>
+    </div>
+@endif
+
 @endsection

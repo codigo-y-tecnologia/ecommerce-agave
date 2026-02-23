@@ -154,6 +154,11 @@ Route::get('/consulta-pedido', [ConsultaPedidoController::class, 'form'])
 Route::post('/consulta-pedido', [ConsultaPedidoController::class, 'buscar'])
     ->name('consulta.pedido.buscar');
 
+// Ruta para descargar la factura en PDF sin necesidad de login
+Route::get('/factura/{id}', [FacturaController::class, 'descargar'])
+    ->name('descargar.factura')
+    ->middleware('signed');
+
 // Rutas públicas para la gestión de productos, categorías, marcas, etiquetas y atributos
 Route::resource('/categorias', CategoriaController::class);
 Route::resource('productos', ProductoController::class);

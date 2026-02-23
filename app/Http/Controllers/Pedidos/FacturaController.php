@@ -54,4 +54,27 @@ class FacturaController extends Controller
             'factura-pedido-' . $pedido->id_pedido . '.pdf'
         );
     }
+
+    public function descargar($id)
+    {
+        $pedido = Pedido::with([
+            'detalles.producto',
+            'venta',
+        ])->findOrFail($id);
+
+        abort_if(
+            !$pedido->venta || $pedido->venta->eEstado !== 'completada',
+            403,
+            'La factura aún no está disponible.'
+        );
+
+        $pdf = Pdf::loadView('facturas.pdf', [
+            'pedido' => $pedido,
+            'venta'  => $pedido->venta,
+        ]);
+
+        return $pdf->download(
+            'factura-pedido-' . $pedido->id_pedido . '.pdf'
+        );
+    }
 }

@@ -31,6 +31,7 @@
                    name="email"
                    class="form-control"
                    value="{{ old('email') }}"
+                   maxlength="100"
                    required>
         </div>
 
