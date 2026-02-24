@@ -49,6 +49,7 @@
             gap: 25px;
             padding: 0;
             margin: 0;
+            flex-wrap: wrap;
         }
 
         nav.navbar ul li {
@@ -63,6 +64,43 @@
 
         nav.navbar ul li a:hover {
             text-decoration: underline;
+        }
+
+        .barra-busqueda-principal {
+            text-align: center;
+            margin: 20px 0;
+            padding: 0 20px;
+        }
+
+        .barra-busqueda-principal form {
+            display: inline-block;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .barra-busqueda-principal input[type="text"] {
+            padding: 12px 20px;
+            width: 70%;
+            border: 2px solid #007bff;
+            border-radius: 25px 0 0 25px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .barra-busqueda-principal button {
+            padding: 12px 25px;
+            background: #007bff;
+            color: white;
+            border: 2px solid #007bff;
+            border-radius: 0 25px 25px 0;
+            font-size: 16px;
+            cursor: pointer;
+            margin-left: -5px;
+        }
+
+        .barra-busqueda-principal button:hover {
+            background: #0056b3;
+            border-color: #0056b3;
         }
 
         .busqueda-container {
@@ -150,6 +188,8 @@
             background: #fff;
             border-radius: 8px;
             border: 1px solid #dee2e6;
+            flex-wrap: wrap;
+            gap: 15px;
         }
         
         .resultados-info {
@@ -171,7 +211,7 @@
             margin-bottom: 30px;
         }
         
-        /* PAGINACIÓN PERSONALIZADA - SOLO FLECHAS Y NÚMEROS */
+        /* PAGINACIÓN PERSONALIZADA */
         .paginacion {
             display: flex;
             justify-content: center;
@@ -184,6 +224,8 @@
             gap: 8px;
             padding: 0;
             margin: 0;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         .pagination li {
@@ -220,26 +262,6 @@
             border-color: #007bff;
         }
 
-        /* Estilos específicos para los botones de anterior/siguiente */
-        .pagination li:first-child a,
-        .pagination li:last-child a {
-            font-size: 16px;
-            font-weight: bold;
-        }
-
-        .pagination li.disabled span {
-            color: #adb5bd;
-            background-color: #f8f9fa;
-            border-color: #dee2e6;
-            cursor: not-allowed;
-        }
-
-        /* Ocultar el texto "Previous" y "Next" pero mantener las flechas */
-        .pagination li:first-child a span,
-        .pagination li:last-child a span {
-            display: none;
-        }
-
         .pagination li:first-child a::before {
             content: "←";
             font-size: 18px;
@@ -248,6 +270,18 @@
         .pagination li:last-child a::before {
             content: "→";
             font-size: 18px;
+        }
+
+        .pagination li:first-child a span,
+        .pagination li:last-child a span {
+            display: none;
+        }
+
+        .pagination li.disabled span {
+            color: #adb5bd;
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
+            cursor: not-allowed;
         }
         
         .sin-resultados {
@@ -264,7 +298,7 @@
             color: #333;
         }
 
-        /* Estilos mejorados de tarjetas de producto */
+        /* Estilos de tarjetas de producto */
         .producto-card {
             background: #fff;
             border-radius: 12px;
@@ -275,6 +309,9 @@
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
         }
 
         .producto-card:hover {
@@ -313,6 +350,11 @@
             color: #6c757d;
         }
 
+        .producto-info {
+            padding: 15px;
+            flex: 1;
+        }
+
         .producto-card h3 {
             margin-top: 0;
             margin-bottom: 8px;
@@ -333,10 +375,16 @@
             font-size: 18px;
         }
 
-        .producto-card p {
+        .producto-precio .precio-original {
+            text-decoration: line-through;
+            color: #6c757d;
+            font-size: 14px;
+            font-weight: normal;
+        }
+
+        .stock-info {
             margin-bottom: 5px;
             font-size: 14px;
-            color: #666;
         }
 
         .badge {
@@ -348,6 +396,32 @@
             border-radius: 4px;
             margin-right: 3px;
             font-weight: bold;
+        }
+
+        .badge-oferta {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: #dc3545;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 99;
+        }
+
+        .badge-stock-bajo {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: #ffc107;
+            color: #000;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 99;
         }
 
         .ver-detalle {
@@ -389,6 +463,14 @@
 
         .btn-secondary:hover {
             background: #545b62;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
         }
 
         /* Corazón de favoritos */
@@ -435,71 +517,6 @@
             content: '🤍';
         }
 
-        /* Badge de descuento */
-        .badge-descuento {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            background: #dc3545;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-            z-index: 99;
-        }
-
-        .badge-stock-bajo {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            background: #ffc107;
-            color: #000;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-            z-index: 99;
-        }
-
-        /* Barra de búsqueda única */
-        .barra-busqueda-principal {
-            text-align: center;
-            margin: 20px 0;
-            padding: 0 20px;
-        }
-
-        .barra-busqueda-principal form {
-            display: inline-block;
-            max-width: 600px;
-            width: 100%;
-        }
-
-        .barra-busqueda-principal input[type="text"] {
-            padding: 12px 20px;
-            width: 70%;
-            border: 2px solid #007bff;
-            border-radius: 25px 0 0 25px;
-            font-size: 16px;
-            outline: none;
-        }
-
-        .barra-busqueda-principal button {
-            padding: 12px 25px;
-            background: #007bff;
-            color: white;
-            border: 2px solid #007bff;
-            border-radius: 0 25px 25px 0;
-            font-size: 16px;
-            cursor: pointer;
-            margin-left: -5px;
-        }
-
-        .barra-busqueda-principal button:hover {
-            background: #0056b3;
-            border-color: #0056b3;
-        }
-
         /* Toast notifications */
         .toast {
             position: fixed;
@@ -525,6 +542,23 @@
             transform: translateX(0);
         }
 
+        .etiquetas-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 8px;
+        }
+
+        .badge-etiqueta {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            margin: 2px;
+            color: white;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .busqueda-container {
@@ -537,7 +571,6 @@
             
             .busqueda-superior {
                 flex-direction: column;
-                gap: 15px;
                 align-items: flex-start;
             }
             
@@ -558,6 +591,11 @@
                 min-width: 36px;
                 height: 36px;
                 font-size: 13px;
+            }
+
+            nav.navbar ul {
+                gap: 15px;
+                padding: 0 15px;
             }
         }
 
@@ -589,6 +627,22 @@
                 height: 32px;
                 font-size: 12px;
             }
+
+            nav.navbar ul {
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+            }
+
+            nav.navbar ul li {
+                width: 100%;
+                text-align: center;
+            }
+
+            nav.navbar ul li a {
+                display: block;
+                padding: 5px;
+            }
         }
     </style>
 </head>
@@ -609,6 +663,7 @@
         <ul>
             <li><a href="{{ route('inicio') }}">Inicio</a></li>
             <li><a href="{{ route('busqueda.resultados') }}">Todos los Productos</a></li>
+            <li><a href="{{ route('busqueda.resultados', ['en_descuento' => '1']) }}" style="color: #dc3545; font-weight: bold;">🔥 En Descuento</a></li>
             <li>
                 @auth
                     <a href="{{ route('favoritos.index') }}" style="color: #dc3545; font-weight: bold;">❤️ Mis Favoritos</a>
@@ -647,7 +702,19 @@
             <form id="filtrosForm" method="GET" action="{{ route('busqueda.resultados') }}">
                 <input type="hidden" name="q" value="{{ request('q') }}">
                 
-                <!-- Filtro de Categorías (MÚLTIPLE SELECCIÓN) -->
+                <!-- Filtro de Descuentos -->
+                <div class="filtro-grupo">
+                    <div class="filtro-titulo">Descuentos</div>
+                    <div class="filtro-opcion">
+                        <input type="checkbox" name="en_descuento" value="1" 
+                               id="en_descuento"
+                               {{ request('en_descuento') == '1' ? 'checked' : '' }}
+                               onchange="document.getElementById('filtrosForm').submit()">
+                        <label for="en_descuento">🔥 Solo productos en descuento</label>
+                    </div>
+                </div>
+                
+                <!-- Filtro de Categorías -->
                 <div class="filtro-grupo">
                     <div class="filtro-titulo">Categorías</div>
                     @foreach($categorias as $categoria)
@@ -661,7 +728,7 @@
                     @endforeach
                 </div>
 
-                <!-- Filtro de Marcas (MÚLTIPLE SELECCIÓN) -->
+                <!-- Filtro de Marcas -->
                 <div class="filtro-grupo">
                     <div class="filtro-titulo">Marcas</div>
                     @foreach($marcas as $marca)
@@ -675,7 +742,7 @@
                     @endforeach
                 </div>
 
-                <!-- Filtro de Etiquetas (MÚLTIPLE SELECCIÓN) -->
+                <!-- Filtro de Etiquetas -->
                 <div class="filtro-grupo">
                     <div class="filtro-titulo">Etiquetas</div>
                     @foreach($etiquetas as $etiqueta)
@@ -730,6 +797,9 @@
                     @if(request('q'))
                         para "<strong>{{ request('q') }}</strong>"
                     @endif
+                    @if(request('en_descuento') == '1')
+                        <span style="color: #dc3545; font-weight: bold;">🔥 en descuento</span>
+                    @endif
                 </div>
                 
                 <div class="ordenamiento">
@@ -738,6 +808,7 @@
                         <input type="hidden" name="precio_min" value="{{ request('precio_min') }}">
                         <input type="hidden" name="precio_max" value="{{ request('precio_max') }}">
                         <input type="hidden" name="con_stock" value="{{ request('con_stock') }}">
+                        <input type="hidden" name="en_descuento" value="{{ request('en_descuento') }}">
                         
                         <!-- Pasar todas las categorías seleccionadas -->
                         @if(is_array(request('categorias')))
@@ -765,6 +836,7 @@
                             <option value="precio_asc" {{ request('orden') == 'precio_asc' ? 'selected' : '' }}>Precio: menor a mayor</option>
                             <option value="precio_desc" {{ request('orden') == 'precio_desc' ? 'selected' : '' }}>Precio: mayor a menor</option>
                             <option value="recientes" {{ request('orden') == 'recientes' ? 'selected' : '' }}>Más recientes</option>
+                            <option value="descuento_mayor" {{ request('orden') == 'descuento_mayor' ? 'selected' : '' }}>Mayor descuento</option>
                         </select>
                     </form>
                 </div>
@@ -775,10 +847,10 @@
                 <div class="productos-grid">
                     @foreach($productos as $producto)
                         @php
-                            $estaBajoStock = $producto->estaBajoEnStock();
+                            $estaBajoStock = $producto->iStock > 0 && $producto->iStock <= 10;
                             $esFavorito = $producto->esFavorito();
-                            $tieneDescuento = $producto->tieneDescuento();
-                            $porcentajeDescuento = $producto->porcentajeDescuento();
+                            $tieneDescuento = $producto->tieneDescuentoActivo();
+                            $porcentajeDescuento = $tieneDescuento ? round((($producto->dPrecio_venta - $producto->dPrecio_descuento) / $producto->dPrecio_venta) * 100) : 0;
                         @endphp
                         
                         <div class="producto-card" onclick="window.location.href='{{ route('productos.show.public', $producto->id_producto) }}'">
@@ -786,15 +858,13 @@
                                 <!-- BOTÓN DEL CORAZÓN -->
                                 <button class="corazon-favorito {{ $esFavorito ? 'activo' : 'inactivo' }}" 
                                         data-producto="{{ $producto->id_producto }}"
-                                        data-es-favorito="{{ $esFavorito ? 'true' : 'false' }}"
                                         onclick="event.stopPropagation(); toggleFavorito(this, {{ $producto->id_producto }})"
                                         title="{{ $esFavorito ? 'Quitar de favoritos' : 'Agregar a favoritos' }}">
-                                    <!-- El contenido se maneja con CSS -->
                                 </button>
 
                                 <!-- Badge de descuento -->
                                 @if($tieneDescuento)
-                                    <div class="badge-descuento">
+                                    <div class="badge-oferta">
                                         -{{ $porcentajeDescuento }}%
                                     </div>
                                 @elseif($estaBajoStock)
@@ -812,41 +882,54 @@
                                 @endif
                             </div>
                             
-                            <div style="padding: 15px;">
+                            <div class="producto-info">
                                 <h3>{{ $producto->vNombre }}</h3>
                                 
                                 <!-- Precio con descuento -->
                                 <div class="producto-precio">
                                     @if($tieneDescuento)
-                                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
-                                            <span style="text-decoration: line-through; color: #6c757d; font-size: 14px;">
-                                                ${{ number_format($producto->dPrecio_compra, 2) }}
+                                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap;">
+                                            <span class="precio-original">
+                                                ${{ number_format($producto->dPrecio_venta, 2) }}
+                                            </span>
+                                            <span style="color: #28a745; font-size: 18px;">
+                                                ${{ number_format($producto->dPrecio_descuento, 2) }}
                                             </span>
                                         </div>
+                                    @else
+                                        ${{ number_format($producto->dPrecio_venta, 2) }}
                                     @endif
-                                    ${{ number_format($producto->dPrecio_venta, 2) }}
+                                </div>
+                                
+                                <!-- SKU -->
+                                <div style="font-size: 11px; color: #999; margin-bottom: 5px;">
+                                    SKU: {{ $producto->vCodigo_barras }}
                                 </div>
                                 
                                 <!-- Stock -->
-                                <p style="color: {{ $producto->iStock > 10 ? '#00a650' : ($producto->iStock > 0 ? '#ff6b00' : '#dc3545') }}; font-size: 14px;">
+                                <div class="stock-info" style="color: {{ $producto->iStock > 10 ? '#00a650' : ($producto->iStock > 0 ? '#ff6b00' : '#dc3545') }};">
                                     @if($producto->iStock > 10)
-                                        ✅ En stock
+                                        ✅ En stock ({{ $producto->iStock }} disponibles)
                                     @elseif($producto->iStock > 0)
                                         ⚠️ Solo {{ $producto->iStock }} unidades
                                     @else
                                         ❌ Sin stock
                                     @endif
+                                </div>
+                                
+                                <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
+                                    <strong>Categoría:</strong> {{ $producto->categoria->vNombre ?? 'N/A' }}<br>
+                                    <strong>Marca:</strong> {{ $producto->marca->vNombre ?? 'N/A' }}
                                 </p>
                                 
-                                <p><strong>Categoría:</strong> {{ $producto->categoria->vNombre ?? 'N/A' }}</p>
-                                <p><strong>Marca:</strong> {{ $producto->marca->vNombre ?? 'N/A' }}</p>
-                                
                                 @if ($producto->etiquetas->count() > 0)
-                                    <p style="margin-top: 8px;">
+                                    <div class="etiquetas-container">
                                         @foreach ($producto->etiquetas as $etiqueta)
-                                            <span class="badge" style="background: #007bff;">{{ $etiqueta->vNombre }}</span>
+                                            <span class="badge-etiqueta" style="background-color: {{ $etiqueta->color ?? '#007bff' }};">
+                                                {{ $etiqueta->vNombre }}
+                                            </span>
                                         @endforeach
-                                    </p>
+                                    </div>
                                 @endif
                                 
                                 <div class="ver-detalle">
@@ -857,7 +940,7 @@
                     @endforeach
                 </div>
 
-                <!-- PAGINACIÓN PERSONALIZADA - SOLO FLECHAS Y NÚMEROS -->
+                <!-- PAGINACIÓN PERSONALIZADA -->
                 <div class="paginacion">
                     @if ($productos->hasPages())
                         <ul class="pagination">
@@ -980,11 +1063,6 @@
                         localStorage.setItem('last_favorito_action', 'added');
                         localStorage.setItem('last_favorito_id', productoId);
                         localStorage.setItem('last_favorito_time', Date.now());
-                        
-                        button.style.background = 'rgba(52, 131, 250, 0.2)';
-                        setTimeout(() => {
-                            button.style.background = '';
-                        }, 500);
                     } else {
                         button.classList.remove('activo');
                         button.classList.add('inactivo');

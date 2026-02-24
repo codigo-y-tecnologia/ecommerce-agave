@@ -697,13 +697,13 @@
                         </div>
                     </div>
                     
-                    <div class="col-md-6">
+                    <div class="col-md-6" id="etiquetas-container">
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Etiquetas (Opcional)</label>
                             <div class="row">
                                 @if(isset($etiquetas) && $etiquetas->count() > 0)
                                     @foreach ($etiquetas as $etiqueta)
-                                        <div class="col-md-6 col-6 mb-2">
+                                        <div class="col-md-6 col-6 mb-2 etiqueta-item" data-etiqueta-id="{{ $etiqueta->id_etiqueta }}">
                                             <div class="form-check">
                                                 <input type="checkbox" 
                                                        name="etiquetas[]" 
@@ -720,7 +720,7 @@
                                         </div>
                                     @endforeach
                                 @else
-                                    <div class="col-12">
+                                    <div class="col-12" id="no-etiquetas-msg">
                                         <div class="alert alert-info py-2">
                                             <i class="fas fa-info-circle me-1"></i>
                                             No hay etiquetas disponibles. 
@@ -799,9 +799,9 @@
                 </div>
                 
                 @if(isset($atributos) && $atributos->count() > 0)
-                    <div class="row">
+                    <div class="row" id="atributos-container">
                         @foreach($atributos as $atributo)
-                        <div class="col-md-6 mb-4">
+                        <div class="col-md-6 mb-4 atributo-item" data-atributo-id="{{ $atributo->id_atributo }}">
                             <div class="card border h-100">
                                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
                                     <div class="form-check">
@@ -887,7 +887,7 @@
                     </div>
                     
                 @else
-                    <div class="text-center py-5">
+                    <div class="text-center py-5" id="no-atributos-msg">
                         <i class="fas fa-tags fa-4x text-muted mb-3"></i>
                         <h4 class="text-muted">No hay atributos disponibles</h4>
                         <p class="text-muted">Crea atributos en la pestaña "Atributos" del panel de herramientas</p>
@@ -1113,7 +1113,7 @@
                                 <button type="button" class="btn btn-secondary" onclick="limpiarFormularioCategoria()">
                                     <i class="fas fa-undo me-1"></i> Limpiar
                                 </button>
-                                <button type="submit" class="btn btn-primary">
+                                <button type="submit" class="btn btn-primary" id="btnCrearCategoria">
                                     <i class="fas fa-save me-1"></i> Crear Categoría
                                 </button>
                             </div>
@@ -1127,26 +1127,29 @@
                         <h5><i class="fas fa-industry me-2"></i>Crear Nueva Marca</h5>
                         <p class="text-muted small mb-3">Las marcas identifican al fabricante o productor del artículo.</p>
                         
-                        <div class="mb-3">
-                            <label for="vNombre_marca" class="form-label fw-bold">Nombre de la Marca *</label>
-                            <input type="text" class="form-control" id="vNombre_marca" 
-                                   placeholder="Ej: José Cuervo, Patrón, Don Julio">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="tDescripcion_marca" class="form-label fw-bold">Descripción (Opcional)</label>
-                            <textarea class="form-control" id="tDescripcion_marca" rows="3" 
-                                      placeholder="Describe la marca..."></textarea>
-                        </div>
-                        
-                        <div class="d-flex justify-content-between">
-                            <button type="button" class="btn btn-secondary" onclick="limpiarFormularioMarca()">
-                                <i class="fas fa-undo me-1"></i> Limpiar
-                            </button>
-                            <button type="button" class="btn btn-primary" onclick="crearMarca()">
-                                <i class="fas fa-save me-1"></i> Crear Marca
-                            </button>
-                        </div>
+                        <form id="marcaQuickForm">
+                            @csrf
+                            <div class="mb-3">
+                                <label for="vNombre_marca" class="form-label fw-bold">Nombre de la Marca *</label>
+                                <input type="text" class="form-control" id="vNombre_marca" name="vNombre" 
+                                       placeholder="Ej: José Cuervo, Patrón, Don Julio" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="tDescripcion_marca" class="form-label fw-bold">Descripción (Opcional)</label>
+                                <textarea class="form-control" id="tDescripcion_marca" name="tDescripcion" rows="3" 
+                                          placeholder="Describe la marca..."></textarea>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between">
+                                <button type="button" class="btn btn-secondary" onclick="limpiarFormularioMarca()">
+                                    <i class="fas fa-undo me-1"></i> Limpiar
+                                </button>
+                                <button type="submit" class="btn btn-primary" id="btnCrearMarca">
+                                    <i class="fas fa-save me-1"></i> Crear Marca
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
                 
@@ -1156,42 +1159,45 @@
                         <h5><i class="fas fa-tag me-2"></i>Crear Nueva Etiqueta</h5>
                         <p class="text-muted small mb-3">Las etiquetas son palabras clave que ayudan a clasificar productos.</p>
                         
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="vNombre_eti" class="form-label fw-bold">Nombre de la Etiqueta *</label>
-                                <input type="text" class="form-control" id="vNombre_eti" 
-                                       placeholder="Ej: Artesanal, Orgánico, Premium">
+                        <form id="etiquetaQuickForm">
+                            @csrf
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="vNombre_eti" class="form-label fw-bold">Nombre de la Etiqueta *</label>
+                                    <input type="text" class="form-control" id="vNombre_eti" name="vNombre" 
+                                           placeholder="Ej: Artesanal, Orgánico, Premium" required>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="color_eti" class="form-label fw-bold">Color</label>
+                                    <div class="input-group">
+                                        <input type="color" class="form-control form-control-color" 
+                                               id="color_eti" name="color" value="#007bff">
+                                        <input type="text" class="form-control" 
+                                               id="color_text_eti" value="#007bff" 
+                                               placeholder="#007bff" maxlength="7">
+                                    </div>
+                                    <small class="text-muted">Color opcional para identificar la etiqueta</small>
+                                </div>
                             </div>
                             
-                            <div class="col-md-6 mb-3">
-                                <label for="color_eti" class="form-label fw-bold">Color</label>
-                                <div class="input-group">
-                                    <input type="color" class="form-control form-control-color" 
-                                           id="color_eti" value="#007bff">
-                                    <input type="text" class="form-control" 
-                                           id="color_text_eti" value="#007bff" 
-                                           placeholder="#007bff" maxlength="7">
-                                </div>
-                                <small class="text-muted">Color opcional para identificar la etiqueta</small>
+                            <div class="mb-3">
+                                <label for="tDescripcion_eti" class="form-label fw-bold">Descripción (Opcional)</label>
+                                <textarea class="form-control" id="tDescripcion_eti" name="tDescripcion" rows="2" 
+                                          placeholder="Descripción de la etiqueta..."></textarea>
                             </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="tDescripcion_eti" class="form-label fw-bold">Descripción (Opcional)</label>
-                            <textarea class="form-control" id="tDescripcion_eti" rows="2" 
-                                      placeholder="Descripción de la etiqueta..."></textarea>
-                        </div>
-                        
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>Nota:</strong> Después de crear la etiqueta, estará disponible en la sección "Etiquetas" del formulario.
-                        </div>
-                        
-                        <div class="d-flex justify-content-end">
-                            <button type="button" class="btn btn-primary" onclick="crearEtiqueta()">
-                                <i class="fas fa-save me-1"></i> Crear Etiqueta
-                            </button>
-                        </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Nota:</strong> Después de crear la etiqueta, estará disponible en la sección "Etiquetas" del formulario.
+                            </div>
+                            
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary" id="btnCrearEtiqueta">
+                                    <i class="fas fa-save me-1"></i> Crear Etiqueta
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
                 
@@ -1201,39 +1207,42 @@
                         <h5><i class="fas fa-list-alt me-2"></i>Crear Nuevo Atributo</h5>
                         <p class="text-muted small mb-3">Los atributos son características que definen las variaciones de un producto (Tamaño, Color, Material, etc.).</p>
                         
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="vNombre_attr" class="form-label fw-bold">Nombre del Atributo *</label>
-                                <input type="text" class="form-control" id="vNombre_attr" 
-                                       placeholder="Ej: Tamaño, Color, Sabor, Edad"
-                                       oninput="quickGenerarSlug(this.value, 'vSlug_attr')">
-                                <small class="text-muted">Ejemplos: Tamaño, Color, Material, Sabor</small>
+                        <form id="atributoQuickForm">
+                            @csrf
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="vNombre_attr" class="form-label fw-bold">Nombre del Atributo *</label>
+                                    <input type="text" class="form-control" id="vNombre_attr" name="vNombre" 
+                                           placeholder="Ej: Tamaño, Color, Sabor, Edad"
+                                           oninput="quickGenerarSlug(this.value, 'vSlug_attr')" required>
+                                    <small class="text-muted">Ejemplos: Tamaño, Color, Material, Sabor</small>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="vSlug_attr" class="form-label fw-bold">Slug (URL amigable)</label>
+                                    <input type="text" class="form-control" id="vSlug_attr" name="vSlug" 
+                                           placeholder="tamano, color, material">
+                                    <small class="text-muted">Se genera automáticamente desde el nombre</small>
+                                </div>
                             </div>
                             
-                            <div class="col-md-6 mb-3">
-                                <label for="vSlug_attr" class="form-label fw-bold">Slug (URL amigable)</label>
-                                <input type="text" class="form-control" id="vSlug_attr" 
-                                       placeholder="tamano, color, material">
-                                <small class="text-muted">Se genera automáticamente desde el nombre</small>
+                            <div class="mb-3">
+                                <label for="tDescripcion_attr" class="form-label fw-bold">Descripción (Opcional)</label>
+                                <textarea class="form-control" id="tDescripcion_attr" name="tDescripcion" rows="2" 
+                                          placeholder="Describe el atributo..."></textarea>
                             </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="tDescripcion_attr" class="form-label fw-bold">Descripción (Opcional)</label>
-                            <textarea class="form-control" id="tDescripcion_attr" rows="2" 
-                                      placeholder="Describe el atributo..."></textarea>
-                        </div>
-                        
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>Nota:</strong> Después de crear el atributo, podrás agregar valores específicos en la sección <strong>"Seleccionar Atributos para Variaciones"</strong> usando el botón "Agregar Valor" junto a cada atributo.
-                        </div>
-                        
-                        <div class="d-flex justify-content-end">
-                            <button type="button" class="btn btn-primary" onclick="crearAtributo()">
-                                <i class="fas fa-save me-1"></i> Crear Atributo
-                            </button>
-                        </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Nota:</strong> Después de crear el atributo, podrás agregar valores específicos en la sección <strong>"Seleccionar Atributos para Variaciones"</strong> usando el botón "Agregar Valor" junto a cada atributo.
+                            </div>
+                            
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary" id="btnCrearAtributo">
+                                    <i class="fas fa-save me-1"></i> Crear Atributo
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
 
@@ -1241,70 +1250,8 @@
                 <div class="tab-pane fade" id="impuestos-content" role="tabpanel">
                     <div class="quick-form" id="quick-impuesto-form">
                         <h5><i class="fas fa-file-invoice-dollar me-2"></i>Crear Nuevo Impuesto</h5>
-                        <p class="text-muted small mb-3">Los impuestos se aplicarán automáticamente al precio de venta del producto.</p>
                         
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="vNombre_impuesto" class="form-label fw-bold">Nombre del Impuesto *</label>
-                                <input type="text" class="form-control" id="vNombre_impuesto" 
-                                       placeholder="Ej: IVA, IEPS, ISR">
-                                <small class="text-muted">Nombre identificador del impuesto</small>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="eTipo_impuesto" class="form-label fw-bold">Tipo de Impuesto *</label>
-                                <select class="form-select" id="eTipo_impuesto">
-                                    <option value="">Seleccionar tipo</option>
-                                    <option value="IVA">IVA (Impuesto al Valor Agregado)</option>
-                                    <option value="IEPS">IEPS (Impuesto Especial)</option>
-                                    <option value="ISR">ISR (Impuesto Sobre la Renta)</option>
-                                    <option value="Otro">Otro</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="dPorcentaje_impuesto" class="form-label fw-bold">Porcentaje *</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control" id="dPorcentaje_impuesto" 
-                                           placeholder="16.00"
-                                           oninput="validarPrecio(this)">
-                                    <span class="input-group-text">%</span>
-                                </div>
-                                <small class="text-muted">Ej: 16 para IVA 16%</small>
-                            </div>
-                            
-                            <div class="col-md-8 mb-3">
-                                <label for="tDescripcion_impuesto" class="form-label fw-bold">Descripción (Opcional)</label>
-                                <input type="text" class="form-control" id="tDescripcion_impuesto" 
-                                       placeholder="Descripción del impuesto">
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input type="checkbox" class="form-check-input" id="bActivo_impuesto" checked>
-                                <label class="form-check-label" for="bActivo_impuesto">
-                                    Impuesto activo
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>Nota:</strong> Después de crear el impuesto, estará disponible en el selector de impuestos del producto y se calculará automáticamente el precio final.
-                        </div>
-                        
-                        <div class="d-flex justify-content-end">
-                            <button type="button" class="btn btn-primary" onclick="crearImpuesto()">
-                                <i class="fas fa-save me-1"></i> Crear Impuesto
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+                
     </div>
 </div>
 
@@ -1560,6 +1507,9 @@ let categoriaImagenFile = null;
 // Inicializar modal cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
     valorModal = new bootstrap.Modal(document.getElementById('crearValorModal'));
+    
+    // Inicializar los formularios rápidos
+    initQuickForms();
 });
 
 // ============ FUNCIÓN DE CÁLCULO DE IMPUESTO Y PRECIO FINAL ============
@@ -2189,9 +2139,9 @@ function guardarValorAtributo() {
             
             valorModal.hide();
             
-            setTimeout(() => {
-                location.reload();
-            }, 2000);
+            // Agregar el nuevo valor al listado del atributo
+            agregarValorAlAtributo(data.valor);
+            
         } else {
             Swal.fire({
                 icon: 'error',
@@ -3093,346 +3043,694 @@ function quickActualizarSlug(nombre, slugId) {
     quickGenerarSlug(nombre, slugId);
 }
 
-// ============ FUNCIONES PARA CREACIÓN RÁPIDA ============
+// ============ FUNCIONES PARA AGREGAR ELEMENTOS DINÁMICAMENTE ============
 
-function crearMarca() {
-    const nombre = document.getElementById('vNombre_marca').value.trim();
-    const descripcion = document.getElementById('tDescripcion_marca').value.trim();
+function agregarCategoriaAlSelect(categoria) {
+    const select = document.getElementById('id_categoria');
     
-    if (!nombre) {
-        Swal.fire('Error', 'El nombre de la marca es obligatorio', 'error');
-        return;
+    // Crear la opción
+    const option = document.createElement('option');
+    option.value = categoria.id_categoria;
+    
+    // Determinar el prefijo según el nivel
+    let prefijo = '';
+    for (let i = 0; i < (categoria.nivel || 0); i++) {
+        prefijo += '&nbsp;&nbsp;&nbsp;';
     }
     
-    Swal.fire({
-        title: 'Creando marca...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
+    // Usar innerHTML para que se interpreten los &nbsp;
+    option.innerHTML = prefijo + (categoria.icono || '↳ ') + categoria.vNombre;
     
-    fetch('{{ route("marcas.quick-create") }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            vNombre: nombre,
-            tDescripcion: descripcion
-        })
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => { throw err; });
-        }
-        return response.json();
-    })
-    .then(data => {
-        Swal.close();
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: data.message,
-                timer: 2000,
-                showConfirmButton: false
-            });
-            
-            limpiarFormularioMarca();
-            
-            const select = document.getElementById('id_marca');
-            const option = document.createElement('option');
-            option.value = data.marca.id_marca;
-            option.text = nombre;
-            select.appendChild(option);
-            select.value = data.marca.id_marca;
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: data.message || 'Error al crear la marca'
-            });
-        }
-    })
-    .catch(error => {
-        Swal.close();
-        let message = 'Error en la solicitud';
-        if (error.errors) {
-            message = Object.values(error.errors).flat().join(', ');
-        } else if (error.message) {
-            message = error.message;
-        }
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: message
-        });
-    });
+    select.appendChild(option);
+    select.value = categoria.id_categoria;
 }
 
-function crearEtiqueta() {
-    const nombre = document.getElementById('vNombre_eti').value.trim();
-    const color = document.getElementById('color_eti').value;
-    const descripcion = document.getElementById('tDescripcion_eti').value.trim();
+function agregarEtiquetaAlListado(etiqueta) {
+    const container = document.getElementById('etiquetas-container').querySelector('.row');
     
-    if (!nombre) {
-        Swal.fire('Error', 'El nombre de la etiqueta es obligatorio', 'error');
-        return;
+    // Eliminar el mensaje de "No hay etiquetas" si existe
+    const noEtiquetasMsg = document.getElementById('no-etiquetas-msg');
+    if (noEtiquetasMsg) {
+        noEtiquetasMsg.remove();
     }
     
-    Swal.fire({
-        title: 'Creando etiqueta...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
+    // Crear el nuevo elemento de etiqueta
+    const col = document.createElement('div');
+    col.className = 'col-md-6 col-6 mb-2 etiqueta-item';
+    col.setAttribute('data-etiqueta-id', etiqueta.id_etiqueta);
     
-    fetch('{{ route("etiquetas.quick-create") }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            vNombre: nombre,
-            color: color,
-            tDescripcion: descripcion
-        })
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => { throw err; });
-        }
-        return response.json();
-    })
-    .then(data => {
-        Swal.close();
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: data.message,
-                timer: 2000,
-                showConfirmButton: false
-            });
-            
-            limpiarFormularioEtiqueta();
-            
-            setTimeout(() => {
-                location.reload();
-            }, 2000);
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: data.message || 'Error al crear la etiqueta'
-            });
-        }
-    })
-    .catch(error => {
-        Swal.close();
-        let message = 'Error en la solicitud';
-        if (error.errors) {
-            message = Object.values(error.errors).flat().join(', ');
-        } else if (error.message) {
-            message = error.message;
-        }
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: message
-        });
-    });
+    const divCheck = document.createElement('div');
+    divCheck.className = 'form-check';
+    
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.name = 'etiquetas[]';
+    input.value = etiqueta.id_etiqueta;
+    input.className = 'form-check-input';
+    input.id = 'etiqueta_' + etiqueta.id_etiqueta;
+    input.checked = true; // Seleccionar automáticamente
+    
+    const label = document.createElement('label');
+    label.className = 'form-check-label';
+    label.htmlFor = 'etiqueta_' + etiqueta.id_etiqueta;
+    
+    const span = document.createElement('span');
+    span.className = 'etiqueta-badge';
+    span.style.backgroundColor = etiqueta.color || '#007bff';
+    span.style.color = 'white';
+    span.textContent = etiqueta.vNombre;
+    
+    label.appendChild(span);
+    divCheck.appendChild(input);
+    divCheck.appendChild(label);
+    col.appendChild(divCheck);
+    container.appendChild(col);
 }
 
-function crearAtributo() {
-    const nombre = document.getElementById('vNombre_attr').value.trim();
-    const slug = document.getElementById('vSlug_attr').value.trim();
-    const descripcion = document.getElementById('tDescripcion_attr').value.trim();
+function agregarAtributoAlListado(atributo) {
+    const container = document.getElementById('atributos-container');
+    const noAtributosMsg = document.getElementById('no-atributos-msg');
     
-    if (!nombre) {
-        Swal.fire('Error', 'El nombre del atributo es obligatorio', 'error');
-        return;
+    // Eliminar el mensaje de "No hay atributos" si existe
+    if (noAtributosMsg) {
+        noAtributosMsg.remove();
     }
     
-    Swal.fire({
-        title: 'Creando atributo...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
+    // Crear el nuevo atributo
+    const col = document.createElement('div');
+    col.className = 'col-md-6 mb-4 atributo-item';
+    col.setAttribute('data-atributo-id', atributo.id_atributo);
     
-    fetch('{{ route("atributos.quick-create") }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            vNombre: nombre,
-            vSlug: slug,
-            tDescripcion: descripcion
-        })
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => { throw err; });
-        }
-        return response.json();
-    })
-    .then(data => {
-        Swal.close();
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: data.message,
-                timer: 2000,
-                showConfirmButton: false
-            });
+    const card = document.createElement('div');
+    card.className = 'card border h-100';
+    
+    const cardHeader = document.createElement('div');
+    cardHeader.className = 'card-header bg-light d-flex justify-content-between align-items-center';
+    cardHeader.innerHTML = `
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input atributo-activo-checkbox" 
+                   id="atributo-activo-${atributo.id_atributo}"
+                   data-atributo-id="${atributo.id_atributo}"
+                   data-atributo-nombre="${atributo.vNombre}">
+            <label class="form-check-label fw-bold" for="atributo-activo-${atributo.id_atributo}" style="color: #495057;">
+                ${atributo.vNombre}
+                <span class="badge bg-secondary ms-2">0 valores</span>
+            </label>
+        </div>
+        <div>
+            <span class="badge bg-warning text-dark atributo-estado-badge" id="estado-${atributo.id_atributo}" style="display: none;">
+                <i class="fas fa-check-circle me-1"></i>Activo
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="mostrarFormularioValor(${atributo.id_atributo}, '${atributo.vNombre}')">
+                <i class="fas fa-plus-circle me-1"></i>Agregar Valor
+            </button>
+        </div>
+    `;
+    
+    const cardBody = document.createElement('div');
+    cardBody.className = 'card-body atributo-valores-container';
+    cardBody.id = `valores-container-${atributo.id_atributo}`;
+    cardBody.style.display = 'none';
+    cardBody.style.backgroundColor = 'white';
+    
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-warning mb-0';
+    alertDiv.innerHTML = `
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        Este atributo no tiene valores. 
+        <button type="button" class="btn btn-link p-0 ms-1" onclick="mostrarFormularioValor(${atributo.id_atributo}, '${atributo.vNombre}')">
+            Crear primer valor
+        </button>
+    `;
+    
+    cardBody.appendChild(alertDiv);
+    card.appendChild(cardHeader);
+    card.appendChild(cardBody);
+    col.appendChild(card);
+    container.appendChild(col);
+    
+    // Inicializar el evento del checkbox
+    const checkbox = document.getElementById(`atributo-activo-${atributo.id_atributo}`);
+    if (checkbox) {
+        checkbox.addEventListener('change', function() {
+            const atributoId = this.dataset.atributoId;
+            const atributoNombre = this.dataset.atributoNombre;
+            const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+            const estadoBadge = document.getElementById(`estado-${atributoId}`);
             
-            document.getElementById('vNombre_attr').value = '';
-            document.getElementById('vSlug_attr').value = '';
-            document.getElementById('tDescripcion_attr').value = '';
+            if (this.checked) {
+                valoresContainer.style.display = 'block';
+                estadoBadge.style.display = 'inline-block';
+                
+                if (!atributosActivos[atributoId]) {
+                    atributosActivos[atributoId] = {
+                        id: atributoId,
+                        nombre: atributoNombre,
+                        valores: {}
+                    };
+                }
+            } else {
+                valoresContainer.style.display = 'none';
+                estadoBadge.style.display = 'none';
+                
+                const checkboxes = valoresContainer.querySelectorAll('.valor-checkbox');
+                checkboxes.forEach(cb => {
+                    cb.checked = false;
+                });
+                
+                delete atributosActivos[atributoId];
+                
+                const seleccionarTodos = document.getElementById(`seleccionar-todos-${atributoId}`);
+                if (seleccionarTodos) {
+                    seleccionarTodos.checked = false;
+                }
+            }
             
-            setTimeout(() => {
-                location.reload();
-            }, 2000);
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: data.message || 'Error al crear el atributo'
-            });
-        }
-    })
-    .catch(error => {
-        Swal.close();
-        let message = 'Error en la solicitud';
-        if (error.errors) {
-            message = Object.values(error.errors).flat().join(', ');
-        } else if (error.message) {
-            message = error.message;
-        }
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: message
+            actualizarPestanasValores();
+            actualizarResumenAtributos();
         });
-    });
+    }
 }
 
-function crearImpuesto() {
-    const nombre = document.getElementById('vNombre_impuesto').value.trim();
-    const tipo = document.getElementById('eTipo_impuesto').value;
-    const porcentaje = document.getElementById('dPorcentaje_impuesto').value.trim();
-    const descripcion = document.getElementById('tDescripcion_impuesto').value.trim();
-    const activo = document.getElementById('bActivo_impuesto').checked ? 1 : 0;
+function agregarValorAlAtributo(valor) {
+    const container = document.getElementById(`valores-container-${valor.id_atributo}`);
+    if (!container) return;
     
-    if (!nombre) {
-        Swal.fire('Error', 'El nombre del impuesto es obligatorio', 'error');
-        return;
+    // Eliminar el mensaje de "no tiene valores" si existe
+    const alerta = container.querySelector('.alert-warning');
+    if (alerta) {
+        alerta.remove();
     }
     
-    if (!tipo) {
-        Swal.fire('Error', 'Debes seleccionar un tipo de impuesto', 'error');
-        return;
-    }
-    
-    if (!porcentaje) {
-        Swal.fire('Error', 'El porcentaje es obligatorio', 'error');
-        return;
-    }
-    
-    Swal.fire({
-        title: 'Creando impuesto...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
-    
-    fetch('{{ route("impuestos.quick-create") }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            vNombre: nombre,
-            eTipo: tipo,
-            dPorcentaje: porcentaje,
-            tDescripcion: descripcion,
-            bActivo: activo
-        })
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => { throw err; });
+    // Verificar si ya existe el selector "Seleccionar todos"
+    let selectAllDiv = container.querySelector('.mb-3');
+    if (!selectAllDiv) {
+        // Crear el selector "Seleccionar todos"
+        selectAllDiv = document.createElement('div');
+        selectAllDiv.className = 'mb-3';
+        selectAllDiv.innerHTML = `
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input seleccionar-todos-checkbox" id="seleccionar-todos-${valor.id_atributo}" data-atributo-id="${valor.id_atributo}">
+                <label class="form-check-label" for="seleccionar-todos-${valor.id_atributo}">
+                    <strong>Seleccionar todos</strong>
+                </label>
+            </div>
+        `;
+        container.appendChild(selectAllDiv);
+        
+        const hr = document.createElement('hr');
+        hr.className = 'my-2';
+        container.appendChild(hr);
+        
+        // Inicializar el evento del checkbox "Seleccionar todos"
+        const selectAllCheckbox = document.getElementById(`seleccionar-todos-${valor.id_atributo}`);
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                const atributoId = this.dataset.atributoId;
+                const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+                const valorCheckboxes = valoresContainer.querySelectorAll('.valor-checkbox');
+                
+                valorCheckboxes.forEach(cb => {
+                    cb.checked = this.checked;
+                    
+                    const atributoNombre = cb.dataset.atributoNombre;
+                    const valorId = cb.value;
+                    const valorNombre = cb.dataset.valorNombre;
+                    
+                    if (this.checked) {
+                        if (!atributosActivos[atributoId]) {
+                            atributosActivos[atributoId] = {
+                                id: atributoId,
+                                nombre: atributoNombre,
+                                valores: {}
+                            };
+                        }
+                        atributosActivos[atributoId].valores[valorId] = {
+                            id: valorId,
+                            nombre: valorNombre,
+                            atributoId: atributoId,
+                            atributoNombre: atributoNombre
+                        };
+                    } else {
+                        if (atributosActivos[atributoId]) {
+                            delete atributosActivos[atributoId].valores[valorId];
+                            if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
+                                delete atributosActivos[atributoId];
+                            }
+                        }
+                    }
+                });
+                
+                actualizarPestanasValores();
+                actualizarResumenAtributos();
+            });
         }
-        return response.json();
-    })
-    .then(data => {
-        Swal.close();
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: data.message,
-                timer: 2000,
-                showConfirmButton: false
-            });
-            
-            limpiarFormularioImpuesto();
-            
-            // Agregar el nuevo impuesto al select
-            const select = document.getElementById('id_impuesto');
-            const option = document.createElement('option');
-            option.value = data.impuesto.id_impuesto;
-            option.setAttribute('data-porcentaje', data.impuesto.dPorcentaje);
-            option.setAttribute('data-tipo', data.impuesto.eTipo);
-            option.text = data.impuesto.vNombre + ' (' + data.impuesto.eTipo + ' - ' + parseFloat(data.impuesto.dPorcentaje).toFixed(2) + '%)';
-            select.appendChild(option);
-            
-            // Seleccionar el nuevo impuesto
-            select.value = data.impuesto.id_impuesto;
-            
-            // Actualizar precio final
-            actualizarPrecioFinal();
-            
-            Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: 'Impuesto creado y seleccionado automáticamente',
-                timer: 1500,
-                showConfirmButton: false
-            });
+    }
+    
+    // Buscar o crear el contenedor row para los valores
+    let row = container.querySelector('.row:not(.mb-3)');
+    if (!row) {
+        row = document.createElement('div');
+        row.className = 'row';
+        container.appendChild(row);
+    }
+    
+    // Crear el nuevo valor
+    const col = document.createElement('div');
+    col.className = 'col-md-6 mb-2';
+    
+    const divCheck = document.createElement('div');
+    divCheck.className = 'form-check';
+    
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.name = `atributos[${valor.id_atributo}][]`;
+    input.value = valor.id_atributo_valor;
+    input.className = 'form-check-input valor-checkbox';
+    input.id = `valor-${valor.id_atributo_valor}`;
+    input.setAttribute('data-atributo-id', valor.id_atributo);
+    input.setAttribute('data-atributo-nombre', valor.atributo_nombre || '');
+    input.setAttribute('data-valor-nombre', valor.vValor);
+    
+    const label = document.createElement('label');
+    label.className = 'form-check-label';
+    label.htmlFor = `valor-${valor.id_atributo_valor}`;
+    label.textContent = valor.vValor;
+    
+    divCheck.appendChild(input);
+    divCheck.appendChild(label);
+    col.appendChild(divCheck);
+    row.appendChild(col);
+    
+    // Inicializar el evento del nuevo checkbox
+    input.addEventListener('change', function() {
+        const atributoId = this.dataset.atributoId;
+        const atributoNombre = this.dataset.atributoNombre;
+        const valorId = this.value;
+        const valorNombre = this.dataset.valorNombre;
+        
+        const atributoActivo = document.getElementById(`atributo-activo-${atributoId}`);
+        if (!atributoActivo.checked) {
+            atributoActivo.checked = true;
+            atributoActivo.dispatchEvent(new Event('change'));
+        }
+        
+        if (!atributosActivos[atributoId]) {
+            atributosActivos[atributoId] = {
+                id: atributoId,
+                nombre: atributoNombre,
+                valores: {}
+            };
+        }
+        
+        if (this.checked) {
+            atributosActivos[atributoId].valores[valorId] = {
+                id: valorId,
+                nombre: valorNombre,
+                atributoId: atributoId,
+                atributoNombre: atributoNombre
+            };
         } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: data.message || 'Error al crear el impuesto'
-            });
+            delete atributosActivos[atributoId].valores[valorId];
+            if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
+                delete atributosActivos[atributoId];
+            }
         }
-    })
-    .catch(error => {
-        Swal.close();
-        let message = 'Error en la solicitud';
-        if (error.errors) {
-            message = Object.values(error.errors).flat().join(', ');
-        } else if (error.message) {
-            message = error.message;
+        
+        const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+        const valorCheckboxes = valoresContainer.querySelectorAll('.valor-checkbox');
+        const seleccionarTodos = document.getElementById(`seleccionar-todos-${atributoId}`);
+        const seleccionados = valoresContainer.querySelectorAll('.valor-checkbox:checked');
+        
+        if (seleccionarTodos) {
+            if (seleccionados.length === valorCheckboxes.length) {
+                seleccionarTodos.checked = true;
+                seleccionarTodos.indeterminate = false;
+            } else if (seleccionados.length > 0) {
+                seleccionarTodos.checked = false;
+                seleccionarTodos.indeterminate = true;
+            } else {
+                seleccionarTodos.checked = false;
+                seleccionarTodos.indeterminate = false;
+            }
         }
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: message
-        });
+        
+        actualizarPestanasValores();
+        actualizarResumenAtributos();
     });
+    
+    // Actualizar el badge de conteo de valores
+    const badge = container.closest('.card').querySelector('.badge.bg-secondary');
+    if (badge) {
+        const valorCount = container.querySelectorAll('.valor-checkbox').length;
+        badge.textContent = valorCount + ' valores';
+    }
+}
+
+// ============ INICIALIZAR FORMULARIOS RÁPIDOS ============
+
+function initQuickForms() {
+    // Formulario de Categoría
+    const categoriaForm = document.getElementById('categoriaQuickForm');
+    if (categoriaForm) {
+        categoriaForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            if (categoriaImagenFile) {
+                formData.delete('vImagen');
+                formData.append('vImagen', categoriaImagenFile);
+            }
+            
+            Swal.fire({
+                title: 'Creando categoría...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            
+            fetch('{{ route("categorias.store") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                Swal.close();
+                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: data.message || 'Categoría creada exitosamente',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    // Agregar la nueva categoría al select principal
+                    agregarCategoriaAlSelect(data.categoria);
+                    
+                    // Limpiar el formulario
+                    limpiarFormularioCategoria();
+                } else {
+                    let errorMessage = data.message || 'Error al crear la categoría';
+                    if (data.errors) {
+                        errorMessage = Object.values(data.errors).flat().join('<br>');
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: errorMessage
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error de conexión al servidor'
+                });
+            });
+        });
+    }
+    
+    // Formulario de Marca
+    const marcaForm = document.getElementById('marcaQuickForm');
+    if (marcaForm) {
+        marcaForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            Swal.fire({
+                title: 'Creando marca...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            
+            fetch('{{ route("marcas.quick-create") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                Swal.close();
+                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: data.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    // Agregar la nueva marca al select
+                    const select = document.getElementById('id_marca');
+                    const option = document.createElement('option');
+                    option.value = data.marca.id_marca;
+                    option.textContent = data.marca.vNombre;
+                    select.appendChild(option);
+                    select.value = data.marca.id_marca;
+                    
+                    // Limpiar el formulario
+                    limpiarFormularioMarca();
+                } else {
+                    let errorMessage = data.message || 'Error al crear la marca';
+                    if (data.errors) {
+                        errorMessage = Object.values(data.errors).flat().join('<br>');
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: errorMessage
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error de conexión al servidor'
+                });
+            });
+        });
+    }
+    
+    // Formulario de Etiqueta
+    const etiquetaForm = document.getElementById('etiquetaQuickForm');
+    if (etiquetaForm) {
+        etiquetaForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            Swal.fire({
+                title: 'Creando etiqueta...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            
+            fetch('{{ route("etiquetas.quick-create") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                Swal.close();
+                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: data.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    // Agregar la nueva etiqueta al listado
+                    agregarEtiquetaAlListado(data.etiqueta);
+                    
+                    // Limpiar el formulario
+                    limpiarFormularioEtiqueta();
+                } else {
+                    let errorMessage = data.message || 'Error al crear la etiqueta';
+                    if (data.errors) {
+                        errorMessage = Object.values(data.errors).flat().join('<br>');
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: errorMessage
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error de conexión al servidor'
+                });
+            });
+        });
+    }
+    
+    // Formulario de Atributo
+    const atributoForm = document.getElementById('atributoQuickForm');
+    if (atributoForm) {
+        atributoForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            Swal.fire({
+                title: 'Creando atributo...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            
+            fetch('{{ route("atributos.quick-create") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                Swal.close();
+                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: data.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    // Agregar el nuevo atributo al listado sin recargar la página
+                    agregarAtributoAlListado(data.atributo);
+                    
+                    // Limpiar el formulario
+                    document.getElementById('vNombre_attr').value = '';
+                    document.getElementById('vSlug_attr').value = '';
+                    document.getElementById('tDescripcion_attr').value = '';
+                } else {
+                    let errorMessage = data.message || 'Error al crear el atributo';
+                    if (data.errors) {
+                        errorMessage = Object.values(data.errors).flat().join('<br>');
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: errorMessage
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error de conexión al servidor'
+                });
+            });
+        });
+    }
+    
+    // Formulario de Impuesto
+    const impuestoForm = document.getElementById('impuestoQuickForm');
+    if (impuestoForm) {
+        impuestoForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            Swal.fire({
+                title: 'Creando impuesto...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            
+            fetch('{{ route("impuestos.quick-create") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                Swal.close();
+                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: data.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    // Agregar el nuevo impuesto al select
+                    const select = document.getElementById('id_impuesto');
+                    const option = document.createElement('option');
+                    option.value = data.impuesto.id_impuesto;
+                    option.setAttribute('data-porcentaje', data.impuesto.dPorcentaje);
+                    option.setAttribute('data-tipo', data.impuesto.eTipo);
+                    option.textContent = data.impuesto.vNombre + ' (' + data.impuesto.eTipo + ' - ' + parseFloat(data.impuesto.dPorcentaje).toFixed(2) + '%)';
+                    select.appendChild(option);
+                    
+                    // Seleccionar el nuevo impuesto
+                    select.value = data.impuesto.id_impuesto;
+                    
+                    // Actualizar precio final
+                    actualizarPrecioFinal();
+                    
+                    // Limpiar el formulario
+                    limpiarFormularioImpuesto();
+                } else {
+                    let errorMessage = data.message || 'Error al crear el impuesto';
+                    if (data.errors) {
+                        errorMessage = Object.values(data.errors).flat().join('<br>');
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: errorMessage
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error de conexión al servidor'
+                });
+            });
+        });
+    }
 }
 
 function activarTabAtributos() {
@@ -3485,95 +3783,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (document.getElementById('bTiene_descuento')?.checked) {
                 validarPrecioDescuentoProducto();
             }
-        });
-    }
-
-    const categoriaForm = document.getElementById('categoriaQuickForm');
-    
-    if (categoriaForm) {
-        categoriaForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Crear FormData y agregar la imagen si existe
-            const formData = new FormData(this);
-            
-            // Si hay una imagen seleccionada previamente, asegurarse de que se incluya
-            if (categoriaImagenFile) {
-                // Reemplazar el archivo en el FormData si ya existe
-                if (formData.has('vImagen')) {
-                    formData.delete('vImagen');
-                }
-                formData.append('vImagen', categoriaImagenFile);
-            }
-            
-            Swal.fire({
-                title: 'Creando categoría...',
-                text: 'Por favor espera',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
-            
-            fetch('{{ route("categorias.store") }}', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => { throw err; });
-                }
-                return response.json();
-            })
-            .then(data => {
-                Swal.close();
-                
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: data.message || 'Categoría creada exitosamente',
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                    
-                    limpiarFormularioCategoria();
-                    
-                    setTimeout(() => {
-                        location.reload();
-                    }, 2000);
-                } else {
-                    let errorMessage = data.message || 'Error al crear la categoría';
-                    
-                    if (data.errors) {
-                        errorMessage = Object.values(data.errors).flat().join('<br>');
-                    }
-                    
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        html: errorMessage
-                    });
-                }
-            })
-            .catch(error => {
-                Swal.close();
-                
-                let errorMessage = 'Error de conexión';
-                
-                if (error.errors) {
-                    errorMessage = Object.values(error.errors).flat().join('<br>');
-                } else if (error.message) {
-                    errorMessage = error.message;
-                }
-                
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    html: errorMessage
-                });
-            });
         });
     }
     

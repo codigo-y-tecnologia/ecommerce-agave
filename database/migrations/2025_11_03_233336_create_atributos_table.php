@@ -8,8 +8,7 @@ return new class extends Migration
 {
     public function up()
     {
-        // Eliminar la tabla existente si tiene problemas
-        Schema::dropIfExists('tbl_producto_atributos');
+        
         
         // Crear la tabla con la estructura correcta
         Schema::create('tbl_producto_atributos', function (Blueprint $table) {

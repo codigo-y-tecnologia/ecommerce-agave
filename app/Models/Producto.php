@@ -299,12 +299,12 @@ class Producto extends Model
     }
 
     /**
-     * Relación con impuestos (muchos a muchos)
+     * Relación con impuestos (muchos a muchos) - CORREGIDA
      */
     public function impuestos()
     {
-        return $this->belongsToMany(Impuesto::class, 'tbl_producto_impuestos', 'id_producto', 'id_impuesto')
-                    ->withTimestamps();
+        return $this->belongsToMany(Impuesto::class, 'tbl_producto_impuestos', 'id_producto', 'id_impuesto');
+        // El método withTimestamps() ha sido eliminado para evitar que Laravel busque las columnas created_at y updated_at
     }
 
     /**

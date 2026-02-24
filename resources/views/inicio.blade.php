@@ -96,6 +96,47 @@
             font-size: clamp(0.85rem, 2.5vw, 1rem);
         }
 
+        /* Barra de búsqueda única */
+        .barra-busqueda-principal {
+            text-align: center;
+            margin: 15px 0;
+            padding: 0 15px;
+        }
+
+        .barra-busqueda-principal form {
+            display: flex;
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .barra-busqueda-principal input[type="text"] {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #007bff;
+            border-radius: 25px 0 0 25px;
+            font-size: 16px;
+            outline: none;
+            min-width: 0;
+        }
+
+        .barra-busqueda-principal button {
+            padding: 12px 25px;
+            background: #007bff;
+            color: white;
+            border: 2px solid #007bff;
+            border-radius: 0 25px 25px 0;
+            font-size: 16px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s ease;
+        }
+
+        .barra-busqueda-principal button:hover {
+            background: #0056b3;
+            border-color: #0056b3;
+        }
+
         .productos-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -125,7 +166,7 @@
             margin-bottom: 15px;
         }
 
-        /* Estilos de tarjetas de producto */
+        /* Estilos de tarjetas de producto - IGUAL QUE EN resultados.blade.php */
         .producto-card {
             background: #fff;
             border-radius: 12px;
@@ -213,6 +254,13 @@
             font-size: clamp(1.2rem, 4vw, 1.4rem);
         }
 
+        .producto-precio .precio-original {
+            text-decoration: line-through;
+            color: #999;
+            font-size: 14px;
+            font-weight: normal;
+        }
+
         .stock-info {
             font-size: clamp(0.8rem, 2.5vw, 0.9rem);
             margin-bottom: 10px;
@@ -247,9 +295,41 @@
             font-weight: bold;
         }
 
-        .badge-stock {
-            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+        .badge-oferta {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: #dc3545;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 99;
+            box-shadow: 0 2px 5px rgba(220, 53, 69, 0.3);
+        }
+
+        .badge-stock-bajo {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: #ffc107;
             color: #000;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 99;
+        }
+
+        .badge-etiqueta {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            margin: 2px;
+            color: white;
         }
 
         .ver-detalle {
@@ -296,49 +376,12 @@
             transform: translateY(0);
         }
 
-        /* Barra de búsqueda única */
-        .barra-busqueda-principal {
-            text-align: center;
-            margin: 15px 0;
-            padding: 0 15px;
+        .btn-danger {
+            background: #dc3545;
         }
 
-        .barra-busqueda-principal form {
-            display: flex;
-            max-width: 600px;
-            width: 100%;
-            margin: 0 auto;
-        }
-
-        .barra-busqueda-principal input[type="text"] {
-            flex: 1;
-            padding: 12px 20px;
-            border: 2px solid #007bff;
-            border-radius: 25px 0 0 25px;
-            font-size: 16px;
-            outline: none;
-            min-width: 0; /* Previene overflow en flex */
-        }
-
-        .barra-busqueda-principal button {
-            padding: 12px 25px;
-            background: #007bff;
-            color: white;
-            border: 2px solid #007bff;
-            border-radius: 0 25px 25px 0;
-            font-size: 16px;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.3s ease;
-        }
-
-        .barra-busqueda-principal button:hover {
-            background: #0056b3;
-            border-color: #0056b3;
-        }
-
-        .barra-busqueda-principal button:active {
-            transform: scale(0.98);
+        .btn-danger:hover {
+            background: #c82333;
         }
 
         /* Corazón de favoritos */
@@ -444,6 +487,7 @@
             display: inline-block;
             font-size: clamp(0.9rem, 3vw, 1rem);
             box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            margin: 5px;
         }
 
         .btn-banner:hover {
@@ -456,7 +500,16 @@
             transform: translateY(0);
         }
 
-        /* Sección de productos destacados */
+        .btn-banner.descuento {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-banner.descuento:hover {
+            background: #c82333;
+        }
+
+        /* Sección de productos */
         .seccion-destacados {
             max-width: 1200px;
             margin: 0 auto 30px;
@@ -469,6 +522,10 @@
             color: #333;
             font-size: clamp(1.3rem, 5vw, 2rem);
             padding: 0 15px;
+        }
+
+        .titulo-seccion.descuento {
+            color: #dc3545;
         }
 
         .alert {
@@ -493,7 +550,7 @@
             border: 1px solid #bee5eb;
         }
 
-        /* PAGINACIÓN PERSONALIZADA - SOLO FLECHAS Y NÚMEROS */
+        /* PAGINACIÓN */
         .paginacion {
             display: flex;
             justify-content: center;
@@ -542,33 +599,10 @@
             color: #007bff;
         }
 
-        .pagination li a:active {
-            transform: scale(0.95);
-        }
-
         .pagination li.active span {
             background: #007bff;
             color: white;
             font-weight: 600;
-        }
-
-        /* Estilos específicos para los botones de anterior/siguiente */
-        .pagination li:first-child a,
-        .pagination li:last-child a {
-            font-size: 16px;
-            font-weight: bold;
-        }
-
-        .pagination li.disabled span {
-            color: #adb5bd;
-            cursor: not-allowed;
-            background-color: transparent;
-        }
-
-        /* Ocultar el texto y mostrar solo flechas */
-        .pagination li:first-child a span,
-        .pagination li:last-child a span {
-            display: none;
         }
 
         .pagination li:first-child a::before {
@@ -581,12 +615,30 @@
             font-size: 18px;
         }
 
-        /* Botón flotante para móviles (opcional) */
-        .btn-flotante {
-            display: none;
+        .pagination li.disabled span {
+            color: #adb5bd;
+            cursor: not-allowed;
+            background-color: transparent;
         }
 
-        /* Media Queries específicas para móviles */
+        .etiquetas-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 8px;
+        }
+
+        .envio-info {
+            font-size: 12px;
+            color: #28a745;
+            margin-top: 5px;
+            padding: 4px 8px;
+            background: #e8f5e8;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        /* Media Queries */
         @media (max-width: 768px) {
             .productos-grid {
                 grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -613,41 +665,11 @@
             .nav-links li button {
                 font-size: 13px;
             }
-
-            .producto-imagen-container {
-                min-height: 180px;
-                padding: 10px;
-            }
-
-            .producto-imagen {
-                max-height: 160px;
-            }
-
-            .no-imagen {
-                min-height: 160px;
-            }
-
-            .pagination {
-                gap: 3px;
-                padding: 4px;
-            }
-
-            .pagination li a,
-            .pagination li span {
-                min-width: 32px;
-                height: 32px;
-                font-size: 12px;
-            }
-
-            .pagination li:first-child a::before,
-            .pagination li:last-child a::before {
-                font-size: 16px;
-            }
         }
 
         @media (max-width: 480px) {
             .productos-grid {
-                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+                grid-template-columns: 1fr;
                 gap: 10px;
                 padding: 0 10px;
             }
@@ -659,52 +681,25 @@
             .producto-card h3 {
                 font-size: 13px;
                 height: 34px;
-                margin-bottom: 5px;
             }
 
             .producto-precio {
                 font-size: 16px;
-                margin-bottom: 5px;
-            }
-
-            .stock-info {
-                font-size: 11px;
-                margin-bottom: 8px;
-            }
-
-            .ver-detalle a {
-                font-size: 12px;
-                padding: 6px 0;
             }
 
             .corazon-favorito {
                 width: 32px;
                 height: 32px;
                 font-size: 16px;
-                top: 8px;
-                right: 8px;
             }
 
-            .badge {
-                padding: 3px 6px;
-                font-size: 9px;
+            .badge-oferta {
+                font-size: 10px;
+                padding: 4px 8px;
             }
 
             .banner-inicio {
                 padding: 25px 15px;
-            }
-
-            .banner-inicio h2 {
-                font-size: 1.3rem;
-            }
-
-            .banner-inicio p {
-                font-size: 0.9rem;
-            }
-
-            .btn-banner {
-                padding: 8px 20px;
-                font-size: 0.85rem;
             }
 
             .nav-links {
@@ -718,16 +713,10 @@
                 text-align: center;
             }
 
-            .nav-links li a,
-            .nav-links li button {
+            .nav-links li a {
                 display: block;
                 padding: 8px;
                 white-space: normal;
-                font-size: 14px;
-            }
-
-            .nav-links li button {
-                width: 100%;
             }
 
             .barra-busqueda-principal form {
@@ -738,29 +727,12 @@
             .barra-busqueda-principal input[type="text"] {
                 width: 100%;
                 border-radius: 25px;
-                font-size: 14px;
             }
 
             .barra-busqueda-principal button {
                 width: 100%;
                 border-radius: 25px;
                 margin-left: 0;
-                font-size: 14px;
-                padding: 10px;
-            }
-
-            .producto-imagen-container {
-                min-height: 140px;
-                padding: 8px;
-            }
-
-            .producto-imagen {
-                max-height: 130px;
-            }
-
-            .no-imagen {
-                min-height: 130px;
-                font-size: 12px;
             }
 
             .pagination li a,
@@ -768,59 +740,6 @@
                 min-width: 28px;
                 height: 28px;
                 font-size: 11px;
-            }
-
-            .pagination li:first-child a::before,
-            .pagination li:last-child a::before {
-                font-size: 14px;
-            }
-
-            .toast-single {
-                left: 15px;
-                right: 15px;
-                max-width: none;
-                padding: 12px 15px;
-                font-size: 13px;
-            }
-        }
-
-        /* Para pantallas muy pequeñas */
-        @media (max-width: 320px) {
-            .productos-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .producto-imagen-container {
-                min-height: 200px;
-            }
-
-            .pagination li a,
-            .pagination li span {
-                min-width: 26px;
-                height: 26px;
-                font-size: 10px;
-            }
-        }
-
-        /* Mejoras para touch en móviles */
-        @media (hover: none) and (pointer: coarse) {
-            .corazon-favorito {
-                -webkit-tap-highlight-color: transparent;
-            }
-
-            .corazon-favorito:active {
-                background: rgba(52, 131, 250, 0.2);
-                transform: scale(0.95);
-            }
-
-            .btn:active,
-            .btn-banner:active,
-            .barra-busqueda-principal button:active {
-                transform: scale(0.97);
-            }
-
-            .producto-card:active {
-                transform: scale(0.99);
             }
         }
     </style>
@@ -842,8 +761,9 @@
     <nav class="navbar">
         <div class="nav-container">
             <ul class="nav-links">
-                <li><a href="{{ route('inicio.real') }}">Inicio</a></li>
+                <li><a href="{{ route('inicio') }}">Inicio</a></li>
                 <li><a href="{{ route('busqueda.resultados') }}">Todos los Productos</a></li>
+                <li><a href="{{ route('busqueda.resultados', ['en_descuento' => '1']) }}" style="color: #dc3545; font-weight: bold;">🔥 En Descuento</a></li>
                 <li>
                     @auth
                         <a href="{{ route('favoritos.index') }}" style="color: #dc3545; font-weight: bold;">❤️ Mis Favoritos</a>
@@ -866,7 +786,7 @@
             </ul>
         </div>
 
-        <!-- SOLO UNA BARRA DE BÚSQUEDA -->
+        <!-- Barra de búsqueda -->
         <div class="barra-busqueda-principal">
             <form action="{{ route('busqueda.resultados') }}" method="GET">
                 <input type="text" name="q" placeholder="Buscar productos (agave, mezcal, espadín...)" 
@@ -893,25 +813,129 @@
     <div class="banner-inicio">
         <h2>Bienvenido a Ecommerce Agave</h2>
         <p>Descubre nuestra exclusiva selección de productos de agave y mezcal</p>
-        <a href="{{ route('busqueda.resultados') }}" class="btn-banner">Explorar Productos</a>
+        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+            <a href="{{ route('busqueda.resultados') }}" class="btn-banner">Explorar Productos</a>
+            <a href="{{ route('busqueda.resultados', ['en_descuento' => '1']) }}" class="btn-banner descuento">🔥 Ver Descuentos</a>
+        </div>
     </div>
 
-    <!-- Sección de productos destacados -->
+    <!-- Sección de productos en descuento -->
+    @if(isset($productosDescuento) && $productosDescuento->count() > 0)
+    <div class="seccion-destacados" style="margin-top: 30px;">
+        <h2 class="titulo-seccion descuento">
+            🔥 Productos en Descuento
+        </h2>
+        
+        <div class="productos-grid">
+            @foreach($productosDescuento as $producto)
+                @php
+                    $estaBajoStock = $producto->iStock > 0 && $producto->iStock <= 10;
+                    $esFavorito = $producto->esFavorito();
+                    $tieneDescuento = true;
+                    $porcentajeDescuento = round((($producto->dPrecio_venta - $producto->dPrecio_descuento) / $producto->dPrecio_venta) * 100);
+                @endphp
+                
+                <div class="producto-card" onclick="window.location.href='{{ route('productos.show.public', $producto->id_producto) }}'">
+                    <div class="producto-imagen-container">
+                        <button class="corazon-favorito {{ $esFavorito ? 'activo' : 'inactivo' }}" 
+                                data-producto="{{ $producto->id_producto }}"
+                                onclick="event.stopPropagation(); toggleFavorito(this, {{ $producto->id_producto }})"
+                                title="{{ $esFavorito ? 'Quitar de favoritos' : 'Agregar a favoritos' }}">
+                            {{ $esFavorito ? '❤️' : '🤍' }}
+                        </button>
+
+                        <!-- BADGE DE DESCUENTO DESTACADO -->
+                        <div class="badge-oferta" style="background: #dc3545; font-size: 14px; padding: 6px 12px;">
+                            -{{ $porcentajeDescuento }}% DESCUENTO
+                        </div>
+
+                        @if(count($producto->imagenes) > 0)
+                            <img src="{{ $producto->imagenes[0] }}" alt="{{ $producto->vNombre }}" class="producto-imagen">
+                        @else
+                            <div class="no-imagen">
+                                <span>🛒 Sin imagen</span>
+                            </div>
+                        @endif
+                    </div>
+                    
+                    <div class="producto-info">
+                        <h3>{{ $producto->vNombre }}</h3>
+
+                        <!-- Precio con descuento -->
+                        <div class="producto-precio">
+                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                <span class="precio-original">
+                                    ${{ number_format($producto->dPrecio_venta, 2) }}
+                                </span>
+                                <span style="color: #2e7d32; font-size: 1.4rem;">
+                                    ${{ number_format($producto->dPrecio_descuento, 2) }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- SKU -->
+                        <div style="font-size: 11px; color: #999; margin-bottom: 5px;">
+                            SKU: {{ $producto->vCodigo_barras }}
+                        </div>
+
+                        <!-- Stock -->
+                        <div class="stock-info {{ $producto->iStock > 10 ? 'stock-bueno' : ($producto->iStock > 0 ? 'stock-bajo' : 'sin-stock') }}">
+                            @if($producto->iStock > 10)
+                                ✅ En stock ({{ $producto->iStock }} disponibles)
+                            @elseif($producto->iStock > 0)
+                                ⚠️ Solo {{ $producto->iStock }} unidades
+                            @else
+                                ❌ Sin stock
+                            @endif
+                        </div>
+
+                        <!-- Categoría y Marca -->
+                        <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
+                            <strong>Categoría:</strong> {{ $producto->categoria->vNombre ?? 'N/A' }}<br>
+                            <strong>Marca:</strong> {{ $producto->marca->vNombre ?? 'N/A' }}
+                        </p>
+
+                        <!-- Etiquetas -->
+                        @if($producto->etiquetas->count() > 0)
+                            <div class="etiquetas-container">
+                                @foreach($producto->etiquetas->take(3) as $etiqueta)
+                                    <span class="badge-etiqueta" style="background-color: {{ $etiqueta->color ?? '#007bff' }};">
+                                        {{ $etiqueta->vNombre }}
+                                    </span>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <div class="ver-detalle">
+                            <a href="{{ route('productos.show.public', $producto->id_producto) }}" onclick="event.stopPropagation();">Ver detalle →</a>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+
+        <div style="text-align: center; margin-top: 20px; margin-bottom: 30px;">
+            <a href="{{ route('busqueda.resultados', ['en_descuento' => '1']) }}" class="btn btn-danger">Ver Todos los Descuentos</a>
+        </div>
+    </div>
+    @endif
+
+    <!-- Sección de productos destacados (recientes) -->
     <div class="seccion-destacados">
         <h2 class="titulo-seccion">Productos Destacados</h2>
         
-        @if(isset($productos) && $productos->count() > 0)
+        @if($productos->count() > 0)
             <div class="productos-grid">
                 @foreach($productos as $producto)
                     @php
-                        $estaBajoStock = $producto->estaBajoEnStock();
+                        $estaBajoStock = $producto->iStock > 0 && $producto->iStock <= 10;
                         $esFavorito = $producto->esFavorito();
+                        $tieneDescuento = $producto->tieneDescuentoActivo();
+                        $porcentajeDescuento = $tieneDescuento ? round((($producto->dPrecio_venta - $producto->dPrecio_descuento) / $producto->dPrecio_venta) * 100) : 0;
                     @endphp
                     
                     <div class="producto-card" onclick="window.location.href='{{ route('productos.show.public', $producto->id_producto) }}'">
-                        
                         <div class="producto-imagen-container">
-                            <!-- BOTÓN DEL CORAZÓN -->
                             <button class="corazon-favorito {{ $esFavorito ? 'activo' : 'inactivo' }}" 
                                     data-producto="{{ $producto->id_producto }}"
                                     onclick="event.stopPropagation(); toggleFavorito(this, {{ $producto->id_producto }})"
@@ -919,10 +943,13 @@
                                 {{ $esFavorito ? '❤️' : '🤍' }}
                             </button>
 
-                            <!-- Solo badge de stock bajo si aplica -->
-                            @if($estaBajoStock)
-                                <div style="position: absolute; top: 15px; left: 15px; z-index: 99;">
-                                    <span class="badge badge-stock">¡Últimas!</span>
+                            @if($tieneDescuento)
+                                <div class="badge-oferta">
+                                    -{{ $porcentajeDescuento }}%
+                                </div>
+                            @elseif($estaBajoStock)
+                                <div class="badge-stock-bajo">
+                                    ¡Últimas!
                                 </div>
                             @endif
 
@@ -938,22 +965,119 @@
                         <div class="producto-info">
                             <h3>{{ $producto->vNombre }}</h3>
 
-                            <!-- Precio - DATOS REALES -->
                             <div class="producto-precio">
-                                ${{ number_format($producto->dPrecio_venta, 2) }}
+                                @if($tieneDescuento)
+                                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                        <span class="precio-original">
+                                            ${{ number_format($producto->dPrecio_venta, 2) }}
+                                        </span>
+                                        <span style="color: #2e7d32;">
+                                            ${{ number_format($producto->dPrecio_descuento, 2) }}
+                                        </span>
+                                        <span style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px;">
+                                            -{{ $porcentajeDescuento }}%
+                                        </span>
+                                    </div>
+                                @else
+                                    ${{ number_format($producto->dPrecio_venta, 2) }}
+                                @endif
                             </div>
 
-                            <!-- Envío - INFORMACIÓN REAL -->
-                            <div style="color: #666; font-size: clamp(0.7rem, 2.5vw, 0.85rem); margin-bottom: 5px;">
-                                📦 Envío gratis
+                            <div style="font-size: 11px; color: #999; margin-bottom: 5px;">
+                                SKU: {{ $producto->vCodigo_barras }}
                             </div>
 
-                            <!-- Stock - DATOS REALES -->
                             <div class="stock-info {{ $producto->iStock > 10 ? 'stock-bueno' : ($producto->iStock > 0 ? 'stock-bajo' : 'sin-stock') }}">
                                 @if($producto->iStock > 10)
                                     ✅ En stock
                                 @elseif($producto->iStock > 0)
                                     ⚠️ Solo {{ $producto->iStock }} unidades
+                                @else
+                                    ❌ Sin stock
+                                @endif
+                            </div>
+
+                            <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
+                                <strong>Categoría:</strong> {{ $producto->categoria->vNombre ?? 'N/A' }}<br>
+                                <strong>Marca:</strong> {{ $producto->marca->vNombre ?? 'N/A' }}
+                            </p>
+
+                            @if($producto->etiquetas->count() > 0)
+                                <div class="etiquetas-container">
+                                    @foreach($producto->etiquetas->take(3) as $etiqueta)
+                                        <span class="badge-etiqueta" style="background-color: {{ $etiqueta->color ?? '#007bff' }};">
+                                            {{ $etiqueta->vNombre }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                            @endif
+
+                            <div class="ver-detalle">
+                                <a href="{{ route('productos.show.public', $producto->id_producto) }}" onclick="event.stopPropagation();">Ver detalle →</a>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            <!-- Sección de productos más vendidos -->
+            @if(isset($productosMasVendidos) && $productosMasVendidos->count() > 0)
+            <h2 class="titulo-seccion" style="margin-top: 40px;">⭐ Productos Más Vendidos</h2>
+            
+            <div class="productos-grid">
+                @foreach($productosMasVendidos as $producto)
+                    @php
+                        $estaBajoStock = $producto->iStock > 0 && $producto->iStock <= 10;
+                        $esFavorito = $producto->esFavorito();
+                        $tieneDescuento = $producto->tieneDescuentoActivo();
+                        $porcentajeDescuento = $tieneDescuento ? round((($producto->dPrecio_venta - $producto->dPrecio_descuento) / $producto->dPrecio_venta) * 100) : 0;
+                    @endphp
+                    
+                    <div class="producto-card" onclick="window.location.href='{{ route('productos.show.public', $producto->id_producto) }}'">
+                        <div class="producto-imagen-container">
+                            <button class="corazon-favorito {{ $esFavorito ? 'activo' : 'inactivo' }}" 
+                                    data-producto="{{ $producto->id_producto }}"
+                                    onclick="event.stopPropagation(); toggleFavorito(this, {{ $producto->id_producto }})"
+                                    title="{{ $esFavorito ? 'Quitar de favoritos' : 'Agregar a favoritos' }}">
+                                {{ $esFavorito ? '❤️' : '🤍' }}
+                            </button>
+
+                            @if($tieneDescuento)
+                                <div class="badge-oferta">
+                                    -{{ $porcentajeDescuento }}%
+                                </div>
+                            @endif
+
+                            @if(count($producto->imagenes) > 0)
+                                <img src="{{ $producto->imagenes[0] }}" alt="{{ $producto->vNombre }}" class="producto-imagen">
+                            @else
+                                <div class="no-imagen">
+                                    <span>🛒 Sin imagen</span>
+                                </div>
+                            @endif
+                        </div>
+                        
+                        <div class="producto-info">
+                            <h3>{{ $producto->vNombre }}</h3>
+
+                            <div class="producto-precio">
+                                @if($tieneDescuento)
+                                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                        <span class="precio-original">
+                                            ${{ number_format($producto->dPrecio_venta, 2) }}
+                                        </span>
+                                        <span style="color: #2e7d32;">
+                                            ${{ number_format($producto->dPrecio_descuento, 2) }}
+                                        </span>
+                                    </div>
+                                @else
+                                    ${{ number_format($producto->dPrecio_venta, 2) }}
+                                @endif
+                            </div>
+
+                            <div class="stock-info {{ $producto->iStock > 10 ? 'stock-bueno' : ($producto->iStock > 0 ? 'stock-bajo' : 'sin-stock') }}">
+                                @if($producto->iStock > 0)
+                                    ✅ Disponible
                                 @else
                                     ❌ Sin stock
                                 @endif
@@ -966,46 +1090,9 @@
                     </div>
                 @endforeach
             </div>
+            @endif
 
-            <!-- PAGINACIÓN PERSONALIZADA - SOLO FLECHAS Y NÚMEROS -->
-            <div class="paginacion">
-                @if ($productos instanceof \Illuminate\Pagination\LengthAwarePaginator && $productos->hasPages())
-                    <ul class="pagination">
-                        {{-- Flecha Anterior --}}
-                        @if ($productos->onFirstPage())
-                            <li class="disabled" aria-disabled="true">
-                                <span></span>
-                            </li>
-                        @else
-                            <li>
-                                <a href="{{ $productos->previousPageUrl() }}" rel="prev" aria-label="Anterior"></a>
-                            </li>
-                        @endif
-
-                        {{-- Números de página --}}
-                        @foreach ($productos->getUrlRange(max(1, $productos->currentPage() - 2), min($productos->lastPage(), $productos->currentPage() + 2)) as $page => $url)
-                            @if ($page == $productos->currentPage())
-                                <li class="active" aria-current="page"><span>{{ $page }}</span></li>
-                            @else
-                                <li><a href="{{ $url }}">{{ $page }}</a></li>
-                            @endif
-                        @endforeach
-
-                        {{-- Flecha Siguiente --}}
-                        @if ($productos->hasMorePages())
-                            <li>
-                                <a href="{{ $productos->nextPageUrl() }}" rel="next" aria-label="Siguiente"></a>
-                            </li>
-                        @else
-                            <li class="disabled" aria-disabled="true">
-                                <span></span>
-                            </li>
-                        @endif
-                    </ul>
-                @endif
-            </div>
-
-            <div style="text-align: center; margin-top: 20px; margin-bottom: 20px;">
+            <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
                 <a href="{{ route('busqueda.resultados') }}" class="btn">Ver Todos los Productos</a>
             </div>
         @else
@@ -1177,18 +1264,13 @@
                 }
             }
 
-            // Prevenir zoom en inputs para móviles (opcional)
+            // Prevenir zoom en inputs para móviles
             const inputs = document.querySelectorAll('input[type="text"], input[type="number"], select');
             inputs.forEach(input => {
                 input.addEventListener('touchstart', function() {
                     this.style.fontSize = '16px';
                 });
             });
-        });
-
-        // Detectar cambios de orientación en móviles
-        window.addEventListener('resize', function() {
-            // Ajustar algo si es necesario
         });
     </script>
 </body>

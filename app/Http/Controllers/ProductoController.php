@@ -485,26 +485,25 @@ class ProductoController extends Controller
                 'dAncho_cm' => $producto->dAncho_cm,
                 'dAlto_cm' => $producto->dAlto_cm,
             ]);
-            Log::info('Precio final calculado:', ['dPrecio_final' => $producto->dPrecio_final]);
 
             // Guardar imagen principal
             if ($request->hasFile('imagen_principal')) {
-                $producto->guardarImagenPrincipal($request->file('imagen_principal'));
+                $this->guardarImagenPrincipal($producto, $request->file('imagen_principal'));
             }
 
             // Guardar video si existe
             if ($request->hasFile('video_producto')) {
-                $producto->guardarVideo($request->file('video_producto'));
+                $this->guardarVideo($producto, $request->file('video_producto'));
             }
 
             // Guardar GIF si existe
             if ($request->hasFile('gif_producto')) {
-                $producto->guardarGif($request->file('gif_producto'));
+                $this->guardarGif($producto, $request->file('gif_producto'));
             }
 
             // Guardar imágenes adicionales
             if ($request->hasFile('imagenes')) {
-                $producto->guardarImagenes($request->file('imagenes'));
+                $this->guardarImagenes($producto, $request->file('imagenes'));
             }
 
             // Sincronizar etiquetas
@@ -876,7 +875,7 @@ class ProductoController extends Controller
 
             // Eliminar imágenes seleccionadas SOLO si se especifica
             if ($request->has('imagenes_a_eliminar') && is_array($request->imagenes_a_eliminar) && count($request->imagenes_a_eliminar) > 0) {
-                $producto->eliminarImagenesEspecificas($request->imagenes_a_eliminar);
+                $this->eliminarImagenesEspecificas($producto, $request->imagenes_a_eliminar);
             }
 
             // Actualizar producto
@@ -922,25 +921,25 @@ class ProductoController extends Controller
 
             // Guardar imagen principal si se subió una nueva
             if ($request->hasFile('imagen_principal')) {
-                $producto->eliminarImagenPrincipal();
-                $producto->guardarImagenPrincipal($request->file('imagen_principal'));
+                $this->eliminarImagenPrincipal($producto);
+                $this->guardarImagenPrincipal($producto, $request->file('imagen_principal'));
             }
 
             // Guardar video si se subió uno nuevo
             if ($request->hasFile('video_producto')) {
-                $producto->eliminarVideo();
-                $producto->guardarVideo($request->file('video_producto'));
+                $this->eliminarVideo($producto);
+                $this->guardarVideo($producto, $request->file('video_producto'));
             }
 
             // Guardar GIF si se subió uno nuevo
             if ($request->hasFile('gif_producto')) {
-                $producto->eliminarGif();
-                $producto->guardarGif($request->file('gif_producto'));
+                $this->eliminarGif($producto);
+                $this->guardarGif($producto, $request->file('gif_producto'));
             }
 
             // Guardar nuevas imágenes adicionales
             if ($request->hasFile('imagenes') && count($request->file('imagenes')) > 0) {
-                $producto->guardarImagenes($request->file('imagenes'));
+                $this->guardarImagenes($producto, $request->file('imagenes'));
             }
 
             // Sincronizar etiquetas
@@ -1127,7 +1126,7 @@ class ProductoController extends Controller
             $producto->variaciones()->delete();
 
             // Eliminar imágenes principales
-            $producto->eliminarTodasLasImagenes();
+            $this->eliminarTodasLasImagenes($producto);
 
             // Eliminar relaciones
             $producto->etiquetas()->detach();
@@ -1240,7 +1239,137 @@ class ProductoController extends Controller
         return view('productos.variaciones', compact('productos'));
     }
 
-    // Funciones privadas para manejo de imágenes
+    // ============ FUNCIONES PARA MANEJO DE IMÁGENES ============
+
+    private function guardarImagenPrincipal($producto, $imagen)
+    {
+        $carpeta = 'productos/' . $producto->id_producto;
+        
+        if (!Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->makeDirectory($carpeta);
+        }
+        
+        $extension = $imagen->getClientOriginalExtension();
+        $nombreArchivo = 'principal_' . time() . '.' . $extension;
+        $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
+        
+        // Guardar la ruta en algún campo del producto si es necesario
+        // $producto->vImagen_principal = Storage::url($ruta);
+        // $producto->save();
+    }
+
+    private function eliminarImagenPrincipal($producto)
+    {
+        $carpeta = 'productos/' . $producto->id_producto;
+        
+        if (Storage::disk('public')->exists($carpeta)) {
+            $archivos = Storage::disk('public')->files($carpeta);
+            foreach ($archivos as $archivo) {
+                if (strpos($archivo, 'principal_') !== false) {
+                    Storage::disk('public')->delete($archivo);
+                }
+            }
+        }
+    }
+
+    private function guardarVideo($producto, $video)
+    {
+        $carpeta = 'productos/' . $producto->id_producto;
+        
+        if (!Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->makeDirectory($carpeta);
+        }
+        
+        $extension = $video->getClientOriginalExtension();
+        $nombreArchivo = 'video_' . time() . '.' . $extension;
+        $ruta = $video->storeAs($carpeta, $nombreArchivo, 'public');
+        
+        // Guardar la ruta en algún campo del producto si es necesario
+        // $producto->vVideo = Storage::url($ruta);
+        // $producto->save();
+    }
+
+    private function eliminarVideo($producto)
+    {
+        $carpeta = 'productos/' . $producto->id_producto;
+        
+        if (Storage::disk('public')->exists($carpeta)) {
+            $archivos = Storage::disk('public')->files($carpeta);
+            foreach ($archivos as $archivo) {
+                if (strpos($archivo, 'video_') !== false) {
+                    Storage::disk('public')->delete($archivo);
+                }
+            }
+        }
+    }
+
+    private function guardarGif($producto, $gif)
+    {
+        $carpeta = 'productos/' . $producto->id_producto;
+        
+        if (!Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->makeDirectory($carpeta);
+        }
+        
+        $extension = $gif->getClientOriginalExtension();
+        $nombreArchivo = 'gif_' . time() . '.' . $extension;
+        $ruta = $gif->storeAs($carpeta, $nombreArchivo, 'public');
+        
+        // Guardar la ruta en algún campo del producto si es necesario
+        // $producto->vGif = Storage::url($ruta);
+        // $producto->save();
+    }
+
+    private function eliminarGif($producto)
+    {
+        $carpeta = 'productos/' . $producto->id_producto;
+        
+        if (Storage::disk('public')->exists($carpeta)) {
+            $archivos = Storage::disk('public')->files($carpeta);
+            foreach ($archivos as $archivo) {
+                if (strpos($archivo, 'gif_') !== false) {
+                    Storage::disk('public')->delete($archivo);
+                }
+            }
+        }
+    }
+
+    private function guardarImagenes($producto, $imagenes)
+    {
+        $carpeta = 'productos/' . $producto->id_producto . '/adicionales';
+        
+        if (!Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->makeDirectory($carpeta);
+        }
+        
+        foreach ($imagenes as $index => $imagen) {
+            $extension = $imagen->getClientOriginalExtension();
+            $nombreArchivo = 'imagen_' . $index . '_' . time() . '.' . $extension;
+            $imagen->storeAs($carpeta, $nombreArchivo, 'public');
+        }
+    }
+
+    private function eliminarImagenesEspecificas($producto, $imagenesAEliminar)
+    {
+        $carpeta = 'productos/' . $producto->id_producto . '/adicionales';
+        
+        foreach ($imagenesAEliminar as $nombreImagen) {
+            $ruta = $carpeta . '/' . $nombreImagen;
+            if (Storage::disk('public')->exists($ruta)) {
+                Storage::disk('public')->delete($ruta);
+            }
+        }
+    }
+
+    private function eliminarTodasLasImagenes($producto)
+    {
+        $carpeta = 'productos/' . $producto->id_producto;
+        
+        if (Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->deleteDirectory($carpeta);
+        }
+    }
+
     private function guardarImagenVariacion($variacion, $imagen)
     {
         $carpeta = 'variaciones/' . $variacion->id_variacion;

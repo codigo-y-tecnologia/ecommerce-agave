@@ -154,13 +154,22 @@ Route::get('/etiquetas/json', [EtiquetaController::class, 'getJson'])->name('eti
 Route::get('/atributos/json', [AtributoController::class, 'getJson'])->name('atributos.json');
 
 // =====================================================================
+// RUTAS PARA IMPUESTOS
+// =====================================================================
+Route::resource('impuestos', ImpuestoController::class);
+Route::post('/impuestos/quick-create', [ImpuestoController::class, 'quickCreate'])->name('impuestos.quick-create');
+Route::get('/impuestos/json', [ImpuestoController::class, 'getJson'])->name('impuestos.json');
+
+// =====================================================================
+// RUTA PARA DASHBOARD
+// =====================================================================
+Route::get('/dashboard', function () {
+    return redirect()->route('inicio.real');
+})->name('dashboard');
+
+// =====================================================================
 // RUTAS DE FALLBACK (si ninguna ruta coincide)
 // =====================================================================
 Route::fallback(function () {
     return redirect()->route('inicio.real');
 });
-
-// Rutas para impuestos
-Route::resource('impuestos', ImpuestoController::class);
-Route::post('/impuestos/quick-create', [ImpuestoController::class, 'quickCreate'])->name('impuestos.quick-create');
-Route::get('/impuestos/json', [ImpuestoController::class, 'getJson'])->name('impuestos.json');

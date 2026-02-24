@@ -10,11 +10,11 @@ return new class extends Migration
     {
         Schema::create('tbl_atributos', function (Blueprint $table) {
             $table->id('id_atributo');
-            $table->string('vNombre', 100); // Ej: "Tamaño", "Tipo", "Edad"
-            $table->string('vSlug', 100)->unique(); // Para URLs amigables
+            $table->string('vNombre', 100); 
+            $table->string('vSlug', 100)->unique(); 
             $table->text('tDescripcion')->nullable();
             $table->boolean('bActivo')->default(true);
-            $table->timestamps(); // ESTA LÍNEA ES CRÍTICA
+            $table->timestamps(); 
         });
     }
 
