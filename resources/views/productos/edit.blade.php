@@ -2,197 +2,41 @@
 
 @section('title', 'Editar Producto - ' . $producto->vNombre)
 @section('content')
-<div class="container">
-    <h1><i class="fas fa-edit me-2"></i>Editar Producto</h1>
-
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <i class="fas fa-edit me-2"></i>
+            Editar Producto: {{ $producto->vNombre }}
+        </h1>
+        <a href="{{ route('productos.show', $producto->id_producto) }}" class="btn btn-info">
+            <i class="fas fa-eye me-2"></i>Ver detalle
+        </a>
+    </div>
 
     @if ($errors->any())
-        <div class="alert alert-danger">
-            <ul class="mb-0">
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Por favor corrige los siguientes errores:</strong>
+            <ul class="mb-0 mt-2">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
                 @endforeach
             </ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
-    <!-- Modal de confirmación para eliminar imágenes -->
-    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title">
-                        <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Eliminación
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-trash-alt fa-2x text-danger"></i>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h5 class="text-danger mb-1">¿Eliminar imagen?</h5>
-                            <p class="mb-0" id="modalMessage">Esta acción no se puede deshacer.</p>
-                        </div>
-                    </div>
-                    <div class="text-center" id="imagePreviewContainer">
-                        <!-- Vista previa de la imagen a eliminar -->
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i> Cancelar
-                    </button>
-                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
-                        <i class="fas fa-trash me-1"></i> Sí, Eliminar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <form action="{{ route('productos.update', $producto->id_producto) }}" method="POST" enctype="multipart/form-data" id="productoForm">
+    <form action="{{ route('productos.update', $producto->id_producto) }}" 
+          method="POST" 
+          enctype="multipart/form-data" 
+          id="productoForm">
         @csrf
         @method('PUT')
 
-        <!-- IMÁGENES DEL PRODUCTO - CORREGIDO -->
-        <div class="card mb-4">
-            <div class="card-header bg-secondary text-white">
-                <div>
-                    <i class="fas fa-images me-2"></i>
-                    <h5 class="mb-0">Imágenes del Producto (Máximo 8)</h5>
-                </div>
-            </div>
-            <div class="card-body">
-                @php
-                    $nombresArchivos = $producto->getNombresArchivosImagenes();
-                    $imagenesExistentes = count($nombresArchivos);
-                @endphp
-                
-                <!-- CONTENEDOR DE IMÁGENES EXISTENTES - CORREGIDO -->
-                <div class="row mb-4" id="imagenes-existentes-container">
-                    @if($imagenesExistentes > 0)
-                        <div class="col-12 mb-3">
-                            <h6 class="fw-bold">
-                                <i class="fas fa-images me-2"></i>Imágenes actuales
-                                <span class="badge bg-primary">{{ $imagenesExistentes }} / 8</span>
-                            </h6>
-                        </div>
-                        
-                        @foreach($nombresArchivos as $index => $imagen)
-                            <div class="col-6 col-md-4 col-lg-3 mb-3 image-item" id="image-container-{{ $imagen['nombre'] }}">
-                                <div class="card h-100 border position-relative">
-                                    <img src="{{ $imagen['url'] }}" 
-                                         class="card-img-top existing-image" 
-                                         style="height: 180px; object-fit: contain; background: #f8f9fa; padding: 10px;"
-                                         alt="Imagen {{ $index + 1 }}"
-                                         data-image-name="{{ $imagen['nombre'] }}"
-                                         data-image-url="{{ $imagen['url'] }}">
-                                    
-                                    <!-- Botón para eliminar -->
-                                    <button type="button" 
-                                            class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2 delete-existing-btn"
-                                            style="width: 32px; height: 32px; padding: 0; border-radius: 50%; z-index: 10;"
-                                            data-image-name="{{ $imagen['nombre'] }}"
-                                            data-image-url="{{ $imagen['url'] }}"
-                                            title="Eliminar esta imagen">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                    
-                                    <!-- Campo oculto para marcar la imagen a eliminar -->
-                                    <input type="hidden" 
-                                           name="imagenes_a_eliminar[]" 
-                                           value="{{ $imagen['nombre'] }}"
-                                           id="hidden-eliminar-{{ $imagen['nombre'] }}"
-                                           class="hidden-eliminar-input"
-                                           disabled>
-                                    
-                                    <!-- Badge de número -->
-                                    <div class="position-absolute top-0 start-0 m-2">
-                                        <span class="badge bg-primary">#{{ $index + 1 }}</span>
-                                    </div>
-                                    
-                                    <div class="card-body p-2 text-center">
-                                        <small class="text-muted d-block" style="font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                            {{ $imagen['nombre'] }}
-                                        </small>
-                                        <span class="badge bg-success mt-1" id="badge-{{ $imagen['nombre'] }}">
-                                            <i class="fas fa-check-circle me-1"></i> Actual
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    @else
-                        <div class="col-12 text-center py-4">
-                            <i class="fas fa-image fa-3x text-muted mb-3"></i>
-                            <p class="text-muted">No hay imágenes disponibles</p>
-                        </div>
-                    @endif
-                </div>
-                
-                <!-- CONTADOR DE IMÁGENES -->
-                <div class="alert alert-info mb-4" id="contador-imagenes">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <span id="contador-texto">
-                        @if($imagenesExistentes > 0)
-                            Tienes <strong>{{ $imagenesExistentes }}</strong> imágenes. Puedes eliminar imágenes existentes y agregar nuevas manteniendo un máximo de 8 imágenes en total.
-                        @else
-                            No tienes imágenes. Puedes agregar hasta 8 imágenes.
-                        @endif
-                    </span>
-                </div>
-                
-                <!-- AGREGAR NUEVAS IMÁGENES -->
-                <div class="mt-4">
-                    <h6 class="fw-bold mb-3">
-                        <i class="fas fa-plus-circle me-2"></i>Agregar nuevas imágenes
-                        <span id="contador-nuevas" class="badge bg-success ms-2">0 nuevas</span>
-                    </h6>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="form-group mb-3">
-                                <label for="imagenes" class="form-label fw-bold">
-                                    Seleccionar imágenes
-                                </label>
-                                <input type="file" 
-                                       name="imagenes[]" 
-                                       id="imagenes" 
-                                       class="form-control @error('imagenes') is-invalid @enderror" 
-                                       multiple 
-                                       accept="image/*"
-                                       onchange="manejarNuevasImagenes(event)">
-                                @error('imagenes')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                <small class="form-text text-muted">
-                                    Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP, JFIF, SVG. 
-                                    Máximo 5MB por imagen. Puedes seleccionar múltiples imágenes.
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- CONTENEDOR PARA PREVISUALIZAR NUEVAS IMÁGENES -->
-                    <div class="row mb-4" id="nuevas-imagenes-container">
-                        <!-- Las nuevas imágenes seleccionadas aparecerán aquí -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- INFORMACIÓN BÁSICA DEL PRODUCTO -->
         <div class="card mb-4">
-            <div class="card-header bg-primary text-white d-flex align-items-center">
-                <i class="fas fa-info-circle me-2"></i>
-                <h5 class="mb-0">Información Básica</h5>
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información Básica</h5>
             </div>
             <div class="card-body">
                 <div class="row">
@@ -205,14 +49,15 @@
                                    class="form-control @error('vCodigo_barras') is-invalid @enderror"
                                    value="{{ old('vCodigo_barras', $producto->vCodigo_barras) }}" 
                                    maxlength="15" 
-                                   required 
+                                   required
                                    oninput="validarSKU(this)"
                                    pattern="[A-Za-z0-9]+"
-                                   title="Solo letras y números (máximo 15 caracteres)">
+                                   title="Solo letras y números (máximo 15 caracteres)"
+                                   autocomplete="off">
                             @error('vCodigo_barras')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            <small class="form-text text-muted">15 caracteres máximo, solo letras y números</small>
+                            <small class="form-text text-muted">Ej: AGAVE001, MEZCAL2024 (15 caracteres máximo, solo letras y números)</small>
                         </div>
                     </div>
                     
@@ -222,10 +67,11 @@
                                 Nombre del producto <span class="text-danger">*</span>
                             </label>
                             <input type="text" name="vNombre" id="vNombre" 
-                                   class="form-control @error('vNombre') is-invalid @enderror"
+                                   class="form-control @error('vNombre') is-invalid @enderror" 
                                    value="{{ old('vNombre', $producto->vNombre) }}" 
                                    maxlength="100" 
-                                   required>
+                                   required
+                                   autocomplete="off">
                             @error('vNombre')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -241,18 +87,21 @@
                             </label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <input type="text" name="dPrecio_compra" id="dPrecio_compra" 
+                                <input type="text" 
+                                       name="dPrecio_compra" 
+                                       id="dPrecio_compra" 
                                        class="form-control @error('dPrecio_compra') is-invalid @enderror"
-                                       value="{{ old('dPrecio_compra', $producto->dPrecio_compra ? number_format($producto->dPrecio_compra, 2, '.', '') : '') }}" 
+                                       value="{{ old('dPrecio_compra', $producto->dPrecio_compra) }}" 
                                        oninput="validarPrecio(this)"
                                        placeholder="0.00"
-                                       title="Máximo: 9,999,999.99 (7 dígitos enteros, 2 decimales)">
+                                       title="Máximo: 9,999,999.99 (7 dígitos enteros, 2 decimales)"
+                                       autocomplete="off">
                                 @error('dPrecio_compra')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
                             <small class="form-text text-muted">
-                                Máximo: 9,999,999.99 - Mínimo: 0.00
+                                Máximo: 9,999,999.99 (7 dígitos enteros)
                             </small>
                         </div>
                     </div>
@@ -260,23 +109,26 @@
                     <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="dPrecio_venta" class="form-label fw-bold">
-                                Precio de venta <span class="text-danger">*</span>
+                                Precio de venta (sin impuesto) <span class="text-danger">*</span>
                             </label>
                             <div class="input-group">
                                 <span class="input-group-text">$</span>
-                                <input type="text" name="dPrecio_venta" id="dPrecio_venta" 
+                                <input type="text" 
+                                       name="dPrecio_venta" 
+                                       id="dPrecio_venta" 
                                        class="form-control @error('dPrecio_venta') is-invalid @enderror"
-                                       value="{{ old('dPrecio_venta', number_format($producto->dPrecio_venta, 2, '.', '')) }}" 
+                                       value="{{ old('dPrecio_venta', $producto->dPrecio_venta) }}" 
                                        required 
-                                       oninput="validarPrecio(this)"
+                                       oninput="validarPrecio(this); actualizarPrecioFinal();"
                                        placeholder="0.00"
-                                       title="Máximo: 9,999,999.99 (7 dígitos enteros, 2 decimales)">
+                                       title="Máximo: 9,999,999.99 (7 dígitos enteros, 2 decimales)"
+                                       autocomplete="off">
                                 @error('dPrecio_venta')
                                     <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                                @enderror
                             </div>
                             <small class="form-text text-muted">
-                                Máximo: 9,999,999.99 - Mínimo: 0.00
+                                Máximo: 9,999,999.99 (7 dígitos enteros)
                             </small>
                         </div>
                     </div>
@@ -295,26 +147,273 @@
                                    title="Máximo 4 dígitos (0-9999)"
                                    inputmode="numeric"
                                    min="0"
-                                   max="9999">
+                                   max="9999"
+                                   autocomplete="off"
+                                   {{ $producto->tieneVariaciones() ? 'readonly' : '' }}>
                             @error('iStock')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            <small class="form-text text-muted">Solo números enteros. Rango: 0 - 9,999</small>
+                            <small class="form-text text-muted">
+                                Máximo 4 dígitos (0-9999)
+                                @if($producto->tieneVariaciones())
+                                    <span class="text-warning d-block">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        El stock es gestionado por las variaciones
+                                    </span>
+                                @endif
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CAMPOS DE DESCUENTO -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-percentage me-1"></i>Descuento Especial
+                            </label>
+                            <div class="form-check form-switch">
+                                <input type="checkbox" name="bTiene_descuento" id="bTiene_descuento" 
+                                       class="form-check-input" value="1"
+                                       {{ old('bTiene_descuento', $producto->bTiene_oferta) ? 'checked' : '' }}
+                                       onchange="toggleDescuentoFields()">
+                                <label class="form-check-label" for="bTiene_descuento">
+                                    Activar Descuento para este producto
+                                </label>
+                            </div>
+                            <small class="form-text text-muted">
+                                Permite establecer un precio de descuento por tiempo limitado
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" name="bActivo" id="bActivo" 
+                                       class="form-check-input" value="1"
+                                       {{ old('bActivo', $producto->bActivo) ? 'checked' : '' }}>
+                                <label class="form-check-label" for="bActivo">
+                                    Producto activo
+                                </label>
+                            </div>
+                            <small class="form-text text-muted">
+                                Si está desactivado, el producto no será visible en el catálogo
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CAMPOS DE DESCUENTO -->
+                <div id="descuentoFields" style="display: {{ old('bTiene_descuento', $producto->bTiene_oferta) ? 'block' : 'none' }};">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label for="dPrecio_descuento" class="form-label fw-bold">
+                                    Precio de Descuento <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="text" 
+                                           name="dPrecio_descuento" 
+                                           id="dPrecio_descuento" 
+                                           class="form-control @error('dPrecio_descuento') is-invalid @enderror"
+                                           value="{{ old('dPrecio_descuento', $producto->dPrecio_oferta) }}" 
+                                           oninput="validarPrecio(this); validarPrecioDescuentoProductoInstantaneo(this);"
+                                           onblur="validarPrecioDescuentoProducto()"
+                                           placeholder="0.00"
+                                           autocomplete="off">
+                                </div>
+                                <div id="error-precio-descuento" class="invalid-feedback" style="display: none;"></div>
+                                @error('dPrecio_descuento')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <small class="form-text text-muted">Debe ser menor al precio de venta</small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label for="dFecha_inicio_descuento" class="form-label fw-bold">
+                                    Fecha inicio <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" 
+                                       name="dFecha_inicio_descuento" 
+                                       id="dFecha_inicio_descuento" 
+                                       class="form-control @error('dFecha_inicio_descuento') is-invalid @enderror"
+                                       value="{{ old('dFecha_inicio_descuento', $producto->dFecha_inicio_oferta ? \Carbon\Carbon::parse($producto->dFecha_inicio_oferta)->format('Y-m-d') : '') }}"
+                                       autocomplete="off">
+                                @error('dFecha_inicio_descuento')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label for="dFecha_fin_descuento" class="form-label fw-bold">
+                                    Fecha fin <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" 
+                                       name="dFecha_fin_descuento" 
+                                       id="dFecha_fin_descuento" 
+                                       class="form-control @error('dFecha_fin_descuento') is-invalid @enderror"
+                                       value="{{ old('dFecha_fin_descuento', $producto->dFecha_fin_oferta ? \Carbon\Carbon::parse($producto->dFecha_fin_oferta)->format('Y-m-d') : '') }}"
+                                       autocomplete="off">
+                                @error('dFecha_fin_descuento')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group mb-3">
+                                <label for="vMotivo_descuento" class="form-label fw-bold">
+                                    Motivo del descuento
+                                </label>
+                                <input type="text" 
+                                       name="vMotivo_descuento" 
+                                       id="vMotivo_descuento" 
+                                       class="form-control @error('vMotivo_descuento') is-invalid @enderror"
+                                       value="{{ old('vMotivo_descuento', $producto->vMotivo_oferta) }}"
+                                       maxlength="255"
+                                       placeholder="Ej: Liquidación de temporada, Black Friday, etc."
+                                       autocomplete="off">
+                                @error('vMotivo_descuento')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CAMPOS PARA DIMENSIONES Y PESO -->
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group mb-3">
+                            <label for="dPeso" class="form-label fw-bold">
+                                <i class="fas fa-weight-hanging me-1"></i>Peso (kg)
+                            </label>
+                            <input type="text" 
+                                   name="dPeso" 
+                                   id="dPeso" 
+                                   class="form-control @error('dPeso') is-invalid @enderror"
+                                   value="{{ old('dPeso', $producto->dPeso) }}"
+                                   oninput="validarPeso(this)"
+                                   onblur="formatearPeso(this)"
+                                   onkeydown="permitirBorrado(event)"
+                                   placeholder="0.000"
+                                   title="Máximo: 999.999 kg (máximo 3 decimales)"
+                                   autocomplete="off">
+                            @error('dPeso')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="form-group mb-3">
+                            <label for="dLargo_cm" class="form-label fw-bold">
+                                <i class="fas fa-ruler-vertical me-1"></i>Largo (cm)
+                            </label>
+                            <input type="text" 
+                                   name="dLargo_cm" 
+                                   id="dLargo_cm" 
+                                   class="form-control @error('dLargo_cm') is-invalid @enderror"
+                                   value="{{ old('dLargo_cm', $producto->dLargo_cm) }}"
+                                   oninput="validarDimensionCm(this)"
+                                   onblur="formatearDimensionCm(this)"
+                                   onkeydown="permitirBorrado(event)"
+                                   placeholder="0.00"
+                                   title="Máximo: 999.99 cm (máximo 2 decimales)"
+                                   autocomplete="off">
+                            @error('dLargo_cm')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="form-group mb-3">
+                            <label for="dAncho_cm" class="form-label fw-bold">
+                                <i class="fas fa-ruler-horizontal me-1"></i>Ancho (cm)
+                            </label>
+                            <input type="text" 
+                                   name="dAncho_cm" 
+                                   id="dAncho_cm" 
+                                   class="form-control @error('dAncho_cm') is-invalid @enderror"
+                                   value="{{ old('dAncho_cm', $producto->dAncho_cm) }}"
+                                   oninput="validarDimensionCm(this)"
+                                   onblur="formatearDimensionCm(this)"
+                                   onkeydown="permitirBorrado(event)"
+                                   placeholder="0.00"
+                                   title="Máximo: 999.99 cm (máximo 2 decimales)"
+                                   autocomplete="off">
+                            @error('dAncho_cm')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="form-group mb-3">
+                            <label for="dAlto_cm" class="form-label fw-bold">
+                                <i class="fas fa-arrows-alt-v me-1"></i>Alto (cm)
+                            </label>
+                            <input type="text" 
+                                   name="dAlto_cm" 
+                                   id="dAlto_cm" 
+                                   class="form-control @error('dAlto_cm') is-invalid @enderror"
+                                   value="{{ old('dAlto_cm', $producto->dAlto_cm) }}"
+                                   oninput="validarDimensionCm(this)"
+                                   onblur="formatearDimensionCm(this)"
+                                   onkeydown="permitirBorrado(event)"
+                                   placeholder="0.00"
+                                   title="Máximo: 999.99 cm (máximo 2 decimales)"
+                                   autocomplete="off">
+                            @error('dAlto_cm')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CLASE DE ENVÍO -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="vClase_envio" class="form-label fw-bold">
+                                <i class="fas fa-shipping-fast me-1"></i>Clase de envío
+                            </label>
+                            <select name="vClase_envio" id="vClase_envio" 
+                                    class="form-select @error('vClase_envio') is-invalid @enderror">
+                                <option value="">Seleccionar clase de envío</option>
+                                <option value="estandar" {{ old('vClase_envio', $producto->vClase_envio) == 'estandar' ? 'selected' : '' }}>Estándar</option>
+                                <option value="express" {{ old('vClase_envio', $producto->vClase_envio) == 'express' ? 'selected' : '' }}>Express</option>
+                                <option value="fragil" {{ old('vClase_envio', $producto->vClase_envio) == 'fragil' ? 'selected' : '' }}>Frágil</option>
+                                <option value="grandes_dimensiones" {{ old('vClase_envio', $producto->vClase_envio) == 'grandes_dimensiones' ? 'selected' : '' }}>Grandes dimensiones</option>
+                            </select>
+                            @error('vClase_envio')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">Determina el tipo de envío para este producto</small>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- CATEGORÍA Y MARCA -->
+        <!-- CATEGORÍA, MARCA E IMPUESTO -->
         <div class="card mb-4">
-            <div class="card-header bg-success text-white d-flex align-items-center">
-                <i class="fas fa-tags me-2"></i>
-                <h5 class="mb-0">Categorización</h5>
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Categoría, Marca e Impuesto</h5>
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="id_categoria" class="form-label fw-bold">
                                 Categoría <span class="text-danger">*</span>
@@ -324,7 +423,7 @@
                                     required>
                                 <option value="">Seleccionar categoría</option>
                                 @php
-                                    function mostrarCategoriasJerarquicamenteEdit($categorias, $nivel = 0, $oldValue = null, $productoCategoria = null)
+                                    function mostrarCategoriasJerarquicamenteEdit($categorias, $nivel = 0, $oldValue = null, $selectedValue = null)
                                     {
                                         foreach($categorias as $categoria) {
                                             $prefijo = str_repeat('&nbsp;&nbsp;&nbsp;', $nivel);
@@ -338,33 +437,24 @@
                                                 $icono = str_repeat('↳&nbsp;', $nivel);
                                             }
                                             
-                                            // Determinar si está seleccionado (prioridad: old value, luego producto actual)
-                                            $selected = false;
-                                            if ($oldValue !== null) {
-                                                $selected = ($oldValue == $categoria->id_categoria);
-                                            } elseif ($productoCategoria !== null) {
-                                                $selected = ($productoCategoria == $categoria->id_categoria);
-                                            }
+                                            $selected = ($oldValue == $categoria->id_categoria || $selectedValue == $categoria->id_categoria) ? 'selected' : '';
                                             
-                                            echo '<option value="' . $categoria->id_categoria . '" ' . 
-                                                 ($selected ? 'selected' : '') . '>' .
+                                            echo '<option value="' . $categoria->id_categoria . '" ' . $selected . '>' .
                                                  $prefijo . $icono . htmlspecialchars($categoria->vNombre) . 
                                                  '</option>';
                                             
                                             if ($categoria->hijos && $categoria->hijos->count() > 0) {
-                                                mostrarCategoriasJerarquicamenteEdit($categoria->hijos, $nivel + 1, $oldValue, $productoCategoria);
+                                                mostrarCategoriasJerarquicamenteEdit($categoria->hijos, $nivel + 1, $oldValue, $selectedValue);
                                             }
                                         }
                                     }
                                     
-                                    // Pasar el valor old si existe, o el valor actual del producto
-                                    $oldCategoria = old('id_categoria');
-                                    $productoCategoria = $producto->id_categoria;
+                                    $oldCategoria = old('id_categoria', $producto->id_categoria);
                                     $categoriasRaiz = $categorias->where('id_categoria_padre', null)->where('bActivo', true);
                                 @endphp
                                 
                                 @php
-                                    mostrarCategoriasJerarquicamenteEdit($categoriasRaiz, 0, $oldCategoria, $productoCategoria);
+                                    mostrarCategoriasJerarquicamenteEdit($categoriasRaiz, 0, $oldCategoria, null);
                                 @endphp
                             </select>
                             @error('id_categoria')
@@ -376,7 +466,7 @@
                         </div>
                     </div>
                     
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="id_marca" class="form-label fw-bold">
                                 Marca <span class="text-danger">*</span>
@@ -386,8 +476,8 @@
                                     required>
                                 <option value="">Seleccionar marca</option>
                                 @foreach ($marcas as $marca)
-                                    <option value="{{ $marca->id_marca }}"
-                                        {{ $marca->id_marca == old('id_marca', $producto->id_marca) ? 'selected' : '' }}>
+                                    <option value="{{ $marca->id_marca }}" 
+                                        {{ old('id_marca', $producto->id_marca) == $marca->id_marca ? 'selected' : '' }}>
                                         {{ $marca->vNombre }}
                                     </option>
                                 @endforeach
@@ -397,322 +487,275 @@
                             @enderror
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- DIMENSIONES Y PESO - SECCIÓN NUEVA -->
-        <div class="card mb-4">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="fas fa-ruler-combined me-2"></i>Dimensiones y Peso (Opcional)</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3">
+                    <!-- SECCIÓN DE IMPUESTO -->
+                    <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label for="dPeso" class="form-label fw-bold">
-                                Peso (kg)
+                            <label for="id_impuesto" class="form-label fw-bold">
+                                <i class="fas fa-file-invoice-dollar me-1"></i>Impuesto Aplicable
                             </label>
-                            <div class="input-group">
-                                <input type="text" 
-                                       name="dPeso" 
-                                       id="dPeso" 
-                                       class="form-control @error('dPeso') is-invalid @enderror"
-                                       value="{{ old('dPeso', $producto->dPeso ? number_format($producto->dPeso, 3, '.', '') : '') }}" 
-                                       oninput="validarPeso(this)"
-                                       placeholder="0.000"
-                                       title="Peso en kilogramos (ej: 1.250)">
-                                <span class="input-group-text">kg</span>
-                            </div>
-                            @error('dPeso')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <small class="form-text text-muted">Ej: 1.250 (máximo 999.999 kg)</small>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-3">
-                        <div class="form-group mb-3">
-                            <label for="dLargo_cm" class="form-label fw-bold">
-                                Largo (cm)
-                            </label>
-                            <div class="input-group">
-                                <input type="text" 
-                                       name="dLargo_cm" 
-                                       id="dLargo_cm" 
-                                       class="form-control @error('dLargo_cm') is-invalid @enderror"
-                                       value="{{ old('dLargo_cm', $producto->dLargo_cm ? number_format($producto->dLargo_cm, 2, '.', '') : '') }}" 
-                                       oninput="validarDimension(this)"
-                                       placeholder="0.00"
-                                       title="Largo en centímetros">
-                                <span class="input-group-text">cm</span>
-                            </div>
-                            @error('dLargo_cm')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <small class="form-text text-muted">Ej: 30.50 cm</small>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-3">
-                        <div class="form-group mb-3">
-                            <label for="dAncho_cm" class="form-label fw-bold">
-                                Ancho (cm)
-                            </label>
-                            <div class="input-group">
-                                <input type="text" 
-                                       name="dAncho_cm" 
-                                       id="dAncho_cm" 
-                                       class="form-control @error('dAncho_cm') is-invalid @enderror"
-                                       value="{{ old('dAncho_cm', $producto->dAncho_cm ? number_format($producto->dAncho_cm, 2, '.', '') : '') }}" 
-                                       oninput="validarDimension(this)"
-                                       placeholder="0.00"
-                                       title="Ancho en centímetros">
-                                <span class="input-group-text">cm</span>
-                            </div>
-                            @error('dAncho_cm')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <small class="form-text text-muted">Ej: 20.30 cm</small>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-3">
-                        <div class="form-group mb-3">
-                            <label for="dAlto_cm" class="form-label fw-bold">
-                                Alto (cm)
-                            </label>
-                            <div class="input-group">
-                                <input type="text" 
-                                       name="dAlto_cm" 
-                                       id="dAlto_cm" 
-                                       class="form-control @error('dAlto_cm') is-invalid @enderror"
-                                       value="{{ old('dAlto_cm', $producto->dAlto_cm ? number_format($producto->dAlto_cm, 2, '.', '') : '') }}" 
-                                       oninput="validarDimension(this)"
-                                       placeholder="0.00"
-                                       title="Alto en centímetros">
-                                <span class="input-group-text">cm</span>
-                            </div>
-                            @error('dAlto_cm')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <small class="form-text text-muted">Ej: 15.25 cm</small>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label for="vClase_envio" class="form-label fw-bold">
-                                Clase de envío
-                            </label>
-                            <select name="vClase_envio" id="vClase_envio" 
-                                    class="form-select @error('vClase_envio') is-invalid @enderror">
-                                <option value="">Seleccionar clase...</option>
-                                <option value="estandar" {{ old('vClase_envio', $producto->vClase_envio) == 'estandar' ? 'selected' : '' }}>Estándar</option>
-                                <option value="express" {{ old('vClase_envio', $producto->vClase_envio) == 'express' ? 'selected' : '' }}>Express</option>
-                                <option value="fragil" {{ old('vClase_envio', $producto->vClase_envio) == 'fragil' ? 'selected' : '' }}>Frágil</option>
-                                <option value="grandes_dimensiones" {{ old('vClase_envio', $producto->vClase_envio) == 'grandes_dimensiones' ? 'selected' : '' }}>Grandes dimensiones</option>
-                            </select>
-                            @error('vClase_envio')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <small class="form-text text-muted">Define la categoría de envío del producto</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- OFERTA ESPECIAL - SECCIÓN CORREGIDA (CON FORMATO DE FECHA CORRECTO) -->
-        <div class="card mb-4">
-            <div class="card-header bg-danger text-white">
-                <h5 class="mb-0"><i class="fas fa-percentage me-2"></i>Oferta Especial (Opcional)</h5>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Configura una oferta temporal con precio especial y fechas específicas.
-                </div>
-                
-                <div class="form-group mb-3">
-                    <div class="form-check form-switch">
-                        <input type="hidden" name="bTiene_oferta" value="0">
-                        <input type="checkbox" name="bTiene_oferta" id="bTiene_oferta" 
-                               class="form-check-input"
-                               onchange="toggleOfertaForm()"
-                               value="1"
-                               {{ old('bTiene_oferta', $producto->bTiene_oferta ? '1' : '0') == '1' ? 'checked' : '' }}>
-                        <label for="bTiene_oferta" class="form-check-label fw-bold">
-                            Activar oferta especial
-                        </label>
-                    </div>
-                </div>
-                
-                <div id="oferta-form" style="display: {{ old('bTiene_oferta', $producto->bTiene_oferta ? '1' : '0') == '1' ? 'block' : 'none' }};">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="dPrecio_oferta" class="form-label fw-bold">
-                                    Precio de oferta <span class="text-danger">*</span>
-                                </label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="text" 
-                                           name="dPrecio_oferta" 
-                                           id="dPrecio_oferta" 
-                                           class="form-control @error('dPrecio_oferta') is-invalid @enderror"
-                                           value="{{ old('dPrecio_oferta', $producto->dPrecio_oferta ? number_format($producto->dPrecio_oferta, 2, '.', '') : '') }}" 
-                                           oninput="validarPrecioOferta()"
-                                           placeholder="0.00"
-                                           title="Precio de oferta especial (debe ser menor que el precio de venta)">
-                                    @error('dPrecio_oferta')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
+                            @if(isset($impuestos) && $impuestos->count() > 0)
+                                <select name="id_impuesto" id="id_impuesto" 
+                                        class="form-select @error('id_impuesto') is-invalid @enderror"
+                                        onchange="actualizarPrecioFinal()">
+                                    <option value="">-- Sin impuesto --</option>
+                                    @foreach($impuestos as $impuesto)
+                                        @php
+                                            $selected = false;
+                                            if(old('id_impuesto') == $impuesto->id_impuesto) {
+                                                $selected = true;
+                                            } elseif(!old('id_impuesto') && $producto->impuestos->first()) {
+                                                $selected = $producto->impuestos->first()->id_impuesto == $impuesto->id_impuesto;
+                                            }
+                                        @endphp
+                                        <option value="{{ $impuesto->id_impuesto }}" 
+                                            data-porcentaje="{{ $impuesto->dPorcentaje }}"
+                                            data-tipo="{{ $impuesto->eTipo }}"
+                                            {{ $selected ? 'selected' : '' }}>
+                                            {{ $impuesto->vNombre }} ({{ $impuesto->eTipo }} - {{ number_format($impuesto->dPorcentaje, 2) }}%)
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('id_impuesto')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <small class="form-text text-muted mt-2">
+                                    Selecciona el impuesto que aplica a este producto (opcional)
+                                </small>
+                            @else
+                                <div class="alert alert-warning mb-0">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    No hay impuestos disponibles. 
+                                    <button type="button" class="btn btn-link p-0 ms-1" onclick="activarTabImpuestos()">
+                                        Crear impuestos
+                                    </button>
                                 </div>
-                                <small class="form-text text-muted">
-                                    Precio especial durante el periodo de oferta (debe ser menor que el precio de venta)
-                                </small>
-                            </div>
+                            @endif
                         </div>
-                        
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="vMotivo_oferta" class="form-label fw-bold">
-                                    Motivo de la oferta
-                                </label>
-                                <input type="text" 
-                                       name="vMotivo_oferta" 
-                                       id="vMotivo_oferta" 
-                                       class="form-control @error('vMotivo_oferta') is-invalid @enderror"
-                                       value="{{ old('vMotivo_oferta', $producto->vMotivo_oferta) }}" 
-                                       maxlength="255"
-                                       placeholder="Ej: Temporada navideña, Liquidación, etc.">
-                                @error('vMotivo_oferta')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="dFecha_inicio_oferta" class="form-label fw-bold">
-                                    Fecha de inicio <span class="text-danger">*</span>
-                                </label>
-                                <input type="date" 
-                                       name="dFecha_inicio_oferta" 
-                                       id="dFecha_inicio_oferta" 
-                                       class="form-control @error('dFecha_inicio_oferta') is-invalid @enderror"
-                                       value="{{ old('dFecha_inicio_oferta', $producto->dFecha_inicio_oferta ? \Carbon\Carbon::parse($producto->dFecha_inicio_oferta)->format('Y-m-d') : '') }}">
-                                @error('dFecha_inicio_oferta')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                <small class="form-text text-muted">
-                                    Fecha de inicio de la oferta
-                                </small>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="dFecha_fin_oferta" class="form-label fw-bold">
-                                    Fecha de fin <span class="text-danger">*</span>
-                                </label>
-                                <input type="date" 
-                                       name="dFecha_fin_oferta" 
-                                       id="dFecha_fin_oferta" 
-                                       class="form-control @error('dFecha_fin_oferta') is-invalid @enderror"
-                                       value="{{ old('dFecha_fin_oferta', $producto->dFecha_fin_oferta ? \Carbon\Carbon::parse($producto->dFecha_fin_oferta)->format('Y-m-d') : '') }}">
-                                @error('dFecha_fin_oferta')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                <small class="form-text text-muted">
-                                    Fecha de finalización de la oferta
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        La oferta solo estará activa durante el periodo especificado.
-                        Después de la fecha de fin, el producto volverá a su precio normal.
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ATRIBUTOS (OPCIONAL) -->
-        @if($atributos && $atributos->count() > 0)
+        <!-- IMAGEN PRINCIPAL, VIDEO E IMÁGENES ADICIONALES -->
         <div class="card mb-4">
-            <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Atributos (Opcional)</h5>
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="fas fa-images me-2"></i>Multimedia del Producto</h5>
             </div>
             <div class="card-body">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Los atributos son opcionales. Puedes asignarlos después de crear el producto.
-                </div>
-                
                 @php
-                    // Obtener atributos actuales del producto
-                    $atributosSeleccionados = [];
-                    foreach ($producto->valoresAtributos as $valor) {
-                        $atributosSeleccionados[$valor->id_atributo][] = $valor->id_atributo_valor;
-                    }
+                    $imagenes = $producto->getNombresArchivosImagenes();
+                    $imagenesAEliminar = [];
                 @endphp
+
+                <!-- IMÁGENES ACTUALES -->
+                @if(count($imagenes) > 0)
+                <div class="alert alert-info mb-4">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Imágenes actuales:</strong> Puedes seleccionar las imágenes que deseas eliminar marcando la casilla correspondiente.
+                </div>
                 
-                <div class="row">
-                    @foreach($atributos as $atributo)
-                        <div class="col-md-6 mb-3">
-                            <div class="card h-100 border">
-                                <div class="card-header bg-light">
-                                    <h6 class="mb-0 fw-bold">{{ $atributo->vNombre }}</h6>
-                                    @if($atributo->tDescripcion)
-                                        <p class="small text-muted mb-0 mt-1">{{ $atributo->tDescripcion }}</p>
-                                    @endif
-                                </div>
-                                <div class="card-body">
-                                    @if($atributo->valoresActivos && $atributo->valoresActivos->count() > 0)
-                                        @foreach($atributo->valoresActivos as $valor)
-                                            <div class="form-check mb-2">
-                                                <input type="checkbox" 
-                                                       class="form-check-input" 
-                                                       name="atributos[{{ $atributo->id_atributo }}][]"
-                                                       value="{{ $valor->id_atributo_valor }}"
-                                                       id="atributo_{{ $atributo->id_atributo }}_valor_{{ $valor->id_atributo_valor }}"
-                                                       {{ isset($atributosSeleccionados[$atributo->id_atributo]) && in_array($valor->id_atributo_valor, $atributosSeleccionados[$atributo->id_atributo]) ? 'checked' : '' }}>
-                                                <label class="form-check-label" for="atributo_{{ $atributo->id_atributo }}_valor_{{ $valor->id_atributo_valor }}">
-                                                    {{ $valor->vValor }}
-                                                    @if($valor->dPrecio_extra > 0)
-                                                        <small class="text-success">(+${{ number_format($valor->dPrecio_extra, 2) }})</small>
-                                                    @endif
-                                                </label>
-                                            </div>
-                                        @endforeach
-                                    @else
-                                        <div class="alert alert-warning py-2 mb-0">
-                                            <i class="fas fa-exclamation-triangle me-1"></i>
-                                            No hay valores disponibles
-                                        </div>
-                                    @endif
+                <div class="row mb-4">
+                    @foreach($imagenes as $index => $imagen)
+                        <div class="col-md-3 mb-3">
+                            <div class="card border position-relative {{ $index == 0 ? 'bg-light' : '' }}">
+                                @if($index == 0)
+                                    <div class="position-absolute top-0 start-0 bg-warning text-dark px-2 py-1 small fw-bold">
+                                        Principal
+                                    </div>
+                                @endif
+                                <img src="{{ $imagen['url'] }}" 
+                                     class="card-img-top p-2" 
+                                     style="height: 150px; object-fit: contain;"
+                                     alt="Imagen {{ $index + 1 }}">
+                                <div class="card-body p-2">
+                                    <div class="form-check">
+                                        <input type="checkbox" 
+                                               name="imagenes_a_eliminar[]" 
+                                               value="{{ $imagen['nombre'] }}" 
+                                               class="form-check-input"
+                                               id="eliminar_img_{{ $index }}"
+                                               onchange="marcarImagenAEliminar(this, {{ $index }})">
+                                        <label class="form-check-label text-danger small" for="eliminar_img_{{ $index }}">
+                                            <i class="fas fa-trash me-1"></i>Eliminar
+                                        </label>
+                                    </div>
+                                    <small class="text-muted d-block text-truncate mt-1">{{ $imagen['nombre'] }}</small>
                                 </div>
                             </div>
                         </div>
                     @endforeach
                 </div>
+                <hr>
+                @endif
+
+                <!-- IMAGEN PRINCIPAL (NUEVA) -->
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="imagen_principal" class="form-label fw-bold">
+                                <i class="fas fa-star text-warning me-1"></i>Nueva Imagen Principal (Opcional)
+                            </label>
+                            <input type="file" name="imagen_principal" id="imagen_principal" 
+                                   class="form-control @error('imagen_principal') is-invalid @enderror" 
+                                   accept="image/jpeg,image/jpg,image/png"
+                                   onchange="previewImagenPrincipal(this)">
+                            @error('imagen_principal')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Si subes una nueva imagen principal, reemplazará la actual. Formatos: JPG, JPEG, PNG. Máximo 5MB.
+                            </small>
+                            
+                            <!-- Preview de imagen principal nueva -->
+                            <div id="preview_principal_container" class="mt-2" style="display: none;">
+                                <div class="border rounded p-2 text-center bg-light">
+                                    <img id="preview_principal_img" src="#" 
+                                         class="img-thumbnail" 
+                                         style="max-width: 200px; max-height: 200px; object-fit: contain;"
+                                         alt="Preview imagen principal">
+                                    <div class="mt-2">
+                                        <small class="text-muted d-block">Nueva imagen principal</small>
+                                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarImagenPrincipal()">
+                                            <i class="fas fa-times me-1"></i>Quitar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- VIDEO DEL PRODUCTO -->
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="video_producto" class="form-label fw-bold">
+                                <i class="fas fa-video text-danger me-1"></i>Video del Producto (Opcional)
+                            </label>
+                            <input type="file" name="video_producto" id="video_producto" 
+                                   class="form-control @error('video_producto') is-invalid @enderror" 
+                                   accept="video/mp4,video/webm,video/ogg,video/avi,video/mov,video/mkv"
+                                   onchange="previewVideo(this)">
+                            @error('video_producto')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Formatos: MP4, WebM, OGG, AVI, MOV, MKV. Máximo 50MB.
+                            </small>
+                            
+                            <!-- Preview de video -->
+                            <div id="preview_video_container" class="mt-2" style="display: none;">
+                                <div class="border rounded p-2 text-center bg-light">
+                                    <video id="preview_video" controls style="max-width: 100%; max-height: 150px;">
+                                        <source src="#" type="video/mp4">
+                                        Tu navegador no soporta el elemento de video.
+                                    </video>
+                                    <div class="mt-2">
+                                        <small class="text-muted d-block">Nuevo video seleccionado</small>
+                                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarVideo()">
+                                            <i class="fas fa-times me-1"></i>Quitar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- GIF DEL PRODUCTO -->
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="gif_producto" class="form-label fw-bold">
+                                <i class="fas fa-file-image text-success me-1"></i>GIF Animado (Opcional)
+                            </label>
+                            <input type="file" name="gif_producto" id="gif_producto" 
+                                   class="form-control @error('gif_producto') is-invalid @enderror" 
+                                   accept="image/gif"
+                                   onchange="previewGif(this)">
+                            @error('gif_producto')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Formatos: GIF. Máximo 10MB. Animación del producto.
+                            </small>
+                            
+                            <!-- Preview de GIF -->
+                            <div id="preview_gif_container" class="mt-2" style="display: none;">
+                                <div class="border rounded p-2 text-center bg-light">
+                                    <img id="preview_gif" src="#" 
+                                         class="img-thumbnail" 
+                                         style="max-width: 200px; max-height: 200px; object-fit: contain;"
+                                         alt="Preview GIF">
+                                    <div class="mt-2">
+                                        <small class="text-muted d-block">Nuevo GIF seleccionado</small>
+                                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarGif()">
+                                            <i class="fas fa-times me-1"></i>Quitar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- IMÁGENES ADICIONALES NUEVAS -->
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <div class="form-group mb-3">
+                            <label for="imagenes" class="form-label fw-bold">
+                                <i class="fas fa-images me-1"></i>Agregar Imágenes Adicionales (Máximo 7)
+                            </label>
+                            <input type="file" name="imagenes[]" id="imagenes" 
+                                   class="form-control @error('imagenes') is-invalid @enderror" 
+                                   multiple accept="image/jpeg,image/jpg,image/png,image/webp"
+                                   onchange="handleImageSelection(event)">
+                            @error('imagenes')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">
+                                Formatos: JPG, JPEG, PNG, WEBP. Máximo 5MB por imagen.
+                                Puedes seleccionar hasta 7 imágenes adicionales.
+                            </small>
+                            <div class="mt-2">
+                                <span class="badge bg-info" id="selected-images-count">0 archivos</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Contador de imágenes -->
+                <div class="alert alert-info py-2 mt-2">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <i class="fas fa-camera me-1"></i>
+                            <strong>Total de imágenes del producto:</strong> 
+                            <span id="total-imagenes">{{ count($imagenes) }}</span> de 9 (1 principal + 1 GIF + 7 adicionales)
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <span class="badge bg-primary me-2" id="principal-count">Principal: {{ count($imagenes) > 0 ? '1' : '0' }}</span>
+                            <span class="badge bg-success me-2" id="gif-count">GIF: 0</span>
+                            <span class="badge bg-secondary" id="adicionales-count">Adicionales: {{ count($imagenes) - (count($imagenes) > 0 ? 1 : 0) }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Galería de nuevas imágenes seleccionadas -->
+                <div class="mt-3">
+                    <h6 class="fw-bold mb-2"><i class="fas fa-images me-2"></i>Nuevas imágenes a agregar:</h6>
+                    <div id="selected-images-container" class="row g-2"></div>
+                    <div class="alert alert-warning py-2" id="no-imagenes-msg">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <small>No hay imágenes nuevas seleccionadas</small>
+                    </div>
+                </div>
             </div>
         </div>
-        @endif
 
         <!-- DESCRIPCIÓN Y ETIQUETAS -->
         <div class="card mb-4">
-            <div class="card-header bg-secondary text-white d-flex align-items-center">
-                <i class="fas fa-file-alt me-2"></i>
-                <h5 class="mb-0">Descripción y Etiquetas</h5>
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-align-left me-2"></i>Descripción y Etiquetas</h5>
             </div>
             <div class="card-body">
                 <div class="row">
@@ -728,400 +771,1130 @@
                             @error('tDescripcion_corta')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            <small class="form-text text-muted">Máximo 255 caracteres</small>
                         </div>
                     </div>
                     
-                    <div class="col-md-6">
+                    <div class="col-md-6" id="etiquetas-container">
                         <div class="form-group mb-3">
-                            <label for="tDescripcion_larga" class="form-label fw-bold">
-                                Descripción detallada
-                            </label>
-                            <textarea name="tDescripcion_larga" id="tDescripcion_larga" 
-                                      class="form-control @error('tDescripcion_larga') is-invalid @enderror" 
-                                      rows="5">{{ old('tDescripcion_larga', $producto->tDescripcion_larga) }}</textarea>
-                            @error('tDescripcion_larga')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                            <label class="form-label fw-bold">Etiquetas (Opcional)</label>
+                            <div class="row">
+                                @php
+                                    $etiquetasSeleccionadas = old('etiquetas', $producto->etiquetas->pluck('id_etiqueta')->toArray());
+                                @endphp
+                                
+                                @if(isset($etiquetas) && $etiquetas->count() > 0)
+                                    @foreach ($etiquetas as $etiqueta)
+                                        <div class="col-md-6 col-6 mb-2 etiqueta-item" data-etiqueta-id="{{ $etiqueta->id_etiqueta }}">
+                                            <div class="form-check">
+                                                <input type="checkbox" 
+                                                       name="etiquetas[]" 
+                                                       value="{{ $etiqueta->id_etiqueta }}" 
+                                                       class="form-check-input"
+                                                       {{ in_array($etiqueta->id_etiqueta, $etiquetasSeleccionadas) ? 'checked' : '' }}
+                                                       id="etiqueta_{{ $etiqueta->id_etiqueta }}">
+                                                <label class="form-check-label" for="etiqueta_{{ $etiqueta->id_etiqueta }}">
+                                                    <span class="etiqueta-badge" style="background-color: {{ $etiqueta->color ?? '#007bff' }}; color: white;">
+                                                        {{ $etiqueta->vNombre }}
+                                                    </span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                @else
+                                    <div class="col-12" id="no-etiquetas-msg">
+                                        <div class="alert alert-info py-2">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            No hay etiquetas disponibles. 
+                                            <button type="button" class="btn btn-link p-0 ms-1" onclick="activarTabEtiquetas()">
+                                                Crear etiquetas
+                                            </button>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="form-group mb-3">
-                    <label class="form-label fw-bold">Etiquetas</label>
-                    <div class="row">
-                        @foreach ($etiquetas as $etiqueta)
-                            <div class="col-md-3 col-6 mb-2">
-                                <div class="form-check">
-                                    <input type="checkbox" 
-                                           name="etiquetas[]" 
-                                           value="{{ $etiqueta->id_etiqueta }}" 
-                                           class="form-check-input"
-                                           {{ in_array($etiqueta->id_etiqueta, old('etiquetas', $producto->etiquetas->pluck('id_etiqueta')->toArray())) ? 'checked' : '' }}
-                                           id="etiqueta_{{ $etiqueta->id_etiqueta }}">
-                                    <label class="form-check-label" for="etiqueta_{{ $etiqueta->id_etiqueta }}">
-                                        {{ $etiqueta->vNombre }}
-                                    </label>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                    @error('etiquetas')
-                        <div class="text-danger small">{{ $message }}</div>
+                    <label for="tDescripcion_larga" class="form-label fw-bold">
+                        Descripción detallada
+                    </label>
+                    <textarea name="tDescripcion_larga" id="tDescripcion_larga" 
+                              class="form-control @error('tDescripcion_larga') is-invalid @enderror" 
+                              rows="5">{{ old('tDescripcion_larga', $producto->tDescripcion_larga) }}</textarea>
+                    @error('tDescripcion_larga')
+                        <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
-                
-                <div class="form-group mb-3">
-                    <div class="form-check form-switch">
-                        <input type="checkbox" name="bActivo" id="bActivo" 
-                               class="form-check-input" value="1" 
-                               {{ old('bActivo', $producto->bActivo) ? 'checked' : '' }}>
-                        <label for="bActivo" class="form-check-label fw-bold">
-                            Producto activo
-                        </label>
-                        <small class="form-text text-muted d-block">
-                            Si está desactivado, el producto no se mostrará en la tienda
-                        </small>
+            </div>
+        </div>
+
+        <!-- SECCIÓN DE PRECIO FINAL CON IMPUESTO -->
+        <div class="card mb-4 bg-info text-white">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Precio Final con Impuesto</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card bg-white text-dark">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted">Precio base (sin impuesto)</h6>
+                                <h3 class="fw-bold" id="precio-base-display">${{ number_format($producto->dPrecio_venta, 2) }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-white text-dark">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted">Impuesto</h6>
+                                <h3 class="fw-bold" id="total-impuestos-display">
+                                    ${{ number_format($producto->totalImpuestos, 2) }}
+                                </h3>
+                                <small id="porcentaje-impuestos-display">{{ $producto->porcentajeImpuestos }}%</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <h6>Precio final (con impuesto)</h6>
+                                <h2 class="fw-bold" id="precio-final-display">${{ number_format($producto->dPrecio_final, 2) }}</h2>
+                                <small>Este es el precio que verá el cliente</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- ATRIBUTOS DEL PRODUCTO -->
+        <div class="card mb-4">
+            <div class="card-header" style="background-color: #45c973ff; color: white;">
+                <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Atributos del Producto</h5>
+            </div>
+            <div class="card-body" style="background-color: #f8f9fa;">
+                <div class="alert alert-info mb-4">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Instrucciones:</strong> 
+                    Marca los atributos que deseas activar y selecciona los valores correspondientes. 
+                    Los valores previamente seleccionados aparecerán marcados.
+                </div>
+                
+                @php
+                    $valoresSeleccionados = $producto->valoresAtributos->pluck('id_atributo_valor')->toArray();
+                @endphp
+                
+                @if(isset($atributos) && $atributos->count() > 0)
+                    <div class="row" id="atributos-container">
+                        @foreach($atributos as $atributo)
+                        @php
+                            $tieneValoresSeleccionados = !empty(array_intersect($valoresSeleccionados, $atributo->valoresActivos->pluck('id_atributo_valor')->toArray()));
+                        @endphp
+                        <div class="col-md-6 mb-4 atributo-item" data-atributo-id="{{ $atributo->id_atributo }}">
+                            <div class="card border h-100">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <div class="form-check">
+                                        <input type="checkbox" 
+                                               class="form-check-input atributo-activo-checkbox" 
+                                               id="atributo-activo-{{ $atributo->id_atributo }}"
+                                               data-atributo-id="{{ $atributo->id_atributo }}"
+                                               data-atributo-nombre="{{ $atributo->vNombre }}"
+                                               {{ $tieneValoresSeleccionados ? 'checked' : '' }}>
+                                        <label class="form-check-label fw-bold" for="atributo-activo-{{ $atributo->id_atributo }}" style="color: #495057;">
+                                            {{ $atributo->vNombre }}
+                                            <span class="badge bg-secondary ms-2">{{ $atributo->valoresActivos->count() }} valores</span>
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-warning text-dark atributo-estado-badge" 
+                                              id="estado-{{ $atributo->id_atributo }}" 
+                                              style="display: {{ $tieneValoresSeleccionados ? 'inline-block' : 'none' }};">
+                                            <i class="fas fa-check-circle me-1"></i>Activo
+                                        </span>
+                                        <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="mostrarFormularioValor({{ $atributo->id_atributo }}, '{{ $atributo->vNombre }}')">
+                                            <i class="fas fa-plus-circle me-1"></i>Agregar Valor
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="card-body atributo-valores-container" 
+                                     id="valores-container-{{ $atributo->id_atributo }}" 
+                                     style="display: {{ $tieneValoresSeleccionados ? 'block' : 'none' }}; background-color: white;">
+                                    
+                                    @if($atributo->valoresActivos->count() > 0)
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                <input type="checkbox" 
+                                                       class="form-check-input seleccionar-todos-checkbox" 
+                                                       id="seleccionar-todos-{{ $atributo->id_atributo }}"
+                                                       data-atributo-id="{{ $atributo->id_atributo }}">
+                                                <label class="form-check-label" for="seleccionar-todos-{{ $atributo->id_atributo }}" style="color: #495057;">
+                                                    <strong>Seleccionar todos</strong>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <hr class="my-2">
+                                        <div class="row">
+                                            @foreach($atributo->valoresActivos as $valor)
+                                            <div class="col-md-6 mb-2">
+                                                <div class="form-check">
+                                                    <input type="checkbox" 
+                                                           name="atributos[{{ $atributo->id_atributo }}][]" 
+                                                           value="{{ $valor->id_atributo_valor }}" 
+                                                           class="form-check-input valor-checkbox"
+                                                           id="valor-{{ $valor->id_atributo_valor }}"
+                                                           data-atributo-id="{{ $atributo->id_atributo }}"
+                                                           data-atributo-nombre="{{ $atributo->vNombre }}"
+                                                           data-valor-nombre="{{ $valor->vValor }}"
+                                                           {{ in_array($valor->id_atributo_valor, $valoresSeleccionados) ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="valor-{{ $valor->id_atributo_valor }}" style="color: #495057;">
+                                                        {{ $valor->vValor }}
+                                                        @if($valor->dPrecio_extra > 0)
+                                                            <span class="badge bg-success ms-1">+${{ number_format($valor->dPrecio_extra, 2) }}</span>
+                                                        @endif
+                                                        @if($valor->iStock > 0)
+                                                            <small class="text-muted d-block">Stock: {{ $valor->iStock }}</small>
+                                                        @endif
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="alert alert-warning mb-0">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            Este atributo no tiene valores. 
+                                            <button type="button" class="btn btn-link p-0 ms-1" onclick="mostrarFormularioValor({{ $atributo->id_atributo }}, '{{ $atributo->vNombre }}')">
+                                                Crear primer valor
+                                            </button>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                    
+                    <!-- Resumen de atributos seleccionados -->
+                    <div class="mt-4 p-3 bg-light border rounded" id="resumen-atributos" style="display: none;">
+                        <h6 class="fw-bold mb-3" style="color: #495037;"><i class="fas fa-check-circle text-success me-2"></i>Atributos activados:</h6>
+                        <div id="atributos-activos-lista" class="d-flex flex-wrap gap-3"></div>
+                    </div>
+                    
+                @else
+                    <div class="text-center py-5" id="no-atributos-msg">
+                        <i class="fas fa-tags fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">No hay atributos disponibles</h4>
+                        <p class="text-muted">Crea atributos en la pestaña "Atributos" del panel de herramientas</p>
+                        <button type="button" class="btn btn-primary mt-3" onclick="activarTabAtributos()">
+                            <i class="fas fa-plus-circle me-2"></i> Crear Atributo
+                        </button>
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        <!-- VARIACIONES DEL PRODUCTO -->
+        <div class="card mb-4">
+            <div class="card-header" style="background-color: #6f42c1; color: white;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0"><i class="fas fa-cubes me-2"></i>Variaciones del Producto</h5>
+                        <small style="color: rgba(255,255,255,0.9);">Configura cada variación individualmente</small>
+                    </div>
+                    <div>
+                        <span class="badge bg-light text-dark me-2" id="total-atributos-activos-badge">0 atributos activos</span>
+                        <span class="badge bg-warning text-dark" id="total-valores-badge">0 valores</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body" style="background-color: #f8f9fa;">
+                @if(isset($atributos) && $atributos->count() > 0)
+                    <!-- Mensaje cuando no hay atributos activos -->
+                    <div id="no-atributos-activos-message" class="text-center py-5">
+                        <i class="fas fa-cubes fa-4x text-muted mb-3"></i>
+                        <h5 class="text-muted">No hay atributos activos</h5>
+                        <p class="text-muted">
+                            Activa atributos en la sección <strong>"Atributos del Producto"</strong> 
+                            marcando el checkbox del atributo y seleccionando sus valores.
+                        </p>
+                    </div>
+                    
+                    <!-- PESTAÑAS DE VALORES -->
+                    <div id="valores-activos-tabs-container" style="display: none;">
+                        <!-- Cabecera de pestañas -->
+                        <ul class="nav nav-tabs valores-nav" id="valoresTab" role="tablist" style="background-color: white;"></ul>
+                        
+                        <!-- Contenido de las pestañas -->
+                        <div class="tab-content p-4 border border-top-0 rounded-bottom" id="valoresTabContent" style="background-color: white;"></div>
+                    </div>
+                @else
+                    <div class="text-center py-5">
+                        <i class="fas fa-cubes fa-4x text-muted mb-3"></i>
+                        <h5 class="text-muted">No hay atributos disponibles</h5>
+                        <p class="text-muted">Crea atributos primero para poder generar variaciones</p>
+                    </div>
+                @endif
+            </div>
+        </div>
+
         <!-- BOTONES DE ACCIÓN -->
         <div class="d-flex gap-2 mb-4">
-            <button type="submit" class="btn btn-primary btn-lg px-4">
+            <button type="submit" class="btn btn-success btn-lg px-4" id="btnSubmit">
                 <i class="fas fa-save me-2"></i> Actualizar Producto
             </button>
-            <a href="{{ route('productos.index') }}" class="btn btn-secondary btn-lg px-4">
-                <i class="fas fa-times me-2"></i> Cancelar
+            <a href="{{ route('productos.show', $producto->id_producto) }}" class="btn btn-info btn-lg px-4">
+                <i class="fas fa-eye me-2"></i> Ver detalle
             </a>
-            <a href="{{ route('productos.show', $producto) }}" class="btn btn-info btn-lg px-4">
-                <i class="fas fa-eye me-2"></i> Ver Detalle
+            <a href="{{ route('productos.index') }}" class="btn btn-secondary btn-lg px-4">
+                <i class="fas fa-arrow-left me-2"></i> Cancelar
             </a>
         </div>
     </form>
+
+    <!-- PANEL DE HERRAMIENTAS CON TABS -->
+    <div class="card mt-4 border">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="mb-0"><i class="fas fa-tools me-2"></i>Herramientas de Gestión Rápida</h4>
+                <small class="text-muted">Crea rápidamente elementos necesarios para tu producto</small>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <!-- TABS DE NAVEGACIÓN -->
+            <ul class="nav nav-tabs" id="toolsTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="categorias-tab" data-bs-toggle="tab" 
+                            data-bs-target="#categorias-content" type="button" role="tab">
+                        <i class="fas fa-tags me-1"></i>Categorías
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="marcas-tab" data-bs-toggle="tab" 
+                            data-bs-target="#marcas-content" type="button" role="tab">
+                        <i class="fas fa-industry me-1"></i>Marcas
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="etiquetas-tab" data-bs-toggle="tab" 
+                            data-bs-target="#etiquetas-content" type="button" role="tab">
+                        <i class="fas fa-tag me-1"></i>Etiquetas
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="atributos-tab" data-bs-toggle="tab" 
+                            data-bs-target="#atributos-content" type="button" role="tab">
+                        <i class="fas fa-list-alt me-1"></i>Atributos
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="impuestos-tab" data-bs-toggle="tab" 
+                            data-bs-target="#impuestos-content" type="button" role="tab">
+                        <i class="fas fa-file-invoice-dollar me-1"></i>Impuestos
+                    </button>
+                </li>
+            </ul>
+            
+            <!-- CONTENIDO DE LOS TABS -->
+            <div class="tab-content p-4">
+                <!-- TAB: CATEGORÍAS -->
+                <div class="tab-pane fade show active" id="categorias-content" role="tabpanel">
+                    <div class="quick-form" id="quick-categoria-form">
+                        <h5><i class="fas fa-tags me-2"></i>Crear Nueva Categoría</h5>
+                        <p class="text-muted small mb-3">Las categorías ayudan a organizar tus productos de forma jerárquica.</p>
+                        
+                        <form id="categoriaQuickForm" method="POST" enctype="multipart/form-data">
+                            @csrf
+                            
+                            <div class="mb-3">
+                                <label for="vNombre_categoria" class="form-label fw-bold">Nombre de la Categoría *</label>
+                                <input type="text" class="form-control" 
+                                       id="vNombre_categoria" name="vNombre" 
+                                       required
+                                       placeholder="Ej: Tequila, Mezcal, Añejos..."
+                                       oninput="quickActualizarSlug(this.value, 'vSlug_categoria')">
+                                <small class="form-text text-muted">Nombre descriptivo para la categoría</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="vSlug_categoria" class="form-label fw-bold">Slug (URL amigable) *</label>
+                                <input type="text" class="form-control" 
+                                       id="vSlug_categoria" name="vSlug" 
+                                       required
+                                       placeholder="tequila-reposado">
+                                <small class="form-text text-muted">
+                                    URL para la categoría (ej: tequila-reposado). Se genera automáticamente desde el nombre.
+                                </small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="id_categoria_padre_quick" class="form-label fw-bold">Categoría Padre</label>
+                                <select class="form-control" id="id_categoria_padre_quick" name="id_categoria_padre">
+                                    <option value="">-- Seleccionar Categoría Padre (Opcional) --</option>
+                                    @php
+                                        function mostrarCategoriasParaQuick($categorias, $nivel = 0) {
+                                            foreach($categorias as $categoria) {
+                                                $prefijo = str_repeat('&nbsp;&nbsp;&nbsp;', $nivel);
+                                                $icono = $nivel == 0 ? '🏠 ' : '↳ ';
+                                                echo '<option value="' . $categoria->id_categoria . '">' .
+                                                     $prefijo . $icono . htmlspecialchars($categoria->vNombre) . 
+                                                     '</option>';
+                                                
+                                                if ($categoria->hijos && $categoria->hijos->count() > 0) {
+                                                    mostrarCategoriasParaQuick($categoria->hijos, $nivel + 1);
+                                                }
+                                            }
+                                        }
+                                        
+                                        $categoriasRaiz = $categorias->where('id_categoria_padre', null)->where('bActivo', true);
+                                    @endphp
+                                    
+                                    @php mostrarCategoriasParaQuick($categoriasRaiz, 0); @endphp
+                                </select>
+                                <small class="form-text text-muted">Selecciona si esta categoría pertenece a otra</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="tDescripcion_categoria" class="form-label fw-bold">Descripción</label>
+                                <textarea class="form-control" 
+                                          id="tDescripcion_categoria" name="tDescripcion" rows="3"
+                                          placeholder="Describe la categoría..."></textarea>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Estado</label>
+                                <div class="form-check mt-2">
+                                    <input type="checkbox" class="form-check-input" 
+                                           id="bActivo_categoria" name="bActivo" value="1" checked>
+                                    <label class="form-check-label" for="bActivo_categoria">
+                                        Categoría activa
+                                    </label>
+                                </div>
+                                <small class="form-text text-muted">Las categorías inactivas no estarán disponibles</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Imagen de la Categoría</label>
+                                
+                                <!-- Preview de nueva imagen -->
+                                <div class="mb-3" id="categoriaImagePreview" style="display: none;">
+                                    <div class="border rounded p-3 text-center">
+                                        <img id="categoriaPreviewImg" src="#" 
+                                             class="img-thumbnail" 
+                                             style="max-width: 150px; max-height: 150px; object-fit: cover;"
+                                             alt="Preview">
+                                        <div class="mt-2">
+                                            <small class="text-muted d-block">Vista previa</small>
+                                            <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarImagenCategoria()">
+                                                <i class="fas fa-times me-1"></i>Cancelar imagen
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="input-group">
+                                    <input type="file" class="form-control" 
+                                           id="vImagen_categoria" name="vImagen"
+                                           accept="image/jpeg,image/jpg,image/png,image/webp"
+                                           onchange="previewImagenCategoria(this)">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="resetearInputImagen()">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+                                </div>
+                                <small class="form-text text-muted">
+                                    Formatos: JPG, JPEG, PNG, WebP. Tamaño máximo: 2MB. La imagen es opcional.
+                                </small>
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <button type="button" class="btn btn-secondary" onclick="limpiarFormularioCategoria()">
+                                    <i class="fas fa-undo me-1"></i> Limpiar
+                                </button>
+                                <button type="submit" class="btn btn-primary" id="btnCrearCategoria">
+                                    <i class="fas fa-save me-1"></i> Crear Categoría
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- TAB: MARCAS -->
+                <div class="tab-pane fade" id="marcas-content" role="tabpanel">
+                    <div class="quick-form" id="quick-marca-form">
+                        <h5><i class="fas fa-industry me-2"></i>Crear Nueva Marca</h5>
+                        <p class="text-muted small mb-3">Las marcas identifican al fabricante o productor del artículo.</p>
+                        
+                        <form id="marcaQuickForm">
+                            @csrf
+                            <div class="mb-3">
+                                <label for="vNombre_marca" class="form-label fw-bold">Nombre de la Marca *</label>
+                                <input type="text" class="form-control" id="vNombre_marca" name="vNombre" 
+                                       placeholder="Ej: José Cuervo, Patrón, Don Julio" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="tDescripcion_marca" class="form-label fw-bold">Descripción (Opcional)</label>
+                                <textarea class="form-control" id="tDescripcion_marca" name="tDescripcion" rows="3" 
+                                          placeholder="Describe la marca..."></textarea>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between">
+                                <button type="button" class="btn btn-secondary" onclick="limpiarFormularioMarca()">
+                                    <i class="fas fa-undo me-1"></i> Limpiar
+                                </button>
+                                <button type="submit" class="btn btn-primary" id="btnCrearMarca">
+                                    <i class="fas fa-save me-1"></i> Crear Marca
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- TAB: ETIQUETAS -->
+                <div class="tab-pane fade" id="etiquetas-content" role="tabpanel">
+                    <div class="quick-form" id="quick-etiqueta-form">
+                        <h5><i class="fas fa-tag me-2"></i>Crear Nueva Etiqueta</h5>
+                        <p class="text-muted small mb-3">Las etiquetas son palabras clave que ayudan a clasificar productos.</p>
+                        
+                        <form id="etiquetaQuickForm">
+                            @csrf
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="vNombre_eti" class="form-label fw-bold">Nombre de la Etiqueta *</label>
+                                    <input type="text" class="form-control" id="vNombre_eti" name="vNombre" 
+                                           placeholder="Ej: Artesanal, Orgánico, Premium" required>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="color_eti" class="form-label fw-bold">Color</label>
+                                    <div class="input-group">
+                                        <input type="color" class="form-control form-control-color" 
+                                               id="color_eti" name="color" value="#007bff">
+                                        <input type="text" class="form-control" 
+                                               id="color_text_eti" value="#007bff" 
+                                               placeholder="#007bff" maxlength="7">
+                                    </div>
+                                    <small class="text-muted">Color opcional para identificar la etiqueta</small>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="tDescripcion_eti" class="form-label fw-bold">Descripción (Opcional)</label>
+                                <textarea class="form-control" id="tDescripcion_eti" name="tDescripcion" rows="2" 
+                                          placeholder="Descripción de la etiqueta..."></textarea>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Nota:</strong> Después de crear la etiqueta, estará disponible en la sección "Etiquetas" del formulario.
+                            </div>
+                            
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary" id="btnCrearEtiqueta">
+                                    <i class="fas fa-save me-1"></i> Crear Etiqueta
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- TAB: ATRIBUTOS -->
+                <div class="tab-pane fade" id="atributos-content" role="tabpanel">
+                    <div class="quick-form" id="quick-atributo-form">
+                        <h5><i class="fas fa-list-alt me-2"></i>Crear Nuevo Atributo</h5>
+                        <p class="text-muted small mb-3">Los atributos son características que definen las variaciones de un producto.</p>
+                        
+                        <form id="atributoQuickForm">
+                            @csrf
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="vNombre_attr" class="form-label fw-bold">Nombre del Atributo *</label>
+                                    <input type="text" class="form-control" id="vNombre_attr" name="vNombre" 
+                                           placeholder="Ej: Tamaño, Color, Sabor, Edad"
+                                           oninput="quickGenerarSlug(this.value, 'vSlug_attr')" required>
+                                    <small class="text-muted">Ejemplos: Tamaño, Color, Material, Sabor</small>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="vSlug_attr" class="form-label fw-bold">Slug (URL amigable)</label>
+                                    <input type="text" class="form-control" id="vSlug_attr" name="vSlug" 
+                                           placeholder="tamano, color, material">
+                                    <small class="text-muted">Se genera automáticamente desde el nombre</small>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="tDescripcion_attr" class="form-label fw-bold">Descripción (Opcional)</label>
+                                <textarea class="form-control" id="tDescripcion_attr" name="tDescripcion" rows="2" 
+                                          placeholder="Describe el atributo..."></textarea>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Nota:</strong> Después de crear el atributo, podrás agregar valores específicos usando el botón "Agregar Valor".
+                            </div>
+                            
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary" id="btnCrearAtributo">
+                                    <i class="fas fa-save me-1"></i> Crear Atributo
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- TAB: IMPUESTOS -->
+                <div class="tab-pane fade" id="impuestos-content" role="tabpanel">
+                    <div class="quick-form" id="quick-impuesto-form">
+                        <h5><i class="fas fa-file-invoice-dollar me-2"></i>Crear Nuevo Impuesto</h5>
+                        
+                        <form id="impuestoQuickForm">
+                            @csrf
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="vNombre_impuesto" class="form-label fw-bold">Nombre del Impuesto *</label>
+                                    <input type="text" class="form-control" id="vNombre_impuesto" name="vNombre" 
+                                           placeholder="Ej: IVA, ISR, IEPS" required>
+                                </div>
+                                
+                                <div class="col-md-3 mb-3">
+                                    <label for="eTipo_impuesto" class="form-label fw-bold">Tipo *</label>
+                                    <select class="form-control" id="eTipo_impuesto" name="eTipo" required>
+                                        <option value="">Seleccionar</option>
+                                        <option value="IVA">IVA</option>
+                                        <option value="ISR">ISR</option>
+                                        <option value="IEPS">IEPS</option>
+                                        <option value="OTRO">Otro</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="col-md-3 mb-3">
+                                    <label for="dPorcentaje_impuesto" class="form-label fw-bold">Porcentaje *</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="dPorcentaje_impuesto" name="dPorcentaje" 
+                                               placeholder="16.00" required>
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="tDescripcion_impuesto" class="form-label fw-bold">Descripción (Opcional)</label>
+                                <textarea class="form-control" id="tDescripcion_impuesto" name="tDescripcion" rows="2" 
+                                          placeholder="Descripción del impuesto..."></textarea>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="bActivo_impuesto" name="bActivo" value="1" checked>
+                                    <label class="form-check-label" for="bActivo_impuesto">Impuesto activo</label>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary" id="btnCrearImpuesto">
+                                    <i class="fas fa-save me-1"></i> Crear Impuesto
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
+<!-- MODAL PARA CREAR VALOR DE ATRIBUTO -->
+<div class="modal fade" id="crearValorModal" tabindex="-1" aria-labelledby="crearValorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="crearValorModalLabel">
+                    <i class="fas fa-plus-circle me-2"></i>Crear Nuevo Valor para <span id="atributoNombreModal"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="valorQuickForm">
+                    @csrf
+                    <input type="hidden" id="valor_atributo_id" name="atributo_id">
+                    
+                    <div class="mb-3">
+                        <label for="vValor_modal" class="form-label fw-bold">Valor <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="vValor_modal" name="vValor" required
+                               placeholder="Ej: 750ml, Rojo, Joven, 6 meses"
+                               oninput="generarSlugValor(this.value)">
+                        <small class="form-text text-muted">El valor que aparecerá en las opciones del producto</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="vSlug_valor_modal" class="form-label fw-bold">Slug (URL amigable)</label>
+                        <input type="text" class="form-control" id="vSlug_valor_modal" name="vSlug"
+                               placeholder="Se genera automáticamente">
+                        <small class="form-text text-muted">Versión para URL del valor</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="bActivo_valor_modal" name="bActivo" value="1" checked>
+                            <label class="form-check-label" for="bActivo_valor_modal">Activo</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" onclick="guardarValorAtributo()">
+                    <i class="fas fa-save me-1"></i>Guardar Valor
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('styles')
+<style>
+.etiqueta-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 15px;
+    font-size: 13px;
+    margin: 2px;
+}
+
+.bg-purple {
+    background-color: #6f42c1 !important;
+}
+
+.valores-nav {
+    border-bottom: 2px solid #dee2e6;
+    padding-left: 10px;
+    background: white;
+    border-radius: 8px 8px 0 0;
+    flex-wrap: wrap;
+}
+
+.valores-nav .nav-item {
+    margin-right: 2px;
+    margin-bottom: 5px;
+}
+
+.valores-nav .nav-link {
+    color: #495057;
+    border: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    padding: 10px 15px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    background: transparent;
+    position: relative;
+    border-radius: 8px 8px 0 0;
+}
+
+.valores-nav .nav-link:hover {
+    color: #007bff;
+    border-bottom-color: #adb5bd;
+    background: rgba(0,123,255,0.05);
+}
+
+.valores-nav .nav-link.active {
+    color: #007bff;
+    background: white;
+    border-bottom: 3px solid #007bff;
+    font-weight: 600;
+}
+
+.valores-nav .nav-link .badge {
+    margin-left: 8px;
+    background-color: #6c757d;
+    color: white;
+}
+
+.valores-nav .nav-link.active .badge {
+    background-color: #007bff !important;
+    color: white;
+}
+
+.valor-tab-content {
+    background: white;
+    border-radius: 0 0 8px 8px;
+}
+
+.variacion-form-container {
+    padding: 20px;
+    background: white;
+}
+
+.variacion-header-info {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.variacion-header-info h6 {
+    margin-bottom: 5px;
+    font-size: 1.1rem;
+}
+
+.quick-form {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    margin-bottom: 15px;
+}
+
+.quick-form h5 {
+    color: #2E8B57;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #2E8B57;
+}
+
+.invalid-feedback {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #dc3545;
+}
+
+.variacion-precio-descuento.is-invalid {
+    border-color: #dc3545;
+    padding-right: calc(1.5em + 0.75rem);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.image-preview-card {
+    transition: transform 0.2s;
+    border: 2px solid transparent;
+}
+
+.image-preview-card:hover {
+    transform: scale(1.02);
+    border-color: #007bff;
+}
+
+.image-preview-card.principal {
+    border-color: #ffc107;
+    background-color: #fff3cd;
+}
+
+.principal-badge {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    background-color: #ffc107;
+    color: #000;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 2;
+}
+
+.video-preview, .gif-preview {
+    max-width: 100%;
+    max-height: 150px;
+    border-radius: 8px;
+}
+
+.selected-image-item {
+    position: relative;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 8px;
+    background: #fff;
+}
+
+.selected-image-item .remove-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: 50%;
+    z-index: 10;
+}
+
+@media (max-width: 768px) {
+    .valores-nav .nav-link {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+    }
+}
+</style>
+@endpush
+
+@push('scripts')
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-// ==================== VARIABLES GLOBALES PARA IMÁGENES ====================
+// Variables globales
+let selectedImages = [];
+let imageCounter = 0;
+let atributosActivos = {};
+let imagenPrincipalFile = null;
+let videoFile = null;
+let gifFile = null;
+let valorModal = null;
+let categoriaImagenFile = null;
 
-// Array para almacenar imágenes nuevas seleccionadas
-let nuevasImagenes = [];
-let nuevasImagenesCounter = 0;
-let imagenesAEliminar = []; // Array para almacenar nombres de imágenes a eliminar
-let currentImageToDelete = null; // Variable para almacenar la imagen a eliminar
+// Array de imágenes a eliminar (para seguimiento visual)
+let imagenesAEliminar = [];
 
-// ==================== FUNCIONES PARA MANEJAR IMÁGENES ====================
-
-// Manejar la selección de nuevas imágenes
-function manejarNuevasImagenes(event) {
-    const files = event.target.files;
-    const contenedor = document.getElementById('nuevas-imagenes-container');
+// Inicializar modal cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    valorModal = new bootstrap.Modal(document.getElementById('crearValorModal'));
     
-    // Calcular imágenes totales después de cambios
-    const imagenesActuales = {{ $imagenesExistentes }} - imagenesAEliminar.length;
-    const espacioDisponible = 8 - (imagenesActuales + nuevasImagenes.length);
+    // Inicializar los formularios rápidos
+    initQuickForms();
     
-    if (files.length > espacioDisponible) {
-        alert(`Solo puedes agregar ${espacioDisponible} imágenes más. Ya tienes ${imagenesActuales} imágenes existentes y ${nuevasImagenes.length} nuevas seleccionadas.`);
-        event.target.value = '';
+    // Cargar atributos activos desde el producto
+    cargarAtributosActivosDesdeProducto();
+});
+
+// ============ FUNCIÓN DE CÁLCULO DE IMPUESTO Y PRECIO FINAL ============
+
+function actualizarPrecioFinal() {
+    const precioVentaInput = document.getElementById('dPrecio_venta');
+    const impuestoSelect = document.getElementById('id_impuesto');
+    
+    if (!precioVentaInput) return;
+    
+    const precioVenta = parseFloat(precioVentaInput.value) || 0;
+    
+    // Mostrar precio base
+    document.getElementById('precio-base-display').textContent = '$' + precioVenta.toFixed(2);
+    
+    // Obtener impuesto seleccionado
+    let totalImpuestos = 0;
+    let porcentaje = 0;
+    
+    if (impuestoSelect && impuestoSelect.value) {
+        const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
+        porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
+        totalImpuestos = precioVenta * (porcentaje / 100);
+    }
+    
+    const precioFinal = precioVenta + totalImpuestos;
+    
+    // Mostrar resultados
+    document.getElementById('total-impuestos-display').textContent = '$' + totalImpuestos.toFixed(2);
+    document.getElementById('precio-final-display').textContent = '$' + precioFinal.toFixed(2);
+    document.getElementById('porcentaje-impuestos-display').textContent = porcentaje.toFixed(2) + '%';
+}
+
+// ============ FUNCIONES DE VALIDACIÓN ============
+
+function validarPrecioDescuentoProductoInstantaneo(input) {
+    const tieneDescuento = document.getElementById('bTiene_descuento');
+    if (!tieneDescuento || !tieneDescuento.checked) return true;
+    
+    const precioVenta = parseFloat(document.getElementById('dPrecio_venta').value) || 0;
+    const precioDescuento = parseFloat(input.value) || 0;
+    const errorDiv = document.getElementById('error-precio-descuento');
+    
+    if (precioDescuento >= precioVenta && precioDescuento > 0 && input.value !== '') {
+        input.classList.add('is-invalid');
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
+        return false;
+    } else {
+        input.classList.remove('is-invalid');
+        errorDiv.style.display = 'none';
+        return true;
+    }
+}
+
+function validarPrecioDescuentoProducto() {
+    const tieneDescuento = document.getElementById('bTiene_descuento');
+    if (!tieneDescuento || !tieneDescuento.checked) return true;
+    
+    const precioVenta = parseFloat(document.getElementById('dPrecio_venta').value) || 0;
+    const precioDescuento = parseFloat(document.getElementById('dPrecio_descuento').value) || 0;
+    const input = document.getElementById('dPrecio_descuento');
+    const errorDiv = document.getElementById('error-precio-descuento');
+    
+    if (precioDescuento >= precioVenta && precioDescuento > 0) {
+        input.classList.add('is-invalid');
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
+        return false;
+    } else {
+        input.classList.remove('is-invalid');
+        errorDiv.style.display = 'none';
+        return true;
+    }
+}
+
+function validarDimension(input, maxDecimales, maxValor) {
+    let value = input.value;
+    const cursorPos = input.selectionStart;
+    
+    if (value === '') {
+        input.classList.remove('is-invalid');
         return;
     }
     
-    // Agregar nuevas imágenes
-    let imagenesAgregadas = 0;
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        
-        // Verificar si ya fue seleccionada entre las nuevas imágenes
-        if (!esImagenDuplicada(file)) {
-            // Verificar si el archivo ya existe entre las imágenes actuales del producto
-            if (imagenYaExisteEnProducto(file)) {
-                alert(`La imagen "${file.name}" ya existe en este producto.`);
-                continue;
-            }
-            
-            const reader = new FileReader();
-            const imageId = 'nueva_img_' + Date.now() + '_' + nuevasImagenesCounter++;
-            
-            reader.onload = function(e) {
-                // Agregar al array
-                nuevasImagenes.push({
-                    id: imageId,
-                    file: file,
-                    preview: e.target.result,
-                    nombre: file.name,
-                    size: file.size,
-                    lastModified: file.lastModified
-                });
-                
-                // Crear elemento para mostrar
-                const col = document.createElement('div');
-                col.className = 'col-6 col-md-4 col-lg-3 mb-3';
-                col.id = `nueva-container-${imageId}`;
-                col.innerHTML = `
-                    <div class="card h-100 border position-relative nueva-imagen">
-                        <!-- Imagen -->
-                        <img src="${e.target.result}" 
-                             class="card-img-top" 
-                             style="height: 180px; object-fit: contain; background: #f8f9fa; padding: 10px;"
-                             alt="Nueva imagen">
-                        
-                        <!-- Botón para eliminar -->
-                        <button type="button" 
-                                class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2"
-                                style="width: 32px; height: 32px; padding: 0; border-radius: 50%; z-index: 10;"
-                                onclick="mostrarConfirmacionEliminarNueva('${imageId}', '${file.name}')"
-                                title="Eliminar esta imagen">
-                            <i class="fas fa-times"></i>
-                        </button>
-                        
-                        <div class="card-body p-2 text-center">
-                            <small class="text-muted d-block" style="font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                ${file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name}
-                            </small>
-                            <small class="text-muted d-block">
-                                ${(file.size / 1024).toFixed(2)} KB
-                            </small>
-                            <span class="badge bg-success mt-1">
-                                Nueva
-                            </span>
-                        </div>
-                    </div>
-                `;
-                
-                // Agregar al contenedor
-                contenedor.appendChild(col);
-                imagenesAgregadas++;
-            };
-            
-            reader.readAsDataURL(file);
-        } else {
-            alert(`La imagen "${file.name}" ya fue seleccionada.`);
+    const lastCharWasDot = value.endsWith('.');
+    
+    value = value.replace(/[^0-9.]/g, '');
+    
+    const puntos = value.split('.').length - 1;
+    if (puntos > 1) {
+        const partes = value.split('.');
+        value = partes[0] + '.' + partes.slice(1).join('');
+    }
+    
+    if (value.startsWith('.')) {
+        value = '0' + value;
+    }
+    
+    const partesNumero = value.split('.');
+    let parteEntera = partesNumero[0];
+    let parteDecimal = partesNumero[1] || '';
+    
+    if (parteEntera.length > 3) {
+        parteEntera = parteEntera.substring(0, 3);
+    }
+    
+    if (parteDecimal.length > maxDecimales) {
+        parteDecimal = parteDecimal.substring(0, maxDecimales);
+    }
+    
+    value = parteEntera;
+    if (parteDecimal || lastCharWasDot) {
+        value += '.' + parteDecimal;
+    }
+    
+    if (value && !value.endsWith('.') && !isNaN(parseFloat(value))) {
+        let numValue = parseFloat(value);
+        if (numValue > maxValor) {
+            value = maxValor.toString();
         }
     }
     
-    if (imagenesAgregadas > 0) {
-        // Actualizar contador
-        actualizarContadorImagenes();
+    if (input.value !== value) {
+        const oldLength = input.value.length;
+        input.value = value;
+        const newLength = value.length;
         
-        // Actualizar DataTransfer
-        actualizarDataTransfer();
-    }
-    
-    // Limpiar input para permitir nuevas selecciones
-    event.target.value = '';
-}
-
-// Verificar si la imagen ya fue seleccionada entre las nuevas imágenes
-function esImagenDuplicada(newFile) {
-    return nuevasImagenes.some(img => 
-        img.file.name === newFile.name && 
-        img.file.size === newFile.size && 
-        img.file.lastModified === newFile.lastModified
-    );
-}
-
-// Verificar si la imagen ya existe en el producto actual (imágenes existentes no marcadas para eliminar)
-function imagenYaExisteEnProducto(file) {
-    // Obtener todos los nombres de imágenes existentes que NO están marcadas para eliminar
-    const nombresImagenesExistentes = [];
-    
-    // Obtener nombres de imágenes existentes desde los datos PHP
-    @foreach($nombresArchivos as $imagen)
-        if (!imagenesAEliminar.includes('{{ $imagen['nombre'] }}')) {
-            nombresImagenesExistentes.push('{{ $imagen['nombre'] }}');
+        let newCursorPos = cursorPos;
+        if (oldLength > newLength) {
+            newCursorPos = Math.min(cursorPos, newLength);
+        } else if (oldLength < newLength) {
+            newCursorPos = cursorPos + (newLength - oldLength);
         }
-    @endforeach
-    
-    // Verificar si el nombre del archivo ya existe
-    return nombresImagenesExistentes.some(nombreExistente => {
-        // Comparamos solo el nombre del archivo
-        return nombreExistente.toLowerCase() === file.name.toLowerCase();
-    });
-}
-
-// Mostrar modal de confirmación para eliminar imagen existente
-function mostrarConfirmacionEliminarExistente(imageName, imageUrl) {
-    currentImageToDelete = {
-        type: 'existing',
-        name: imageName,
-        url: imageUrl
-    };
-    
-    // Actualizar mensaje del modal
-    document.getElementById('modalMessage').textContent = `¿Estás seguro de que deseas eliminar la imagen "${imageName}"? Esta acción no se puede deshacer.`;
-    
-    // Mostrar vista previa de la imagen
-    const previewContainer = document.getElementById('imagePreviewContainer');
-    previewContainer.innerHTML = `
-        <div class="text-center mt-3">
-            <img src="${imageUrl}" 
-                 alt="Vista previa" 
-                 class="img-fluid rounded" 
-                 style="max-height: 150px; max-width: 100%;">
-            <p class="mt-2 text-muted"><small>${imageName}</small></p>
-        </div>
-    `;
-    
-    // Mostrar el modal
-    const modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
-    modal.show();
-}
-
-// Mostrar modal de confirmación para eliminar imagen nueva
-function mostrarConfirmacionEliminarNueva(imageId, fileName) {
-    // Buscar la imagen en el array de nuevas imágenes
-    const imagen = nuevasImagenes.find(img => img.id === imageId);
-    if (!imagen) return;
-    
-    currentImageToDelete = {
-        type: 'new',
-        id: imageId,
-        name: fileName,
-        preview: imagen.preview
-    };
-    
-    // Actualizar mensaje del modal
-    document.getElementById('modalMessage').textContent = `¿Estás seguro de que deseas eliminar la imagen "${fileName}"? Esta acción no se puede deshacer.`;
-    
-    // Mostrar vista previa de la imagen
-    const previewContainer = document.getElementById('imagePreviewContainer');
-    previewContainer.innerHTML = `
-        <div class="text-center mt-3">
-            <img src="${imagen.preview}" 
-                 alt="Vista previa" 
-                 class="img-fluid rounded" 
-                 style="max-height: 150px; max-width: 100%;">
-            <p class="mt-2 text-muted"><small>${fileName}</small></p>
-        </div>
-    `;
-    
-    // Mostrar el modal
-    const modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
-    modal.show();
-}
-
-// Función para manejar la eliminación confirmada
-function confirmarEliminacion() {
-    if (!currentImageToDelete) return;
-    
-    if (currentImageToDelete.type === 'existing') {
-        // Eliminar imagen existente
-        eliminarImagenExistenteConfirmada(currentImageToDelete.name);
-    } else if (currentImageToDelete.type === 'new') {
-        // Eliminar imagen nueva
-        eliminarNuevaImagenConfirmada(currentImageToDelete.id);
-    }
-    
-    // Cerrar el modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal'));
-    modal.hide();
-    
-    // Limpiar la variable
-    currentImageToDelete = null;
-}
-
-// Eliminar una imagen existente (después de confirmación)
-function eliminarImagenExistenteConfirmada(nombreImagen) {
-    // Agregar a la lista de imágenes a eliminar
-    if (!imagenesAEliminar.includes(nombreImagen)) {
-        imagenesAEliminar.push(nombreImagen);
-    }
-    
-    const hiddenInput = document.getElementById(`hidden-eliminar-${nombreImagen}`);
-    const container = document.getElementById(`image-container-${nombreImagen}`);
-    
-    if (hiddenInput) {
-        hiddenInput.disabled = false;
-    }
-    
-    if (container) {
-        // Aplicar animación de eliminación
-        container.style.opacity = '0.5';
-        container.style.transform = 'scale(0.95)';
-        container.style.transition = 'all 0.3s ease';
         
-        // Después de la animación, remover del DOM
         setTimeout(() => {
-            container.style.display = 'none';
-            
-            // Actualizar contador
-            actualizarContadorImagenes();
-        }, 300);
-    }
-}
-
-// Eliminar una imagen nueva seleccionada (después de confirmación)
-function eliminarNuevaImagenConfirmada(imageId) {
-    // Remover del array
-    nuevasImagenes = nuevasImagenes.filter(img => img.id !== imageId);
-    
-    // Remover del DOM
-    const container = document.getElementById(`nueva-container-${imageId}`);
-    if (container) {
-        // Aplicar animación de eliminación
-        container.style.opacity = '0.5';
-        container.style.transform = 'scale(0.95)';
-        container.style.transition = 'all 0.3s ease';
-        
-        // Después de la animación, remover del DOM
-        setTimeout(() => {
-            container.remove();
-            
-            // Actualizar contador
-            actualizarContadorImagenes();
-            
-            // Actualizar DataTransfer
-            actualizarDataTransfer();
-        }, 300);
-    }
-}
-
-// Actualizar DataTransfer para mantener archivos
-function actualizarDataTransfer() {
-    const dataTransfer = new DataTransfer();
-    
-    // Agregar todas las nuevas imágenes al DataTransfer
-    nuevasImagenes.forEach(imagen => {
-        dataTransfer.items.add(imagen.file);
-    });
-    
-    // Actualizar input file
-    const fileInput = document.getElementById('imagenes');
-    fileInput.files = dataTransfer.files;
-}
-
-// Actualizar contador de imágenes
-function actualizarContadorImagenes() {
-    const imagenesActuales = {{ $imagenesExistentes }} - imagenesAEliminar.length;
-    const totalImagenes = imagenesActuales + nuevasImagenes.length;
-    
-    // Actualizar contador de nuevas imágenes
-    const contadorNuevas = document.getElementById('contador-nuevas');
-    if (contadorNuevas) {
-        contadorNuevas.textContent = `${nuevasImagenes.length} nuevas`;
+            input.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
     }
     
-    // Actualizar texto informativo
-    const contadorTexto = document.getElementById('contador-texto');
-    if (contadorTexto) {
-        if (totalImagenes > 8) {
-            contadorTexto.innerHTML = `<span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Excedes el límite de 8 imágenes. Tienes ${totalImagenes} imágenes (${imagenesActuales} existentes + ${nuevasImagenes.length} nuevas).</span>`;
-        } else {
-            contadorTexto.innerHTML = `
-                Tienes <strong>${totalImagenes} de 8</strong> imágenes: 
-                <span class="text-primary">${imagenesActuales} existentes</span> 
-                <span class="text-success">${nuevasImagenes.length} nuevas</span>.
-                ${imagenesAEliminar.length > 0 ? `<span class="text-danger">(${imagenesAEliminar.length} marcadas para eliminar)</span>` : ''}
-            `;
+    input.classList.remove('is-invalid');
+}
+
+function validarPeso(input) {
+    validarDimension(input, 3, 999.999);
+}
+
+function validarDimensionCm(input) {
+    validarDimension(input, 2, 999.99);
+}
+
+function formatearPeso(input) {
+    let value = input.value;
+    
+    if (!value || value === '.' || value.endsWith('.')) {
+        return;
+    }
+    
+    let num = parseFloat(value);
+    if (isNaN(num)) {
+        input.value = '';
+        return;
+    }
+    
+    if (num > 999.999) {
+        num = 999.999;
+    }
+    
+    input.value = num.toString();
+}
+
+function formatearDimensionCm(input) {
+    let value = input.value;
+    
+    if (!value || value === '.' || value.endsWith('.')) {
+        return;
+    }
+    
+    let num = parseFloat(value);
+    if (isNaN(num)) {
+        input.value = '';
+        return;
+    }
+    
+    if (num > 999.99) {
+        num = 999.99;
+    }
+    
+    input.value = num.toString();
+}
+
+function permitirBorrado(e) {
+    const teclasPermitidas = [
+        'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+        'Home', 'End', 'Tab', 'Enter'
+    ];
+    
+    if (e.ctrlKey || e.metaKey) {
+        return true;
+    }
+    
+    if (teclasPermitidas.includes(e.key)) {
+        return true;
+    }
+    
+    if (e.key >= '0' && e.key <= '9') {
+        return true;
+    }
+    
+    if (e.key === '.') {
+        if (e.target.value.includes('.')) {
+            e.preventDefault();
+            return false;
         }
+        return true;
     }
+    
+    e.preventDefault();
+    return false;
 }
 
-// ==================== FUNCIONES DE VALIDACIÓN ====================
+function validarSKU(input) {
+    input.value = input.value.replace(/[^A-Za-z0-9-]/g, '');
+    if (input.value.length > 50) {
+        input.value = input.value.substring(0, 50);
+    }
+    input.value = input.value.toUpperCase();
+    input.classList.remove('is-invalid');
+}
 
-// Validar precio
 function validarPrecio(input) {
     let value = input.value;
     const cursorPos = input.selectionStart;
@@ -1132,26 +1905,21 @@ function validarPrecio(input) {
     }
     
     value = value.replace(/[^0-9.]/g, '');
-    
     const puntos = value.split('.').length - 1;
     if (puntos > 1) {
         const partes = value.split('.');
         value = partes[0] + '.' + partes.slice(1).join('');
     }
-    
     value = value.replace(/\.{2,}/g, '.');
-    
     if (value.startsWith('.')) {
         value = '0' + value;
     }
     
     const partesNumero = value.split('.');
     const parteEntera = partesNumero[0];
-    
     if (parteEntera.length > 7) {
         value = parteEntera.substring(0, 7) + (partesNumero[1] ? '.' + partesNumero[1] : '');
     }
-    
     if (value.includes('.')) {
         const partes = value.split('.');
         if (partes[1].length > 2) {
@@ -1163,674 +1931,2157 @@ function validarPrecio(input) {
     if (input.value !== value) {
         const oldValue = input.value;
         input.value = value;
-        
         const cursorDiff = value.length - oldValue.length;
         const newCursorPos = Math.max(0, Math.min(value.length, cursorPos + cursorDiff));
         setTimeout(() => {
             input.setSelectionRange(newCursorPos, newCursorPos);
         }, 0);
     }
-    
     input.classList.remove('is-invalid');
     
-    if (value) {
-        const numero = parseFloat(value);
-        if (!isNaN(numero) && numero > 9999999.99) {
-            input.classList.add('is-invalid');
-            mostrarErrorPrecio(input, 'El precio máximo es 9,999,999.99');
-        }
+    if (input.id === 'dPrecio_descuento') {
+        validarPrecioDescuentoProductoInstantaneo(input);
+    }
+    
+    if (input.id === 'dPrecio_venta') {
+        actualizarPrecioFinal();
     }
 }
 
-function mostrarErrorPrecio(input, mensaje) {
-    const errorId = `error-${input.id}`;
-    const errorElement = document.getElementById(errorId);
-    if (errorElement) {
-        errorElement.remove();
-    }
-    
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'invalid-feedback d-block precio-error';
-    errorDiv.textContent = mensaje;
-    errorDiv.id = errorId;
-    
-    input.parentNode.appendChild(errorDiv);
-}
-
-// Validar stock
 function validarStock(input) {
     input.value = input.value.replace(/[^0-9]/g, '');
-    
     if (input.value.length > 4) {
         input.value = input.value.substring(0, 4);
     }
-    
     if (input.value && parseInt(input.value) < 0) {
         input.value = '0';
     }
-    
     if (input.value.length > 1 && input.value.startsWith('0')) {
         input.value = input.value.replace(/^0+/, '');
     }
-    
     if (input.value === '') {
         input.value = '0';
     }
-    
     input.classList.remove('is-invalid');
 }
 
-// Validar SKU
-function validarSKU(input) {
-    input.value = input.value.replace(/[^A-Za-z0-9]/g, '');
+function toggleDescuentoFields() {
+    const descuentoFields = document.getElementById('descuentoFields');
+    const tieneDescuento = document.getElementById('bTiene_descuento').checked;
+    const precioDescuento = document.getElementById('dPrecio_descuento');
+    const fechaInicio = document.getElementById('dFecha_inicio_descuento');
+    const fechaFin = document.getElementById('dFecha_fin_descuento');
     
-    if (input.value.length > 15) {
-        input.value = input.value.substring(0, 15);
-    }
-    
-    input.value = input.value.toUpperCase();
-    
-    input.classList.remove('is-invalid');
-}
-
-// Validar peso
-function validarPeso(input) {
-    let value = input.value;
-    const cursorPos = input.selectionStart;
-    
-    if (value === '') {
-        input.classList.remove('is-invalid');
-        return;
-    }
-    
-    value = value.replace(/[^0-9.]/g, '');
-    
-    const puntos = value.split('.').length - 1;
-    if (puntos > 1) {
-        const partes = value.split('.');
-        value = partes[0] + '.' + partes.slice(1).join('');
-    }
-    
-    value = value.replace(/\.{2,}/g, '.');
-    
-    if (value.startsWith('.')) {
-        value = '0' + value;
-    }
-    
-    const partesNumero = value.split('.');
-    const parteEntera = partesNumero[0];
-    
-    if (parteEntera.length > 3) {
-        value = parteEntera.substring(0, 3) + (partesNumero[1] ? '.' + partesNumero[1] : '');
-    }
-    
-    if (value.includes('.')) {
-        const partes = value.split('.');
-        if (partes[1].length > 3) {
-            partes[1] = partes[1].substring(0, 3);
-            value = partes[0] + '.' + partes[1];
-        }
-    }
-    
-    if (input.value !== value) {
-        const oldValue = input.value;
-        input.value = value;
+    if (tieneDescuento) {
+        descuentoFields.style.display = 'block';
+        precioDescuento.required = true;
+        fechaInicio.required = true;
+        fechaFin.required = true;
         
-        const cursorDiff = value.length - oldValue.length;
-        const newCursorPos = Math.max(0, Math.min(value.length, cursorPos + cursorDiff));
-        setTimeout(() => {
-            input.setSelectionRange(newCursorPos, newCursorPos);
-        }, 0);
-    }
-    
-    input.classList.remove('is-invalid');
-    
-    if (value) {
-        const numero = parseFloat(value);
-        if (!isNaN(numero) && numero > 999.999) {
-            input.classList.add('is-invalid');
-            mostrarErrorGeneral(input, 'El peso máximo es 999.999 kg');
-        }
-    }
-}
-
-// Validar dimensiones
-function validarDimension(input) {
-    let value = input.value;
-    const cursorPos = input.selectionStart;
-    
-    if (value === '') {
-        input.classList.remove('is-invalid');
-        return;
-    }
-    
-    value = value.replace(/[^0-9.]/g, '');
-    
-    const puntos = value.split('.').length - 1;
-    if (puntos > 1) {
-        const partes = value.split('.');
-        value = partes[0] + '.' + partes.slice(1).join('');
-    }
-    
-    value = value.replace(/\.{2,}/g, '.');
-    
-    if (value.startsWith('.')) {
-        value = '0' + value;
-    }
-    
-    const partesNumero = value.split('.');
-    const parteEntera = partesNumero[0];
-    
-    if (parteEntera.length > 3) {
-        value = parteEntera.substring(0, 3) + (partesNumero[1] ? '.' + partesNumero[1] : '');
-    }
-    
-    if (value.includes('.')) {
-        const partes = value.split('.');
-        if (partes[1].length > 2) {
-            partes[1] = partes[1].substring(0, 2);
-            value = partes[0] + '.' + partes[1];
-        }
-    }
-    
-    if (input.value !== value) {
-        const oldValue = input.value;
-        input.value = value;
-        
-        const cursorDiff = value.length - oldValue.length;
-        const newCursorPos = Math.max(0, Math.min(value.length, cursorPos + cursorDiff));
-        setTimeout(() => {
-            input.setSelectionRange(newCursorPos, newCursorPos);
-        }, 0);
-    }
-    
-    input.classList.remove('is-invalid');
-    
-    if (value) {
-        const numero = parseFloat(value);
-        if (!isNaN(numero) && numero > 999.99) {
-            input.classList.add('is-invalid');
-            mostrarErrorGeneral(input, 'La dimensión máxima es 999.99 cm');
-        }
-    }
-}
-
-function mostrarErrorGeneral(input, mensaje) {
-    const errorId = `error-${input.id}`;
-    const errorElement = document.getElementById(errorId);
-    
-    if (errorElement) {
-        errorElement.remove();
-    }
-    
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'invalid-feedback d-block';
-    errorDiv.textContent = mensaje;
-    errorDiv.id = errorId;
-    
-    input.parentNode.appendChild(errorDiv);
-}
-
-// ==================== FUNCIONES PARA OFERTA ====================
-
-// Mostrar/ocultar formulario de oferta
-function toggleOfertaForm() {
-    const ofertaCheckbox = document.getElementById('bTiene_oferta');
-    const ofertaForm = document.getElementById('oferta-form');
-    
-    if (ofertaCheckbox.checked) {
-        ofertaForm.style.display = 'block';
+        setTimeout(() => validarPrecioDescuentoProducto(), 100);
     } else {
-        ofertaForm.style.display = 'none';
-    }
-    
-    // Validar precio de oferta al cambiar
-    validarPrecioOferta();
-}
-
-// ==================== VALIDACIÓN DE PRECIO DE OFERTA ====================
-
-// Validar precio de oferta en tiempo real
-function validarPrecioOferta() {
-    const precioVentaInput = document.getElementById('dPrecio_venta');
-    const precioOfertaInput = document.getElementById('dPrecio_oferta');
-    const tieneOfertaCheckbox = document.getElementById('bTiene_oferta');
-    
-    if (!precioVentaInput || !precioOfertaInput || !tieneOfertaCheckbox) {
-        return true;
-    }
-    
-    const precioVenta = parseFloat(precioVentaInput.value) || 0;
-    const precioOferta = parseFloat(precioOfertaInput.value) || 0;
-    const tieneOferta = tieneOfertaCheckbox.checked;
-    
-    if (tieneOferta && precioOferta > 0) {
-        if (precioOferta >= precioVenta) {
-            mostrarErrorOferta('El precio de oferta debe ser menor que el precio de venta.');
-            return false;
-        } else {
-            limpiarErrorOferta();
-            return true;
-        }
-    }
-    
-    limpiarErrorOferta();
-    return true;
-}
-
-function mostrarErrorOferta(mensaje) {
-    const inputOferta = document.getElementById('dPrecio_oferta');
-    const errorId = 'error-precio-oferta';
-    
-    // Remover error anterior si existe
-    const errorElement = document.getElementById(errorId);
-    if (errorElement) {
-        errorElement.remove();
-    }
-    
-    // Crear elemento de error
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'invalid-feedback d-block text-danger mt-1';
-    errorDiv.id = errorId;
-    errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i> ${mensaje}`;
-    
-    // Insertar después del input
-    const inputGroup = inputOferta.closest('.input-group') || inputOferta.parentNode;
-    inputGroup.appendChild(errorDiv);
-    inputOferta.classList.add('is-invalid');
-}
-
-function limpiarErrorOferta() {
-    const inputOferta = document.getElementById('dPrecio_oferta');
-    const errorId = 'error-precio-oferta';
-    
-    const errorElement = document.getElementById(errorId);
-    if (errorElement) {
-        errorElement.remove();
-    }
-    
-    inputOferta.classList.remove('is-invalid');
-}
-
-// Validación de fechas de oferta
-function validarFechasOferta() {
-    const fechaInicio = document.getElementById('dFecha_inicio_oferta');
-    const fechaFin = document.getElementById('dFecha_fin_oferta');
-    
-    if (fechaInicio.value && fechaFin.value) {
-        const inicio = new Date(fechaInicio.value);
-        const fin = new Date(fechaFin.value);
+        descuentoFields.style.display = 'none';
+        precioDescuento.required = false;
+        fechaInicio.required = false;
+        fechaFin.required = false;
         
-        if (fin < inicio) {
-            fechaFin.setCustomValidity('La fecha de fin debe ser posterior a la fecha de inicio');
-            return false;
-        }
+        precioDescuento.classList.remove('is-invalid');
+        document.getElementById('error-precio-descuento').style.display = 'none';
     }
-    
-    fechaFin.setCustomValidity('');
-    return true;
 }
 
-// ==================== VALIDACIÓN DEL FORMULARIO ====================
+// ============ FUNCIONES DE IMÁGENES ============
 
-document.getElementById('productoForm').addEventListener('submit', function(e) {
-    let erroresCriticos = false;
+function marcarImagenAEliminar(checkbox, index) {
+    if (checkbox.checked) {
+        imagenesAEliminar.push(checkbox.value);
+    } else {
+        imagenesAEliminar = imagenesAEliminar.filter(img => img !== checkbox.value);
+    }
+    actualizarContadorImagenes();
+}
+
+function previewImagenPrincipal(input) {
+    const previewContainer = document.getElementById('preview_principal_container');
+    const previewImg = document.getElementById('preview_principal_img');
     
-    // Validar campos obligatorios
-    const camposObligatorios = [
-        {id: 'vCodigo_barras', nombre: 'SKU'},
-        {id: 'vNombre', nombre: 'Nombre'},
-        {id: 'dPrecio_venta', nombre: 'Precio de venta'},
-        {id: 'iStock', nombre: 'Stock'},
-        {id: 'id_categoria', nombre: 'Categoría'},
-        {id: 'id_marca', nombre: 'Marca'}
-    ];
-    
-    camposObligatorios.forEach(campo => {
-        const elemento = document.getElementById(campo.id);
-        if (!elemento.value.trim()) {
-            elemento.classList.add('is-invalid');
-            erroresCriticos = true;
-            
-            if (!elemento.nextElementSibling || !elemento.nextElementSibling.classList.contains('invalid-feedback')) {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'invalid-feedback';
-                errorDiv.textContent = `El campo "${campo.nombre}" es obligatorio`;
-                elemento.parentNode.appendChild(errorDiv);
-            }
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        
+        if (!validTypes.includes(file.type)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Formato no válido',
+                text: 'La imagen principal solo acepta formatos JPG, JPEG y PNG'
+            });
+            input.value = '';
+            return;
         }
+        
+        imagenPrincipalFile = file;
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewContainer.style.display = 'block';
+        }
+        
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        previewContainer.style.display = 'none';
+        imagenPrincipalFile = null;
+    }
+    
+    actualizarContadorImagenes();
+}
+
+function cancelarImagenPrincipal() {
+    const input = document.getElementById('imagen_principal');
+    const previewContainer = document.getElementById('preview_principal_container');
+    
+    input.value = '';
+    previewContainer.style.display = 'none';
+    imagenPrincipalFile = null;
+    actualizarContadorImagenes();
+}
+
+function previewVideo(input) {
+    const previewContainer = document.getElementById('preview_video_container');
+    const previewVideo = document.getElementById('preview_video');
+    const source = previewVideo.querySelector('source');
+    
+    if (input.files && input.files[0]) {
+        videoFile = input.files[0];
+        const url = URL.createObjectURL(input.files[0]);
+        source.src = url;
+        source.type = input.files[0].type;
+        previewVideo.load();
+        previewContainer.style.display = 'block';
+    } else {
+        previewContainer.style.display = 'none';
+        videoFile = null;
+    }
+}
+
+function cancelarVideo() {
+    const input = document.getElementById('video_producto');
+    const previewContainer = document.getElementById('preview_video_container');
+    const previewVideo = document.getElementById('preview_video');
+    const source = previewVideo.querySelector('source');
+    
+    input.value = '';
+    previewContainer.style.display = 'none';
+    source.src = '#';
+    videoFile = null;
+}
+
+function previewGif(input) {
+    const previewContainer = document.getElementById('preview_gif_container');
+    const previewImg = document.getElementById('preview_gif');
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        
+        if (file.type !== 'image/gif') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Formato no válido',
+                text: 'El campo GIF solo acepta archivos con formato GIF'
+            });
+            input.value = '';
+            return;
+        }
+        
+        gifFile = file;
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewContainer.style.display = 'block';
+        }
+        
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        previewContainer.style.display = 'none';
+        gifFile = null;
+    }
+    
+    actualizarContadorImagenes();
+}
+
+function cancelarGif() {
+    const input = document.getElementById('gif_producto');
+    const previewContainer = document.getElementById('preview_gif_container');
+    
+    input.value = '';
+    previewContainer.style.display = 'none';
+    gifFile = null;
+    actualizarContadorImagenes();
+}
+
+function previewImagenCategoria(input) {
+    const preview = document.getElementById('categoriaImagePreview');
+    const previewImg = document.getElementById('categoriaPreviewImg');
+    
+    if (input.files && input.files.length > 0) {
+        const file = input.files[0];
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        
+        if (!validTypes.includes(file.type)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Formato no válido',
+                text: 'Solo se permiten imágenes JPG, JPEG, PNG o WebP'
+            });
+            input.value = '';
+            return;
+        }
+        
+        categoriaImagenFile = file;
+        
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            preview.style.display = 'block';
+        }
+        
+        reader.readAsDataURL(file);
+    }
+}
+
+function cancelarImagenCategoria() {
+    const preview = document.getElementById('categoriaImagePreview');
+    const fileInput = document.getElementById('vImagen_categoria');
+    
+    preview.style.display = 'none';
+    fileInput.value = '';
+    categoriaImagenFile = null;
+}
+
+function resetearInputImagen() {
+    const fileInput = document.getElementById('vImagen_categoria');
+    fileInput.value = '';
+    document.getElementById('categoriaImagePreview').style.display = 'none';
+    categoriaImagenFile = null;
+}
+
+function limpiarFormularioCategoria() {
+    document.getElementById('vNombre_categoria').value = '';
+    document.getElementById('vSlug_categoria').value = '';
+    document.getElementById('id_categoria_padre_quick').value = '';
+    document.getElementById('tDescripcion_categoria').value = '';
+    document.getElementById('bActivo_categoria').checked = true;
+    document.getElementById('vImagen_categoria').value = '';
+    document.getElementById('categoriaImagePreview').style.display = 'none';
+    categoriaImagenFile = null;
+}
+
+function limpiarFormularioMarca() {
+    document.getElementById('vNombre_marca').value = '';
+    document.getElementById('tDescripcion_marca').value = '';
+}
+
+function limpiarFormularioEtiqueta() {
+    document.getElementById('vNombre_eti').value = '';
+    document.getElementById('tDescripcion_eti').value = '';
+    document.getElementById('color_eti').value = '#007bff';
+    document.getElementById('color_text_eti').value = '#007bff';
+}
+
+function limpiarFormularioImpuesto() {
+    document.getElementById('vNombre_impuesto').value = '';
+    document.getElementById('eTipo_impuesto').value = '';
+    document.getElementById('dPorcentaje_impuesto').value = '';
+    document.getElementById('tDescripcion_impuesto').value = '';
+    document.getElementById('bActivo_impuesto').checked = true;
+}
+
+// ============ FUNCIONES PARA VALORES DE ATRIBUTOS ============
+
+function mostrarFormularioValor(atributoId, atributoNombre) {
+    document.getElementById('atributoNombreModal').textContent = atributoNombre;
+    document.getElementById('valor_atributo_id').value = atributoId;
+    document.getElementById('vValor_modal').value = '';
+    document.getElementById('vSlug_valor_modal').value = '';
+    document.getElementById('bActivo_valor_modal').checked = true;
+    
+    valorModal.show();
+}
+
+function generarSlugValor(valor) {
+    if (!valor) {
+        document.getElementById('vSlug_valor_modal').value = '';
+        return;
+    }
+    
+    let slug = valor.toLowerCase();
+    slug = slug.replace(/á/gi, 'a').replace(/é/gi, 'e').replace(/í/gi, 'i')
+               .replace(/ó/gi, 'o').replace(/ú/gi, 'u').replace(/ñ/gi, 'n');
+    slug = slug.replace(/[^a-z0-9\s]/g, '');
+    slug = slug.replace(/\s+/g, '-');
+    slug = slug.replace(/-+/g, '-');
+    slug = slug.replace(/^-+/, '').replace(/-+$/, '');
+    
+    document.getElementById('vSlug_valor_modal').value = slug;
+}
+
+function guardarValorAtributo() {
+    const atributoId = document.getElementById('valor_atributo_id').value;
+    const vValor = document.getElementById('vValor_modal').value.trim();
+    const vSlug = document.getElementById('vSlug_valor_modal').value.trim();
+    const bActivo = document.getElementById('bActivo_valor_modal').checked ? 1 : 0;
+    
+    if (!vValor) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'El valor es obligatorio'
+        });
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Creando valor...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
     });
     
-    // Validar stock
-    const stockInput = document.getElementById('iStock');
-    const stockValue = stockInput.value.trim();
-    if (stockValue) {
-        const stockNum = parseInt(stockValue);
-        if (isNaN(stockNum) || stockNum < 0 || stockNum > 9999) {
-            stockInput.classList.add('is-invalid');
-            erroresCriticos = true;
+    fetch(`/atributos/${atributoId}/valores-quick`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            vValor: vValor,
+            vSlug: vSlug,
+            bActivo: bActivo
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
+    .then(data => {
+        Swal.close();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message || 'Valor creado exitosamente',
+                timer: 2000,
+                showConfirmButton: false
+            });
             
-            if (!stockInput.nextElementSibling || !stockInput.nextElementSibling.classList.contains('invalid-feedback')) {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'invalid-feedback';
-                errorDiv.textContent = 'El stock debe ser un número entre 0 y 9999';
-                stockInput.parentNode.appendChild(errorDiv);
+            valorModal.hide();
+            agregarValorAlAtributo(data.valor);
+            
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.message || 'Error al crear el valor'
+            });
+        }
+    })
+    .catch(error => {
+        Swal.close();
+        
+        let errorMessage = 'Error en la solicitud';
+        if (error.errors) {
+            errorMessage = Object.values(error.errors).flat().join(', ');
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: errorMessage
+        });
+    });
+}
+
+// ============ FUNCIONES DE ATRIBUTOS Y VARIACIONES ============
+
+function cargarAtributosActivosDesdeProducto() {
+    @php
+        $valoresSeleccionados = $producto->valoresAtributos->pluck('id_atributo_valor')->toArray();
+        $atributosConValores = [];
+        foreach($producto->valoresAtributos as $valor) {
+            $atributosConValores[$valor->id_atributo][] = $valor->id_atributo_valor;
+        }
+    @endphp
+    
+    // Inicializar atributosActivos con los valores del producto
+    @foreach($atributosConValores as $atributoId => $valores)
+        const atributoNombre = document.querySelector(`[data-atributo-id="${ {{ $atributoId }} }"] .fw-bold`)?.textContent.trim() || '';
+        atributosActivos[{{ $atributoId }}] = {
+            id: {{ $atributoId }},
+            nombre: atributoNombre,
+            valores: {}
+        };
+        @foreach($valores as $valorId)
+            @php
+                $valorNombre = \App\Models\AtributoValor::find($valorId)->vValor ?? '';
+            @endphp
+            atributosActivos[{{ $atributoId }}].valores[{{ $valorId }}] = {
+                id: {{ $valorId }},
+                nombre: '{{ $valorNombre }}',
+                atributoId: {{ $atributoId }},
+                atributoNombre: atributoNombre
+            };
+        @endforeach
+    @endforeach
+    
+    // Actualizar UI
+    actualizarResumenAtributos();
+    actualizarPestanasValores();
+}
+
+// Event listeners para checkboxes de atributos
+document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const atributoId = this.dataset.atributoId;
+        const atributoNombre = this.dataset.atributoNombre;
+        const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+        const estadoBadge = document.getElementById(`estado-${atributoId}`);
+        
+        if (this.checked) {
+            valoresContainer.style.display = 'block';
+            estadoBadge.style.display = 'inline-block';
+            
+            if (!atributosActivos[atributoId]) {
+                atributosActivos[atributoId] = {
+                    id: atributoId,
+                    nombre: atributoNombre,
+                    valores: {}
+                };
+            }
+        } else {
+            valoresContainer.style.display = 'none';
+            estadoBadge.style.display = 'none';
+            
+            const checkboxes = valoresContainer.querySelectorAll('.valor-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+            });
+            
+            delete atributosActivos[atributoId];
+            
+            const seleccionarTodos = document.getElementById(`seleccionar-todos-${atributoId}`);
+            if (seleccionarTodos) {
+                seleccionarTodos.checked = false;
             }
         }
-    }
-    
-    // Validar imágenes (máximo 8)
-    const imagenesActuales = {{ $imagenesExistentes }} - imagenesAEliminar.length;
-    const totalImagenes = imagenesActuales + nuevasImagenes.length;
-    
-    if (totalImagenes > 8) {
-        e.preventDefault();
-        alert(`Máximo 8 imágenes permitidas. Tienes ${totalImagenes} imágenes (${imagenesActuales} existentes + ${nuevasImagenes.length} nuevas).`);
-        return false;
-    }
-    
-    // Validar precio de oferta si está activa
-    const tieneOfertaCheckbox = document.getElementById('bTiene_oferta');
-    const precioOfertaInput = document.getElementById('dPrecio_oferta');
-    const precioVentaInput = document.getElementById('dPrecio_venta');
-    
-    if (tieneOfertaCheckbox && precioOfertaInput && precioVentaInput) {
-        const tieneOferta = tieneOfertaCheckbox.checked;
-        const precioOferta = parseFloat(precioOfertaInput.value) || 0;
-        const precioVenta = parseFloat(precioVentaInput.value) || 0;
         
-        if (tieneOferta) {
-            // Validar que precio de oferta tenga valor
-            if (precioOferta <= 0) {
-                precioOfertaInput.classList.add('is-invalid');
-                erroresCriticos = true;
-                
-                if (!precioOfertaInput.nextElementSibling || !precioOfertaInput.nextElementSibling.classList.contains('invalid-feedback')) {
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'invalid-feedback';
-                    errorDiv.textContent = 'El precio de oferta es obligatorio cuando se activa la oferta';
-                    precioOfertaInput.parentNode.appendChild(errorDiv);
+        actualizarPestanasValores();
+        actualizarResumenAtributos();
+    });
+});
+
+document.querySelectorAll('.seleccionar-todos-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const atributoId = this.dataset.atributoId;
+        const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+        const valorCheckboxes = valoresContainer.querySelectorAll('.valor-checkbox');
+        
+        valorCheckboxes.forEach(cb => {
+            cb.checked = this.checked;
+            
+            const atributoNombre = cb.dataset.atributoNombre;
+            const valorId = cb.value;
+            const valorNombre = cb.dataset.valorNombre;
+            
+            if (this.checked) {
+                if (!atributosActivos[atributoId]) {
+                    atributosActivos[atributoId] = {
+                        id: atributoId,
+                        nombre: atributoNombre,
+                        valores: {}
+                    };
                 }
-            }
-            
-            // Validar que precio de oferta sea menor que precio de venta
-            if (precioOferta > 0 && precioOferta >= precioVenta) {
-                precioOfertaInput.classList.add('is-invalid');
-                erroresCriticos = true;
-                
-                if (!document.getElementById('error-precio-oferta')) {
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'invalid-feedback d-block text-danger mt-1';
-                    errorDiv.id = 'error-precio-oferta';
-                    errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i> El precio de oferta debe ser menor que el precio de venta`;
-                    precioOfertaInput.parentNode.appendChild(errorDiv);
-                }
-            }
-            
-            // Validar fechas de oferta
-            const fechaInicio = document.getElementById('dFecha_inicio_oferta');
-            const fechaFin = document.getElementById('dFecha_fin_oferta');
-            
-            // Validar que las fechas tengan valor
-            if (!fechaInicio.value) {
-                fechaInicio.classList.add('is-invalid');
-                erroresCriticos = true;
-                
-                if (!fechaInicio.nextElementSibling || !fechaInicio.nextElementSibling.classList.contains('invalid-feedback')) {
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'invalid-feedback';
-                    errorDiv.textContent = 'La fecha de inicio es obligatoria cuando se activa la oferta';
-                    fechaInicio.parentNode.appendChild(errorDiv);
-                }
-            }
-            
-            if (!fechaFin.value) {
-                fechaFin.classList.add('is-invalid');
-                erroresCriticos = true;
-                
-                if (!fechaFin.nextElementSibling || !fechaFin.nextElementSibling.classList.contains('invalid-feedback')) {
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'invalid-feedback';
-                    errorDiv.textContent = 'La fecha de fin es obligatoria cuando se activa la oferta';
-                    fechaFin.parentNode.appendChild(errorDiv);
-                }
-            }
-            
-            if (fechaInicio.value && fechaFin.value) {
-                const inicio = new Date(fechaInicio.value);
-                const fin = new Date(fechaFin.value);
-                
-                // Permitir fechas pasadas, solo validar que fin sea mayor que inicio
-                if (fin < inicio) {
-                    fechaFin.classList.add('is-invalid');
-                    erroresCriticos = true;
-                    
-                    if (!fechaFin.nextElementSibling || !fechaFin.nextElementSibling.classList.contains('invalid-feedback')) {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'invalid-feedback';
-                        errorDiv.textContent = 'La fecha de fin debe ser posterior a la fecha de inicio';
-                        fechaFin.parentNode.appendChild(errorDiv);
+                atributosActivos[atributoId].valores[valorId] = {
+                    id: valorId,
+                    nombre: valorNombre,
+                    atributoId: atributoId,
+                    atributoNombre: atributoNombre
+                };
+            } else {
+                if (atributosActivos[atributoId]) {
+                    delete atributosActivos[atributoId].valores[valorId];
+                    if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
+                        delete atributosActivos[atributoId];
                     }
                 }
             }
+        });
+        
+        actualizarPestanasValores();
+        actualizarResumenAtributos();
+    });
+});
+
+document.querySelectorAll('.valor-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const atributoId = this.dataset.atributoId;
+        const atributoNombre = this.dataset.atributoNombre;
+        const valorId = this.value;
+        const valorNombre = this.dataset.valorNombre;
+        
+        const atributoActivo = document.getElementById(`atributo-activo-${atributoId}`);
+        if (!atributoActivo.checked) {
+            atributoActivo.checked = true;
+            atributoActivo.dispatchEvent(new Event('change'));
+        }
+        
+        if (!atributosActivos[atributoId]) {
+            atributosActivos[atributoId] = {
+                id: atributoId,
+                nombre: atributoNombre,
+                valores: {}
+            };
+        }
+        
+        if (this.checked) {
+            atributosActivos[atributoId].valores[valorId] = {
+                id: valorId,
+                nombre: valorNombre,
+                atributoId: atributoId,
+                atributoNombre: atributoNombre
+            };
+        } else {
+            delete atributosActivos[atributoId].valores[valorId];
+            if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
+                delete atributosActivos[atributoId];
+            }
+        }
+        
+        const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+        const valorCheckboxes = valoresContainer.querySelectorAll('.valor-checkbox');
+        const seleccionarTodos = document.getElementById(`seleccionar-todos-${atributoId}`);
+        const seleccionados = valoresContainer.querySelectorAll('.valor-checkbox:checked');
+        
+        if (seleccionarTodos) {
+            if (seleccionados.length === valorCheckboxes.length) {
+                seleccionarTodos.checked = true;
+                seleccionarTodos.indeterminate = false;
+            } else if (seleccionados.length > 0) {
+                seleccionarTodos.checked = false;
+                seleccionarTodos.indeterminate = true;
+            } else {
+                seleccionarTodos.checked = false;
+                seleccionarTodos.indeterminate = false;
+            }
+        }
+        
+        actualizarPestanasValores();
+        actualizarResumenAtributos();
+    });
+});
+
+function actualizarResumenAtributos() {
+    const resumenDiv = document.getElementById('resumen-atributos');
+    const lista = document.getElementById('atributos-activos-lista');
+    const totalAtributosBadge = document.getElementById('total-atributos-activos-badge');
+    
+    if (!lista) return;
+    
+    lista.innerHTML = '';
+    let atributosCount = 0;
+    let totalValores = 0;
+    
+    Object.values(atributosActivos).forEach(atributo => {
+        const valoresArray = Object.values(atributo.valores);
+        if (valoresArray.length > 0) {
+            atributosCount++;
+            totalValores += valoresArray.length;
+            
+            const item = document.createElement('div');
+            item.className = 'p-2 bg-white border rounded';
+            
+            const span1 = document.createElement('span');
+            span1.className = 'fw-bold text-primary';
+            span1.textContent = atributo.nombre + ': ';
+            
+            const span2 = document.createElement('span');
+            span2.className = 'badge bg-success ms-2';
+            span2.textContent = valoresArray.length + ' valores';
+            
+            const div = document.createElement('div');
+            div.className = 'mt-1 small';
+            
+            valoresArray.forEach(v => {
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-light text-dark me-1';
+                badge.textContent = v.nombre;
+                div.appendChild(badge);
+            });
+            
+            item.appendChild(span1);
+            item.appendChild(span2);
+            item.appendChild(div);
+            
+            lista.appendChild(item);
+        }
+    });
+    
+    if (atributosCount > 0) {
+        resumenDiv.style.display = 'block';
+        totalAtributosBadge.textContent = atributosCount + ' atributos activos (' + totalValores + ' valores)';
+    } else {
+        resumenDiv.style.display = 'none';
+        totalAtributosBadge.textContent = '0 atributos activos';
+    }
+}
+
+function actualizarPestanasValores() {
+    const tabsContainer = document.getElementById('valores-activos-tabs-container');
+    const noAtributosMsg = document.getElementById('no-atributos-activos-message');
+    const navTabs = document.querySelector('#valoresTab');
+    const tabContent = document.querySelector('#valoresTabContent');
+    const totalValoresBadge = document.getElementById('total-valores-badge');
+    
+    if (!tabsContainer || !navTabs || !tabContent) return;
+    
+    let todosLosValores = [];
+    
+    Object.values(atributosActivos).forEach(atributo => {
+        Object.values(atributo.valores).forEach(valor => {
+            todosLosValores.push({
+                ...valor,
+                atributoNombre: atributo.nombre,
+                atributoId: atributo.id
+            });
+        });
+    });
+    
+    if (todosLosValores.length === 0) {
+        tabsContainer.style.display = 'none';
+        noAtributosMsg.style.display = 'block';
+        if (totalValoresBadge) totalValoresBadge.textContent = '0 valores';
+        return;
+    }
+    
+    tabsContainer.style.display = 'block';
+    noAtributosMsg.style.display = 'none';
+    if (totalValoresBadge) {
+        totalValoresBadge.textContent = todosLosValores.length + ' ' + (todosLosValores.length === 1 ? 'valor' : 'valores');
+    }
+    
+    navTabs.innerHTML = '';
+    tabContent.innerHTML = '';
+    
+    const productoSku = document.getElementById('vCodigo_barras')?.value || 'PROD';
+    
+    todosLosValores.forEach((valor, index) => {
+        const valorId = valor.id;
+        const valorKey = `${valor.atributoId}_${valorId}`;
+        
+        const tabItem = document.createElement('li');
+        tabItem.className = 'nav-item';
+        tabItem.role = 'presentation';
+        
+        const tabButton = document.createElement('button');
+        tabButton.className = 'nav-link' + (index === 0 ? ' active' : '');
+        tabButton.id = 'valor-tab-' + valorKey;
+        tabButton.setAttribute('data-bs-toggle', 'tab');
+        tabButton.setAttribute('data-bs-target', '#valor-content-' + valorKey);
+        tabButton.type = 'button';
+        tabButton.role = 'tab';
+        tabButton.setAttribute('data-valor-id', valorId);
+        tabButton.setAttribute('data-atributo-id', valor.atributoId);
+        
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-cube me-1';
+        tabButton.appendChild(icon);
+        
+        tabButton.appendChild(document.createTextNode(' ' + valor.atributoNombre + ': ' + valor.nombre));
+        
+        tabItem.appendChild(tabButton);
+        navTabs.appendChild(tabItem);
+        
+        const contentPane = document.createElement('div');
+        contentPane.className = 'tab-pane fade' + (index === 0 ? ' show active' : '');
+        contentPane.id = 'valor-content-' + valorKey;
+        contentPane.role = 'tabpanel';
+        
+        const combinacion = [{
+            atributoId: valor.atributoId,
+            atributoNombre: valor.atributoNombre,
+            valorId: valor.id,
+            valorNombre: valor.nombre
+        }];
+        const skuSugerido = generarSkuSugerido(productoSku, combinacion);
+        
+        // Buscar variación existente para este valor
+        @php
+            $variacionesPorValor = [];
+            foreach($producto->variaciones as $variacion) {
+                foreach($variacion->atributos as $atributo) {
+                    $key = $atributo->id_atributo . '_' . $atributo->id_atributo_valor;
+                    $variacionesPorValor[$key] = $variacion;
+                }
+            }
+        @endphp
+        
+        @php
+            $valorKey = $valor->atributoId . '_' . $valor->id;
+            $variacionExistente = $variacionesPorValor[$valorKey] ?? null;
+        @endphp
+        
+        const formHtml = `
+            <div class="variacion-form-container">
+                <div class="variacion-header-info mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h6 class="fw-bold mb-2">
+                                <i class="fas fa-cube me-2"></i>
+                                Variación: <span class="text-warning">${valor.atributoNombre}: ${valor.nombre}</span>
+                            </h6>
+                            <p class="small mb-0 opacity-75">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Configura los datos específicos para esta variación
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <span class="badge bg-white text-dark p-2">
+                                <i class="fas fa-barcode me-1"></i>
+                                ID: ${valor.atributoNombre.substring(0,3)}-${valor.nombre.substring(0,3)}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                @if($variacionExistente)
+                <input type="hidden" name="variaciones[${valorKey}][id_variacion]" value="{{ $variacionExistente->id_variacion }}">
+                @endif
+                <input type="hidden" name="variaciones[${valorKey}][id_atributo]" value="${valor.atributoId}">
+                <input type="hidden" name="variaciones[${valorKey}][id_atributo_valor]" value="${valor.id}">
+                <input type="hidden" name="variaciones[${valorKey}][vNombre_variacion]" 
+                       value="${valor.atributoNombre}: ${valor.nombre}">
+
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <div class="form-group">
+                            <label for="sku-${valorKey}" class="form-label fw-bold">
+                                SKU de la variación <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">
+                                    <i class="fas fa-barcode"></i>
+                                </span>
+                                <input type="text" 
+                                       name="variaciones[${valorKey}][vSKU]" 
+                                       id="sku-${valorKey}" 
+                                       class="form-control"
+                                       value="{{ $variacionExistente ? $variacionExistente->vSKU : '${skuSugerido}' }}"
+                                       maxlength="50"
+                                       required
+                                       oninput="validarSKU(this)"
+                                       pattern="[A-Za-z0-9-]+"
+                                       title="Solo letras, números y guiones"
+                                       placeholder="Ej: ${skuSugerido}"
+                                       data-atributo-id="${valor.atributoId}"
+                                       data-valor-id="${valor.id}"
+                                       autocomplete="off">
+                            </div>
+                            <small class="form-text text-muted">
+                                <i class="fas fa-lightbulb me-1"></i>
+                                Sugerido: ${skuSugerido}
+                            </small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label fw-bold d-block">Estado de la variación</label>
+                            <div class="form-check form-switch mt-2">
+                                <input type="checkbox" 
+                                       name="variaciones[${valorKey}][bActivo]" 
+                                       id="activo-${valorKey}" 
+                                       class="form-check-input" 
+                                       value="1"
+                                       {{ $variacionExistente && $variacionExistente->bActivo ? 'checked' : 'checked' }}>
+                                <label class="form-check-label" for="activo-${valorKey}">
+                                    Variación activa
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="precio-${valorKey}" class="form-label fw-bold">
+                                Precio de venta <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="text" 
+                                       name="variaciones[${valorKey}][dPrecio]" 
+                                       id="precio-${valorKey}" 
+                                       class="form-control"
+                                       value="{{ $variacionExistente ? $variacionExistente->dPrecio : '' }}"
+                                       required
+                                       oninput="validarPrecio(this)"
+                                       placeholder="0.00"
+                                       title="Máximo: 9,999,999.99"
+                                       autocomplete="off">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="stock-${valorKey}" class="form-label fw-bold">
+                                Stock disponible <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-boxes"></i>
+                                </span>
+                                <input type="text" 
+                                       name="variaciones[${valorKey}][iStock]" 
+                                       id="stock-${valorKey}" 
+                                       class="form-control"
+                                       value="{{ $variacionExistente ? $variacionExistente->iStock : '0' }}"
+                                       required
+                                       oninput="validarStock(this)"
+                                       pattern="[0-9]{1,4}"
+                                       min="0"
+                                       max="9999"
+                                       placeholder="0"
+                                       autocomplete="off">
+                            </div>
+                            <small class="form-text text-muted">Máximo 9,999 unidades</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="clase-envio-${valorKey}" class="form-label fw-bold">
+                                Clase de envío
+                            </label>
+                            <select name="variaciones[${valorKey}][vClase_envio]" 
+                                    id="clase-envio-${valorKey}" 
+                                    class="form-select">
+                                <option value="">-- Por defecto --</option>
+                                <option value="estandar" {{ $variacionExistente && $variacionExistente->vClase_envio == 'estandar' ? 'selected' : '' }}>Estándar</option>
+                                <option value="express" {{ $variacionExistente && $variacionExistente->vClase_envio == 'express' ? 'selected' : '' }}>Express</option>
+                                <option value="fragil" {{ $variacionExistente && $variacionExistente->vClase_envio == 'fragil' ? 'selected' : '' }}>Frágil</option>
+                                <option value="grandes_dimensiones" {{ $variacionExistente && $variacionExistente->vClase_envio == 'grandes_dimensiones' ? 'selected' : '' }}>Grandes dimensiones</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CAMPOS DE DIMENSIONES -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="peso-${valorKey}" class="form-label fw-bold">
+                                <i class="fas fa-weight-hanging me-1"></i>Peso (kg)
+                            </label>
+                            <input type="text" 
+                                   name="variaciones[${valorKey}][dPeso]" 
+                                   id="peso-${valorKey}" 
+                                   class="form-control"
+                                   value="{{ $variacionExistente ? $variacionExistente->dPeso : '' }}"
+                                   oninput="validarPeso(this)"
+                                   onblur="formatearPeso(this)"
+                                   onkeydown="permitirBorrado(event)"
+                                   placeholder="0.000"
+                                   title="Máximo: 999.999 kg"
+                                   autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="largo-${valorKey}" class="form-label fw-bold">
+                                <i class="fas fa-ruler-vertical me-1"></i>Largo (cm)
+                            </label>
+                            <input type="text" 
+                                   name="variaciones[${valorKey}][dLargo_cm]" 
+                                   id="largo-${valorKey}" 
+                                   class="form-control"
+                                   value="{{ $variacionExistente ? $variacionExistente->dLargo_cm : '' }}"
+                                   oninput="validarDimensionCm(this)"
+                                   onblur="formatearDimensionCm(this)"
+                                   onkeydown="permitirBorrado(event)"
+                                   placeholder="0.00"
+                                   title="Máximo: 999.99 cm"
+                                   autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="ancho-${valorKey}" class="form-label fw-bold">
+                                <i class="fas fa-ruler-horizontal me-1"></i>Ancho (cm)
+                            </label>
+                            <input type="text" 
+                                   name="variaciones[${valorKey}][dAncho_cm]" 
+                                   id="ancho-${valorKey}" 
+                                   class="form-control"
+                                   value="{{ $variacionExistente ? $variacionExistente->dAncho_cm : '' }}"
+                                   oninput="validarDimensionCm(this)"
+                                   onblur="formatearDimensionCm(this)"
+                                   onkeydown="permitirBorrado(event)"
+                                   placeholder="0.00"
+                                   title="Máximo: 999.99 cm"
+                                   autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="alto-${valorKey}" class="form-label fw-bold">
+                                <i class="fas fa-arrows-alt-v me-1"></i>Alto (cm)
+                            </label>
+                            <input type="text" 
+                                   name="variaciones[${valorKey}][dAlto_cm]" 
+                                   id="alto-${valorKey}" 
+                                   class="form-control"
+                                   value="{{ $variacionExistente ? $variacionExistente->dAlto_cm : '' }}"
+                                   oninput="validarDimensionCm(this)"
+                                   onblur="formatearDimensionCm(this)"
+                                   onkeydown="permitirBorrado(event)"
+                                   placeholder="0.00"
+                                   title="Máximo: 999.99 cm"
+                                   autocomplete="off">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="card bg-light border">
+                            <div class="card-body py-2">
+                                <div class="row align-items-center">
+                                    <div class="col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input type="checkbox" 
+                                                   name="variaciones[${valorKey}][bTiene_descuento]" 
+                                                   id="descuento-${valorKey}" 
+                                                   class="form-check-input" 
+                                                   value="1"
+                                                   {{ $variacionExistente && $variacionExistente->bTiene_oferta ? 'checked' : '' }}
+                                                   onchange="toggleDescuentoVariacion(this, '${valorKey}')">
+                                            <label class="form-check-label fw-bold" for="descuento-${valorKey}">
+                                                <i class="fas fa-percentage me-1"></i>
+                                                Activar descuento
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <div class="row descuento-fields-${valorKey}" style="display: {{ $variacionExistente && $variacionExistente->bTiene_oferta ? 'flex' : 'none' }};">
+                                            <div class="col-md-4 mb-2 mb-md-0">
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text">$</span>
+                                                    <input type="text" 
+                                                           name="variaciones[${valorKey}][dPrecio_descuento]" 
+                                                           class="form-control variacion-precio-descuento"
+                                                           data-precio-normal-id="precio-${valorKey}"
+                                                           data-valor-key="${valorKey}"
+                                                           value="{{ $variacionExistente ? $variacionExistente->dPrecio_oferta : '' }}"
+                                                           oninput="validarPrecio(this); validarPrecioDescuentoVariacionInstantaneo(this);"
+                                                           onblur="validarPrecioDescuentoVariacion(this)"
+                                                           placeholder="Precio descuento"
+                                                           autocomplete="off">
+                                                </div>
+                                                <div class="invalid-feedback" style="display: none;"></div>
+                                            </div>
+                                            <div class="col-md-3 mb-2 mb-md-0">
+                                                <input type="date" 
+                                                       name="variaciones[${valorKey}][dFecha_inicio_descuento]" 
+                                                       class="form-control form-control-sm fecha-inicio-${valorKey}"
+                                                       value="{{ $variacionExistente && $variacionExistente->dFecha_inicio_oferta ? \Carbon\Carbon::parse($variacionExistente->dFecha_inicio_oferta)->format('Y-m-d') : '' }}"
+                                                       autocomplete="off">
+                                            </div>
+                                            <div class="col-md-3 mb-2 mb-md-0">
+                                                <input type="date" 
+                                                       name="variaciones[${valorKey}][dFecha_fin_descuento]" 
+                                                       class="form-control form-control-sm fecha-fin-${valorKey}"
+                                                       value="{{ $variacionExistente && $variacionExistente->dFecha_fin_oferta ? \Carbon\Carbon::parse($variacionExistente->dFecha_fin_oferta)->format('Y-m-d') : '' }}"
+                                                       autocomplete="off">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <input type="text" 
+                                                       name="variaciones[${valorKey}][vMotivo_descuento]" 
+                                                       class="form-control form-control-sm"
+                                                       value="{{ $variacionExistente ? $variacionExistente->vMotivo_oferta : '' }}"
+                                                       placeholder="Motivo"
+                                                       maxlength="255"
+                                                       autocomplete="off">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label for="descripcion-${valorKey}" class="form-label fw-bold">
+                                Descripción de la variación
+                            </label>
+                            <textarea name="variaciones[${valorKey}][tDescripcion]" 
+                                      id="descripcion-${valorKey}" 
+                                      class="form-control" 
+                                      rows="2"
+                                      placeholder="Descripción específica para esta variación (opcional)"
+                                      maxlength="500"
+                                      autocomplete="off">{{ $variacionExistente ? $variacionExistente->tDescripcion : '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        contentPane.innerHTML = formHtml;
+        tabContent.appendChild(contentPane);
+    });
+}
+
+function generarSkuSugerido(productoSku, combinacion) {
+    let sku = productoSku || 'PROD';
+    combinacion.forEach(item => {
+        const attrCode = item.atributoNombre.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, '');
+        const valCode = item.valorNombre.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase();
+        sku += `-${attrCode}${valCode}`;
+    });
+    return sku;
+}
+
+function toggleDescuentoVariacion(checkbox, valorKey) {
+    const fields = document.querySelector(`.descuento-fields-${valorKey}`);
+    const precioDescuento = fields.querySelector('.variacion-precio-descuento');
+    const fechaInicio = fields.querySelector(`.fecha-inicio-${valorKey}`);
+    const fechaFin = fields.querySelector(`.fecha-fin-${valorKey}`);
+    
+    if (checkbox.checked) {
+        fields.style.display = 'flex';
+        precioDescuento.required = true;
+        fechaInicio.required = true;
+        fechaFin.required = true;
+    } else {
+        fields.style.display = 'none';
+        precioDescuento.required = false;
+        fechaInicio.required = false;
+        fechaFin.required = false;
+        precioDescuento.classList.remove('is-invalid');
+    }
+}
+
+function validarPrecioDescuentoVariacionInstantaneo(input) {
+    const precioNormalId = input.dataset.precioNormalId;
+    const precioNormal = document.getElementById(precioNormalId);
+    const valorKey = input.dataset.valorKey;
+    const checkbox = document.getElementById(`descuento-${valorKey}`);
+    
+    if (!checkbox || !checkbox.checked) return true;
+    
+    if (precioNormal && input.value) {
+        const precioNormalValor = parseFloat(precioNormal.value) || 0;
+        const precioDescuentoValor = parseFloat(input.value) || 0;
+        
+        let errorDiv = input.closest('.col-md-4').querySelector('.invalid-feedback');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback';
+            input.closest('.col-md-4').appendChild(errorDiv);
+        }
+        
+        if (precioDescuentoValor >= precioNormalValor && precioDescuentoValor > 0 && input.value !== '') {
+            input.classList.add('is-invalid');
+            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio normal';
+            errorDiv.style.display = 'block';
+            return false;
+        } else {
+            input.classList.remove('is-invalid');
+            errorDiv.style.display = 'none';
+            return true;
+        }
+    }
+    return true;
+}
+
+function validarPrecioDescuentoVariacion(input) {
+    const precioNormalId = input.dataset.precioNormalId;
+    const precioNormal = document.getElementById(precioNormalId);
+    const valorKey = input.dataset.valorKey;
+    const checkbox = document.getElementById(`descuento-${valorKey}`);
+    
+    if (!checkbox || !checkbox.checked) return true;
+    
+    if (precioNormal && input.value) {
+        const precioNormalValor = parseFloat(precioNormal.value) || 0;
+        const precioDescuentoValor = parseFloat(input.value) || 0;
+        
+        let errorDiv = input.closest('.col-md-4').querySelector('.invalid-feedback');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback';
+            input.closest('.col-md-4').appendChild(errorDiv);
+        }
+        
+        if (precioDescuentoValor >= precioNormalValor && precioDescuentoValor > 0) {
+            input.classList.add('is-invalid');
+            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio normal';
+            errorDiv.style.display = 'block';
+            return false;
+        } else {
+            input.classList.remove('is-invalid');
+            errorDiv.style.display = 'none';
+            return true;
+        }
+    }
+    return true;
+}
+
+// ============ FUNCIONES PARA FORMULARIOS RÁPIDOS ============
+
+function quickGenerarSlug(texto, inputId) {
+    if (!texto) return;
+    let slug = texto.toLowerCase();
+    slug = slug.replace(/á/gi, 'a').replace(/é/gi, 'e').replace(/í/gi, 'i')
+               .replace(/ó/gi, 'o').replace(/ú/gi, 'u').replace(/ñ/gi, 'n');
+    slug = slug.replace(/[^a-z0-9\s]/g, '');
+    slug = slug.replace(/\s+/g, '-');
+    slug = slug.replace(/-+/g, '-');
+    slug = slug.replace(/^-+/, '').replace(/-+$/, '');
+    document.getElementById(inputId).value = slug;
+}
+
+function quickActualizarSlug(nombre, slugId) {
+    quickGenerarSlug(nombre, slugId);
+}
+
+// ============ FUNCIONES PARA AGREGAR ELEMENTOS ============
+
+function agregarCategoriaAlSelect(categoria) {
+    const select = document.getElementById('id_categoria');
+    
+    const option = document.createElement('option');
+    option.value = categoria.id_categoria;
+    option.innerHTML = categoria.vNombre;
+    select.appendChild(option);
+    select.value = categoria.id_categoria;
+}
+
+function agregarEtiquetaAlListado(etiqueta) {
+    const container = document.getElementById('etiquetas-container').querySelector('.row');
+    
+    const noEtiquetasMsg = document.getElementById('no-etiquetas-msg');
+    if (noEtiquetasMsg) {
+        noEtiquetasMsg.remove();
+    }
+    
+    const col = document.createElement('div');
+    col.className = 'col-md-6 col-6 mb-2 etiqueta-item';
+    col.setAttribute('data-etiqueta-id', etiqueta.id_etiqueta);
+    
+    const divCheck = document.createElement('div');
+    divCheck.className = 'form-check';
+    
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.name = 'etiquetas[]';
+    input.value = etiqueta.id_etiqueta;
+    input.className = 'form-check-input';
+    input.id = 'etiqueta_' + etiqueta.id_etiqueta;
+    input.checked = true;
+    
+    const label = document.createElement('label');
+    label.className = 'form-check-label';
+    label.htmlFor = 'etiqueta_' + etiqueta.id_etiqueta;
+    
+    const span = document.createElement('span');
+    span.className = 'etiqueta-badge';
+    span.style.backgroundColor = etiqueta.color || '#007bff';
+    span.style.color = 'white';
+    span.textContent = etiqueta.vNombre;
+    
+    label.appendChild(span);
+    divCheck.appendChild(input);
+    divCheck.appendChild(label);
+    col.appendChild(divCheck);
+    container.appendChild(col);
+}
+
+function agregarAtributoAlListado(atributo) {
+    const container = document.getElementById('atributos-container');
+    const noAtributosMsg = document.getElementById('no-atributos-msg');
+    
+    if (noAtributosMsg) {
+        noAtributosMsg.remove();
+    }
+    
+    const col = document.createElement('div');
+    col.className = 'col-md-6 mb-4 atributo-item';
+    col.setAttribute('data-atributo-id', atributo.id_atributo);
+    
+    const card = document.createElement('div');
+    card.className = 'card border h-100';
+    
+    const cardHeader = document.createElement('div');
+    cardHeader.className = 'card-header bg-light d-flex justify-content-between align-items-center';
+    cardHeader.innerHTML = `
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input atributo-activo-checkbox" 
+                   id="atributo-activo-${atributo.id_atributo}"
+                   data-atributo-id="${atributo.id_atributo}"
+                   data-atributo-nombre="${atributo.vNombre}">
+            <label class="form-check-label fw-bold" for="atributo-activo-${atributo.id_atributo}">
+                ${atributo.vNombre}
+                <span class="badge bg-secondary ms-2">0 valores</span>
+            </label>
+        </div>
+        <div>
+            <span class="badge bg-warning text-dark atributo-estado-badge" id="estado-${atributo.id_atributo}" style="display: none;">
+                <i class="fas fa-check-circle me-1"></i>Activo
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="mostrarFormularioValor(${atributo.id_atributo}, '${atributo.vNombre}')">
+                <i class="fas fa-plus-circle me-1"></i>Agregar Valor
+            </button>
+        </div>
+    `;
+    
+    const cardBody = document.createElement('div');
+    cardBody.className = 'card-body atributo-valores-container';
+    cardBody.id = `valores-container-${atributo.id_atributo}`;
+    cardBody.style.display = 'none';
+    
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-warning mb-0';
+    alertDiv.innerHTML = `
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        Este atributo no tiene valores. 
+        <button type="button" class="btn btn-link p-0 ms-1" onclick="mostrarFormularioValor(${atributo.id_atributo}, '${atributo.vNombre}')">
+            Crear primer valor
+        </button>
+    `;
+    
+    cardBody.appendChild(alertDiv);
+    card.appendChild(cardHeader);
+    card.appendChild(cardBody);
+    col.appendChild(card);
+    container.appendChild(col);
+    
+    const checkbox = document.getElementById(`atributo-activo-${atributo.id_atributo}`);
+    if (checkbox) {
+        checkbox.addEventListener('change', function() {
+            const atributoId = this.dataset.atributoId;
+            const atributoNombre = this.dataset.atributoNombre;
+            const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+            const estadoBadge = document.getElementById(`estado-${atributoId}`);
+            
+            if (this.checked) {
+                valoresContainer.style.display = 'block';
+                estadoBadge.style.display = 'inline-block';
+                
+                if (!atributosActivos[atributoId]) {
+                    atributosActivos[atributoId] = {
+                        id: atributoId,
+                        nombre: atributoNombre,
+                        valores: {}
+                    };
+                }
+            } else {
+                valoresContainer.style.display = 'none';
+                estadoBadge.style.display = 'none';
+                
+                const checkboxes = valoresContainer.querySelectorAll('.valor-checkbox');
+                checkboxes.forEach(cb => {
+                    cb.checked = false;
+                });
+                
+                delete atributosActivos[atributoId];
+            }
+            
+            actualizarPestanasValores();
+            actualizarResumenAtributos();
+        });
+    }
+}
+
+function agregarValorAlAtributo(valor) {
+    const container = document.getElementById(`valores-container-${valor.id_atributo}`);
+    if (!container) return;
+    
+    const alerta = container.querySelector('.alert-warning');
+    if (alerta) {
+        alerta.remove();
+    }
+    
+    let selectAllDiv = container.querySelector('.mb-3');
+    if (!selectAllDiv) {
+        selectAllDiv = document.createElement('div');
+        selectAllDiv.className = 'mb-3';
+        selectAllDiv.innerHTML = `
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input seleccionar-todos-checkbox" id="seleccionar-todos-${valor.id_atributo}" data-atributo-id="${valor.id_atributo}">
+                <label class="form-check-label" for="seleccionar-todos-${valor.id_atributo}">
+                    <strong>Seleccionar todos</strong>
+                </label>
+            </div>
+        `;
+        container.appendChild(selectAllDiv);
+        
+        const hr = document.createElement('hr');
+        hr.className = 'my-2';
+        container.appendChild(hr);
+        
+        const selectAllCheckbox = document.getElementById(`seleccionar-todos-${valor.id_atributo}`);
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                const atributoId = this.dataset.atributoId;
+                const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+                const valorCheckboxes = valoresContainer.querySelectorAll('.valor-checkbox');
+                
+                valorCheckboxes.forEach(cb => {
+                    cb.checked = this.checked;
+                    
+                    const atributoNombre = cb.dataset.atributoNombre;
+                    const valorId = cb.value;
+                    const valorNombre = cb.dataset.valorNombre;
+                    
+                    if (this.checked) {
+                        if (!atributosActivos[atributoId]) {
+                            atributosActivos[atributoId] = {
+                                id: atributoId,
+                                nombre: atributoNombre,
+                                valores: {}
+                            };
+                        }
+                        atributosActivos[atributoId].valores[valorId] = {
+                            id: valorId,
+                            nombre: valorNombre,
+                            atributoId: atributoId,
+                            atributoNombre: atributoNombre
+                        };
+                    } else {
+                        if (atributosActivos[atributoId]) {
+                            delete atributosActivos[atributoId].valores[valorId];
+                            if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
+                                delete atributosActivos[atributoId];
+                            }
+                        }
+                    }
+                });
+                
+                actualizarPestanasValores();
+                actualizarResumenAtributos();
+            });
         }
     }
     
-    // Actualizar DataTransfer antes de enviar
-    actualizarDataTransfer();
+    let row = container.querySelector('.row:not(.mb-3)');
+    if (!row) {
+        row = document.createElement('div');
+        row.className = 'row';
+        container.appendChild(row);
+    }
     
-    if (erroresCriticos) {
-        e.preventDefault();
+    const col = document.createElement('div');
+    col.className = 'col-md-6 mb-2';
+    
+    const divCheck = document.createElement('div');
+    divCheck.className = 'form-check';
+    
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.name = `atributos[${valor.id_atributo}][]`;
+    input.value = valor.id_atributo_valor;
+    input.className = 'form-check-input valor-checkbox';
+    input.id = `valor-${valor.id_atributo_valor}`;
+    input.setAttribute('data-atributo-id', valor.id_atributo);
+    input.setAttribute('data-atributo-nombre', valor.atributo_nombre || '');
+    input.setAttribute('data-valor-nombre', valor.vValor);
+    
+    const label = document.createElement('label');
+    label.className = 'form-check-label';
+    label.htmlFor = `valor-${valor.id_atributo_valor}`;
+    label.textContent = valor.vValor;
+    
+    divCheck.appendChild(input);
+    divCheck.appendChild(label);
+    col.appendChild(divCheck);
+    row.appendChild(col);
+    
+    input.addEventListener('change', function() {
+        const atributoId = this.dataset.atributoId;
+        const atributoNombre = this.dataset.atributoNombre;
+        const valorId = this.value;
+        const valorNombre = this.dataset.valorNombre;
         
-        const primerError = document.querySelector('.is-invalid');
-        if (primerError) {
-            primerError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            primerError.focus();
+        const atributoActivo = document.getElementById(`atributo-activo-${atributoId}`);
+        if (!atributoActivo.checked) {
+            atributoActivo.checked = true;
+            atributoActivo.dispatchEvent(new Event('change'));
         }
         
+        if (!atributosActivos[atributoId]) {
+            atributosActivos[atributoId] = {
+                id: atributoId,
+                nombre: atributoNombre,
+                valores: {}
+            };
+        }
+        
+        if (this.checked) {
+            atributosActivos[atributoId].valores[valorId] = {
+                id: valorId,
+                nombre: valorNombre,
+                atributoId: atributoId,
+                atributoNombre: atributoNombre
+            };
+        } else {
+            delete atributosActivos[atributoId].valores[valorId];
+            if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
+                delete atributosActivos[atributoId];
+            }
+        }
+        
+        const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+        const valorCheckboxes = valoresContainer.querySelectorAll('.valor-checkbox');
+        const seleccionarTodos = document.getElementById(`seleccionar-todos-${atributoId}`);
+        const seleccionados = valoresContainer.querySelectorAll('.valor-checkbox:checked');
+        
+        if (seleccionarTodos) {
+            if (seleccionados.length === valorCheckboxes.length) {
+                seleccionarTodos.checked = true;
+                seleccionarTodos.indeterminate = false;
+            } else if (seleccionados.length > 0) {
+                seleccionarTodos.checked = false;
+                seleccionarTodos.indeterminate = true;
+            } else {
+                seleccionarTodos.checked = false;
+                seleccionarTodos.indeterminate = false;
+            }
+        }
+        
+        actualizarPestanasValores();
+        actualizarResumenAtributos();
+    });
+    
+    const badge = container.closest('.card').querySelector('.badge.bg-secondary');
+    if (badge) {
+        const valorCount = container.querySelectorAll('.valor-checkbox').length;
+        badge.textContent = valorCount + ' valores';
+    }
+}
+
+// ============ FUNCIONES DE IMÁGENES ADICIONALES ============
+
+function handleImageSelection(event) {
+    const files = event.target.files;
+    const maxFiles = 7;
+    const currentCount = selectedImages.length;
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    
+    if (currentCount + files.length > maxFiles) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de imágenes',
+            text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales. Ya tienes ${currentCount} seleccionadas.`
+        });
+        event.target.value = '';
+        return;
+    }
+    
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        if (!validTypes.includes(file.type)) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Formato no válido',
+                text: `El archivo "${file.name}" no es un formato válido. Formatos aceptados: JPG, JPEG, PNG, WEBP.`
+            });
+            continue;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Archivo demasiado grande',
+                text: `La imagen "${file.name}" excede el límite de 5MB.`
+            });
+            continue;
+        }
+        
+        if (!isImageDuplicate(file)) {
+            const imageId = 'img_' + Date.now() + '_' + imageCounter++;
+            const preview = URL.createObjectURL(file);
+            
+            selectedImages.push({
+                id: imageId,
+                file: file,
+                preview: preview,
+                name: file.name,
+                size: file.size
+            });
+        }
+    }
+    
+    document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
+    renderSelectedImages();
+    event.target.value = '';
+    actualizarContadorImagenes();
+}
+
+function isImageDuplicate(newFile) {
+    return selectedImages.some(img => 
+        img.file.name === newFile.name && 
+        img.file.size === newFile.size && 
+        img.file.lastModified === newFile.lastModified
+    );
+}
+
+function removeSelectedImage(imageId) {
+    const image = selectedImages.find(img => img.id === imageId);
+    if (image && image.preview) {
+        URL.revokeObjectURL(image.preview);
+    }
+    selectedImages = selectedImages.filter(img => img.id !== imageId);
+    
+    document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
+    renderSelectedImages();
+    actualizarContadorImagenes();
+}
+
+function renderSelectedImages() {
+    const container = document.getElementById('selected-images-container');
+    const noMsg = document.getElementById('no-imagenes-msg');
+    
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (selectedImages.length === 0) {
+        if (noMsg) noMsg.style.display = 'block';
+        return;
+    }
+    
+    if (noMsg) noMsg.style.display = 'none';
+    
+    selectedImages.forEach((image, index) => {
+        const col = document.createElement('div');
+        col.className = 'col-6 col-md-3 mb-3';
+        
+        const card = document.createElement('div');
+        card.className = 'card border image-preview-card position-relative';
+        
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1 remove-btn';
+        btn.style.cssText = 'width: 28px; height: 28px; padding: 0; border-radius: 50%; z-index: 10;';
+        btn.onclick = function(e) { 
+            e.preventDefault();
+            removeSelectedImage(image.id); 
+        };
+        
+        const btnIcon = document.createElement('i');
+        btnIcon.className = 'fas fa-times';
+        btn.appendChild(btnIcon);
+        
+        const img = document.createElement('img');
+        img.src = image.preview;
+        img.className = 'card-img-top';
+        img.style.cssText = 'height: 120px; object-fit: contain; background: #f8f9fa; padding: 8px;';
+        img.alt = 'Imagen ' + (index + 1);
+        
+        const cardBody = document.createElement('div');
+        cardBody.className = 'card-body p-2 text-center';
+        
+        const small1 = document.createElement('small');
+        small1.className = 'text-muted d-block';
+        small1.style.cssText = 'font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+        small1.textContent = image.file.name.length > 20 ? image.file.name.substring(0, 20) + '...' : image.file.name;
+        
+        const small2 = document.createElement('small');
+        small2.className = 'text-muted d-block';
+        small2.textContent = (image.file.size / 1024).toFixed(2) + ' KB';
+        
+        cardBody.appendChild(small1);
+        cardBody.appendChild(small2);
+        
+        card.appendChild(btn);
+        card.appendChild(img);
+        card.appendChild(cardBody);
+        
+        col.appendChild(card);
+        container.appendChild(col);
+    });
+}
+
+function actualizarContadorImagenes() {
+    @php
+        $imagenesActuales = count($imagenes);
+        $imagenesAEliminarCount = 0;
+    @endphp
+    
+    const imagenesAEliminarCount = imagenesAEliminar.length;
+    const nuevasImagenes = selectedImages.length;
+    const nuevaPrincipal = imagenPrincipalFile ? 1 : 0;
+    const nuevoGif = gifFile ? 1 : 0;
+    
+    const imagenesRestantes = {{ $imagenesActuales }} - imagenesAEliminarCount;
+    const total = imagenesRestantes + nuevaPrincipal + nuevoGif + nuevasImagenes;
+    
+    document.getElementById('total-imagenes').textContent = total;
+    document.getElementById('principal-count').textContent = `Principal: ${nuevaPrincipal || {{ $imagenesActuales > 0 ? 1 : 0 }} - imagenesAEliminarCount > 0 ? 1 : 0}`;
+    document.getElementById('gif-count').textContent = `GIF: ${nuevoGif}`;
+    document.getElementById('adicionales-count').textContent = `Adicionales: ${imagenesRestantes + nuevasImagenes}`;
+}
+
+// ============ INICIALIZAR FORMULARIOS RÁPIDOS ============
+
+function initQuickForms() {
+    // Formulario de Categoría
+    const categoriaForm = document.getElementById('categoriaQuickForm');
+    if (categoriaForm) {
+        categoriaForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            if (categoriaImagenFile) {
+                formData.delete('vImagen');
+                formData.append('vImagen', categoriaImagenFile);
+            }
+            
+            Swal.fire({
+                title: 'Creando categoría...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            
+            fetch('{{ route("categorias.store") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                Swal.close();
+                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: data.message || 'Categoría creada exitosamente',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    agregarCategoriaAlSelect(data.categoria);
+                    limpiarFormularioCategoria();
+                } else {
+                    let errorMessage = data.message || 'Error al crear la categoría';
+                    if (data.errors) {
+                        errorMessage = Object.values(data.errors).flat().join('<br>');
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: errorMessage
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error de conexión al servidor'
+                });
+            });
+        });
+    }
+    
+    // Formulario de Marca
+    const marcaForm = document.getElementById('marcaQuickForm');
+    if (marcaForm) {
+        marcaForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            Swal.fire({
+                title: 'Creando marca...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            
+            fetch('{{ route("marcas.quick-create") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                Swal.close();
+                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: data.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    const select = document.getElementById('id_marca');
+                    const option = document.createElement('option');
+                    option.value = data.marca.id_marca;
+                    option.textContent = data.marca.vNombre;
+                    select.appendChild(option);
+                    select.value = data.marca.id_marca;
+                    
+                    limpiarFormularioMarca();
+                } else {
+                    let errorMessage = data.message || 'Error al crear la marca';
+                    if (data.errors) {
+                        errorMessage = Object.values(data.errors).flat().join('<br>');
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: errorMessage
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error de conexión al servidor'
+                });
+            });
+        });
+    }
+    
+    // Formulario de Etiqueta
+    const etiquetaForm = document.getElementById('etiquetaQuickForm');
+    if (etiquetaForm) {
+        etiquetaForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            Swal.fire({
+                title: 'Creando etiqueta...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            
+            fetch('{{ route("etiquetas.quick-create") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                Swal.close();
+                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: data.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    agregarEtiquetaAlListado(data.etiqueta);
+                    limpiarFormularioEtiqueta();
+                } else {
+                    let errorMessage = data.message || 'Error al crear la etiqueta';
+                    if (data.errors) {
+                        errorMessage = Object.values(data.errors).flat().join('<br>');
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: errorMessage
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error de conexión al servidor'
+                });
+            });
+        });
+    }
+    
+    // Formulario de Atributo
+    const atributoForm = document.getElementById('atributoQuickForm');
+    if (atributoForm) {
+        atributoForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            Swal.fire({
+                title: 'Creando atributo...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            
+            fetch('{{ route("atributos.quick-create") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                Swal.close();
+                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: data.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    agregarAtributoAlListado(data.atributo);
+                    
+                    document.getElementById('vNombre_attr').value = '';
+                    document.getElementById('vSlug_attr').value = '';
+                    document.getElementById('tDescripcion_attr').value = '';
+                } else {
+                    let errorMessage = data.message || 'Error al crear el atributo';
+                    if (data.errors) {
+                        errorMessage = Object.values(data.errors).flat().join('<br>');
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: errorMessage
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error de conexión al servidor'
+                });
+            });
+        });
+    }
+    
+    // Formulario de Impuesto
+    const impuestoForm = document.getElementById('impuestoQuickForm');
+    if (impuestoForm) {
+        impuestoForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            Swal.fire({
+                title: 'Creando impuesto...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            
+            fetch('{{ route("impuestos.quick-create") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                Swal.close();
+                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: data.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    const select = document.getElementById('id_impuesto');
+                    const option = document.createElement('option');
+                    option.value = data.impuesto.id_impuesto;
+                    option.setAttribute('data-porcentaje', data.impuesto.dPorcentaje);
+                    option.setAttribute('data-tipo', data.impuesto.eTipo);
+                    option.textContent = data.impuesto.vNombre + ' (' + data.impuesto.eTipo + ' - ' + parseFloat(data.impuesto.dPorcentaje).toFixed(2) + '%)';
+                    select.appendChild(option);
+                    select.value = data.impuesto.id_impuesto;
+                    
+                    actualizarPrecioFinal();
+                    limpiarFormularioImpuesto();
+                } else {
+                    let errorMessage = data.message || 'Error al crear el impuesto';
+                    if (data.errors) {
+                        errorMessage = Object.values(data.errors).flat().join('<br>');
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: errorMessage
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error de conexión al servidor'
+                });
+            });
+        });
+    }
+}
+
+function activarTabAtributos() {
+    const tab = document.getElementById('atributos-tab');
+    if (tab) {
+        tab.click();
+        tab.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+function activarTabEtiquetas() {
+    const tab = document.getElementById('etiquetas-tab');
+    if (tab) {
+        tab.click();
+        tab.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+function activarTabImpuestos() {
+    const tab = document.getElementById('impuestos-tab');
+    if (tab) {
+        tab.click();
+        tab.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+// ============ EVENT LISTENERS ============
+
+document.addEventListener('DOMContentLoaded', function() {
+    const pesoInput = document.getElementById('dPeso');
+    if (pesoInput) {
+        pesoInput.addEventListener('blur', function() {
+            formatearPeso(this);
+        });
+    }
+    
+    const dimensionInputs = ['dLargo_cm', 'dAncho_cm', 'dAlto_cm'];
+    dimensionInputs.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.addEventListener('blur', function() {
+                formatearDimensionCm(this);
+            });
+        }
+    });
+
+    const precioVenta = document.getElementById('dPrecio_venta');
+    if (precioVenta) {
+        precioVenta.addEventListener('input', function() {
+            if (document.getElementById('bTiene_descuento')?.checked) {
+                validarPrecioDescuentoProducto();
+            }
+        });
+    }
+    
+    if (document.getElementById('bTiene_descuento')) {
+        if (document.getElementById('bTiene_descuento').checked) {
+            toggleDescuentoFields();
+        }
+    }
+    
+    document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
+        if (checkbox.checked) {
+            checkbox.dispatchEvent(new Event('change'));
+        }
+    });
+    
+    document.getElementById('selected-images-count').textContent = '0 archivos';
+    
+    renderSelectedImages();
+    actualizarResumenAtributos();
+    actualizarPestanasValores();
+    actualizarContadorImagenes();
+    actualizarPrecioFinal();
+    
+    const colorPicker = document.getElementById('color_eti');
+    const colorText = document.getElementById('color_text_eti');
+    
+    if (colorPicker && colorText) {
+        colorPicker.addEventListener('input', function() {
+            colorText.value = this.value;
+        });
+        
+        colorText.addEventListener('input', function() {
+            if (this.value.match(/^#[0-9A-F]{6}$/i)) {
+                colorPicker.value = this.value;
+            }
+        });
+    }
+
+    document.getElementById('id_impuesto')?.addEventListener('change', actualizarPrecioFinal);
+});
+
+// Validación del formulario
+document.getElementById('productoForm').addEventListener('submit', function(e) {
+    const btnSubmit = document.getElementById('btnSubmit');
+    
+    if (document.getElementById('bTiene_descuento') && document.getElementById('bTiene_descuento').checked) {
+        const precioVenta = parseFloat(document.getElementById('dPrecio_venta').value) || 0;
+        const precioDescuento = parseFloat(document.getElementById('dPrecio_descuento').value) || 0;
+        
+        if (precioDescuento >= precioVenta) {
+            e.preventDefault();
+            Swal.fire({
+                icon: 'error',
+                title: 'Error en precio de descuento',
+                text: 'El precio de descuento debe ser menor que el precio de venta'
+            });
+            document.getElementById('dPrecio_descuento').focus();
+            return false;
+        }
+        
+        const fechaInicio = document.getElementById('dFecha_inicio_descuento').value;
+        const fechaFin = document.getElementById('dFecha_fin_descuento').value;
+        
+        if (!fechaInicio || !fechaFin) {
+            e.preventDefault();
+            Swal.fire({
+                icon: 'error',
+                title: 'Fechas requeridas',
+                text: 'Cuando el descuento está activo, las fechas de inicio y fin son obligatorias'
+            });
+            return false;
+        }
+        
+        if (new Date(fechaFin) < new Date(fechaInicio)) {
+            e.preventDefault();
+            Swal.fire({
+                icon: 'error',
+                title: 'Error en fechas de descuento',
+                text: 'La fecha de fin debe ser igual o posterior a la fecha de inicio'
+            });
+            return false;
+        }
+    }
+    
+    let errorVariaciones = [];
+    document.querySelectorAll('.variacion-precio-descuento').forEach(input => {
+        const valorKey = input.dataset.valorKey;
+        const checkbox = document.getElementById(`descuento-${valorKey}`);
+        
+        if (checkbox && checkbox.checked && input.value) {
+            const precioNormalId = input.dataset.precioNormalId;
+            const precioNormal = document.getElementById(precioNormalId);
+            
+            if (precioNormal) {
+                const precioNormalValor = parseFloat(precioNormal.value) || 0;
+                const precioDescuentoValor = parseFloat(input.value) || 0;
+                
+                if (precioDescuentoValor >= precioNormalValor) {
+                    errorVariaciones.push('En una variación, el precio de descuento debe ser menor que el precio normal');
+                    input.classList.add('is-invalid');
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            }
+        }
+    });
+    
+    if (errorVariaciones.length > 0) {
+        e.preventDefault();
+        Swal.fire({
+            icon: 'error',
+            title: 'Errores en precios de descuento',
+            html: errorVariaciones.join('<br>')
+        });
         return false;
+    }
+    
+    const skuInputs = document.querySelectorAll('input[name*="[vSKU]"]');
+    let variacionesValidas = true;
+    
+    skuInputs.forEach(input => {
+        if (!input.value.trim()) {
+            variacionesValidas = false;
+            input.classList.add('is-invalid');
+        }
+    });
+    
+    if (!variacionesValidas) {
+        e.preventDefault();
+        Swal.fire({
+            icon: 'error',
+            title: 'Error en variaciones',
+            text: 'Todas las variaciones deben tener un SKU asignado'
+        });
+        return false;
+    }
+    
+    if (btnSubmit) {
+        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Actualizando...';
+        btnSubmit.disabled = true;
     }
     
     return true;
 });
 
-// ==================== INICIALIZACIÓN ====================
+document.querySelectorAll('input, select, textarea').forEach(elemento => {
+    elemento.addEventListener('input', function() {
+        this.classList.remove('is-invalid');
+    });
+});
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Configurar botón de confirmación del modal
-    document.getElementById('confirmDeleteBtn').addEventListener('click', confirmarEliminacion);
-    
-    // Configurar botones de eliminar imágenes existentes para usar el modal
-    document.querySelectorAll('.delete-existing-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
+document.querySelectorAll('button[type="button"]').forEach(button => {
+    button.addEventListener('click', function(e) {
+        if (this.closest('form')) {
             e.preventDefault();
-            const imageName = this.getAttribute('data-image-name');
-            const imageUrl = this.getAttribute('data-image-url');
-            mostrarConfirmacionEliminarExistente(imageName, imageUrl);
-        });
+        }
     });
-    
-    // Limpiar errores al escribir
-    document.querySelectorAll('input, select, textarea').forEach(elemento => {
-        elemento.addEventListener('input', function() {
-            this.classList.remove('is-invalid');
-            
-            const errorFeedback = this.nextElementSibling;
-            if (errorFeedback && errorFeedback.classList.contains('invalid-feedback')) {
-                errorFeedback.remove();
-            }
-            
-            // Si es precio de venta, validar precio de oferta
-            if (this.id === 'dPrecio_venta') {
-                validarPrecioOferta();
-            }
-        });
-    });
-    
-    // Inicializar contador de imágenes
-    actualizarContadorImagenes();
-    
-    // Inicializar toggle de oferta
-    toggleOfertaForm();
-    
-    // Event listeners para validar precio de oferta en tiempo real
-    const precioVentaInput = document.getElementById('dPrecio_venta');
-    const precioOfertaInput = document.getElementById('dPrecio_oferta');
-    const tieneOfertaCheckbox = document.getElementById('bTiene_oferta');
-    
-    if (precioVentaInput && precioOfertaInput && tieneOfertaCheckbox) {
-        precioVentaInput.addEventListener('input', validarPrecioOferta);
-        precioOfertaInput.addEventListener('input', validarPrecioOferta);
-        tieneOfertaCheckbox.addEventListener('change', validarPrecioOferta);
-    }
-    
-    // Event listeners para validar fechas de oferta
-    const fechaInicio = document.getElementById('dFecha_inicio_oferta');
-    const fechaFin = document.getElementById('dFecha_fin_oferta');
-    
-    if (fechaInicio) {
-        fechaInicio.addEventListener('change', function() {
-            if (fechaFin.value && new Date(fechaFin.value) < new Date(this.value)) {
-                fechaFin.value = this.value;
-            }
-            validarFechasOferta();
-        });
-    }
-    
-    if (fechaFin) {
-        fechaFin.addEventListener('change', validarFechasOferta);
-    }
-    
-    // **IMPORTANTE: NO se establece fecha mínima para permitir fechas pasadas**
-    // Esto permite mantener las fechas originales de la oferta
 });
 </script>
+@endpush
 
-<style>
-/* ==================== ESTILOS GENERALES ==================== */
-.card {
-    transition: all 0.3s ease;
-    border: 1px solid #dee2e6;
-}
-
-.card-header {
-    border-bottom: 1px solid rgba(0,0,0,0.125);
-}
-
-/* ==================== ESTILOS PARA IMÁGENES ==================== */
-.card-img-top {
-    transition: transform 0.3s ease;
-}
-
-.card:hover .card-img-top {
-    transform: scale(1.05);
-}
-
-.eliminar-imagen-btn {
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-}
-
-.eliminar-imagen-btn:hover {
-    transform: scale(1.1);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-}
-
-/* Estilos para botones de eliminar */
-.btn-danger.btn-sm {
-    transition: all 0.3s ease;
-}
-
-.btn-danger.btn-sm:hover {
-    transform: scale(1.1);
-    background-color: #c82333;
-    border-color: #bd2130;
-}
-
-/* Estilos para errores */
-.precio-error {
-    margin-top: 5px;
-    font-size: 0.875em;
-    color: #dc3545;
-}
-
-.input-group .is-invalid {
-    z-index: 3;
-}
-
-.input-group .is-invalid ~ .invalid-feedback {
-    display: block;
-}
-
-/* Inputs especiales */
-input[name="dPrecio_venta"],
-input[name="dPrecio_compra"],
-input[name="dPeso"],
-input[name="dLargo_cm"],
-input[name="dAncho_cm"],
-input[name="dAlto_cm"],
-input[name="dPrecio_oferta"] {
-    font-family: 'Courier New', monospace;
-    font-size: 1.1em;
-    letter-spacing: 0.5px;
-    text-align: right;
-}
-
-.input-group-text {
-    background-color: #f8f9fa;
-    border: 1px solid #ced4da;
-}
-
-/* Estilos para sección de oferta */
-#oferta-form {
-    transition: all 0.3s ease;
-}
-
-.card-header.bg-danger {
-    background: linear-gradient(135deg, #dc3545, #c82333);
-}
-
-/* Animaciones para imágenes eliminadas */
-@keyframes fadeOut {
-    from { opacity: 1; transform: scale(1); }
-    to { opacity: 0; transform: scale(0.95); }
-}
-
-.image-item.eliminando {
-    animation: fadeOut 0.3s ease forwards;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .card-img-top {
-        height: 150px !important;
-    }
-}
-
-@media (max-width: 576px) {
-    .card-img-top {
-        height: 130px !important;
-    }
-}
-
-/* Estilos para imágenes marcadas para eliminar */
-[id^="image-container-"] {
-    transition: all 0.3s ease;
-}
-
-/* Estilos para el badge de imágenes */
-.badge {
-    font-size: 12px;
-    padding: 4px 8px;
-}
-
-/* Estilos para el modal de confirmación */
-#confirmDeleteModal .modal-header {
-    background: linear-gradient(135deg, #dc3545, #c82333);
-}
-
-#confirmDeleteModal .modal-body {
-    padding: 25px;
-}
-</style>
 @endsection

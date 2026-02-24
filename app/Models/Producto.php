@@ -452,6 +452,14 @@ class Producto extends Model
         return $this->bTiene_oferta;
     }
 
+    /**
+     * Verificar si el producto tiene descuento activo (alias de ofertaVigente)
+     */
+    public function tieneDescuentoActivo()
+    {
+        return $this->ofertaVigente();
+    }
+
     // NUEVO: Método para obtener el precio de oferta si está vigente
     public function getPrecioOfertaVigenteAttribute()
     {

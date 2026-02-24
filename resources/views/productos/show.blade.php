@@ -1,801 +1,714 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $producto->vNombre }} - Detalles</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { 
-            background-color: #f8f9fa; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        .card {
-            border: none;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        
-        .card-header {
-            background-color: #2E8B57;
-            color: white;
-            font-weight: bold;
-            border-bottom: none;
-        }
-        
-        .card-header.bg-info {
-            background-color: #17a2b8 !important;
-        }
-        
-        .card-header.bg-warning {
-            background-color: #ffc107 !important;
-            color: #212529 !important;
-        }
-        
-        .card-header.bg-danger {
-            background-color: #dc3545 !important;
-        }
-        
-        .imagen-producto {
-            width: 100%;
-            max-height: 400px;
-            object-fit: contain;
-            border-radius: 8px;
-            background: white;
-            padding: 15px;
-        }
-        
-        .precio-destacado {
-            font-size: 28px;
-            font-weight: bold;
-            color: #2E8B57;
-            margin-bottom: 5px;
-        }
-        
-        .precio-oferta {
-            font-size: 24px;
-            font-weight: bold;
-            color: #dc3545;
-        }
-        
-        .precio-original {
-            font-size: 18px;
-            color: #6c757d;
-            text-decoration: line-through;
-            margin-right: 10px;
-        }
-        
-        .stock-badge {
-            font-size: 14px;
-            padding: 6px 12px;
-        }
-        
-        .etiqueta-badge {
-            background: #007bff;
-            color: white;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            margin-right: 8px;
-            margin-bottom: 8px;
-            display: inline-block;
-        }
-        
-        .badge-oferta {
-            background: linear-gradient(135deg, #dc3545, #c82333);
-            color: white;
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
-        }
-        
-        .info-box {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border-left: 4px solid #2E8B57;
-        }
-        
-        .info-box h6 {
-            color: #2E8B57;
-            margin-bottom: 10px;
-        }
-        
-        .dimension-box {
-            background: #e9f7fe;
-            border-radius: 8px;
-            padding: 15px;
-            border-left: 4px solid #17a2b8;
-        }
-        
-        .envio-box {
-            background: #d4edda;
-            border-radius: 8px;
-            padding: 15px;
-            border-left: 4px solid #28a745;
-        }
-        
-        .oferta-box {
-            background: #fff3cd;
-            border-radius: 8px;
-            padding: 15px;
-            border-left: 4px solid #ffc107;
-        }
-        
-        table.table-borderless td {
-            padding: 8px 0;
-            vertical-align: top;
-        }
-        
-        table.table-borderless td strong {
-            color: #495057;
-        }
-        
-        .dimension-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid #e9ecef;
-        }
-        
-        .dimension-item:last-child {
-            border-bottom: none;
-        }
-        
-        .dimension-label {
-            font-weight: 600;
-            color: #495057;
-        }
-        
-        .dimension-value {
-            font-weight: bold;
-            color: #17a2b8;
-        }
-    </style>
-</head>
-<body>
-    <div class="container py-4">
-        <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1><i class="fas fa-wine-bottle me-2"></i>{{ $producto->vNombre }}</h1>
-            <div>
-                <a href="{{ route('productos.edit', $producto) }}" class="btn btn-primary">
-                    <i class="fas fa-edit me-1"></i> Editar
-                </a>
-                <a href="{{ route('productos.index') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left me-1"></i> Volver
-                </a>
-            </div>
-        </div>
+@extends('layouts.app')
 
-        <div class="row">
-            <!-- Columna izquierda: Imágenes -->
-            <div class="col-md-6">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <i class="fas fa-images me-2"></i>Imágenes del Producto
-                        <span class="badge bg-secondary float-end">{{ count($producto->imagenes) }} imágenes</span>
-                    </div>
-                    <div class="card-body">
-                        @if(count($producto->imagenes) > 0)
-                            <div class="text-center">
-                                <img src="{{ $producto->imagenes[0] }}" 
-                                     alt="{{ $producto->vNombre }}" 
-                                     class="imagen-producto mb-3">
-                            </div>
-                            
-                            @if(count($producto->imagenes) > 1)
-                                <div class="row mt-3">
-                                    @foreach($producto->imagenes as $index => $imagen)
-                                        <div class="col-4 col-md-3 mb-2">
-                                            <img src="{{ $imagen }}" 
-                                                 alt="{{ $producto->vNombre }} - Imagen {{ $index + 1 }}"
-                                                 class="img-fluid rounded"
-                                                 style="height: 80px; width: 100%; object-fit: cover; cursor: pointer;"
-                                                 onclick="ampliarImagen('{{ $imagen }}')">
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @endif
-                        @else
-                            <div class="text-center py-4">
-                                <i class="fas fa-image fa-3x text-muted mb-3"></i>
-                                <p class="text-muted">No hay imágenes disponibles</p>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-            </div>
+@section('title', 'Detalle del Producto - ' . $producto->vNombre)
 
-            <!-- Columna derecha: Información principal -->
-            <div class="col-md-6">
-                <!-- Información básica -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <i class="fas fa-info-circle me-2"></i>Información Básica
-                    </div>
-                    <div class="card-body">
-                        <table class="table table-borderless">
-                            <tr>
-                                <td width="40%"><strong>SKU:</strong></td>
-                                <td><code class="fs-5">{{ $producto->vCodigo_barras }}</code></td>
-                            </tr>
-                            <tr>
-                                <td><strong>Categoría:</strong></td>
-                                <td>
-                                    <span class="badge bg-success">
-                                        {{ $producto->categoria->vNombre ?? 'Sin categoría' }}
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><strong>Marca:</strong></td>
-                                <td>
-                                    <span class="badge bg-info">
-                                        {{ $producto->marca->vNombre ?? 'Sin marca' }}
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><strong>Estado:</strong></td>
-                                <td>
-                                    <span class="badge {{ $producto->bActivo ? 'bg-success' : 'bg-secondary' }}">
-                                        {{ $producto->bActivo ? 'Activo' : 'Inactivo' }}
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><strong>Fecha registro:</strong></td>
-                                <td>{{ $producto->tFecha_registro ? \Carbon\Carbon::parse($producto->tFecha_registro)->format('d/m/Y H:i') : 'No disponible' }}</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Última actualización:</strong></td>
-                                <td>{{ $producto->tFecha_actualizacion ? \Carbon\Carbon::parse($producto->tFecha_actualizacion)->format('d/m/Y H:i') : 'No disponible' }}</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- DIMENSIONES Y PESO - SECCIÓN NUEVA -->
-                <div class="card mb-4">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0"><i class="fas fa-ruler-combined me-2"></i>Dimensiones y Peso</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="dimension-box h-100">
-                                    <h6 class="text-primary mb-3">
-                                        <i class="fas fa-weight-hanging me-2"></i>Dimensiones
-                                    </h6>
-                                    
-                                    <div class="dimension-item">
-                                        <span class="dimension-label">Peso:</span>
-                                        <span class="dimension-value">
-                                            @if($producto->dPeso)
-                                                {{ number_format($producto->dPeso, 3) }} kg
-                                            @else
-                                                <span class="text-muted">No especificado</span>
-                                            @endif
-                                        </span>
-                                    </div>
-                                    
-                                    <div class="dimension-item">
-                                        <span class="dimension-label">Largo:</span>
-                                        <span class="dimension-value">
-                                            @if($producto->dLargo_cm)
-                                                {{ number_format($producto->dLargo_cm, 2) }} cm
-                                            @else
-                                                <span class="text-muted">No especificado</span>
-                                            @endif
-                                        </span>
-                                    </div>
-                                    
-                                    <div class="dimension-item">
-                                        <span class="dimension-label">Ancho:</span>
-                                        <span class="dimension-value">
-                                            @if($producto->dAncho_cm)
-                                                {{ number_format($producto->dAncho_cm, 2) }} cm
-                                            @else
-                                                <span class="text-muted">No especificado</span>
-                                            @endif
-                                        </span>
-                                    </div>
-                                    
-                                    <div class="dimension-item">
-                                        <span class="dimension-label">Alto:</span>
-                                        <span class="dimension-value">
-                                            @if($producto->dAlto_cm)
-                                                {{ number_format($producto->dAlto_cm, 2) }} cm
-                                            @else
-                                                <span class="text-muted">No especificado</span>
-                                            @endif
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <div class="envio-box h-100">
-                                    <h6 class="text-success mb-3">
-                                        <i class="fas fa-shipping-fast me-2"></i>Información de Envío
-                                    </h6>
-                                    
-                                    <div class="mb-3">
-                                        <strong>Clase de envío:</strong>
-                                        <div class="mt-2">
-                                            {!! $producto->clase_envio_badge !!}
-                                        </div>
-                                    </div>
-                                    
-                                    @if($producto->tieneDimensionesCompletas())
-                                        <div class="mt-3">
-                                            <strong>Volumen:</strong>
-                                            <p class="mb-1">{{ $producto->volumen_formateado }}</p>
-                                            <small class="text-muted">Largo × Ancho × Alto</small>
-                                        </div>
-                                        
-                                        <div class="mt-3">
-                                            <strong>Peso volumétrico:</strong>
-                                            <p class="mb-1">{{ $producto->peso_volumetrico_formateado }}</p>
-                                            <small class="text-muted">Volumen / 5000</small>
-                                        </div>
-                                        
-                                        <div class="mt-3">
-                                            <strong>Peso facturable:</strong>
-                                            <p class="mb-1">{{ $producto->peso_facturable ? number_format($producto->peso_facturable, 3) . ' kg' : 'No calculable' }}</p>
-                                            <small class="text-muted">Mayor entre peso real y volumétrico</small>
-                                        </div>
-                                    @endif
-                                </div>
-                            </div>
+@section('content')
+<div class="container-fluid px-4 py-4">
+    <!-- Header con breadcrumbs y acciones -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 bg-transparent">
+                <div class="card-body p-0">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-2">
+                            <li class="breadcrumb-item"><a href="{{ route('dashboard') }}" class="text-decoration-none">Dashboard</a></li>
+                            <li class="breadcrumb-item"><a href="{{ route('productos.index') }}" class="text-decoration-none">Productos</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">{{ $producto->vNombre }}</li>
+                        </ol>
+                    </nav>
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <div>
+                            <h2 class="fw-bold mb-1">{{ $producto->vNombre }}</h2>
+                            <span class="text-muted">
+                                <i class="fas fa-barcode me-1"></i>SKU: <span class="fw-semibold">{{ $producto->vCodigo_barras }}</span>
+                                <span class="mx-2">|</span>
+                                <i class="fas fa-calendar-alt me-1"></i>Registro: {{ $producto->tFecha_registro ? \Carbon\Carbon::parse($producto->tFecha_registro)->format('d/m/Y') : 'N/A' }}
+                            </span>
+                        </div>
+                        <div>
+                            <a href="{{ route('productos.edit', $producto->id_producto) }}" class="btn btn-primary me-2">
+                                <i class="fas fa-edit me-1"></i>Editar
+                            </a>
+                            <a href="{{ route('productos.index') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Volver
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Precio y stock -->
-        <div class="card mb-4">
-            <div class="card-header bg-success text-white">
-                <i class="fas fa-money-bill-wave me-2"></i>Precio y Stock
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="info-box">
-                            <h6><i class="fas fa-tag me-2"></i>Precio de venta</h6>
-                            <div class="precio-destacado">
-                                @if($producto->tieneVariaciones())
-                                    ${{ $producto->rangoPrecios }}
-                                    <small class="d-block text-muted fs-6">(Rango de precios)</small>
-                                @else
-                                    @if($producto->ofertaVigente())
-                                        <div class="precio-original">
-                                            ${{ number_format($producto->dPrecio_venta, 2) }}
-                                        </div>
-                                        <div class="precio-oferta">
-                                            ${{ number_format($producto->dPrecio_oferta, 2) }}
-                                        </div>
-                                        <div class="mt-2">
-                                            <span class="badge-oferta">
-                                                <i class="fas fa-tag me-1"></i>Ahorra {{ $producto->porcentajeDescuento }}%
-                                            </span>
-                                        </div>
-                                    @else
-                                        ${{ number_format($producto->dPrecio_venta, 2) }}
-                                    @endif
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <div class="info-box">
-                            <h6><i class="fas fa-shopping-cart me-2"></i>Precio de compra</h6>
-                            <div class="fs-4">
-                                @if($producto->dPrecio_compra)
-                                    ${{ number_format($producto->dPrecio_compra, 2) }}
-                                @else
-                                    <span class="text-muted">No especificado</span>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <div class="info-box">
-                            <h6><i class="fas fa-boxes me-2"></i>Stock disponible</h6>
-                            <div class="mt-2">
-                                <span class="badge stock-badge fs-5 {{ $producto->iStock > 10 ? 'bg-success' : ($producto->iStock > 0 ? 'bg-warning' : 'bg-danger') }}">
-                                    {{ $producto->iStock }} unidades
-                                </span>
-                            </div>
-                            
-                            @if($producto->estaBajoEnStock())
-                                <div class="alert alert-warning mt-3 mb-0 py-2">
-                                    <i class="fas fa-exclamation-triangle me-1"></i>
-                                    <strong>Stock bajo:</strong> Se recomienda reabastecer
-                                </div>
-                            @endif
-                            
-                            @if($producto->tieneVariaciones())
-                                <div class="alert alert-info mt-2 mb-0 py-2">
-                                    <i class="fas fa-info-circle me-1"></i>
-                                    <small>Este producto tiene variaciones con stock distribuido</small>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <!-- Alertas -->
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
+            <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
+    @endif
 
-        <!-- OFERTA ESPECIAL (si tiene) -->
-        @if($producto->bTiene_oferta)
-        <div class="card mb-4">
-            <div class="card-header bg-danger text-white">
-                <i class="fas fa-percentage me-2"></i>Oferta Especial
-                @if($producto->ofertaVigente())
-                    <span class="badge bg-success float-end"><i class="fas fa-clock me-1"></i>Vigente</span>
-                @else
-                    <span class="badge bg-secondary float-end"><i class="fas fa-clock me-1"></i>No vigente</span>
-                @endif
-            </div>
-            <div class="card-body">
-                <div class="oferta-box">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="text-danger mb-3">
-                                <i class="fas fa-calendar-alt me-2"></i>Periodo de Oferta
-                            </h6>
-                            
-                            <div class="dimension-item">
-                                <span class="dimension-label">Inicio:</span>
-                                <span class="dimension-value">
-                                    @if($producto->dFecha_inicio_oferta)
-                                        {{ \Carbon\Carbon::parse($producto->dFecha_inicio_oferta)->format('d/m/Y') }}
-                                    @else
-                                        <span class="text-muted">No especificado</span>
-                                    @endif
-                                </span>
-                            </div>
-                            
-                            <div class="dimension-item">
-                                <span class="dimension-label">Fin:</span>
-                                <span class="dimension-value">
-                                    @if($producto->dFecha_fin_oferta)
-                                        {{ \Carbon\Carbon::parse($producto->dFecha_fin_oferta)->format('d/m/Y') }}
-                                    @else
-                                        <span class="text-muted">No especificado</span>
-                                    @endif
-                                </span>
-                            </div>
-                            
-                            <div class="dimension-item">
-                                <span class="dimension-label">Estado:</span>
-                                <span class="dimension-value">
-                                    @if($producto->ofertaVigente())
-                                        <span class="badge bg-success">Vigente</span>
-                                    @else
-                                        <span class="badge bg-secondary">No vigente</span>
-                                    @endif
-                                </span>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <h6 class="text-danger mb-3">
-                                <i class="fas fa-info-circle me-2"></i>Detalles de Oferta
-                            </h6>
-                            
-                            <div class="dimension-item">
-                                <span class="dimension-label">Precio original:</span>
-                                <span class="dimension-value">
-                                    ${{ number_format($producto->dPrecio_venta, 2) }}
-                                </span>
-                            </div>
-                            
-                            <div class="dimension-item">
-                                <span class="dimension-label">Precio oferta:</span>
-                                <span class="dimension-value">
-                                    ${{ number_format($producto->dPrecio_oferta, 2) }}
-                                </span>
-                            </div>
-                            
-                            <div class="dimension-item">
-                                <span class="dimension-label">Descuento:</span>
-                                <span class="dimension-value">
-                                    {{ $producto->porcentajeDescuento }}%
-                                </span>
-                            </div>
-                            
-                            @if($producto->vMotivo_oferta)
-                                <div class="mt-3">
-                                    <strong><i class="fas fa-comment me-2"></i>Motivo:</strong>
-                                    <p class="mb-0 mt-1">{{ $producto->vMotivo_oferta }}</p>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
+    <!-- PRIMERA FILA: Imagen principal + Información básica -->
+    <div class="row g-4 mb-4">
+        <!-- Columna de imagen -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center p-4">
+                    @php
+                        $imagenes = $producto->imagenes;
+                        $imagenPrincipal = !empty($imagenes) ? $imagenes[0] : null;
+                    @endphp
                     
-                    @if($producto->ofertaVigente())
-                        <div class="alert alert-success mt-3 mb-0">
-                            <i class="fas fa-check-circle me-2"></i>
-                            <strong>¡Oferta activa!</strong> Esta oferta está vigente hasta el {{ $producto->dFecha_fin_oferta ? \Carbon\Carbon::parse($producto->dFecha_fin_oferta)->format('d/m/Y') : 'fecha no especificada' }}.
+                    @if($imagenPrincipal)
+                        <div class="position-relative d-inline-block">
+                            <img src="{{ $imagenPrincipal }}" 
+                                 class="img-fluid rounded-3 border" 
+                                 style="max-height: 280px; width: 100%; object-fit: contain;"
+                                 alt="{{ $producto->vNombre }}">
+                            @if($producto->bActivo)
+                                <span class="position-absolute top-0 start-0 badge bg-success mt-2 ms-2 px-3 py-2">
+                                    <i class="fas fa-check-circle me-1"></i>Activo
+                                </span>
+                            @endif
                         </div>
                     @else
-                        <div class="alert alert-warning mt-3 mb-0">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <strong>Oferta no vigente.</strong> Esta oferta ha expirado o no ha comenzado.
+                        <div class="bg-light rounded-3 d-flex align-items-center justify-content-center" style="height: 280px;">
+                            <i class="fas fa-image fa-4x text-muted"></i>
+                        </div>
+                    @endif
+                    
+                    @if(count($imagenes) > 1)
+                        <div class="mt-3">
+                            <span class="badge bg-light text-dark py-2 px-3">
+                                <i class="fas fa-images me-2 text-primary"></i>{{ count($imagenes) }} imágenes en total
+                            </span>
                         </div>
                     @endif
                 </div>
             </div>
         </div>
-        @endif
-
-        <!-- Descripciones -->
-        <div class="row mt-3">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <i class="fas fa-file-alt me-2"></i>Descripción
-                    </div>
-                    <div class="card-body">
-                        @if($producto->tDescripcion_corta)
-                            <div class="mb-4">
-                                <h5 class="text-primary">
-                                    <i class="fas fa-align-left me-2"></i>Descripción corta
-                                </h5>
-                                <p class="fs-5">{{ $producto->tDescripcion_corta }}</p>
-                            </div>
-                            <hr>
-                        @endif
-                        
-                        @if($producto->tDescripcion_larga)
-                            <div>
-                                <h5 class="text-primary">
-                                    <i class="fas fa-align-justify me-2"></i>Descripción detallada
-                                </h5>
-                                <div class="fs-5" style="white-space: pre-line;">{{ $producto->tDescripcion_larga }}</div>
-                            </div>
-                        @endif
-                        
-                        @if(!$producto->tDescripcion_corta && !$producto->tDescripcion_larga)
-                            <div class="text-center py-5">
-                                <i class="fas fa-file-alt fa-4x text-muted mb-3"></i>
-                                <h5 class="text-muted">No hay descripción disponible</h5>
-                                <p class="text-muted">Agrega una descripción para mejorar la presentación del producto</p>
-                            </div>
-                        @endif
-                    </div>
+        
+        <!-- Columna de información básica -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0">
+                        <i class="fas fa-info-circle me-2 text-primary"></i>Información General
+                    </h5>
                 </div>
-            </div>
-        </div>
-
-        <!-- Etiquetas -->
-        @if($producto->etiquetas->count() > 0)
-            <div class="row mt-3">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="fas fa-tags me-2"></i>Etiquetas
-                            <span class="badge bg-secondary float-end">{{ $producto->etiquetas->count() }}</span>
-                        </div>
-                        <div class="card-body">
-                            @foreach($producto->etiquetas as $etiqueta)
-                                <span class="etiqueta-badge">
-                                    <i class="fas fa-tag me-1"></i>{{ $etiqueta->vNombre }}
-                                </span>
-                            @endforeach
-                        </div>
-                    </div>
-                </div>
-            </div>
-        @endif
-
-        <!-- Atributos (si tiene) -->
-        @if($producto->tieneAtributos())
-            <div class="row mt-3">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="fas fa-tags me-2"></i>Atributos del Producto
-                            <span class="badge bg-secondary float-end">{{ $producto->valoresAtributos->count() }} valores</span>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                @foreach($producto->atributosAgrupados as $atributo)
-                                    <div class="col-md-6 mb-3">
-                                        <div class="border rounded p-3 h-100">
-                                            <h6 class="fw-bold mb-2 text-primary">
-                                                <i class="fas fa-list me-1"></i>{{ $atributo['nombre'] }}
-                                                <small class="text-muted">({{ count($atributo['valores']) }})</small>
-                                            </h6>
-                                            <div>
-                                                @foreach($atributo['valores'] as $valor)
-                                                    <span class="badge bg-secondary me-1 mb-1">
-                                                        {{ $valor['valor'] }}
-                                                        @if($valor['precio_extra'] > 0)
-                                                            <small class="ms-1">(+${{ number_format($valor['precio_extra'], 2) }})</small>
-                                                        @endif
-                                                        @if($valor['stock'] > 0)
-                                                            <small class="ms-1">(Stock: {{ $valor['stock'] }})</small>
-                                                        @endif
-                                                    </span>
-                                                @endforeach
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                            
-                            <div class="text-center mt-3">
-                                <a href="{{ route('productos.asignar-atributos', $producto->id_producto) }}" 
-                                   class="btn btn-outline-primary btn-lg">
-                                    <i class="fas fa-edit me-1"></i> Gestionar Atributos
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        @endif
-
-        <!-- VARIACIONES (si tiene) -->
-        @if($producto->tieneVariaciones())
-            <div class="row mt-3">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="fas fa-layer-group me-2"></i>Variaciones del Producto
-                            <span class="badge bg-secondary float-end">{{ $producto->variacionesActivas()->count() }} variaciones</span>
-                        </div>
-                        <div class="card-body">
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                Este producto tiene {{ $producto->variacionesActivas()->count() }} variaciones activas con diferentes combinaciones de atributos.
-                            </div>
-                            
-                            <div class="text-center mt-3">
-                                <a href="{{ route('productos.variaciones') }}" 
-                                   class="btn btn-outline-info btn-lg">
-                                    <i class="fas fa-cog me-1"></i> Gestionar Variaciones
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        @endif
-
-        <!-- FAVORITOS (si está logueado) -->
-        @if(auth()->check())
-            <div class="row mt-3">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="fas fa-heart me-2"></i>Estado de Favorito
-                        </div>
-                        <div class="card-body text-center">
-                            @if($producto->esFavorito())
-                                <div class="alert alert-success">
-                                    <i class="fas fa-heart text-danger me-2"></i>
-                                    <strong>Este producto está en tus favoritos</strong>
-                                    <p class="mb-0 mt-2">Recibirás notificaciones cuando haya cambios en stock o precio</p>
+                <div class="card-body pt-0 px-4">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                                <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                                    <i class="fas fa-barcode text-primary"></i>
                                 </div>
-                            @else
-                                <div class="alert alert-secondary">
-                                    <i class="far fa-heart me-2"></i>
-                                    <strong>No está en tus favoritos</strong>
-                                    <p class="mb-0 mt-2">Agrega este producto a favoritos para recibir notificaciones</p>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
-        @endif
-
-        <!-- RESUMEN ESTADÍSTICAS -->
-        <div class="row mt-3">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <i class="fas fa-chart-bar me-2"></i>Resumen del Producto
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3 col-6 text-center mb-3">
-                                <div class="p-3 border rounded">
-                                    <i class="fas fa-images fa-2x text-primary mb-2"></i>
-                                    <h5 class="mb-1">{{ count($producto->imagenes) }}</h5>
-                                    <small class="text-muted">Imágenes</small>
+                                <div>
+                                    <small class="text-muted text-uppercase">SKU</small>
+                                    <h6 class="fw-bold mb-0">{{ $producto->vCodigo_barras }}</h6>
                                 </div>
                             </div>
-                            
-                            <div class="col-md-3 col-6 text-center mb-3">
-                                <div class="p-3 border rounded">
-                                    <i class="fas fa-tags fa-2x text-success mb-2"></i>
-                                    <h5 class="mb-1">{{ $producto->etiquetas->count() }}</h5>
-                                    <small class="text-muted">Etiquetas</small>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                                <div class="rounded-circle bg-success bg-opacity-10 p-3 me-3">
+                                    <i class="fas fa-tag text-success"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted text-uppercase">Categoría</small>
+                                    <h6 class="fw-bold mb-0">{{ $producto->categoria->vNombre ?? 'Sin categoría' }}</h6>
                                 </div>
                             </div>
-                            
-                            <div class="col-md-3 col-6 text-center mb-3">
-                                <div class="p-3 border rounded">
-                                    <i class="fas fa-layer-group fa-2x text-info mb-2"></i>
-                                    <h5 class="mb-1">{{ $producto->tieneAtributos() ? $producto->valoresAtributos->count() : 0 }}</h5>
-                                    <small class="text-muted">Atributos</small>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                                <div class="rounded-circle bg-info bg-opacity-10 p-3 me-3">
+                                    <i class="fas fa-industry text-info"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted text-uppercase">Marca</small>
+                                    <h6 class="fw-bold mb-0">{{ $producto->marca->vNombre ?? 'Sin marca' }}</h6>
                                 </div>
                             </div>
-                            
-                            <div class="col-md-3 col-6 text-center mb-3">
-                                <div class="p-3 border rounded">
-                                    <i class="fas fa-heart fa-2x text-danger mb-2"></i>
-                                    <h5 class="mb-1">{{ $producto->favoritos->count() }}</h5>
-                                    <small class="text-muted">Favoritos</small>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                                <div class="rounded-circle bg-warning bg-opacity-10 p-3 me-3">
+                                    <i class="fas fa-boxes text-warning"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted text-uppercase">Stock</small>
+                                    <h6 class="fw-bold mb-0">
+                                        @if($producto->tieneVariaciones())
+                                            <span class="badge bg-info">Variable por variaciones</span>
+                                        @else
+                                            <span class="{{ $producto->iStock > 10 ? 'text-success' : ($producto->iStock > 0 ? 'text-warning' : 'text-danger') }}">
+                                                {{ number_format($producto->iStock) }} unidades
+                                            </span>
+                                        @endif
+                                    </h6>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Acciones -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <a href="{{ route('productos.edit', $producto) }}" class="btn btn-primary btn-lg">
-                            <i class="fas fa-edit me-1"></i> Editar Producto
-                        </a>
-                        
-                        @if(!$producto->tieneAtributos())
-                            <a href="{{ route('productos.asignar-atributos', $producto->id_producto) }}" 
-                               class="btn btn-outline-primary btn-lg ms-2">
-                                <i class="fas fa-tags me-1"></i> Agregar Atributos
-                            </a>
-                        @endif
-                        
-                        @if($producto->tieneVariaciones())
-                            <a href="{{ route('productos.variaciones') }}" 
-                               class="btn btn-outline-info btn-lg ms-2">
-                                <i class="fas fa-cog me-1"></i> Gestionar Variaciones
-                            </a>
-                        @endif
-                    </div>
-                    
-                    <div>
-                        <form action="{{ route('productos.destroy', $producto) }}" method="POST" 
-                              class="d-inline" onsubmit="return confirmarEliminacion()">
-                            @csrf @method('DELETE')
-                            <button type="submit" class="btn btn-danger btn-lg">
-                                <i class="fas fa-trash me-1"></i> Eliminar Producto
-                            </button>
-                        </form>
-                    </div>
-                </div>
-                
-                <div class="mt-3 text-center">
-                    <small class="text-muted">
-                        <i class="fas fa-info-circle me-1"></i>
-                        ID del Producto: <code>{{ $producto->id_producto }}</code> | 
-                        Última actualización: {{ $producto->tFecha_actualizacion ? \Carbon\Carbon::parse($producto->tFecha_actualizacion)->format('d/m/Y H:i') : 'N/A' }}
-                    </small>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- SEGUNDA FILA: Precios e Impuestos -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0">
+                        <i class="fas fa-chart-line me-2 text-primary"></i>Información de Precios
+                    </h5>
+                </div>
+                <div class="card-body px-4">
+                    <div class="table-responsive">
+                        <table class="table table-borderless">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="py-3 px-3 rounded-start">Concepto</th>
+                                    <th class="py-3 px-3">Precio</th>
+                                    <th class="py-3 px-3 rounded-end">Impuestos</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="py-3 px-3">
+                                        <strong>Precio de compra</strong>
+                                    </td>
+                                    <td class="py-3 px-3">
+                                        <span class="fw-semibold">${{ number_format($producto->dPrecio_compra, 2) }}</span>
+                                    </td>
+                                    <td class="py-3 px-3 text-muted">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 px-3">
+                                        <strong>Precio de venta</strong>
+                                        @if($producto->bTiene_oferta && $producto->dPrecio_oferta)
+                                            <br><small class="text-danger">(Oferta activa)</small>
+                                        @endif
+                                    </td>
+                                    <td class="py-3 px-3">
+                                        @if($producto->bTiene_oferta && $producto->dPrecio_oferta && $producto->dFecha_inicio_oferta && $producto->dFecha_fin_oferta && now()->between($producto->dFecha_inicio_oferta, $producto->dFecha_fin_oferta))
+                                            <span class="text-decoration-line-through text-muted me-2">
+                                                ${{ number_format($producto->dPrecio_venta, 2) }}
+                                            </span>
+                                            <span class="fw-bold text-danger">
+                                                ${{ number_format($producto->dPrecio_oferta, 2) }}
+                                            </span>
+                                        @else
+                                            <span class="fw-bold">${{ number_format($producto->dPrecio_venta, 2) }}</span>
+                                        @endif
+                                    </td>
+                                    <td class="py-3 px-3">
+                                        @php
+                                            $totalImpuestos = 0;
+                                            foreach($producto->impuestos as $impuesto) {
+                                                $totalImpuestos += $producto->dPrecio_venta * ($impuesto->dPorcentaje / 100);
+                                            }
+                                        @endphp
+                                        +${{ number_format($totalImpuestos, 2) }}
+                                    </td>
+                                </tr>
+                                <tr class="bg-light">
+                                    <td class="py-3 px-3 rounded-start">
+                                        <strong class="text-primary">TOTAL (con impuestos)</strong>
+                                    </td>
+                                    <td class="py-3 px-3">
+                                        <span class="fw-bold text-primary fs-5">
+                                            ${{ number_format($producto->dPrecio_venta + $totalImpuestos, 2) }}
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-3 rounded-end"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0">
+                        <i class="fas fa-file-invoice-dollar me-2 text-primary"></i>Impuestos Aplicados
+                    </h5>
+                </div>
+                <div class="card-body px-4">
+                    @if($producto->impuestos->count() > 0)
+                        @foreach($producto->impuestos as $impuesto)
+                            <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded-3 mb-3">
+                                <div>
+                                    <strong>{{ $impuesto->vNombre }}</strong>
+                                    <div><small class="text-muted">{{ $impuesto->eTipo }}</small></div>
+                                </div>
+                                <span class="badge bg-primary fs-6">{{ $impuesto->dPorcentaje }}%</span>
+                            </div>
+                        @endforeach
+                    @else
+                        <div class="text-center py-5">
+                            <i class="fas fa-file-invoice-dollar fa-3x text-muted mb-3"></i>
+                            <p class="text-muted mb-0">Sin impuestos asignados</p>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OFERTA ESPECIAL (si tiene) -->
+    @if($producto->bTiene_oferta && $producto->dPrecio_oferta)
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm border-start border-danger border-4">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="rounded-circle bg-danger bg-opacity-10 p-3 me-3">
+                            <i class="fas fa-tag fa-lg text-danger"></i>
+                        </div>
+                        <h5 class="fw-bold mb-0">Oferta Especial</h5>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="p-3 bg-light rounded-3 text-center">
+                                <small class="text-muted">Precio normal</small>
+                                <h5 class="text-decoration-line-through mb-0">${{ number_format($producto->dPrecio_venta, 2) }}</h5>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 bg-light rounded-3 text-center">
+                                <small class="text-muted">Precio oferta</small>
+                                <h5 class="text-danger fw-bold mb-0">${{ number_format($producto->dPrecio_oferta, 2) }}</h5>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 bg-light rounded-3 text-center">
+                                <small class="text-muted">Descuento</small>
+                                @php
+                                    $porcentajeDescuento = 0;
+                                    if($producto->dPrecio_venta > 0 && $producto->dPrecio_oferta < $producto->dPrecio_venta) {
+                                        $porcentajeDescuento = round((($producto->dPrecio_venta - $producto->dPrecio_oferta) / $producto->dPrecio_venta) * 100);
+                                    }
+                                @endphp
+                                <h5 class="text-success fw-bold mb-0">{{ $porcentajeDescuento }}%</h5>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 bg-light rounded-3">
+                                <small class="text-muted">Vigencia</small>
+                                <h6 class="mb-0">
+                                    @if($producto->dFecha_inicio_oferta && $producto->dFecha_fin_oferta)
+                                        {{ \Carbon\Carbon::parse($producto->dFecha_inicio_oferta)->format('d/m/Y') }} - 
+                                        {{ \Carbon\Carbon::parse($producto->dFecha_fin_oferta)->format('d/m/Y') }}
+                                    @else
+                                        <span class="text-muted">No especificada</span>
+                                    @endif
+                                </h6>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    @if($producto->vMotivo_oferta)
+                        <div class="mt-3 p-3 bg-light rounded-3">
+                            <small class="text-muted">Motivo</small>
+                            <p class="mb-0">{{ $producto->vMotivo_oferta }}</p>
+                        </div>
+                    @endif
+                    
+                    @php
+                        $ofertaVigente = $producto->bTiene_oferta && $producto->dFecha_inicio_oferta && $producto->dFecha_fin_oferta && 
+                                          now()->between($producto->dFecha_inicio_oferta, $producto->dFecha_fin_oferta);
+                    @endphp
+                    @if($ofertaVigente)
+                        <div class="alert alert-success mt-3 mb-0 py-2">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>Oferta vigente</strong> - Activa hasta {{ \Carbon\Carbon::parse($producto->dFecha_fin_oferta)->format('d/m/Y') }}
+                        </div>
+                    @else
+                        <div class="alert alert-warning mt-3 mb-0 py-2">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Oferta no vigente</strong> - Ha expirado o aún no comienza
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- TERCERA FILA: Dimensiones y Envío -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0">
+                        <i class="fas fa-ruler-combined me-2 text-primary"></i>Dimensiones y Envío
+                    </h5>
+                </div>
+                <div class="card-body px-4">
+                    <div class="row">
+                        <div class="col-md-2">
+                            <div class="p-3 bg-light rounded-3 text-center">
+                                <i class="fas fa-weight-hanging fa-2x text-primary mb-2"></i>
+                                <small class="d-block text-muted">Peso</small>
+                                <strong>{{ $producto->dPeso ? number_format($producto->dPeso, 3) . ' kg' : '—' }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="p-3 bg-light rounded-3 text-center">
+                                <i class="fas fa-ruler-vertical fa-2x text-primary mb-2"></i>
+                                <small class="d-block text-muted">Largo</small>
+                                <strong>{{ $producto->dLargo_cm ? number_format($producto->dLargo_cm, 2) . ' cm' : '—' }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="p-3 bg-light rounded-3 text-center">
+                                <i class="fas fa-ruler-horizontal fa-2x text-primary mb-2"></i>
+                                <small class="d-block text-muted">Ancho</small>
+                                <strong>{{ $producto->dAncho_cm ? number_format($producto->dAncho_cm, 2) . ' cm' : '—' }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="p-3 bg-light rounded-3 text-center">
+                                <i class="fas fa-arrows-alt-v fa-2x text-primary mb-2"></i>
+                                <small class="d-block text-muted">Alto</small>
+                                <strong>{{ $producto->dAlto_cm ? number_format($producto->dAlto_cm, 2) . ' cm' : '—' }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <small class="text-muted">Clase de envío</small>
+                                    @php
+                                        $claseEnvioText = '';
+                                        $claseEnvioClass = '';
+                                        switch($producto->vClase_envio) {
+                                            case 'estandar':
+                                                $claseEnvioText = 'Estándar';
+                                                $claseEnvioClass = 'bg-primary';
+                                                break;
+                                            case 'express':
+                                                $claseEnvioText = 'Express';
+                                                $claseEnvioClass = 'bg-success';
+                                                break;
+                                            case 'fragil':
+                                                $claseEnvioText = 'Frágil';
+                                                $claseEnvioClass = 'bg-warning text-dark';
+                                                break;
+                                            case 'grandes_dimensiones':
+                                                $claseEnvioText = 'Grandes dimensiones';
+                                                $claseEnvioClass = 'bg-danger';
+                                                break;
+                                            default:
+                                                $claseEnvioText = 'No especificada';
+                                                $claseEnvioClass = 'bg-secondary';
+                                        }
+                                    @endphp
+                                    <span class="badge {{ $claseEnvioClass }}">{{ $claseEnvioText }}</span>
+                                </div>
+                                @if($producto->dLargo_cm && $producto->dAncho_cm && $producto->dAlto_cm)
+                                    <small class="text-muted">Volumen: {{ number_format($producto->dLargo_cm * $producto->dAncho_cm * $producto->dAlto_cm, 2) }} cm³</small>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CUARTA FILA: Descripción -->
+    @if($producto->tDescripcion_corta || $producto->tDescripcion_larga)
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0">
+                        <i class="fas fa-align-left me-2 text-primary"></i>Descripción
+                    </h5>
+                </div>
+                <div class="card-body px-4">
+                    @if($producto->tDescripcion_corta)
+                        <div class="mb-4">
+                            <small class="text-muted text-uppercase">Descripción corta</small>
+                            <p class="fs-5 mb-0 p-3 bg-light rounded-3">{{ $producto->tDescripcion_corta }}</p>
+                        </div>
+                    @endif
+                    
+                    @if($producto->tDescripcion_larga)
+                        <div>
+                            <small class="text-muted text-uppercase">Descripción detallada</small>
+                            <div class="p-3 bg-light rounded-3" style="white-space: pre-line;">
+                                {{ $producto->tDescripcion_larga }}
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- QUINTA FILA: Etiquetas -->
+    @if($producto->etiquetas->count() > 0)
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0">
+                        <i class="fas fa-tags me-2 text-primary"></i>Etiquetas
+                    </h5>
+                </div>
+                <div class="card-body px-4">
+                    @foreach($producto->etiquetas as $etiqueta)
+                        <span class="badge me-2 mb-2 p-3" 
+                              style="background-color: {{ $etiqueta->color ?? '#6c757d' }}; color: white; font-size: 14px;">
+                            <i class="fas fa-tag me-1"></i>{{ $etiqueta->vNombre }}
+                        </span>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- SEXTA FILA: Galería de imágenes adicionales -->
+    @if(count($imagenes) > 1)
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0">
+                        <i class="fas fa-images me-2 text-primary"></i>Galería de Imágenes
+                    </h5>
+                </div>
+                <div class="card-body px-4">
+                    <div class="row g-3">
+                        @foreach($imagenes as $index => $imagen)
+                            @if($index > 0)
+                            <div class="col-lg-2 col-md-3 col-4">
+                                <div class="border rounded-3 p-2 text-center bg-light h-100" style="cursor: pointer;" onclick="ampliarImagen('{{ $imagen }}')">
+                                    <img src="{{ $imagen }}" 
+                                         class="img-fluid rounded" 
+                                         style="height: 100px; width: 100%; object-fit: contain;"
+                                         alt="Imagen {{ $index + 1 }}">
+                                </div>
+                            </div>
+                            @endif
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- SÉPTIMA FILA: Atributos -->
+    @if($producto->valoresAtributos->count() > 0)
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0">
+                        <i class="fas fa-list-alt me-2 text-primary"></i>Atributos
+                    </h5>
+                </div>
+                <div class="card-body px-4">
+                    @php
+                        $atributosAgrupados = [];
+                        foreach($producto->valoresAtributos as $valor) {
+                            $atributo = $valor->atributo;
+                            if($atributo) {
+                                if(!isset($atributosAgrupados[$atributo->id_atributo])) {
+                                    $atributosAgrupados[$atributo->id_atributo] = [
+                                        'nombre' => $atributo->vNombre,
+                                        'valores' => []
+                                    ];
+                                }
+                                $atributosAgrupados[$atributo->id_atributo]['valores'][] = [
+                                    'valor' => $valor->vValor,
+                                    'precio_extra' => $valor->pivot->dPrecio_extra ?? 0
+                                ];
+                            }
+                        }
+                    @endphp
+                    
+                    <div class="row">
+                        @foreach($atributosAgrupados as $atributo)
+                            <div class="col-md-4 mb-3">
+                                <div class="bg-light rounded-3 p-3">
+                                    <strong class="text-primary">{{ $atributo['nombre'] }}</strong>
+                                    <div class="mt-2">
+                                        @foreach($atributo['valores'] as $valor)
+                                            <span class="badge bg-white text-dark border me-1 mb-1 p-2">
+                                                {{ $valor['valor'] }}
+                                                @if($valor['precio_extra'] > 0)
+                                                    <span class="text-success">(+${{ number_format($valor['precio_extra'], 2) }})</span>
+                                                @endif
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- OCTAVA FILA: Variaciones -->
+    @if($producto->variaciones->count() > 0)
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold mb-0">
+                            <i class="fas fa-cubes me-2 text-primary"></i>Variaciones
+                        </h5>
+                        <span class="badge bg-primary">{{ $producto->variaciones->count() }} variaciones</span>
+                    </div>
+                </div>
+                <div class="card-body px-4">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="py-3">Atributos</th>
+                                    <th class="py-3">SKU</th>
+                                    <th class="py-3 text-end">Precio</th>
+                                    <th class="py-3 text-center">Stock</th>
+                                    <th class="py-3">Dimensiones</th>
+                                    <th class="py-3 text-center">Estado</th>
+                                    <th class="py-3 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($producto->variaciones as $variacion)
+                                    <tr>
+                                        <td>
+                                            @foreach($variacion->atributos as $atributoRel)
+                                                @if($atributoRel->atributo && $atributoRel->valor)
+                                                    <span class="badge bg-info bg-opacity-10 text-dark border me-1 mb-1">
+                                                        {{ $atributoRel->atributo->vNombre }}: {{ $atributoRel->valor->vValor }}
+                                                    </span>
+                                                @endif
+                                            @endforeach
+                                        </td>
+                                        <td><code class="bg-light p-2 rounded">{{ $variacion->vSKU }}</code></td>
+                                        <td class="text-end">
+                                            @if($variacion->bTiene_oferta && $variacion->dPrecio_oferta && $variacion->dFecha_inicio_oferta && $variacion->dFecha_fin_oferta && now()->between($variacion->dFecha_inicio_oferta, $variacion->dFecha_fin_oferta))
+                                                <span class="text-decoration-line-through text-muted small">
+                                                    ${{ number_format($variacion->dPrecio, 2) }}
+                                                </span><br>
+                                                <span class="fw-bold text-danger">
+                                                    ${{ number_format($variacion->dPrecio_oferta, 2) }}
+                                                </span>
+                                            @else
+                                                <span class="fw-bold">${{ number_format($variacion->dPrecio, 2) }}</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge {{ $variacion->iStock > 10 ? 'bg-success' : ($variacion->iStock > 0 ? 'bg-warning text-dark' : 'bg-danger') }} py-2 px-3">
+                                                {{ $variacion->iStock }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if($variacion->dLargo_cm || $variacion->dAncho_cm || $variacion->dAlto_cm || $variacion->dPeso)
+                                                <small>
+                                                    @if($variacion->dPeso)<span class="d-block">{{ number_format($variacion->dPeso, 3) }} kg</span>@endif
+                                                    @if($variacion->dLargo_cm && $variacion->dAncho_cm && $variacion->dAlto_cm)
+                                                        <span class="d-block">{{ number_format($variacion->dLargo_cm, 2) }} × {{ number_format($variacion->dAncho_cm, 2) }} × {{ number_format($variacion->dAlto_cm, 2) }} cm</span>
+                                                    @endif
+                                                </small>
+                                            @else
+                                                <span class="text-muted">—</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            @if($variacion->bActivo)
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success py-2 px-3">
+                                                    <i class="fas fa-check-circle me-1"></i>Activo
+                                                </span>
+                                            @else
+                                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger py-2 px-3">
+                                                    <i class="fas fa-times-circle me-1"></i>Inactivo
+                                                </span>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            <a href="{{ route('variaciones.edit', ['producto_id' => $producto->id_producto, 'variacion_id' => $variacion->id_variacion]) }}" 
+                                               class="btn btn-sm btn-outline-primary" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- NOVENA FILA: Historial -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm bg-light">
+                <div class="card-body p-4">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <small class="text-muted">Fecha de registro</small>
+                            <p class="fw-bold mb-0">
+                                <i class="far fa-calendar-alt me-2 text-primary"></i>
+                                {{ $producto->tFecha_registro ? \Carbon\Carbon::parse($producto->tFecha_registro)->format('d/m/Y H:i:s') : 'No disponible' }}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <small class="text-muted">Última actualización</small>
+                            <p class="fw-bold mb-0">
+                                <i class="far fa-clock me-2 text-warning"></i>
+                                {{ $producto->tFecha_actualizacion ? \Carbon\Carbon::parse($producto->tFecha_actualizacion)->format('d/m/Y H:i:s') : 'No disponible' }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACCIONES FINALES -->
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex gap-2 justify-content-end">
+                <a href="{{ route('productos.edit', $producto->id_producto) }}" class="btn btn-primary px-5 py-3">
+                    <i class="fas fa-edit me-2"></i>Editar Producto
+                </a>
+                <button type="button" class="btn btn-outline-danger px-5 py-3" onclick="confirmDelete({{ $producto->id_producto }})">
+                    <i class="fas fa-trash me-2"></i>Eliminar
+                </button>
+                <a href="{{ route('productos.index') }}" class="btn btn-outline-secondary px-5 py-3">
+                    <i class="fas fa-arrow-left me-2"></i>Volver
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario de eliminación oculto -->
+    <form id="deleteForm-{{ $producto->id_producto }}" action="{{ route('productos.destroy', $producto->id_producto) }}" method="POST" style="display: none;">
+        @csrf
+        @method('DELETE')
+    </form>
 
     <!-- Modal para ampliar imágenes -->
     <div class="modal fade" id="imagenModal" tabindex="-1" aria-hidden="true">
@@ -811,20 +724,34 @@
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <script>
-        function confirmarEliminacion() {
-            return confirm('¿Estás seguro de que deseas eliminar este producto? Esta acción no se puede deshacer y eliminará todas las imágenes, atributos y variaciones asociadas.');
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+function confirmDelete(id) {
+    Swal.fire({
+        title: '¿Eliminar producto?',
+        text: 'Esta acción no se puede deshacer. Se eliminarán todas las variaciones, imágenes y relaciones asociadas.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            document.getElementById('deleteForm-' + id).submit();
         }
-        
-        function ampliarImagen(url) {
-            document.getElementById('imagenAmpliada').src = url;
-            const modal = new bootstrap.Modal(document.getElementById('imagenModal'));
-            modal.show();
-        }
-    </script>
-</body>
-</html>
+    });
+}
+
+function ampliarImagen(url) {
+    document.getElementById('imagenAmpliada').src = url;
+    const modal = new bootstrap.Modal(document.getElementById('imagenModal'));
+    modal.show();
+}
+</script>
+@endpush
+
+@endsection

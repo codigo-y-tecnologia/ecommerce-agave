@@ -21,15 +21,15 @@ class BusquedaController extends Controller
             ->take(12)
             ->get();
         
-        // Productos en descuento (USANDO bTiene_descuento)
+        // Productos en descuento (CORREGIDO: usando bTiene_oferta, dPrecio_oferta, dFecha_fin_oferta)
         $productosDescuento = Producto::with(['categoria', 'marca', 'etiquetas'])
             ->where('bActivo', true)
-            ->where('bTiene_descuento', true)
+            ->where('bTiene_oferta', 1)
             ->where(function($dateQuery) {
-                $dateQuery->whereNull('dFecha_fin_descuento')
-                          ->orWhere('dFecha_fin_descuento', '>=', now());
+                $dateQuery->whereNull('dFecha_fin_oferta')
+                          ->orWhere('dFecha_fin_oferta', '>=', now());
             })
-            ->orderByRaw('((dPrecio_venta - dPrecio_descuento) / dPrecio_venta) DESC')
+            ->orderByRaw('((dPrecio_venta - dPrecio_oferta) / dPrecio_venta) DESC')
             ->take(8)
             ->get();
         
@@ -69,13 +69,13 @@ class BusquedaController extends Controller
             });
         }
 
-        // FILTRO DE BÚSQUEDA POR DESCUENTO (CORREGIDO - USANDO bTiene_descuento)
+        // FILTRO DE BÚSQUEDA POR DESCUENTO (CORREGIDO - usando bTiene_oferta)
         if ($request->has('en_descuento') && $request->en_descuento == '1') {
             $query->where(function($q) {
-                $q->where('bTiene_descuento', true)
+                $q->where('bTiene_oferta', 1)
                   ->where(function($dateQuery) {
-                      $dateQuery->whereNull('dFecha_fin_descuento')
-                                ->orWhere('dFecha_fin_descuento', '>=', now());
+                      $dateQuery->whereNull('dFecha_fin_oferta')
+                                ->orWhere('dFecha_fin_oferta', '>=', now());
                   });
             });
         }
@@ -115,11 +115,11 @@ class BusquedaController extends Controller
             $query->where('iStock', '>', 0);
         }
 
-        // Filtro por rango de descuento
+        // Filtro por rango de descuento (CORREGIDO - usando dPrecio_oferta)
         if ($request->has('descuento_min') && !empty($request->descuento_min)) {
             $descuentoMin = floatval($request->descuento_min);
-            $query->where('bTiene_descuento', true)
-                  ->whereRaw('((dPrecio_venta - dPrecio_descuento) / dPrecio_venta * 100) >= ?', [$descuentoMin]);
+            $query->where('bTiene_oferta', 1)
+                  ->whereRaw('((dPrecio_venta - dPrecio_oferta) / dPrecio_venta * 100) >= ?', [$descuentoMin]);
         }
 
         // Ordenamiento
@@ -135,8 +135,8 @@ class BusquedaController extends Controller
                 $query->orderBy('id_producto', 'desc');
                 break;
             case 'descuento_mayor':
-                $query->where('bTiene_descuento', true)
-                      ->orderByRaw('((dPrecio_venta - dPrecio_descuento) / dPrecio_venta) DESC');
+                $query->where('bTiene_oferta', 1)
+                      ->orderByRaw('((dPrecio_venta - dPrecio_oferta) / dPrecio_venta) DESC');
                 break;
             case 'nombre':
             default:
@@ -175,12 +175,12 @@ class BusquedaController extends Controller
                   });
             })
             ->take(5)
-            ->get(['id_producto', 'vNombre', 'dPrecio_venta', 'dPrecio_descuento', 'bTiene_descuento']);
+            ->get(['id_producto', 'vNombre', 'dPrecio_venta', 'dPrecio_oferta', 'bTiene_oferta']);
 
         $sugerencias = [];
         foreach ($productos as $producto) {
-            $tieneDescuento = $producto->tieneDescuentoActivo(); // Debes tener este método en el modelo
-            $precioMostrar = $tieneDescuento ? $producto->dPrecio_descuento : $producto->dPrecio_venta;
+            $tieneDescuento = $producto->tieneDescuentoActivo(); // Este método debe existir en el modelo
+            $precioMostrar = $tieneDescuento ? $producto->dPrecio_oferta : $producto->dPrecio_venta;
             $texto = $producto->vNombre . ' - $' . number_format($precioMostrar, 2);
             
             if ($tieneDescuento) {
@@ -210,7 +210,7 @@ class BusquedaController extends Controller
             ->where('vNombre', 'LIKE', "%{$term}%")
             ->orWhere('tDescripcion_corta', 'LIKE', "%{$term}%")
             ->take(10)
-            ->get(['id_producto', 'vNombre', 'dPrecio_venta', 'dPrecio_descuento', 'bTiene_descuento']);
+            ->get(['id_producto', 'vNombre', 'dPrecio_venta', 'dPrecio_oferta', 'bTiene_oferta']);
 
         return response()->json($productos);
     }
