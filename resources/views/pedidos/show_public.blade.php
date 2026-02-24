@@ -138,4 +138,16 @@
     </div>
 @endif
 
+@if($pedido->eEstado === 'pagado' && optional($pedido->envio)->eEstado === 'pendiente')
+    <div class="alert alert-info mt-4">
+        ¿Necesitas cancelar este pedido?
+        <br>
+        Para gestionar cancelaciones o devoluciones,
+        <a href="{{ route('usuarios.create') }}" class="fw-semibold">
+            crea una cuenta con este mismo correo
+        </a>
+        y podrás administrarlo desde tu perfil.
+    </div>
+@endif
+
 @endsection

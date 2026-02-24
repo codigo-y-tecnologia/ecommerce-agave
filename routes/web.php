@@ -152,7 +152,8 @@ Route::get('/consulta-pedido', [ConsultaPedidoController::class, 'form'])
     ->name('consulta.pedido.form');
 
 Route::post('/consulta-pedido', [ConsultaPedidoController::class, 'buscar'])
-    ->name('consulta.pedido.buscar');
+    ->name('consulta.pedido.buscar')
+    ->middleware('throttle:consulta-pedido'); // Aplica el throttle personalizado definido en RouteServiceProvider
 
 // Ruta para descargar la factura en PDF sin necesidad de login
 Route::get('/factura/{id}', [FacturaController::class, 'descargar'])

@@ -28,14 +28,14 @@ class PostventaController extends Controller
 
         // Evitar duplicados
         if (
-    SolicitudPostventa::where('id_pedido', $pedido->id_pedido)
-        ->where('eTipo', 'cancelacion')
-        ->exists()
-) {
-    return response()->json([
-        'message' => 'Ya existe una solicitud para este pedido'
-    ], 409);
-}
+            SolicitudPostventa::where('id_pedido', $pedido->id_pedido)
+            ->where('eTipo', 'cancelacion')
+            ->exists()
+        ) {
+            return response()->json([
+                'message' => 'Ya existe una solicitud para este pedido'
+            ], 409);
+        }
 
         $solicitud = SolicitudPostventa::create([
             'id_pedido' => $pedido->id_pedido,
@@ -46,15 +46,15 @@ class PostventaController extends Controller
 
         // 🔔 Notificar admins
         try {
-    $admins = Usuario::where('eRol', 'admin')->get();
-    foreach ($admins as $admin) {
-        $admin->notify(new SolicitudPostventaCreada($solicitud));
-    }
+            $admins = Usuario::where('eRol', 'admin')->get();
+            foreach ($admins as $admin) {
+                $admin->notify(new SolicitudPostventaCreada($solicitud));
+            }
 
-    Auth::user()->notify(new SolicitudPostventaCliente($solicitud));
-} catch (\Throwable $e) {
-    report($e); // se guarda en storage/logs
-}
+            Auth::user()->notify(new SolicitudPostventaCliente($solicitud));
+        } catch (\Throwable $e) {
+            report($e); // se guarda en storage/logs
+        }
 
         return response()->json([
             'success' => true,
@@ -76,14 +76,14 @@ class PostventaController extends Controller
 
         // Evitar duplicados
         if (
-    SolicitudPostventa::where('id_pedido', $pedido->id_pedido)
-        ->where('eTipo', 'devolucion')
-        ->exists()
-) {
-    return response()->json([
-        'message' => 'Ya existe una solicitud para este pedido'
-    ], 409);
-}
+            SolicitudPostventa::where('id_pedido', $pedido->id_pedido)
+            ->where('eTipo', 'devolucion')
+            ->exists()
+        ) {
+            return response()->json([
+                'message' => 'Ya existe una solicitud para este pedido'
+            ], 409);
+        }
 
         $solicitud = SolicitudPostventa::create([
             'id_pedido' => $pedido->id_pedido,
@@ -94,15 +94,15 @@ class PostventaController extends Controller
 
         // 🔔 Notificar admins
         try {
-    $admins = Usuario::whereIn('eRol', ['admin', 'superadmin'])->get();
-    foreach ($admins as $admin) {
-        $admin->notify(new SolicitudPostventaCreada($solicitud));
-    }
+            $admins = Usuario::whereIn('eRol', ['admin', 'superadmin'])->get();
+            foreach ($admins as $admin) {
+                $admin->notify(new SolicitudPostventaCreada($solicitud));
+            }
 
-    Auth::user()->notify(new SolicitudPostventaCliente($solicitud));
-} catch (\Throwable $e) {
-    report($e); // se guarda en storage/logs
-}
+            Auth::user()->notify(new SolicitudPostventaCliente($solicitud));
+        } catch (\Throwable $e) {
+            report($e); // se guarda en storage/logs
+        }
 
         return response()->json([
             'success' => true,

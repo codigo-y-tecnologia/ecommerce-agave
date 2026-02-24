@@ -33,7 +33,7 @@ class ConsultaPedidoController extends Controller
         if (!$pedido) {
             return back()
                 ->withErrors([
-                    'general' => 'No encontramos un pedido con esos datos.'
+                    'general' => 'No fue posible validar la información proporcionada.'
                 ])
                 ->withInput();
         }
