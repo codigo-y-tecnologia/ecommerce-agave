@@ -14,15 +14,19 @@
 
 <div class="row mb-4">
     <div class="col-md-6">
-        <p>
-            <strong>Cliente:</strong>
-            {{ data_get($pedido->usuario, 'vNombre') . ' ' . data_get($pedido->usuario, 'vApaterno') }}
-        </p>
+        @php
+      $nombre = trim(($pedido->vNombre ?? '').' '.($pedido->vApaterno ?? '').' '.($pedido->vAmaterno ?? ''));
+    @endphp
 
-        <p>
-            <strong>Email:</strong>
-            {{ optional($pedido->usuario)->vEmail ?? '—' }}
-        </p>
+    <p>
+        <strong>Cliente:</strong>
+        {{ $nombre ?: 'No disponible' }}
+    </p>
+
+    <p>
+        <strong>Email:</strong>
+        {{ $pedido->vEmail ?? '—' }}
+    </p>
 
         <p>
             <strong>Estado pedido:</strong>

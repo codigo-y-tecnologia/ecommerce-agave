@@ -872,38 +872,59 @@ function renderPaypalIfNeeded() {
 
             const data = await res.json();
 
-            if (data.success) {
-                mensaje.textContent = data.message;
-                mensaje.style.display = 'block';
-                mensaje.classList.remove('text-danger');
-                mensaje.classList.add('text-success');
-                
-                totalFinal.textContent = formatCurrency(data.totalFinal);
-                stripeTotal.textContent = data.totalFinal.toFixed(2);
+            if (!res.ok || !data.success) {
+            Swal.fire({
+                icon: "warning",
+                title: "Cupón no disponible",
+                text: data.message || "No se pudo aplicar el cupón.",
+                confirmButtonText: "Entendido"
+            });
 
-                // Actualizar Envío dinámicamente
-                if (typeof data.envio !== 'undefined' && envioElemento) {
-                    const envioValor = data.envio == 0
-                        ? '<span class="text-success">Gratis 🚚</span>'
-                        : formatCurrency(data.envio);
-                    envioElemento.innerHTML = `<span><strong>Envío:</strong></span><span>${envioValor}</span>`;
-                }
-            } else {
-                Swal.fire({
-                    icon: "warning",
-                    title: "Cupón no disponible",
-                    text: data.message,
-                    confirmButtonText: "Entendido"
-                });
-
-                mensaje.textContent = data.message;
+            if (mensaje) {
+                mensaje.textContent = data.message || "Cupón inválido.";
                 mensaje.style.display = 'block';
                 mensaje.classList.remove('text-success');
                 mensaje.classList.add('text-danger');
             }
 
+            return;
+        }
+
+        if (mensaje) {
+            mensaje.textContent = data.message;
+            mensaje.style.display = 'block';
+            mensaje.classList.remove('text-danger');
+            mensaje.classList.add('text-success');
+        }
+
+        if (totalFinal) {
+            totalFinal.textContent = formatCurrency(data.totalFinal);
+        }
+
+        if (stripeTotal) {
+            //stripeTotal.textContent = " $" + formatCurrency(data.totalFinal);
+            stripeTotal.textContent = data.totalFinal.toFixed(2);
+        }
+
+        // Actualizar Envío dinámicamente
+        if (typeof data.envio !== 'undefined' && envioElemento) {
+            const envioValor = data.envio == 0
+                ? '<span class="text-success">Gratis 🚚</span>'
+                : formatCurrency(data.envio);
+
+            envioElemento.innerHTML = `
+                <span><strong>Envío:</strong></span>
+                <span>${envioValor}</span>
+            `;
+        }
+
         } catch (error) {
             console.error('Error al aplicar cupón:', error);
+            console.log({
+            mensaje,
+            totalFinal,
+            stripeTotal
+        });
             Swal.fire({
                 icon: "error",
                 title: "Error",

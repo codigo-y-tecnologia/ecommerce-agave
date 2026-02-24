@@ -210,10 +210,24 @@
                         <td>{{ $pedido->id_pedido }}</td>
 
                         <td>
-                            {{ data_get($pedido->usuario, 'vNombre')
-                                ? data_get($pedido->usuario, 'vNombre').' '.data_get($pedido->usuario, 'vApaterno')
-                                : 'Cliente eliminado'
-                            }}
+                            @php
+                                // PRIORIDAD 1: Datos históricos del pedido
+                                $nombre = trim(($pedido->vNombre ?? '').' '.($pedido->vApaterno ?? '').' '.($pedido->vAmaterno ?? ''));
+
+                                // PRIORIDAD 2: Fallback a relación usuario (pedidos antiguos)
+                                if (empty($nombre) && $pedido->usuario) {
+                                    $nombre = trim($pedido->usuario->vNombre.' '.$pedido->usuario->vApaterno.' '.$pedido->usuario->vAmaterno);
+                                }
+                            @endphp
+
+                            @if(!empty($nombre))
+                                <div class="fw-semibold">{{ $nombre }}</div>
+                                <small class="text-muted">
+                                    {{ $pedido->vEmail ?? optional($pedido->usuario)->vEmail }}
+                                </small>
+                            @else
+                                <span class="text-muted">Cliente no disponible</span>
+                            @endif
                         </td>
 
                         <td>
