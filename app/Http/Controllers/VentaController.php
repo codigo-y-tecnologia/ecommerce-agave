@@ -10,28 +10,28 @@ class VentaController extends Controller
     public function index(Request $request)
     {
         $query = Venta::query();
-        
+
         // BÚSQUEDA ÚNICA EN MÚLTIPLES CAMPOS
         if ($request->filled('search')) {
             $searchTerm = $request->search;
-            $query->where(function($q) use ($searchTerm) {
+            $query->where(function ($q) use ($searchTerm) {
                 $q->where('id_venta', 'LIKE', "%{$searchTerm}%")
-                  ->orWhere('id_pedido', 'LIKE', "%{$searchTerm}%")
-                  ->orWhere('id_usuario', 'LIKE', "%{$searchTerm}%");
+                    ->orWhere('id_pedido', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('id_usuario', 'LIKE', "%{$searchTerm}%");
             });
         }
-        
+
         // Filtros adicionales (si los necesitas)
         if ($request->filled('search_metodo_pago')) {
             $query->where('eMetodo_pago', $request->search_metodo_pago);
         }
-        
+
         if ($request->filled('search_estado')) {
             $query->where('eEstado', $request->search_estado);
         }
-        
+
         $ventas = $query->orderBy('tFecha_venta', 'desc')->paginate(10);
-        
+
         return view('ventas.index', compact('ventas'));
     }
 
@@ -56,9 +56,7 @@ class VentaController extends Controller
         ]);
 
         $venta->update($request->all());
-        
+
         return redirect()->route('ventas.index')->with('success', 'Venta actualizada correctamente.');
     }
-
-
 }

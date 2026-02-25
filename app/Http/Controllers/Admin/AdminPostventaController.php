@@ -106,16 +106,16 @@ class AdminPostventaController extends Controller
             // 🔄 Estados
 
             if ($solicitud->eTipo === 'cancelacion') {
-    $pedido->update(['eEstado' => 'cancelado']);
+                $pedido->update(['eEstado' => 'cancelado']);
 
-    $solicitud->update(['tRespuesta_admin' => 'Cancelación aprobada y reembolso realizado']);
-}
+                $solicitud->update(['tRespuesta_admin' => 'Cancelación aprobada y reembolso realizado']);
+            }
 
-if ($solicitud->eTipo === 'devolucion') {
-    $pedido->update(['eEstado' => 'devuelto']);
+            if ($solicitud->eTipo === 'devolucion') {
+                $pedido->update(['eEstado' => 'devuelto']);
 
-    $solicitud->update(['tRespuesta_admin' => 'Devolución aprobada y reembolso realizado']);
-}
+                $solicitud->update(['tRespuesta_admin' => 'Devolución aprobada y reembolso realizado']);
+            }
 
             $solicitud->update(['eEstado' => 'reembolsada']);
             $venta->update(['eEstado' => 'reembolsada']);
@@ -130,7 +130,6 @@ if ($solicitud->eTipo === 'devolucion') {
             return redirect()
                 ->route('admin.postventa.index')
                 ->with('success', 'Solicitud aprobada y reembolso realizado');
-
         } catch (\Throwable $e) {
             DB::rollBack();
             report($e);
@@ -139,13 +138,13 @@ if ($solicitud->eTipo === 'devolucion') {
         }
     }
 
-public function rechazar(Request $request, SolicitudPostventa $solicitud)
+    public function rechazar(Request $request, SolicitudPostventa $solicitud)
     {
         abort_if($solicitud->eEstado !== 'pendiente', 403);
 
         $request->validate([
-        'respuesta' => 'required|string|min:5|max:255',
-    ]);
+            'respuesta' => 'required|string|min:5|max:255',
+        ]);
 
         $solicitud->update([
             'eEstado' => 'rechazada',

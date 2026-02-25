@@ -418,7 +418,7 @@ Route::middleware(['auth', 'permission:gestionar_tienda'])->group(function () {
     Route::get('/postventa', [AdminPostventaController::class, 'index'])
         ->name('admin.postventa.index');
 
-    Route::get('/{solicitud}', [AdminPostventaController::class, 'show'])
+    Route::get('/postventa/{solicitud}', [AdminPostventaController::class, 'show'])
         ->name('admin.postventa.show');
 
     Route::post('/postventa/{solicitud}/aprobar', [AdminPostventaController::class, 'aprobar'])
@@ -429,11 +429,11 @@ Route::middleware(['auth', 'permission:gestionar_tienda'])->group(function () {
 });
 
 // Reportes
-Route::get('/reportes', function () {
-    return view('reportes.index');
-})
-    ->middleware('permission:ver_reportes')
-    ->name('reportes.index');
+Route::middleware(['auth', 'permission:ver_reportes'])->group(function () {
+    Route::get('/reportes', function () {
+        return view('reportes.index');
+    })->name('reportes.index');
+});
 
 // --------------------
 // Rutas para superadmin
