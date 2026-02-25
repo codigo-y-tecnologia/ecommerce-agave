@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 
 class VariacionController extends Controller
@@ -104,80 +105,31 @@ class VariacionController extends Controller
                     }
                 }
             ],
-            'dPrecio_descuento' => [
-                'nullable',
-                'numeric',
-                'min:0',
-                'max:9999999.99',
-                function ($attribute, $value, $fail) use ($request) {
-                    if ($value !== null && $value !== '') {
-                        if (!is_numeric($value)) {
-                            $fail('El precio de descuento debe ser un número válido.');
-                        } elseif (!preg_match('/^\d{1,7}(\.\d{1,2})?$/', (string)$value)) {
-                            $fail('El precio de descuento debe tener máximo 7 dígitos enteros y 2 decimales.');
-                        }
-                        
-                        if ($request->input('bTiene_descuento') == '1' && $value >= $request->dPrecio) {
-                            $fail('El precio de descuento debe ser menor que el precio normal.');
-                        }
-                    }
-                }
-            ],
-            'iStock' => 'required|integer|min:0|max:999999',
+            'dPrecio_adicional' => 'nullable|numeric|min:0|max:9999999.99',
+            'iStock_variacion' => 'required|integer|min:0|max:999999',
             'dPeso' => [
                 'nullable',
                 'numeric',
                 'min:0',
-                'max:1000',
+                'max:999.999',
                 function ($attribute, $value, $fail) {
-                    if ($value !== null && !preg_match('/^\d{1,4}(\.\d{1,3})?$/', $value)) {
-                        $fail('El peso debe tener máximo 4 dígitos enteros y 3 decimales.');
-                    }
-                }
-            ],
-            'dLargo_cm' => [
-                'nullable',
-                'numeric',
-                'min:0',
-                'max:500',
-                function ($attribute, $value, $fail) {
-                    if ($value !== null && !preg_match('/^\d{1,3}(\.\d{1,2})?$/', $value)) {
-                        $fail('El largo debe tener máximo 3 dígitos enteros y 2 decimales.');
-                    }
-                }
-            ],
-            'dAncho_cm' => [
-                'nullable',
-                'numeric',
-                'min:0',
-                'max:500',
-                function ($attribute, $value, $fail) {
-                    if ($value !== null && !preg_match('/^\d{1,3}(\.\d{1,2})?$/', $value)) {
-                        $fail('El ancho debe tener máximo 3 dígitos enteros y 2 decimales.');
-                    }
-                }
-            ],
-            'dAlto_cm' => [
-                'nullable',
-                'numeric',
-                'min:0',
-                'max:500',
-                function ($attribute, $value, $fail) {
-                    if ($value !== null && !preg_match('/^\d{1,3}(\.\d{1,2})?$/', $value)) {
-                        $fail('El alto debe tener máximo 3 dígitos enteros y 2 decimales.');
+                    if ($value !== null && !preg_match('/^\d{1,3}(\.\d{1,3})?$/', $value)) {
+                        $fail('El peso debe tener máximo 3 dígitos enteros y 3 decimales.');
                     }
                 }
             ],
             'vClase_envio' => 'nullable|max:50',
-            'tDescripcion' => 'nullable',
-            'bActivo' => 'boolean',
-            'imagen' => 'nullable|image|max:5120|mimes:jpg,jpeg,png,gif,webp,bmp,svg',
+            'tDescripcion' => 'nullable|string',
+            'bActivo' => 'nullable|boolean',
+            
+            // CAMPOS DE IMÁGENES MÚLTIPLES
+            'imagen_principal' => 'nullable|image|max:5120|mimes:jpeg,jpg,png',
+            'gif' => 'nullable|mimes:gif|max:10240',
+            'imagenes_adicionales' => 'nullable|array|max:7',
+            'imagenes_adicionales.*' => 'image|mimes:jpeg,jpg,png,webp|max:5120',
+            
             'atributos' => 'required|array',
             'atributos.*' => 'required|exists:tbl_atributo_valores,id_atributo_valor',
-            'bTiene_descuento' => 'nullable|in:0,1',
-            'dFecha_inicio_descuento' => 'nullable|date',
-            'dFecha_fin_descuento' => 'nullable|date|after_or_equal:dFecha_inicio_descuento',
-            'vMotivo_descuento' => 'nullable|string|max:255',
         ], [
             'vSKU.required' => 'El SKU es obligatorio',
             'vSKU.unique' => 'Este SKU ya está registrado',
@@ -186,50 +138,33 @@ class VariacionController extends Controller
             'dPrecio.numeric' => 'El precio debe ser un número válido',
             'dPrecio.min' => 'El precio no puede ser negativo',
             'dPrecio.max' => 'El precio no puede exceder $9,999,999.99',
-            'dPrecio_descuento.numeric' => 'El precio de descuento debe ser un número válido',
-            'dPrecio_descuento.min' => 'El precio de descuento no puede ser negativo',
-            'dPrecio_descuento.max' => 'El precio de descuento no puede exceder $9,999,999.99',
-            'iStock.required' => 'El stock es obligatorio',
-            'iStock.integer' => 'El stock debe ser un número entero',
-            'iStock.min' => 'El stock no puede ser negativo',
-            'iStock.max' => 'El stock no puede exceder 999,999 unidades',
+            'dPrecio_adicional.numeric' => 'El precio adicional debe ser un número válido',
+            'dPrecio_adicional.min' => 'El precio adicional no puede ser negativo',
+            'dPrecio_adicional.max' => 'El precio adicional no puede exceder $9,999,999.99',
+            'iStock_variacion.required' => 'El stock es obligatorio',
+            'iStock_variacion.integer' => 'El stock debe ser un número entero',
+            'iStock_variacion.min' => 'El stock no puede ser negativo',
+            'iStock_variacion.max' => 'El stock no puede exceder 999,999 unidades',
             'dPeso.numeric' => 'El peso debe ser un número válido',
             'dPeso.min' => 'El peso no puede ser negativo',
-            'dPeso.max' => 'El peso no puede exceder 1000 kg',
-            'dLargo_cm.numeric' => 'El largo debe ser un número válido',
-            'dLargo_cm.min' => 'El largo no puede ser negativo',
-            'dLargo_cm.max' => 'El largo no puede exceder 500 cm',
-            'dAncho_cm.numeric' => 'El ancho debe ser un número válido',
-            'dAncho_cm.min' => 'El ancho no puede ser negativo',
-            'dAncho_cm.max' => 'El ancho no puede exceder 500 cm',
-            'dAlto_cm.numeric' => 'El alto debe ser un número válido',
-            'dAlto_cm.min' => 'El alto no puede ser negativo',
-            'dAlto_cm.max' => 'El alto no puede exceder 500 cm',
+            'dPeso.max' => 'El peso no puede exceder 999.999 kg',
             'vClase_envio.max' => 'La clase de envío no puede exceder los 50 caracteres',
-            'imagen.image' => 'El archivo debe ser una imagen válida',
-            'imagen.max' => 'La imagen no debe pesar más de 5MB',
-            'imagen.mimes' => 'Formatos aceptados: JPG, JPEG, PNG, GIF, WebP, BMP, SVG',
+            
+            // Mensajes para imágenes
+            'imagen_principal.image' => 'El archivo debe ser una imagen válida',
+            'imagen_principal.max' => 'La imagen principal no debe pesar más de 5MB',
+            'imagen_principal.mimes' => 'La imagen principal debe ser JPG, JPEG o PNG',
+            'gif.mimes' => 'El archivo debe ser un GIF',
+            'gif.max' => 'El GIF no debe pesar más de 10MB',
+            'imagenes_adicionales.max' => 'No puedes subir más de 7 imágenes adicionales',
+            'imagenes_adicionales.*.image' => 'Solo se permiten archivos de imagen',
+            'imagenes_adicionales.*.mimes' => 'Formatos permitidos: JPG, JPEG, PNG, WEBP',
+            'imagenes_adicionales.*.max' => 'Cada imagen no debe superar los 5MB',
+            
             'atributos.required' => 'Debes seleccionar valores para todos los atributos',
             'atributos.*.required' => 'Debes seleccionar un valor para cada atributo',
             'atributos.*.exists' => 'El valor seleccionado no es válido',
-            'bTiene_descuento.in' => 'El valor de descuento debe ser 0 o 1',
-            'dFecha_inicio_descuento.date' => 'La fecha de inicio debe ser una fecha válida',
-            'dFecha_fin_descuento.date' => 'La fecha de fin debe ser una fecha válida',
-            'dFecha_fin_descuento.after_or_equal' => 'La fecha de fin debe ser igual o posterior a la fecha de inicio',
-            'vMotivo_descuento.max' => 'El motivo del descuento no puede exceder los 255 caracteres',
         ]);
-
-        $validator->sometimes('dPrecio_descuento', 'required', function ($input) {
-            return $input->bTiene_descuento == 1;
-        });
-
-        $validator->sometimes('dFecha_inicio_descuento', 'required', function ($input) {
-            return $input->bTiene_descuento == 1;
-        });
-
-        $validator->sometimes('dFecha_fin_descuento', 'required', function ($input) {
-            return $input->bTiene_descuento == 1;
-        });
 
         if ($validator->fails()) {
             return redirect()->back()
@@ -241,15 +176,7 @@ class VariacionController extends Controller
         try {
             DB::beginTransaction();
 
-            \Log::info('Datos del formulario recibidos en VariacionController:', [
-                'bTiene_descuento' => $request->has('bTiene_descuento'),
-                'bTiene_descuento_value' => $request->bTiene_descuento,
-                'dPrecio_descuento' => $request->dPrecio_descuento,
-                'dFecha_inicio_descuento' => $request->dFecha_inicio_descuento,
-                'dFecha_fin_descuento' => $request->dFecha_fin_descuento,
-                'vMotivo_descuento' => $request->vMotivo_descuento,
-            ]);
-
+            // Determinar clase de envío
             $claseEnvio = $request->vClase_envio;
             if (empty($claseEnvio) && $productoPadre->vClase_envio) {
                 $claseEnvio = $productoPadre->vClase_envio;
@@ -257,42 +184,39 @@ class VariacionController extends Controller
                 $claseEnvio = 'estandar';
             }
 
+            // Crear la variación
             $variacionData = [
                 'id_producto' => $producto_id,
                 'vSKU' => strtoupper($request->vSKU),
+                'vCodigo_barras' => $request->vCodigo_barras ?? null,
+                'vNombre_variacion' => $request->vNombre_variacion ?? null,
                 'dPrecio' => $request->dPrecio,
-                'dPrecio_oferta' => $request->dPrecio_descuento ?: null,
-                'iStock' => $request->iStock,
+                'dPrecio_adicional' => $request->dPrecio_adicional ?? 0,
+                'iStock_variacion' => $request->iStock_variacion,
                 'dPeso' => $request->dPeso ?: null,
-                'dLargo_cm' => $request->dLargo_cm ?: null,
-                'dAncho_cm' => $request->dAncho_cm ?: null,
-                'dAlto_cm' => $request->dAlto_cm ?: null,
                 'vClase_envio' => $claseEnvio,
                 'tDescripcion' => $request->tDescripcion,
                 'bActivo' => $request->has('bActivo') ? 1 : 0,
-                'bTiene_oferta' => $request->has('bTiene_descuento') && $request->bTiene_descuento == '1' ? 1 : 0,
-                'dFecha_inicio_oferta' => $request->dFecha_inicio_descuento ?: null,
-                'dFecha_fin_oferta' => $request->dFecha_fin_descuento ?: null,
-                'vMotivo_oferta' => $request->vMotivo_descuento ?: null,
             ];
-
-            \Log::info('Datos que se van a guardar en la variación:', $variacionData);
 
             $variacion = ProductoVariacion::create($variacionData);
 
-            \Log::info('Variación creada con ID:', ['id' => $variacion->id_variacion]);
-            \Log::info('Campos de oferta guardados:', [
-                'bTiene_oferta' => $variacion->bTiene_oferta,
-                'dPrecio_oferta' => $variacion->dPrecio_oferta,
-                'dFecha_inicio_oferta' => $variacion->dFecha_inicio_oferta,
-                'dFecha_fin_oferta' => $variacion->dFecha_fin_oferta,
-                'vMotivo_oferta' => $variacion->vMotivo_oferta,
-            ]);
-
-            if ($request->hasFile('imagen') && $request->file('imagen')->isValid()) {
-                $this->guardarImagenVariacion($variacion, $request->file('imagen'));
+            // Guardar imagen principal si existe
+            if ($request->hasFile('imagen_principal')) {
+                $variacion->guardarImagenPrincipal($request->file('imagen_principal'));
             }
 
+            // Guardar GIF si existe
+            if ($request->hasFile('gif')) {
+                $variacion->guardarGif($request->file('gif'));
+            }
+
+            // Guardar imágenes adicionales si existen
+            if ($request->hasFile('imagenes_adicionales')) {
+                $variacion->guardarImagenesAdicionales($request->file('imagenes_adicionales'));
+            }
+
+            // Guardar relaciones con atributos
             foreach ($request->atributos as $atributo_id => $valor_id) {
                 $atributoValor = AtributoValor::where('id_atributo_valor', $valor_id)
                     ->where('id_atributo', $atributo_id)
@@ -374,6 +298,9 @@ class VariacionController extends Controller
             $query->where('bActivo', true)->orderBy('iOrden');
         }])->where('bActivo', true)->get();
         
+        // Obtener nombres de archivos de imágenes adicionales
+        $imagenesAdicionalesNombres = $variacion->getNombresArchivosImagenesAdicionales();
+        
         return view('variaciones.edit', compact(
             'producto', 
             'variacion', 
@@ -382,7 +309,8 @@ class VariacionController extends Controller
             'categorias',
             'marcas',
             'etiquetas',
-            'atributosGlobales'
+            'atributosGlobales',
+            'imagenesAdicionalesNombres'
         ));
     }
 
@@ -398,7 +326,11 @@ class VariacionController extends Controller
         }
         
         $validator = Validator::make($request->all(), [
-            'vSKU' => 'required|unique:tbl_producto_variaciones,vSKU,' . $variacion_id . ',id_variacion|max:50',
+            'vSKU' => [
+                'required',
+                'max:50',
+                Rule::unique('tbl_producto_variaciones', 'vSKU')->ignore($variacion_id, 'id_variacion')
+            ],
             'dPrecio' => [
                 'required',
                 'numeric',
@@ -410,80 +342,35 @@ class VariacionController extends Controller
                     }
                 }
             ],
-            'dPrecio_descuento' => [
-                'nullable',
-                'numeric',
-                'min:0',
-                'max:9999999.99',
-                function ($attribute, $value, $fail) use ($request) {
-                    if ($value !== null && $value !== '') {
-                        if (!is_numeric($value)) {
-                            $fail('El precio de descuento debe ser un número válido.');
-                        } elseif (!preg_match('/^\d{1,7}(\.\d{1,2})?$/', (string)$value)) {
-                            $fail('El precio de descuento debe tener máximo 7 dígitos enteros y 2 decimales.');
-                        }
-                        
-                        if ($request->input('bTiene_descuento') == '1' && $value >= $request->dPrecio) {
-                            $fail('El precio de descuento debe ser menor que el precio normal.');
-                        }
-                    }
-                }
-            ],
-            'iStock' => 'required|integer|min:0|max:999999',
+            'dPrecio_adicional' => 'nullable|numeric|min:0|max:9999999.99',
+            'iStock_variacion' => 'required|integer|min:0|max:999999',
             'dPeso' => [
                 'nullable',
                 'numeric',
                 'min:0',
-                'max:1000',
+                'max:999.999',
                 function ($attribute, $value, $fail) {
-                    if ($value !== null && !preg_match('/^\d{1,4}(\.\d{1,3})?$/', $value)) {
-                        $fail('El peso debe tener máximo 4 dígitos enteros y 3 decimales.');
-                    }
-                }
-            ],
-            'dLargo_cm' => [
-                'nullable',
-                'numeric',
-                'min:0',
-                'max:500',
-                function ($attribute, $value, $fail) {
-                    if ($value !== null && !preg_match('/^\d{1,3}(\.\d{1,2})?$/', $value)) {
-                        $fail('El largo debe tener máximo 3 dígitos enteros y 2 decimales.');
-                    }
-                }
-            ],
-            'dAncho_cm' => [
-                'nullable',
-                'numeric',
-                'min:0',
-                'max:500',
-                function ($attribute, $value, $fail) {
-                    if ($value !== null && !preg_match('/^\d{1,3}(\.\d{1,2})?$/', $value)) {
-                        $fail('El ancho debe tener máximo 3 dígitos enteros y 2 decimales.');
-                    }
-                }
-            ],
-            'dAlto_cm' => [
-                'nullable',
-                'numeric',
-                'min:0',
-                'max:500',
-                function ($attribute, $value, $fail) {
-                    if ($value !== null && !preg_match('/^\d{1,3}(\.\d{1,2})?$/', $value)) {
-                        $fail('El alto debe tener máximo 3 dígitos enteros y 2 decimales.');
+                    if ($value !== null && !preg_match('/^\d{1,3}(\.\d{1,3})?$/', $value)) {
+                        $fail('El peso debe tener máximo 3 dígitos enteros y 3 decimales.');
                     }
                 }
             ],
             'vClase_envio' => 'nullable|max:50',
-            'tDescripcion' => 'nullable',
-            'bActivo' => 'boolean',
-            'imagen' => 'nullable|image|max:5120|mimes:jpg,jpeg,png,gif,webp,bmp,svg',
+            'tDescripcion' => 'nullable|string',
+            'bActivo' => 'nullable|boolean',
+            
+            // CAMPOS DE IMÁGENES MÚLTIPLES
+            'imagen_principal' => 'nullable|image|max:5120|mimes:jpeg,jpg,png',
+            'gif' => 'nullable|mimes:gif|max:10240',
+            'imagenes_adicionales' => 'nullable|array|max:7',
+            'imagenes_adicionales.*' => 'image|mimes:jpeg,jpg,png,webp|max:5120',
+            'imagenes_a_eliminar' => 'nullable|array',
+            'imagenes_a_eliminar.*' => 'string',
+            'eliminar_imagen_principal' => 'nullable|in:0,1',
+            'eliminar_gif' => 'nullable|in:0,1',
+            
             'atributos' => 'required|array',
             'atributos.*' => 'required|exists:tbl_atributo_valores,id_atributo_valor',
-            'bTiene_descuento' => 'nullable|in:0,1',
-            'dFecha_inicio_descuento' => 'nullable|date',
-            'dFecha_fin_descuento' => 'nullable|date|after_or_equal:dFecha_inicio_descuento',
-            'vMotivo_descuento' => 'nullable|string|max:255',
         ], [
             'vSKU.required' => 'El SKU es obligatorio',
             'vSKU.unique' => 'Este SKU ya está registrado',
@@ -492,50 +379,33 @@ class VariacionController extends Controller
             'dPrecio.numeric' => 'El precio debe ser un número válido',
             'dPrecio.min' => 'El precio no puede ser negativo',
             'dPrecio.max' => 'El precio no puede exceder $9,999,999.99',
-            'dPrecio_descuento.numeric' => 'El precio de descuento debe ser un número válido',
-            'dPrecio_descuento.min' => 'El precio de descuento no puede ser negativo',
-            'dPrecio_descuento.max' => 'El precio de descuento no puede exceder $9,999,999.99',
-            'iStock.required' => 'El stock es obligatorio',
-            'iStock.integer' => 'El stock debe ser un número entero',
-            'iStock.min' => 'El stock no puede ser negativo',
-            'iStock.max' => 'El stock no puede exceder 999,999 unidades',
+            'dPrecio_adicional.numeric' => 'El precio adicional debe ser un número válido',
+            'dPrecio_adicional.min' => 'El precio adicional no puede ser negativo',
+            'dPrecio_adicional.max' => 'El precio adicional no puede exceder $9,999,999.99',
+            'iStock_variacion.required' => 'El stock es obligatorio',
+            'iStock_variacion.integer' => 'El stock debe ser un número entero',
+            'iStock_variacion.min' => 'El stock no puede ser negativo',
+            'iStock_variacion.max' => 'El stock no puede exceder 999,999 unidades',
             'dPeso.numeric' => 'El peso debe ser un número válido',
             'dPeso.min' => 'El peso no puede ser negativo',
-            'dPeso.max' => 'El peso no puede exceder 1000 kg',
-            'dLargo_cm.numeric' => 'El largo debe ser un número válido',
-            'dLargo_cm.min' => 'El largo no puede ser negativo',
-            'dLargo_cm.max' => 'El largo no puede exceder 500 cm',
-            'dAncho_cm.numeric' => 'El ancho debe ser un número válido',
-            'dAncho_cm.min' => 'El ancho no puede ser negativo',
-            'dAncho_cm.max' => 'El ancho no puede exceder 500 cm',
-            'dAlto_cm.numeric' => 'El alto debe ser un número válido',
-            'dAlto_cm.min' => 'El alto no puede ser negativo',
-            'dAlto_cm.max' => 'El alto no puede exceder 500 cm',
+            'dPeso.max' => 'El peso no puede exceder 999.999 kg',
             'vClase_envio.max' => 'La clase de envío no puede exceder los 50 caracteres',
-            'imagen.image' => 'El archivo debe ser una imagen válida',
-            'imagen.max' => 'La imagen no debe pesar más de 5MB',
-            'imagen.mimes' => 'Formatos aceptados: JPG, JPEG, PNG, GIF, WebP, BMP, SVG',
+            
+            // Mensajes para imágenes
+            'imagen_principal.image' => 'El archivo debe ser una imagen válida',
+            'imagen_principal.max' => 'La imagen principal no debe pesar más de 5MB',
+            'imagen_principal.mimes' => 'La imagen principal debe ser JPG, JPEG o PNG',
+            'gif.mimes' => 'El archivo debe ser un GIF',
+            'gif.max' => 'El GIF no debe pesar más de 10MB',
+            'imagenes_adicionales.max' => 'No puedes subir más de 7 imágenes adicionales',
+            'imagenes_adicionales.*.image' => 'Solo se permiten archivos de imagen',
+            'imagenes_adicionales.*.mimes' => 'Formatos permitidos: JPG, JPEG, PNG, WEBP',
+            'imagenes_adicionales.*.max' => 'Cada imagen no debe superar los 5MB',
+            
             'atributos.required' => 'Debes seleccionar valores para todos los atributos',
             'atributos.*.required' => 'Debes seleccionar un valor para cada atributo',
             'atributos.*.exists' => 'El valor seleccionado no es válido',
-            'bTiene_descuento.in' => 'El valor de descuento debe ser 0 o 1',
-            'dFecha_inicio_descuento.date' => 'La fecha de inicio debe ser una fecha válida',
-            'dFecha_fin_descuento.date' => 'La fecha de fin debe ser una fecha válida',
-            'dFecha_fin_descuento.after_or_equal' => 'La fecha de fin debe ser igual o posterior a la fecha de inicio',
-            'vMotivo_descuento.max' => 'El motivo del descuento no puede exceder los 255 caracteres',
         ]);
-
-        $validator->sometimes('dPrecio_descuento', 'required', function ($input) {
-            return $input->bTiene_descuento == 1;
-        });
-
-        $validator->sometimes('dFecha_inicio_descuento', 'required', function ($input) {
-            return $input->bTiene_descuento == 1;
-        });
-
-        $validator->sometimes('dFecha_fin_descuento', 'required', function ($input) {
-            return $input->bTiene_descuento == 1;
-        });
 
         if ($validator->fails()) {
             return redirect()->back()
@@ -547,15 +417,34 @@ class VariacionController extends Controller
         try {
             DB::beginTransaction();
 
-            \Log::info('Datos del formulario de actualización en VariacionController:', [
-                'bTiene_descuento' => $request->has('bTiene_descuento'),
-                'bTiene_descuento_value' => $request->bTiene_descuento,
-                'dPrecio_descuento' => $request->dPrecio_descuento,
-                'dFecha_inicio_descuento' => $request->dFecha_inicio_descuento,
-                'dFecha_fin_descuento' => $request->dFecha_fin_descuento,
-                'vMotivo_descuento' => $request->vMotivo_descuento,
-            ]);
+            // Validar límite de imágenes
+            $imagenesActuales = $variacion->numero_imagenes;
+            $nuevasImagenes = 0;
+            
+            if ($request->hasFile('imagenes_adicionales')) {
+                $nuevasImagenes = count($request->file('imagenes_adicionales'));
+            }
+            
+            $imagenesAEliminar = $request->imagenes_a_eliminar ? count($request->imagenes_a_eliminar) : 0;
+            
+            $espacioDisponible = $imagenesActuales - $imagenesAEliminar + 
+                                ($request->hasFile('imagen_principal') ? 1 : 0) + 
+                                ($request->hasFile('gif') ? 1 : 0) + 
+                                $nuevasImagenes;
+            
+            if ($espacioDisponible > 9) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors(['imagenes_adicionales' => 'No puedes tener más de 9 archivos multimedia (1 principal + 1 gif + 7 adicionales). Actualmente tienes ' . $imagenesActuales . ' archivos.'])
+                    ->with('swal_error', true);
+            }
 
+            // Eliminar imágenes adicionales seleccionadas
+            if ($request->has('imagenes_a_eliminar') && is_array($request->imagenes_a_eliminar) && count($request->imagenes_a_eliminar) > 0) {
+                $variacion->eliminarImagenesAdicionalesEspecificas($request->imagenes_a_eliminar);
+            }
+
+            // Determinar clase de envío
             $claseEnvio = $request->vClase_envio;
             if (empty($claseEnvio) && $productoPadre->vClase_envio) {
                 $claseEnvio = $productoPadre->vClase_envio;
@@ -563,44 +452,67 @@ class VariacionController extends Controller
                 $claseEnvio = $variacion->vClase_envio ?: 'estandar';
             }
 
+            // Actualizar datos básicos
             $updateData = [
                 'vSKU' => strtoupper($request->vSKU),
+                'vCodigo_barras' => $request->vCodigo_barras ?? null,
+                'vNombre_variacion' => $request->vNombre_variacion ?? null,
                 'dPrecio' => $request->dPrecio,
-                'dPrecio_oferta' => $request->dPrecio_descuento ?: null,
-                'iStock' => $request->iStock,
+                'dPrecio_adicional' => $request->dPrecio_adicional ?? 0,
+                'iStock_variacion' => $request->iStock_variacion,
                 'dPeso' => $request->dPeso ?: null,
-                'dLargo_cm' => $request->dLargo_cm ?: null,
-                'dAncho_cm' => $request->dAncho_cm ?: null,
-                'dAlto_cm' => $request->dAlto_cm ?: null,
                 'vClase_envio' => $claseEnvio,
                 'tDescripcion' => $request->tDescripcion,
                 'bActivo' => $request->has('bActivo') ? 1 : 0,
-                'bTiene_oferta' => $request->has('bTiene_descuento') && $request->bTiene_descuento == '1' ? 1 : 0,
-                'dFecha_inicio_oferta' => $request->dFecha_inicio_descuento ?: null,
-                'dFecha_fin_oferta' => $request->dFecha_fin_descuento ?: null,
-                'vMotivo_oferta' => $request->vMotivo_descuento ?: null,
             ];
-
-            \Log::info('Datos de actualización que se van a guardar:', $updateData);
-
-            if ($request->hasFile('imagen') && $request->file('imagen')->isValid()) {
-                $this->eliminarImagenVariacion($variacion);
-                $this->guardarImagenVariacion($variacion, $request->file('imagen'));
-            } elseif ($request->has('eliminar_imagen') && $request->eliminar_imagen == '1') {
-                $this->eliminarImagenVariacion($variacion);
-            }
 
             $variacion->update($updateData);
 
-            \Log::info('Variación actualizada con ID:', ['id' => $variacion->id_variacion]);
-            \Log::info('Campos de oferta actualizados:', [
-                'bTiene_oferta' => $variacion->bTiene_oferta,
-                'dPrecio_oferta' => $variacion->dPrecio_oferta,
-                'dFecha_inicio_oferta' => $variacion->dFecha_inicio_oferta,
-                'dFecha_fin_oferta' => $variacion->dFecha_fin_oferta,
-                'vMotivo_oferta' => $variacion->vMotivo_oferta,
-            ]);
+            // Gestionar imagen principal
+            if ($request->hasFile('imagen_principal')) {
+                // Subir nueva imagen principal
+                $variacion->guardarImagenPrincipal($request->file('imagen_principal'));
+            } elseif ($request->has('eliminar_imagen_principal') && $request->eliminar_imagen_principal == '1') {
+                // Eliminar imagen principal existente
+                if ($variacion->vImagen) {
+                    $rutaAnterior = str_replace('/storage/', '', $variacion->vImagen);
+                    if (Storage::disk('public')->exists($rutaAnterior)) {
+                        Storage::disk('public')->delete($rutaAnterior);
+                    }
+                    $variacion->vImagen = null;
+                    $variacion->saveQuietly();
+                }
+            }
 
+            // Gestionar GIF
+            if ($request->hasFile('gif')) {
+                // Eliminar GIF anterior si existe
+                $gifAnterior = $variacion->gif_url;
+                if ($gifAnterior) {
+                    $rutaGifAnterior = str_replace('/storage/', '', $gifAnterior);
+                    if (Storage::disk('public')->exists($rutaGifAnterior)) {
+                        Storage::disk('public')->delete($rutaGifAnterior);
+                    }
+                }
+                // Guardar nuevo GIF
+                $variacion->guardarGif($request->file('gif'));
+            } elseif ($request->has('eliminar_gif') && $request->eliminar_gif == '1') {
+                // Eliminar GIF existente
+                $gifUrl = $variacion->gif_url;
+                if ($gifUrl) {
+                    $rutaGif = str_replace('/storage/', '', $gifUrl);
+                    if (Storage::disk('public')->exists($rutaGif)) {
+                        Storage::disk('public')->delete($rutaGif);
+                    }
+                }
+            }
+
+            // Guardar nuevas imágenes adicionales
+            if ($request->hasFile('imagenes_adicionales')) {
+                $variacion->guardarImagenesAdicionales($request->file('imagenes_adicionales'));
+            }
+
+            // Actualizar relaciones con atributos
             $variacion->atributos()->delete();
             
             foreach ($request->atributos as $atributo_id => $valor_id) {
@@ -649,8 +561,13 @@ class VariacionController extends Controller
                     ->with('swal_error', true);
             }
             
-            $this->eliminarImagenVariacion($variacion);
+            // Eliminar todas las imágenes asociadas
+            $variacion->eliminarTodasLasImagenes();
+            
+            // Eliminar relaciones con atributos
             $variacion->atributos()->delete();
+            
+            // Eliminar la variación
             $variacion->delete();
 
             DB::commit();
@@ -670,52 +587,7 @@ class VariacionController extends Controller
         }
     }
 
-    private function guardarImagenVariacion($variacion, $imagen)
-    {
-        $carpeta = 'variaciones/' . $variacion->id_variacion;
-        
-        if (!Storage::disk('public')->exists($carpeta)) {
-            Storage::disk('public')->makeDirectory($carpeta);
-        }
-        
-        $extension = strtolower($imagen->getClientOriginalExtension());
-        
-        $extensionesValidas = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'tiff', 'ico', 'heic', 'heif'];
-        
-        if (!$extension || !in_array($extension, $extensionesValidas)) {
-            $extension = 'jpg';
-        }
-        
-        $nombreArchivo = 'imagen_' . time() . '_' . uniqid() . '.' . $extension;
-        $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
-        
-        $variacion->vImagen = Storage::url($ruta);
-        $variacion->save();
-    }
-
-    private function eliminarImagenVariacion($variacion)
-    {
-        if ($variacion->vImagen) {
-            $urlBase = Storage::url('');
-            $rutaRelativa = str_replace($urlBase, '', $variacion->vImagen);
-            
-            if (Storage::disk('public')->exists($rutaRelativa)) {
-                Storage::disk('public')->delete($rutaRelativa);
-            }
-            
-            $carpeta = 'variaciones/' . $variacion->id_variacion;
-            if (Storage::disk('public')->exists($carpeta)) {
-                $archivos = Storage::disk('public')->files($carpeta);
-                if (empty($archivos)) {
-                    Storage::disk('public')->deleteDirectory($carpeta);
-                }
-            }
-            
-            $variacion->vImagen = null;
-            $variacion->save();
-        }
-    }
-
+    // Métodos para formularios rápidos (API)
     public function quickCreateCategoria(Request $request)
     {
         $validator = Validator::make($request->all(), [

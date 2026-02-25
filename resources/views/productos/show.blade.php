@@ -48,40 +48,197 @@
         </div>
     @endif
 
-    <!-- PRIMERA FILA: Imagen principal + Información básica -->
+    <!-- PRIMERA FILA: Galería de imágenes estilo Mercado Libre + Información básica -->
     <div class="row g-4 mb-4">
-        <!-- Columna de imagen -->
-        <div class="col-lg-4">
+        <!-- Columna de galería de imágenes -->
+        <div class="col-lg-5">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center p-4">
+                <div class="card-body p-3">
                     @php
-                        $imagenes = $producto->imagenes;
-                        $imagenPrincipal = !empty($imagenes) ? $imagenes[0] : null;
+                        // Usar el nuevo accesor que devuelve todas las imágenes en orden
+                        $multimedia = $producto->todas_las_imagenes ?? [];
+                        
+                        // Separar por tipos para facilitar el manejo
+                        $imagenPrincipal = null;
+                        $video = null;
+                        $gif = null;
+                        $adicionales = [];
+                        
+                        foreach($multimedia as $item) {
+                            if($item['tipo'] == 'principal') {
+                                $imagenPrincipal = $item['url'];
+                            } elseif($item['tipo'] == 'video') {
+                                $video = $item['url'];
+                            } elseif($item['tipo'] == 'gif') {
+                                $gif = $item['url'];
+                            } elseif($item['tipo'] == 'adicional') {
+                                $adicionales[] = $item['url'];
+                            }
+                        }
+                        
+                        // Construir el array en el orden correcto para miniaturas
+                        $todasLasMiniaturas = [];
+                        
+                        // 1. Imagen Principal
+                        if($imagenPrincipal) {
+                            $todasLasMiniaturas[] = [
+                                'url' => $imagenPrincipal,
+                                'tipo' => 'principal',
+                                'nombre' => 'Principal'
+                            ];
+                        }
+                        
+                        // 2. Video (si existe)
+                        if($video) {
+                            $todasLasMiniaturas[] = [
+                                'url' => $video,
+                                'tipo' => 'video',
+                                'nombre' => 'Video'
+                            ];
+                        }
+                        
+                        // 3. GIF (si existe)
+                        if($gif) {
+                            $todasLasMiniaturas[] = [
+                                'url' => $gif,
+                                'tipo' => 'gif',
+                                'nombre' => 'GIF'
+                            ];
+                        }
+                        
+                        // 4. Imágenes adicionales
+                        foreach($adicionales as $index => $imgUrl) {
+                            $todasLasMiniaturas[] = [
+                                'url' => $imgUrl,
+                                'tipo' => 'adicional',
+                                'nombre' => 'Adicional ' . ($index + 1)
+                            ];
+                        }
                     @endphp
                     
-                    @if($imagenPrincipal)
-                        <div class="position-relative d-inline-block">
-                            <img src="{{ $imagenPrincipal }}" 
-                                 class="img-fluid rounded-3 border" 
-                                 style="max-height: 280px; width: 100%; object-fit: contain;"
-                                 alt="{{ $producto->vNombre }}">
-                            @if($producto->bActivo)
-                                <span class="position-absolute top-0 start-0 badge bg-success mt-2 ms-2 px-3 py-2">
-                                    <i class="fas fa-check-circle me-1"></i>Activo
-                                </span>
-                            @endif
+                    @if(count($todasLasMiniaturas) > 0)
+                        <div class="row g-2">
+                            <!-- Columna de miniaturas (izquierda) -->
+                            <div class="col-md-2">
+                                <div class="d-flex flex-column gap-2">
+                                    @foreach($todasLasMiniaturas as $index => $item)
+                                        @if($item['tipo'] != 'video')
+                                            <div class="thumbnail-item {{ $index === 0 ? 'active' : '' }}" 
+                                                 onclick="cambiarImagenPrincipal('{{ $item['url'] }}', this)"
+                                                 data-tipo="{{ $item['tipo'] }}"
+                                                 style="cursor: pointer; border: 2px solid {{ $index === 0 ? '#0d6efd' : '#dee2e6' }}; border-radius: 8px; overflow: hidden; padding: 2px; background: white;">
+                                                <img src="{{ $item['url'] }}" 
+                                                     class="img-fluid" 
+                                                     style="height: 60px; width: 100%; object-fit: contain;"
+                                                     alt="Miniatura {{ $item['nombre'] }}">
+                                                @if($item['tipo'] == 'gif')
+                                                    <span class="badge bg-success position-absolute top-0 start-0" style="font-size: 8px;">GIF</span>
+                                                @endif
+                                            </div>
+                                        @else
+                                            <div class="thumbnail-item" 
+                                                 onclick="reproducirVideo('{{ $item['url'] }}', this)"
+                                                 data-tipo="video"
+                                                 style="cursor: pointer; border: 2px solid #dee2e6; border-radius: 8px; overflow: hidden; padding: 2px; background: white; position: relative;">
+                                                <div class="position-relative">
+                                                    <img src="{{ asset('img/video-thumbnail.jpg') }}" 
+                                                         class="img-fluid" 
+                                                         style="height: 60px; width: 100%; object-fit: cover;"
+                                                         alt="Video">
+                                                    <div class="position-absolute top-50 start-50 translate-middle">
+                                                        <i class="fas fa-play-circle fa-2x text-white"></i>
+                                                    </div>
+                                                </div>
+                                                <span class="badge bg-danger position-absolute top-0 start-0" style="font-size: 8px;">VIDEO</span>
+                                            </div>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            </div>
+                            
+                            <!-- Columna de contenido principal (derecha) -->
+                            <div class="col-md-10">
+                                <div class="position-relative">
+                                    <!-- Contenedor de imagen principal -->
+                                    <div id="imagenPrincipalContainer" class="text-center border rounded-3 p-3 bg-light" style="min-height: 400px;">
+                                        @php
+                                            $primerElemento = $todasLasMiniaturas[0] ?? null;
+                                            $mostrarUrl = $primerElemento ? $primerElemento['url'] : '';
+                                        @endphp
+                                        
+                                        @if($primerElemento && $primerElemento['tipo'] != 'video')
+                                            <img id="imagenPrincipal" 
+                                                 src="{{ $mostrarUrl }}" 
+                                                 class="img-fluid" 
+                                                 style="max-height: 380px; width: 100%; object-fit: contain;"
+                                                 alt="{{ $producto->vNombre }}">
+                                        @elseif($primerElemento && $primerElemento['tipo'] == 'video')
+                                            <video id="imagenPrincipalVideo" controls style="max-height: 380px; width: 100%;">
+                                                <source src="{{ $mostrarUrl }}" type="video/mp4">
+                                                Tu navegador no soporta el elemento de video.
+                                            </video>
+                                        @else
+                                            <div class="d-flex align-items-center justify-content-center" style="height: 380px;">
+                                                <i class="fas fa-image fa-4x text-muted"></i>
+                                            </div>
+                                        @endif
+                                        
+                                        @if($producto->bActivo)
+                                            <span class="position-absolute top-0 start-0 badge bg-success mt-2 ms-2 px-3 py-2">
+                                                <i class="fas fa-check-circle me-1"></i>Activo
+                                            </span>
+                                        @endif
+                                        
+                                        @if($producto->bTiene_oferta && $producto->dPrecio_oferta)
+                                            @php
+                                                $ofertaVigente = $producto->dFecha_inicio_oferta && $producto->dFecha_fin_oferta && 
+                                                                 now()->between($producto->dFecha_inicio_oferta, $producto->dFecha_fin_oferta);
+                                            @endphp
+                                            @if($ofertaVigente)
+                                                <span class="position-absolute top-0 end-0 badge bg-danger mt-2 me-2 px-3 py-2">
+                                                    <i class="fas fa-tag me-1"></i>OFERTA
+                                                </span>
+                                            @endif
+                                        @endif
+                                    </div>
+                                    
+                                    <!-- Contenedor de video (oculto inicialmente) -->
+                                    <div id="videoContainer" class="text-center border rounded-3 p-3 bg-light" style="min-height: 400px; display: none;">
+                                        <video id="videoPlayer" controls style="max-height: 380px; width: 100%;">
+                                            <source src="" type="video/mp4">
+                                            Tu navegador no soporta el elemento de video.
+                                        </video>
+                                    </div>
+                                </div>
+                                
+                                @if(count($todasLasMiniaturas) > 1)
+                                    <div class="mt-3 text-center">
+                                        <span class="badge bg-light text-dark py-2 px-3">
+                                            <i class="fas fa-images me-2 text-primary"></i>
+                                            @php
+                                                $totalImagenes = count(array_filter($todasLasMiniaturas, function($item) { 
+                                                    return $item['tipo'] != 'video'; 
+                                                }));
+                                                $tieneVideo = !empty(array_filter($todasLasMiniaturas, function($item) { 
+                                                    return $item['tipo'] == 'video'; 
+                                                }));
+                                            @endphp
+                                            {{ $totalImagenes }} {{ $totalImagenes == 1 ? 'imagen' : 'imágenes' }}
+                                            @if($tieneVideo)
+                                                <span class="mx-1">|</span>
+                                                <i class="fas fa-video me-1 text-danger"></i>1 video
+                                            @endif
+                                        </span>
+                                    </div>
+                                @endif
+                            </div>
                         </div>
                     @else
-                        <div class="bg-light rounded-3 d-flex align-items-center justify-content-center" style="height: 280px;">
-                            <i class="fas fa-image fa-4x text-muted"></i>
-                        </div>
-                    @endif
-                    
-                    @if(count($imagenes) > 1)
-                        <div class="mt-3">
-                            <span class="badge bg-light text-dark py-2 px-3">
-                                <i class="fas fa-images me-2 text-primary"></i>{{ count($imagenes) }} imágenes en total
-                            </span>
+                        <div class="bg-light rounded-3 d-flex align-items-center justify-content-center" style="height: 400px;">
+                            <div class="text-center">
+                                <i class="fas fa-image fa-4x text-muted mb-3"></i>
+                                <p class="text-muted">Sin imágenes disponibles</p>
+                            </div>
                         </div>
                     @endif
                 </div>
@@ -89,7 +246,7 @@
         </div>
         
         <!-- Columna de información básica -->
-        <div class="col-lg-8">
+        <div class="col-lg-7">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white border-0 pt-4 px-4">
                     <h5 class="fw-bold mb-0">
@@ -151,6 +308,13 @@
                             </div>
                         </div>
                     </div>
+                    
+                    @if($producto->tDescripcion_corta)
+                    <div class="mt-4 p-3 bg-light rounded-3">
+                        <small class="text-muted text-uppercase">Descripción corta</small>
+                        <p class="mb-0 mt-1">{{ $producto->tDescripcion_corta }}</p>
+                    </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -188,12 +352,17 @@
                                 <tr>
                                     <td class="py-3 px-3">
                                         <strong>Precio de venta</strong>
-                                        @if($producto->bTiene_oferta && $producto->dPrecio_oferta)
+                                        @php
+                                            $ofertaVigente = $producto->bTiene_oferta && $producto->dPrecio_oferta && 
+                                                             $producto->dFecha_inicio_oferta && $producto->dFecha_fin_oferta && 
+                                                             now()->between($producto->dFecha_inicio_oferta, $producto->dFecha_fin_oferta);
+                                        @endphp
+                                        @if($ofertaVigente)
                                             <br><small class="text-danger">(Oferta activa)</small>
                                         @endif
                                     </td>
                                     <td class="py-3 px-3">
-                                        @if($producto->bTiene_oferta && $producto->dPrecio_oferta && $producto->dFecha_inicio_oferta && $producto->dFecha_fin_oferta && now()->between($producto->dFecha_inicio_oferta, $producto->dFecha_fin_oferta))
+                                        @if($ofertaVigente)
                                             <span class="text-decoration-line-through text-muted me-2">
                                                 ${{ number_format($producto->dPrecio_venta, 2) }}
                                             </span>
@@ -423,32 +592,20 @@
         </div>
     </div>
 
-    <!-- CUARTA FILA: Descripción -->
-    @if($producto->tDescripcion_corta || $producto->tDescripcion_larga)
+    <!-- CUARTA FILA: Descripción larga -->
+    @if($producto->tDescripcion_larga)
     <div class="row g-4 mb-4">
         <div class="col-12">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white border-0 pt-4 px-4">
                     <h5 class="fw-bold mb-0">
-                        <i class="fas fa-align-left me-2 text-primary"></i>Descripción
+                        <i class="fas fa-align-left me-2 text-primary"></i>Descripción Detallada
                     </h5>
                 </div>
                 <div class="card-body px-4">
-                    @if($producto->tDescripcion_corta)
-                        <div class="mb-4">
-                            <small class="text-muted text-uppercase">Descripción corta</small>
-                            <p class="fs-5 mb-0 p-3 bg-light rounded-3">{{ $producto->tDescripcion_corta }}</p>
-                        </div>
-                    @endif
-                    
-                    @if($producto->tDescripcion_larga)
-                        <div>
-                            <small class="text-muted text-uppercase">Descripción detallada</small>
-                            <div class="p-3 bg-light rounded-3" style="white-space: pre-line;">
-                                {{ $producto->tDescripcion_larga }}
-                            </div>
-                        </div>
-                    @endif
+                    <div class="p-3 bg-light rounded-3" style="white-space: pre-line;">
+                        {{ $producto->tDescripcion_larga }}
+                    </div>
                 </div>
             </div>
         </div>
@@ -478,38 +635,7 @@
     </div>
     @endif
 
-    <!-- SEXTA FILA: Galería de imágenes adicionales -->
-    @if(count($imagenes) > 1)
-    <div class="row g-4 mb-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white border-0 pt-4 px-4">
-                    <h5 class="fw-bold mb-0">
-                        <i class="fas fa-images me-2 text-primary"></i>Galería de Imágenes
-                    </h5>
-                </div>
-                <div class="card-body px-4">
-                    <div class="row g-3">
-                        @foreach($imagenes as $index => $imagen)
-                            @if($index > 0)
-                            <div class="col-lg-2 col-md-3 col-4">
-                                <div class="border rounded-3 p-2 text-center bg-light h-100" style="cursor: pointer;" onclick="ampliarImagen('{{ $imagen }}')">
-                                    <img src="{{ $imagen }}" 
-                                         class="img-fluid rounded" 
-                                         style="height: 100px; width: 100%; object-fit: contain;"
-                                         alt="Imagen {{ $index + 1 }}">
-                                </div>
-                            </div>
-                            @endif
-                        @endforeach
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    <!-- SÉPTIMA FILA: Atributos -->
+    <!-- SEXTA FILA: Atributos -->
     @if($producto->valoresAtributos->count() > 0)
     <div class="row g-4 mb-4">
         <div class="col-12">
@@ -564,7 +690,7 @@
     </div>
     @endif
 
-    <!-- OCTAVA FILA: Variaciones -->
+    <!-- SÉPTIMA FILA: Variaciones -->
     @if($producto->variaciones->count() > 0)
     <div class="row g-4 mb-4">
         <div class="col-12">
@@ -605,7 +731,12 @@
                                         </td>
                                         <td><code class="bg-light p-2 rounded">{{ $variacion->vSKU }}</code></td>
                                         <td class="text-end">
-                                            @if($variacion->bTiene_oferta && $variacion->dPrecio_oferta && $variacion->dFecha_inicio_oferta && $variacion->dFecha_fin_oferta && now()->between($variacion->dFecha_inicio_oferta, $variacion->dFecha_fin_oferta))
+                                            @php
+                                                $ofertaVariacionVigente = $variacion->bTiene_oferta && $variacion->dPrecio_oferta && 
+                                                                           $variacion->dFecha_inicio_oferta && $variacion->dFecha_fin_oferta && 
+                                                                           now()->between($variacion->dFecha_inicio_oferta, $variacion->dFecha_fin_oferta);
+                                            @endphp
+                                            @if($ofertaVariacionVigente)
                                                 <span class="text-decoration-line-through text-muted small">
                                                     ${{ number_format($variacion->dPrecio, 2) }}
                                                 </span><br>
@@ -661,7 +792,7 @@
     </div>
     @endif
 
-    <!-- NOVENA FILA: Historial -->
+    <!-- OCTAVA FILA: Historial -->
     <div class="row g-4 mb-4">
         <div class="col-12">
             <div class="card border-0 shadow-sm bg-light">
@@ -726,6 +857,33 @@
     </div>
 </div>
 
+@push('styles')
+<style>
+.thumbnail-item {
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.thumbnail-item:hover {
+    border-color: #0d6efd !important;
+    transform: scale(1.05);
+}
+
+.thumbnail-item.active {
+    border-color: #0d6efd !important;
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+}
+
+#imagenPrincipalContainer, #videoContainer {
+    transition: opacity 0.3s ease;
+}
+
+.table-borderless td, .table-borderless th {
+    border: none;
+}
+</style>
+@endpush
+
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
@@ -746,11 +904,105 @@ function confirmDelete(id) {
     });
 }
 
+function cambiarImagenPrincipal(url, element) {
+    // Actualizar imagen principal
+    const imagenContainer = document.getElementById('imagenPrincipalContainer');
+    const videoContainer = document.getElementById('videoContainer');
+    
+    // Ocultar video
+    if (videoContainer) {
+        videoContainer.style.display = 'none';
+        const videoPlayer = document.getElementById('videoPlayer');
+        if (videoPlayer) {
+            videoPlayer.pause();
+        }
+    }
+    
+    // Mostrar imagen
+    imagenContainer.style.display = 'block';
+    
+    // Actualizar la imagen
+    let imgElement = document.getElementById('imagenPrincipal');
+    if (!imgElement) {
+        // Si no existe, crearlo
+        imgElement = document.createElement('img');
+        imgElement.id = 'imagenPrincipal';
+        imgElement.className = 'img-fluid';
+        imgElement.style = 'max-height: 380px; width: 100%; object-fit: contain;';
+        imagenContainer.innerHTML = '';
+        imagenContainer.appendChild(imgElement);
+    }
+    
+    imgElement.src = url;
+    
+    // Actualizar clase activa en miniaturas
+    document.querySelectorAll('.thumbnail-item').forEach(item => {
+        item.classList.remove('active');
+        item.style.borderColor = '#dee2e6';
+    });
+    
+    element.classList.add('active');
+    element.style.borderColor = '#0d6efd';
+}
+
+function reproducirVideo(url, element) {
+    // Ocultar imagen principal
+    const imagenContainer = document.getElementById('imagenPrincipalContainer');
+    const videoContainer = document.getElementById('videoContainer');
+    const videoPlayer = document.getElementById('videoPlayer');
+    
+    if (videoContainer && videoPlayer) {
+        imagenContainer.style.display = 'none';
+        videoContainer.style.display = 'block';
+        
+        // Obtener el elemento source
+        let source = videoPlayer.querySelector('source');
+        if (!source) {
+            source = document.createElement('source');
+            videoPlayer.appendChild(source);
+        }
+        
+        source.src = url;
+        source.type = 'video/mp4';
+        videoPlayer.load();
+        videoPlayer.play();
+        
+        // Actualizar clase activa en miniaturas
+        document.querySelectorAll('.thumbnail-item').forEach(item => {
+            item.classList.remove('active');
+            item.style.borderColor = '#dee2e6';
+        });
+        
+        element.classList.add('active');
+        element.style.borderColor = '#0d6efd';
+    }
+}
+
 function ampliarImagen(url) {
     document.getElementById('imagenAmpliada').src = url;
     const modal = new bootstrap.Modal(document.getElementById('imagenModal'));
     modal.show();
 }
+
+// Inicializar la galería
+document.addEventListener('DOMContentLoaded', function() {
+    // Marcar la primera miniatura como activa
+    const primeraMiniatura = document.querySelector('.thumbnail-item');
+    if (primeraMiniatura) {
+        primeraMiniatura.classList.add('active');
+        primeraMiniatura.style.borderColor = '#0d6efd';
+    }
+    
+    // Verificar si el primer elemento es un video
+    const primerItem = document.querySelector('.thumbnail-item[data-tipo="video"]');
+    if (primerItem && document.querySelector('.thumbnail-item.active') === primerItem) {
+        // Si el primer elemento es video, iniciar con video
+        const videoUrl = primerItem.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+        if (videoUrl) {
+            reproducirVideo(videoUrl, primerItem);
+        }
+    }
+});
 </script>
 @endpush
 

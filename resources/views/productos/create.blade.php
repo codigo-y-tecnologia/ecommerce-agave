@@ -15,6 +15,13 @@
         </div>
     @endif
 
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>{{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
     <form action="{{ route('productos.store') }}" method="POST" enctype="multipart/form-data" id="productoForm">
         @csrf
 
@@ -219,6 +226,7 @@
                                        id="dFecha_inicio_descuento" 
                                        class="form-control @error('dFecha_inicio_descuento') is-invalid @enderror"
                                        value="{{ old('dFecha_inicio_descuento') }}"
+                                       onchange="validarFechasDescuento()"
                                        autocomplete="off">
                                 @error('dFecha_inicio_descuento')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -236,7 +244,9 @@
                                        id="dFecha_fin_descuento" 
                                        class="form-control @error('dFecha_fin_descuento') is-invalid @enderror"
                                        value="{{ old('dFecha_fin_descuento') }}"
+                                       onchange="validarFechasDescuento()"
                                        autocomplete="off">
+                                <div id="error-fechas-descuento" class="invalid-feedback" style="display: none;"></div>
                                 @error('dFecha_fin_descuento')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -511,6 +521,11 @@
                 <h5 class="mb-0"><i class="fas fa-images me-2"></i>Multimedia del Producto Principal</h5>
             </div>
             <div class="card-body">
+                <div class="alert alert-warning" id="limiteArchivosMsg" style="display: none;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>¡Atención!</strong> Has excedido el límite de tamaño total de archivos.
+                </div>
+
                 <div class="row">
                     <!-- IMAGEN PRINCIPAL -->
                     <div class="col-md-4">
@@ -652,13 +667,20 @@
                     <div class="row align-items-center">
                         <div class="col-md-6">
                             <i class="fas fa-camera me-1"></i>
-                            <strong>Total de imágenes del producto:</strong> 
-                            <span id="total-imagenes">0</span> de 9 (1 principal + 1 GIF + 7 adicionales)
+                            <strong>Total de archivos multimedia:</strong> 
+                            <span id="total-imagenes">0</span> archivos
                         </div>
-                        <div class="col-md-6 text-end">
-                            <span class="badge bg-primary me-2" id="principal-count">Principal: 0</span>
-                            <span class="badge bg-success me-2" id="gif-count">GIF: 0</span>
-                            <span class="badge bg-secondary" id="adicionales-count">Adicionales: 0</span>
+                        <div class="col-md-6">
+                            <strong>Tamaño total:</strong>
+                            <span id="total-size">0 KB</span>
+                            <span class="text-muted ms-2">(Máx: 50MB)</span>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <div class="progress" style="height: 8px;">
+                                <div id="size-progress-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -712,7 +734,7 @@
                                                        {{ is_array(old('etiquetas')) && in_array($etiqueta->id_etiqueta, old('etiquetas', [])) ? 'checked' : '' }}
                                                        id="etiqueta_{{ $etiqueta->id_etiqueta }}">
                                                 <label class="form-check-label" for="etiqueta_{{ $etiqueta->id_etiqueta }}">
-                                                    <span class="etiqueta-badge" style="background-color: {{ $etiqueta->color ?? '#007bff' }}; color: white;">
+                                                    <span class="badge bg-secondary">
                                                         {{ $etiqueta->vNombre }}
                                                     </span>
                                                 </label>
@@ -899,7 +921,7 @@
             </div>
         </div>
 
-        <!-- VARIACIONES DEL PRODUCTO - PESTAÑAS POR VALOR -->
+        <!-- VARIACIONES DEL PRODUCTO - PESTAÑAS POR VALOR CON IMÁGENES MÚLTIPLES -->
         <div class="card mb-4">
             <div class="card-header" style="background-color: #6f42c1; color: white;">
                 <div class="d-flex justify-content-between align-items-center">
@@ -931,7 +953,7 @@
                         <!-- Cabecera de pestañas - Valores -->
                         <ul class="nav nav-tabs valores-nav" id="valoresTab" role="tablist" style="background-color: white;"></ul>
                         
-                        <!-- Contenido de las pestañas - Formularios de variación -->
+                        <!-- Contenido de las pestañas - Formularios de variación con imágenes -->
                         <div class="tab-content p-4 border border-top-0 rounded-bottom" id="valoresTabContent" style="background-color: white;"></div>
                     </div>
                 @else
@@ -1161,24 +1183,10 @@
                         
                         <form id="etiquetaQuickForm">
                             @csrf
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="vNombre_eti" class="form-label fw-bold">Nombre de la Etiqueta *</label>
-                                    <input type="text" class="form-control" id="vNombre_eti" name="vNombre" 
-                                           placeholder="Ej: Artesanal, Orgánico, Premium" required>
-                                </div>
-                                
-                                <div class="col-md-6 mb-3">
-                                    <label for="color_eti" class="form-label fw-bold">Color</label>
-                                    <div class="input-group">
-                                        <input type="color" class="form-control form-control-color" 
-                                               id="color_eti" name="color" value="#007bff">
-                                        <input type="text" class="form-control" 
-                                               id="color_text_eti" value="#007bff" 
-                                               placeholder="#007bff" maxlength="7">
-                                    </div>
-                                    <small class="text-muted">Color opcional para identificar la etiqueta</small>
-                                </div>
+                            <div class="mb-3">
+                                <label for="vNombre_eti" class="form-label fw-bold">Nombre de la Etiqueta *</label>
+                                <input type="text" class="form-control" id="vNombre_eti" name="vNombre" 
+                                       placeholder="Ej: Artesanal, Orgánico, Premium" required>
                             </div>
                             
                             <div class="mb-3">
@@ -1250,56 +1258,106 @@
                 <div class="tab-pane fade" id="impuestos-content" role="tabpanel">
                     <div class="quick-form" id="quick-impuesto-form">
                         <h5><i class="fas fa-file-invoice-dollar me-2"></i>Crear Nuevo Impuesto</h5>
-                        
-                
+                        <form id="impuestoQuickForm">
+                            @csrf
+                            <div class="mb-3">
+                                <label for="vNombre_impuesto" class="form-label fw-bold">Nombre del Impuesto *</label>
+                                <input type="text" class="form-control" id="vNombre_impuesto" name="vNombre" 
+                                       placeholder="Ej: IVA, ISR, IEPS" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="eTipo_impuesto" class="form-label fw-bold">Tipo de Impuesto *</label>
+                                <select class="form-control" id="eTipo_impuesto" name="eTipo" required>
+                                    <option value="">Seleccionar tipo</option>
+                                    <option value="IVA">IVA</option>
+                                    <option value="ISR">ISR</option>
+                                    <option value="IEPS">IEPS</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="dPorcentaje_impuesto" class="form-label fw-bold">Porcentaje *</label>
+                                <div class="input-group">
+                                    <input type="number" step="0.01" min="0" max="100" class="form-control" 
+                                           id="dPorcentaje_impuesto" name="dPorcentaje" 
+                                           placeholder="16.00" required>
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="tDescripcion_impuesto" class="form-label fw-bold">Descripción (Opcional)</label>
+                                <textarea class="form-control" id="tDescripcion_impuesto" name="tDescripcion" rows="2"></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" 
+                                           id="bActivo_impuesto" name="bActivo" value="1" checked>
+                                    <label class="form-check-label" for="bActivo_impuesto">Activo</label>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary" id="btnCrearImpuesto">
+                                    <i class="fas fa-save me-1"></i> Crear Impuesto
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>  
+            </div>
+        </div>
     </div>
-</div>
 
-<!-- MODAL PARA CREAR VALOR DE ATRIBUTO -->
-<div class="modal fade" id="crearValorModal" tabindex="-1" aria-labelledby="crearValorModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="crearValorModalLabel">
-                    <i class="fas fa-plus-circle me-2"></i>Crear Nuevo Valor para <span id="atributoNombreModal"></span>
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="valorQuickForm">
-                    @csrf
-                    <input type="hidden" id="valor_atributo_id" name="atributo_id">
-                    
-                    <div class="mb-3">
-                        <label for="vValor_modal" class="form-label fw-bold">Valor <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="vValor_modal" name="vValor" required
-                               placeholder="Ej: 750ml, Rojo, Joven, 6 meses"
-                               oninput="generarSlugValor(this.value)">
-                        <small class="form-text text-muted">El valor que aparecerá en las opciones del producto</small>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="vSlug_valor_modal" class="form-label fw-bold">Slug (URL amigable)</label>
-                        <input type="text" class="form-control" id="vSlug_valor_modal" name="vSlug"
-                               placeholder="Se genera automáticamente">
-                        <small class="form-text text-muted">Versión para URL del valor</small>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="bActivo_valor_modal" name="bActivo" value="1" checked>
-                            <label class="form-check-label" for="bActivo_valor_modal">Activo</label>
+    <!-- MODAL PARA CREAR VALOR DE ATRIBUTO -->
+    <div class="modal fade" id="crearValorModal" tabindex="-1" aria-labelledby="crearValorModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="crearValorModalLabel">
+                        <i class="fas fa-plus-circle me-2"></i>Crear Nuevo Valor para <span id="atributoNombreModal"></span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="valorQuickForm">
+                        @csrf
+                        <input type="hidden" id="valor_atributo_id" name="atributo_id">
+                        
+                        <div class="mb-3">
+                            <label for="vValor_modal" class="form-label fw-bold">Valor <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="vValor_modal" name="vValor" required
+                                   placeholder="Ej: 750ml, Rojo, Joven, 6 meses"
+                                   oninput="generarSlugValor(this.value)">
+                            <small class="form-text text-muted">El valor que aparecerá en las opciones del producto</small>
                         </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-1"></i>Cancelar
-                </button>
-                <button type="button" class="btn btn-primary" onclick="guardarValorAtributo()">
-                    <i class="fas fa-save me-1"></i>Guardar Valor
-                </button>
+                        
+                        <div class="mb-3">
+                            <label for="vSlug_valor_modal" class="form-label fw-bold">Slug (URL amigable)</label>
+                            <input type="text" class="form-control" id="vSlug_valor_modal" name="vSlug"
+                                   placeholder="Se genera automáticamente">
+                            <small class="form-text text-muted">Versión para URL del valor</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="bActivo_valor_modal" name="bActivo" value="1" checked>
+                                <label class="form-check-label" for="bActivo_valor_modal">Activo</label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="guardarValorAtributo()">
+                        <i class="fas fa-save me-1"></i>Guardar Valor
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1500,9 +1558,14 @@ let videoFile = null;
 let gifFile = null;
 let variacionCounter = 0;
 let valorModal = null;
+let maxTotalSize = 50 * 1024 * 1024; // 50MB en bytes
+let limiteExcedido = false;
 
 // Variable para almacenar la imagen de categoría seleccionada
 let categoriaImagenFile = null;
+
+// Almacenar imágenes de variaciones
+let imagenesVariacion = {};
 
 // Inicializar modal cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
@@ -1528,14 +1591,10 @@ function actualizarPrecioFinal() {
     // Obtener impuesto seleccionado
     let totalImpuestos = 0;
     let porcentaje = 0;
-    let nombreImpuesto = '';
-    let tipoImpuesto = '';
     
     if (impuestoSelect && impuestoSelect.value) {
         const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
         porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
-        tipoImpuesto = selectedOption.dataset.tipo || '';
-        nombreImpuesto = selectedOption.text.split('(')[0].trim();
         
         totalImpuestos = precioVenta * (porcentaje / 100);
     }
@@ -1553,7 +1612,68 @@ function actualizarPrecioFinal() {
     }
 }
 
-// ============ FUNCIONES DE VALIDACIÓN ============
+// ============ FUNCIONES DE VALIDACIÓN DE FECHAS ============
+
+function validarFechasDescuento() {
+    const fechaInicio = document.getElementById('dFecha_inicio_descuento');
+    const fechaFin = document.getElementById('dFecha_fin_descuento');
+    const errorDiv = document.getElementById('error-fechas-descuento');
+    
+    if (!fechaInicio || !fechaFin) return true;
+    
+    if (fechaInicio.value && fechaFin.value) {
+        const inicio = new Date(fechaInicio.value);
+        const fin = new Date(fechaFin.value);
+        
+        if (fin < inicio) {
+            fechaFin.classList.add('is-invalid');
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio';
+            return false;
+        } else {
+            fechaFin.classList.remove('is-invalid');
+            errorDiv.style.display = 'none';
+            return true;
+        }
+    }
+    return true;
+}
+
+function validarFechasDescuentoVariacion(inicioId, finId, valorKey) {
+    const fechaInicio = document.getElementById(inicioId);
+    const fechaFin = document.getElementById(finId);
+    
+    if (!fechaInicio || !fechaFin) return true;
+    
+    if (fechaInicio.value && fechaFin.value) {
+        const inicio = new Date(fechaInicio.value);
+        const fin = new Date(fechaFin.value);
+        
+        if (fin < inicio) {
+            fechaFin.classList.add('is-invalid');
+            
+            let errorDiv = fechaFin.parentNode.querySelector('.invalid-feedback');
+            if (!errorDiv) {
+                errorDiv = document.createElement('div');
+                errorDiv.className = 'invalid-feedback';
+                fechaFin.parentNode.appendChild(errorDiv);
+            }
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio';
+            return false;
+        } else {
+            fechaFin.classList.remove('is-invalid');
+            let errorDiv = fechaFin.parentNode.querySelector('.invalid-feedback');
+            if (errorDiv) {
+                errorDiv.style.display = 'none';
+            }
+            return true;
+        }
+    }
+    return true;
+}
+
+// ============ FUNCIONES DE VALIDACIÓN DE PRECIOS ============
 
 function validarPrecioDescuentoProductoInstantaneo(input) {
     const tieneDescuento = document.getElementById('bTiene_descuento');
@@ -1798,7 +1918,6 @@ function validarPrecio(input) {
         validarPrecioDescuentoProductoInstantaneo(input);
     }
     
-    // Actualizar precio final cuando cambia el precio de venta
     if (input.id === 'dPrecio_venta') {
         actualizarPrecioFinal();
     }
@@ -1843,17 +1962,71 @@ function toggleDescuentoFields() {
         
         precioDescuento.classList.remove('is-invalid');
         document.getElementById('error-precio-descuento').style.display = 'none';
+        fechaFin.classList.remove('is-invalid');
+        document.getElementById('error-fechas-descuento').style.display = 'none';
     }
 }
 
 // ============ FUNCIONES DE IMÁGENES Y VIDEO DEL PRODUCTO PRINCIPAL ============
+
+function calcularTamañoTotal() {
+    let total = 0;
+    
+    if (imagenPrincipalFile) total += imagenPrincipalFile.size;
+    if (videoFile) total += videoFile.size;
+    if (gifFile) total += gifFile.size;
+    
+    selectedImages.forEach(img => {
+        total += img.file.size;
+    });
+    
+    return total;
+}
+
+function actualizarBarraProgresoTamaño() {
+    const totalSize = calcularTamañoTotal();
+    const porcentaje = (totalSize / maxTotalSize) * 100;
+    const progressBar = document.getElementById('size-progress-bar');
+    const totalSizeSpan = document.getElementById('total-size');
+    const limiteMsg = document.getElementById('limiteArchivosMsg');
+    
+    if (totalSize < 1024) {
+        totalSizeSpan.textContent = totalSize + ' B';
+    } else if (totalSize < 1024 * 1024) {
+        totalSizeSpan.textContent = (totalSize / 1024).toFixed(2) + ' KB';
+    } else {
+        totalSizeSpan.textContent = (totalSize / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+    
+    progressBar.style.width = Math.min(porcentaje, 100) + '%';
+    
+    if (porcentaje > 90) {
+        progressBar.classList.remove('bg-success');
+        progressBar.classList.add('bg-danger');
+    } else if (porcentaje > 70) {
+        progressBar.classList.remove('bg-success');
+        progressBar.classList.add('bg-warning');
+    } else {
+        progressBar.classList.remove('bg-danger', 'bg-warning');
+        progressBar.classList.add('bg-success');
+    }
+    
+    if (totalSize > maxTotalSize) {
+        limiteExcedido = true;
+        limiteMsg.style.display = 'block';
+        document.getElementById('btnSubmit').disabled = true;
+    } else {
+        limiteExcedido = false;
+        limiteMsg.style.display = 'none';
+        document.getElementById('btnSubmit').disabled = false;
+    }
+}
 
 function previewImagenPrincipal(input) {
     const previewContainer = document.getElementById('preview_principal_container');
     const previewImg = document.getElementById('preview_principal_img');
     
     if (input.files && input.files[0]) {
-        // Validar formato
         const file = input.files[0];
         const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
         
@@ -1867,18 +2040,30 @@ function previewImagenPrincipal(input) {
             return;
         }
         
+        if (file.size > 5 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Archivo demasiado grande',
+                text: 'La imagen principal no puede exceder los 5MB'
+            });
+            input.value = '';
+            return;
+        }
+        
         imagenPrincipalFile = file;
         const reader = new FileReader();
         
         reader.onload = function(e) {
             previewImg.src = e.target.result;
             previewContainer.style.display = 'block';
+            actualizarBarraProgresoTamaño();
         }
         
         reader.readAsDataURL(input.files[0]);
     } else {
         previewContainer.style.display = 'none';
         imagenPrincipalFile = null;
+        actualizarBarraProgresoTamaño();
     }
     
     actualizarContadorImagenes();
@@ -1891,6 +2076,7 @@ function cancelarImagenPrincipal() {
     input.value = '';
     previewContainer.style.display = 'none';
     imagenPrincipalFile = null;
+    actualizarBarraProgresoTamaño();
     actualizarContadorImagenes();
 }
 
@@ -1900,15 +2086,29 @@ function previewVideo(input) {
     const source = previewVideo.querySelector('source');
     
     if (input.files && input.files[0]) {
-        videoFile = input.files[0];
-        const url = URL.createObjectURL(input.files[0]);
+        const file = input.files[0];
+        
+        if (file.size > 50 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Archivo demasiado grande',
+                text: 'El video no puede exceder los 50MB'
+            });
+            input.value = '';
+            return;
+        }
+        
+        videoFile = file;
+        const url = URL.createObjectURL(file);
         source.src = url;
-        source.type = input.files[0].type;
+        source.type = file.type;
         previewVideo.load();
         previewContainer.style.display = 'block';
+        actualizarBarraProgresoTamaño();
     } else {
         previewContainer.style.display = 'none';
         videoFile = null;
+        actualizarBarraProgresoTamaño();
     }
 }
 
@@ -1922,6 +2122,7 @@ function cancelarVideo() {
     previewContainer.style.display = 'none';
     source.src = '#';
     videoFile = null;
+    actualizarBarraProgresoTamaño();
 }
 
 function previewGif(input) {
@@ -1929,7 +2130,6 @@ function previewGif(input) {
     const previewImg = document.getElementById('preview_gif');
     
     if (input.files && input.files[0]) {
-        // Validar formato
         const file = input.files[0];
         
         if (file.type !== 'image/gif') {
@@ -1942,18 +2142,30 @@ function previewGif(input) {
             return;
         }
         
+        if (file.size > 10 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Archivo demasiado grande',
+                text: 'El GIF no puede exceder los 10MB'
+            });
+            input.value = '';
+            return;
+        }
+        
         gifFile = file;
         const reader = new FileReader();
         
         reader.onload = function(e) {
             previewImg.src = e.target.result;
             previewContainer.style.display = 'block';
+            actualizarBarraProgresoTamaño();
         }
         
         reader.readAsDataURL(input.files[0]);
     } else {
         previewContainer.style.display = 'none';
         gifFile = null;
+        actualizarBarraProgresoTamaño();
     }
     
     actualizarContadorImagenes();
@@ -1966,6 +2178,7 @@ function cancelarGif() {
     input.value = '';
     previewContainer.style.display = 'none';
     gifFile = null;
+    actualizarBarraProgresoTamaño();
     actualizarContadorImagenes();
 }
 
@@ -2034,15 +2247,11 @@ function limpiarFormularioMarca() {
     document.getElementById('tDescripcion_marca').value = '';
 }
 
-// ============ FUNCIÓN PARA LIMPIAR FORMULARIO DE ETIQUETAS ============
 function limpiarFormularioEtiqueta() {
     document.getElementById('vNombre_eti').value = '';
     document.getElementById('tDescripcion_eti').value = '';
-    document.getElementById('color_eti').value = '#007bff';
-    document.getElementById('color_text_eti').value = '#007bff';
 }
 
-// ============ FUNCIONES PARA LIMPIAR FORMULARIO DE IMPUESTOS ============
 function limpiarFormularioImpuesto() {
     document.getElementById('vNombre_impuesto').value = '';
     document.getElementById('eTipo_impuesto').value = '';
@@ -2139,7 +2348,6 @@ function guardarValorAtributo() {
             
             valorModal.hide();
             
-            // Agregar el nuevo valor al listado del atributo
             agregarValorAlAtributo(data.valor);
             
         } else {
@@ -2174,7 +2382,6 @@ function handleImageSelection(event) {
     const currentCount = selectedImages.length;
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     
-    // Verificar límite total
     if (currentCount + files.length > maxFiles) {
         Swal.fire({
             icon: 'warning',
@@ -2185,11 +2392,10 @@ function handleImageSelection(event) {
         return;
     }
     
-    // Procesar cada archivo
+    let archivosAgregados = 0;
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         
-        // Validar tipo de archivo
         if (!validTypes.includes(file.type)) {
             Swal.fire({
                 icon: 'warning',
@@ -2199,7 +2405,6 @@ function handleImageSelection(event) {
             continue;
         }
         
-        // Validar tamaño (5MB)
         if (file.size > 5 * 1024 * 1024) {
             Swal.fire({
                 icon: 'warning',
@@ -2209,7 +2414,16 @@ function handleImageSelection(event) {
             continue;
         }
         
-        // Evitar duplicados
+        const tamanioActual = calcularTamañoTotal();
+        if (tamanioActual + file.size > maxTotalSize) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Límite de tamaño excedido',
+                text: `No puedes agregar "${file.name}" porque excede el límite total de 50MB.`
+            });
+            continue;
+        }
+        
         if (!isImageDuplicate(file)) {
             const imageId = 'img_' + Date.now() + '_' + imageCounter++;
             const preview = URL.createObjectURL(file);
@@ -2221,19 +2435,17 @@ function handleImageSelection(event) {
                 name: file.name,
                 size: file.size
             });
+            archivosAgregados++;
         }
     }
     
-    // Actualizar contador en el badge
-    document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
+    if (archivosAgregados > 0) {
+        document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
+        renderSelectedImages();
+        actualizarBarraProgresoTamaño();
+    }
     
-    // Renderizar las imágenes seleccionadas
-    renderSelectedImages();
-    
-    // Limpiar el input para permitir seleccionar los mismos archivos si es necesario
     event.target.value = '';
-    
-    // Actualizar contador total
     actualizarContadorImagenes();
 }
 
@@ -2252,11 +2464,10 @@ function removeSelectedImage(imageId) {
     }
     selectedImages = selectedImages.filter(img => img.id !== imageId);
     
-    // Actualizar contador en el badge
     document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
-    
     renderSelectedImages();
     actualizarContadorImagenes();
+    actualizarBarraProgresoTamaño();
 }
 
 function renderSelectedImages() {
@@ -2310,7 +2521,15 @@ function renderSelectedImages() {
         
         const small2 = document.createElement('small');
         small2.className = 'text-muted d-block';
-        small2.textContent = (image.file.size / 1024).toFixed(2) + ' KB';
+        let sizeText = '';
+        if (image.file.size < 1024) {
+            sizeText = image.file.size + ' B';
+        } else if (image.file.size < 1024 * 1024) {
+            sizeText = (image.file.size / 1024).toFixed(2) + ' KB';
+        } else {
+            sizeText = (image.file.size / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+        small2.textContent = sizeText;
         
         cardBody.appendChild(small1);
         cardBody.appendChild(small2);
@@ -2327,9 +2546,6 @@ function renderSelectedImages() {
 function actualizarContadorImagenes() {
     const total = (imagenPrincipalFile ? 1 : 0) + (gifFile ? 1 : 0) + selectedImages.length;
     document.getElementById('total-imagenes').textContent = total;
-    document.getElementById('principal-count').textContent = `Principal: ${imagenPrincipalFile ? 1 : 0}`;
-    document.getElementById('gif-count').textContent = `GIF: ${gifFile ? 1 : 0}`;
-    document.getElementById('adicionales-count').textContent = `Adicionales: ${selectedImages.length}`;
 }
 
 // ============ FUNCIONES DE ATRIBUTOS Y VARIACIONES ============
@@ -2634,6 +2850,85 @@ function actualizarPestanasValores() {
                 <input type="hidden" name="variaciones[${valorKey}][vNombre_variacion]" 
                        value="${valor.atributoNombre}: ${valor.nombre}">
 
+                <!-- SECCIÓN DE IMÁGENES DE LA VARIACIÓN -->
+                <div class="card mb-4 border-primary">
+                    <div class="card-header bg-primary text-white py-2">
+                        <h6 class="mb-0"><i class="fas fa-images me-2"></i>Imágenes de la Variación</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- IMAGEN PRINCIPAL DE LA VARIACIÓN -->
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label for="img_principal_${valorKey}" class="form-label fw-bold">
+                                        <i class="fas fa-star text-warning me-1"></i>Imagen Principal
+                                    </label>
+                                    <input type="file" 
+                                           name="variaciones[${valorKey}][imagen_principal]" 
+                                           id="img_principal_${valorKey}" 
+                                           class="form-control"
+                                           accept="image/jpeg,image/jpg,image/png"
+                                           onchange="previewImagenPrincipalVariacion(this, 'preview_principal_${valorKey}')">
+                                    <small class="form-text text-muted">
+                                        JPG, JPEG, PNG. Máx: 5MB
+                                    </small>
+                                    <div id="preview_principal_${valorKey}" class="mt-2" style="display: none;">
+                                        <div class="border rounded p-2 text-center bg-light">
+                                            <img src="#" class="img-thumbnail" style="max-width: 150px; max-height: 150px; object-fit: contain;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- GIF DE LA VARIACIÓN -->
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label for="gif_${valorKey}" class="form-label fw-bold">
+                                        <i class="fas fa-file-image text-success me-1"></i>GIF Animado
+                                    </label>
+                                    <input type="file" 
+                                           name="variaciones[${valorKey}][gif]" 
+                                           id="gif_${valorKey}" 
+                                           class="form-control"
+                                           accept="image/gif"
+                                           onchange="previewGifVariacion(this, 'preview_gif_${valorKey}')">
+                                    <small class="form-text text-muted">
+                                        GIF. Máx: 10MB
+                                    </small>
+                                    <div id="preview_gif_${valorKey}" class="mt-2" style="display: none;">
+                                        <div class="border rounded p-2 text-center bg-light">
+                                            <img src="#" class="img-thumbnail" style="max-width: 150px; max-height: 150px; object-fit: contain;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- IMÁGENES ADICIONALES DE LA VARIACIÓN -->
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label for="imagenes_adicionales_${valorKey}" class="form-label fw-bold">
+                                        <i class="fas fa-images me-1"></i>Imágenes Adicionales (Máx 7)
+                                    </label>
+                                    <input type="file" 
+                                           name="variaciones[${valorKey}][imagenes_adicionales][]" 
+                                           id="imagenes_adicionales_${valorKey}" 
+                                           class="form-control"
+                                           multiple
+                                           accept="image/jpeg,image/jpg,image/png,image/webp"
+                                           onchange="handleImagenesAdicionalesVariacion(this, 'container_adicionales_${valorKey}', 'count_adicionales_${valorKey}')">
+                                    <small class="form-text text-muted">
+                                        JPG, JPEG, PNG, WEBP. Máx: 5MB c/u
+                                    </small>
+                                    <div id="container_adicionales_${valorKey}" class="row mt-2"></div>
+                                    <div class="mt-2">
+                                        <span class="badge bg-info" id="count_adicionales_${valorKey}">0 seleccionadas</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row mb-3">
                     <div class="col-md-8">
                         <div class="form-group">
@@ -2871,14 +3166,18 @@ function actualizarPestanasValores() {
                                                 <input type="date" 
                                                        name="variaciones[${valorKey}][dFecha_inicio_descuento]" 
                                                        class="form-control form-control-sm fecha-inicio-${valorKey}"
+                                                       id="fecha-inicio-${valorKey}"
                                                        value=""
+                                                       onchange="validarFechasDescuentoVariacion('fecha-inicio-${valorKey}', 'fecha-fin-${valorKey}', '${valorKey}')"
                                                        autocomplete="off">
                                             </div>
                                             <div class="col-md-3 mb-2 mb-md-0">
                                                 <input type="date" 
                                                        name="variaciones[${valorKey}][dFecha_fin_descuento]" 
                                                        class="form-control form-control-sm fecha-fin-${valorKey}"
+                                                       id="fecha-fin-${valorKey}"
                                                        value=""
+                                                       onchange="validarFechasDescuentoVariacion('fecha-inicio-${valorKey}', 'fecha-fin-${valorKey}', '${valorKey}')"
                                                        autocomplete="off">
                                             </div>
                                             <div class="col-md-2">
@@ -2938,8 +3237,8 @@ function generarSkuSugerido(productoSku, combinacion) {
 function toggleDescuentoVariacion(checkbox, valorKey) {
     const fields = document.querySelector(`.descuento-fields-${valorKey}`);
     const precioDescuento = fields.querySelector('.variacion-precio-descuento');
-    const fechaInicio = fields.querySelector(`.fecha-inicio-${valorKey}`);
-    const fechaFin = fields.querySelector(`.fecha-fin-${valorKey}`);
+    const fechaInicio = document.getElementById(`fecha-inicio-${valorKey}`);
+    const fechaFin = document.getElementById(`fecha-fin-${valorKey}`);
     
     if (checkbox.checked) {
         fields.style.display = 'flex';
@@ -2952,6 +3251,14 @@ function toggleDescuentoVariacion(checkbox, valorKey) {
         fechaInicio.required = false;
         fechaFin.required = false;
         precioDescuento.classList.remove('is-invalid');
+        
+        if (fechaFin) {
+            fechaFin.classList.remove('is-invalid');
+            const errorDiv = fechaFin.parentNode.querySelector('.invalid-feedback');
+            if (errorDiv) {
+                errorDiv.style.display = 'none';
+            }
+        }
     }
 }
 
@@ -3021,6 +3328,135 @@ function validarPrecioDescuentoVariacion(input) {
     return true;
 }
 
+// ============ FUNCIONES PARA IMÁGENES DE VARIACIONES ============
+
+function previewImagenPrincipalVariacion(input, previewId) {
+    const previewContainer = document.getElementById(previewId);
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        
+        if (!validTypes.includes(file.type)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Formato no válido',
+                text: 'La imagen principal solo acepta formatos JPG, JPEG y PNG'
+            });
+            input.value = '';
+            return;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Archivo demasiado grande',
+                text: 'La imagen principal no puede exceder los 5MB'
+            });
+            input.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewContainer.style.display = 'block';
+            const img = previewContainer.querySelector('img');
+            img.src = e.target.result;
+        }
+        reader.readAsDataURL(file);
+    } else {
+        previewContainer.style.display = 'none';
+    }
+}
+
+function previewGifVariacion(input, previewId) {
+    const previewContainer = document.getElementById(previewId);
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        
+        if (file.type !== 'image/gif') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Formato no válido',
+                text: 'Solo se permiten archivos GIF'
+            });
+            input.value = '';
+            return;
+        }
+        
+        if (file.size > 10 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Archivo demasiado grande',
+                text: 'El GIF no puede exceder los 10MB'
+            });
+            input.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewContainer.style.display = 'block';
+            const img = previewContainer.querySelector('img');
+            img.src = e.target.result;
+        }
+        reader.readAsDataURL(file);
+    } else {
+        previewContainer.style.display = 'none';
+    }
+}
+
+function handleImagenesAdicionalesVariacion(input, containerId, countId) {
+    const container = document.getElementById(containerId);
+    const countSpan = document.getElementById(countId);
+    
+    if (!container || !countSpan) return;
+    
+    const files = input.files;
+    const maxFiles = 7;
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    
+    container.innerHTML = '';
+    let archivosValidos = 0;
+    
+    for (let i = 0; i < Math.min(files.length, maxFiles); i++) {
+        const file = files[i];
+        
+        if (!validTypes.includes(file.type)) {
+            continue;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+            continue;
+        }
+        
+        archivosValidos++;
+        
+        const reader = new FileReader();
+        const col = document.createElement('div');
+        col.className = 'col-4 col-md-3 mb-2';
+        
+        reader.onload = function(e) {
+            col.innerHTML = `
+                <div class="border rounded p-1 text-center bg-light">
+                    <img src="${e.target.result}" class="img-fluid" style="height: 60px; object-fit: contain;">
+                    <small class="d-block text-truncate">${file.name.substring(0, 10)}...</small>
+                </div>
+            `;
+        };
+        
+        reader.readAsDataURL(file);
+        container.appendChild(col);
+    }
+    
+    countSpan.textContent = archivosValidos + ' seleccionadas';
+    
+    if (archivosValidos === 0) {
+        container.innerHTML = '<div class="col-12 text-muted small">No se seleccionaron imágenes válidas</div>';
+    }
+}
+
 // ============ FUNCIONES PARA FORMULARIOS RÁPIDOS ============
 
 function quickGenerarSlug(texto, inputId) {
@@ -3048,17 +3484,14 @@ function quickActualizarSlug(nombre, slugId) {
 function agregarCategoriaAlSelect(categoria) {
     const select = document.getElementById('id_categoria');
     
-    // Crear la opción
     const option = document.createElement('option');
     option.value = categoria.id_categoria;
     
-    // Determinar el prefijo según el nivel
     let prefijo = '';
     for (let i = 0; i < (categoria.nivel || 0); i++) {
         prefijo += '&nbsp;&nbsp;&nbsp;';
     }
     
-    // Usar innerHTML para que se interpreten los &nbsp;
     option.innerHTML = prefijo + (categoria.icono || '↳ ') + categoria.vNombre;
     
     select.appendChild(option);
@@ -3068,13 +3501,11 @@ function agregarCategoriaAlSelect(categoria) {
 function agregarEtiquetaAlListado(etiqueta) {
     const container = document.getElementById('etiquetas-container').querySelector('.row');
     
-    // Eliminar el mensaje de "No hay etiquetas" si existe
     const noEtiquetasMsg = document.getElementById('no-etiquetas-msg');
     if (noEtiquetasMsg) {
         noEtiquetasMsg.remove();
     }
     
-    // Crear el nuevo elemento de etiqueta
     const col = document.createElement('div');
     col.className = 'col-md-6 col-6 mb-2 etiqueta-item';
     col.setAttribute('data-etiqueta-id', etiqueta.id_etiqueta);
@@ -3088,16 +3519,14 @@ function agregarEtiquetaAlListado(etiqueta) {
     input.value = etiqueta.id_etiqueta;
     input.className = 'form-check-input';
     input.id = 'etiqueta_' + etiqueta.id_etiqueta;
-    input.checked = true; // Seleccionar automáticamente
+    input.checked = true;
     
     const label = document.createElement('label');
     label.className = 'form-check-label';
     label.htmlFor = 'etiqueta_' + etiqueta.id_etiqueta;
     
     const span = document.createElement('span');
-    span.className = 'etiqueta-badge';
-    span.style.backgroundColor = etiqueta.color || '#007bff';
-    span.style.color = 'white';
+    span.className = 'badge bg-secondary';
     span.textContent = etiqueta.vNombre;
     
     label.appendChild(span);
@@ -3111,12 +3540,10 @@ function agregarAtributoAlListado(atributo) {
     const container = document.getElementById('atributos-container');
     const noAtributosMsg = document.getElementById('no-atributos-msg');
     
-    // Eliminar el mensaje de "No hay atributos" si existe
     if (noAtributosMsg) {
         noAtributosMsg.remove();
     }
     
-    // Crear el nuevo atributo
     const col = document.createElement('div');
     col.className = 'col-md-6 mb-4 atributo-item';
     col.setAttribute('data-atributo-id', atributo.id_atributo);
@@ -3169,7 +3596,6 @@ function agregarAtributoAlListado(atributo) {
     col.appendChild(card);
     container.appendChild(col);
     
-    // Inicializar el evento del checkbox
     const checkbox = document.getElementById(`atributo-activo-${atributo.id_atributo}`);
     if (checkbox) {
         checkbox.addEventListener('change', function() {
@@ -3216,16 +3642,13 @@ function agregarValorAlAtributo(valor) {
     const container = document.getElementById(`valores-container-${valor.id_atributo}`);
     if (!container) return;
     
-    // Eliminar el mensaje de "no tiene valores" si existe
     const alerta = container.querySelector('.alert-warning');
     if (alerta) {
         alerta.remove();
     }
     
-    // Verificar si ya existe el selector "Seleccionar todos"
     let selectAllDiv = container.querySelector('.mb-3');
     if (!selectAllDiv) {
-        // Crear el selector "Seleccionar todos"
         selectAllDiv = document.createElement('div');
         selectAllDiv.className = 'mb-3';
         selectAllDiv.innerHTML = `
@@ -3242,7 +3665,6 @@ function agregarValorAlAtributo(valor) {
         hr.className = 'my-2';
         container.appendChild(hr);
         
-        // Inicializar el evento del checkbox "Seleccionar todos"
         const selectAllCheckbox = document.getElementById(`seleccionar-todos-${valor.id_atributo}`);
         if (selectAllCheckbox) {
             selectAllCheckbox.addEventListener('change', function() {
@@ -3287,7 +3709,6 @@ function agregarValorAlAtributo(valor) {
         }
     }
     
-    // Buscar o crear el contenedor row para los valores
     let row = container.querySelector('.row:not(.mb-3)');
     if (!row) {
         row = document.createElement('div');
@@ -3295,7 +3716,6 @@ function agregarValorAlAtributo(valor) {
         container.appendChild(row);
     }
     
-    // Crear el nuevo valor
     const col = document.createElement('div');
     col.className = 'col-md-6 mb-2';
     
@@ -3322,7 +3742,6 @@ function agregarValorAlAtributo(valor) {
     col.appendChild(divCheck);
     row.appendChild(col);
     
-    // Inicializar el evento del nuevo checkbox
     input.addEventListener('change', function() {
         const atributoId = this.dataset.atributoId;
         const atributoNombre = this.dataset.atributoNombre;
@@ -3379,7 +3798,6 @@ function agregarValorAlAtributo(valor) {
         actualizarResumenAtributos();
     });
     
-    // Actualizar el badge de conteo de valores
     const badge = container.closest('.card').querySelector('.badge.bg-secondary');
     if (badge) {
         const valorCount = container.querySelectorAll('.valor-checkbox').length;
@@ -3429,10 +3847,7 @@ function initQuickForms() {
                         showConfirmButton: false
                     });
                     
-                    // Agregar la nueva categoría al select principal
                     agregarCategoriaAlSelect(data.categoria);
-                    
-                    // Limpiar el formulario
                     limpiarFormularioCategoria();
                 } else {
                     let errorMessage = data.message || 'Error al crear la categoría';
@@ -3493,7 +3908,6 @@ function initQuickForms() {
                         showConfirmButton: false
                     });
                     
-                    // Agregar la nueva marca al select
                     const select = document.getElementById('id_marca');
                     const option = document.createElement('option');
                     option.value = data.marca.id_marca;
@@ -3501,7 +3915,6 @@ function initQuickForms() {
                     select.appendChild(option);
                     select.value = data.marca.id_marca;
                     
-                    // Limpiar el formulario
                     limpiarFormularioMarca();
                 } else {
                     let errorMessage = data.message || 'Error al crear la marca';
@@ -3562,10 +3975,7 @@ function initQuickForms() {
                         showConfirmButton: false
                     });
                     
-                    // Agregar la nueva etiqueta al listado
                     agregarEtiquetaAlListado(data.etiqueta);
-                    
-                    // Limpiar el formulario
                     limpiarFormularioEtiqueta();
                 } else {
                     let errorMessage = data.message || 'Error al crear la etiqueta';
@@ -3626,10 +4036,8 @@ function initQuickForms() {
                         showConfirmButton: false
                     });
                     
-                    // Agregar el nuevo atributo al listado sin recargar la página
                     agregarAtributoAlListado(data.atributo);
                     
-                    // Limpiar el formulario
                     document.getElementById('vNombre_attr').value = '';
                     document.getElementById('vSlug_attr').value = '';
                     document.getElementById('tDescripcion_attr').value = '';
@@ -3692,7 +4100,6 @@ function initQuickForms() {
                         showConfirmButton: false
                     });
                     
-                    // Agregar el nuevo impuesto al select
                     const select = document.getElementById('id_impuesto');
                     const option = document.createElement('option');
                     option.value = data.impuesto.id_impuesto;
@@ -3701,13 +4108,8 @@ function initQuickForms() {
                     option.textContent = data.impuesto.vNombre + ' (' + data.impuesto.eTipo + ' - ' + parseFloat(data.impuesto.dPorcentaje).toFixed(2) + '%)';
                     select.appendChild(option);
                     
-                    // Seleccionar el nuevo impuesto
                     select.value = data.impuesto.id_impuesto;
-                    
-                    // Actualizar precio final
                     actualizarPrecioFinal();
-                    
-                    // Limpiar el formulario
                     limpiarFormularioImpuesto();
                 } else {
                     let errorMessage = data.message || 'Error al crear el impuesto';
@@ -3798,7 +4200,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Inicializar contador
     document.getElementById('selected-images-count').textContent = '0 archivos';
     
     renderSelectedImages();
@@ -3806,29 +4207,40 @@ document.addEventListener('DOMContentLoaded', function() {
     actualizarPestanasValores();
     actualizarContadorImagenes();
     actualizarPrecioFinal();
+
+    document.getElementById('id_impuesto')?.addEventListener('change', actualizarPrecioFinal);
     
-    const colorPicker = document.getElementById('color_eti');
-    const colorText = document.getElementById('color_text_eti');
-    
-    if (colorPicker && colorText) {
-        colorPicker.addEventListener('input', function() {
-            colorText.value = this.value;
-        });
-        
-        colorText.addEventListener('input', function() {
-            if (this.value.match(/^#[0-9A-F]{6}$/i)) {
-                colorPicker.value = this.value;
+    const productoForm = document.getElementById('productoForm');
+    if (productoForm) {
+        productoForm.addEventListener('submit', function(e) {
+            const totalSize = calcularTamañoTotal();
+            if (totalSize > maxTotalSize) {
+                e.preventDefault();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Límite de tamaño excedido',
+                    text: `El tamaño total de los archivos (${(totalSize / (1024 * 1024)).toFixed(2)}MB) excede el límite permitido de 50MB.`
+                });
+                return false;
             }
         });
     }
-
-    // Agregar evento al select de impuestos
-    document.getElementById('id_impuesto')?.addEventListener('change', actualizarPrecioFinal);
 });
 
 // Validación del formulario antes de enviar
 document.getElementById('productoForm').addEventListener('submit', function(e) {
     const btnSubmit = document.getElementById('btnSubmit');
+    
+    const totalSize = calcularTamañoTotal();
+    if (totalSize > maxTotalSize) {
+        e.preventDefault();
+        Swal.fire({
+            icon: 'error',
+            title: 'Límite de tamaño excedido',
+            text: `El tamaño total de los archivos (${(totalSize / (1024 * 1024)).toFixed(2)}MB) excede el límite permitido de 50MB.`
+        });
+        return false;
+    }
     
     if (!imagenPrincipalFile) {
         e.preventDefault();

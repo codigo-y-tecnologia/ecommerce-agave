@@ -847,7 +847,70 @@ class ProductoController extends Controller
             'variaciones' => 'nullable|array',
         ]);
 
-        // ... resto de validaciones condicionales ...
+        // Validaciones condicionales para descuento
+        $validator->sometimes('dPrecio_descuento', 'required', function ($input) {
+            return $input->bTiene_descuento == 1;
+        });
+
+        $validator->sometimes('dFecha_inicio_descuento', 'required', function ($input) {
+            return $input->bTiene_descuento == 1;
+        });
+
+        $validator->sometimes('dFecha_fin_descuento', 'required', function ($input) {
+            return $input->bTiene_descuento == 1;
+        });
+
+        // Validación de variaciones (similar al store)
+        if ($request->has('variaciones')) {
+            $validator->after(function ($validator) use ($request, $producto) {
+                foreach ($request->variaciones as $key => $variacion) {
+                    $sku = $variacion['vSKU'] ?? '';
+                    if (!empty($sku)) {
+                        $query = ProductoVariacion::where('vSKU', $sku);
+                        
+                        // Si es una variación existente, ignorar su propio ID
+                        if (isset($variacion['id_variacion'])) {
+                            $query->where('id_variacion', '!=', $variacion['id_variacion']);
+                        }
+                        
+                        if ($query->exists()) {
+                            $validator->errors()->add("variaciones.{$key}.vSKU", "El SKU '{$sku}' ya está registrado para otra variación.");
+                        }
+                    }
+                    
+                    // Validación de precio
+                    if (isset($variacion['dPrecio']) && !empty($variacion['dPrecio'])) {
+                        if (!preg_match('/^\d{1,7}(\.\d{1,2})?$/', $variacion['dPrecio'])) {
+                            $validator->errors()->add("variaciones.{$key}.dPrecio", 'El precio debe tener máximo 7 dígitos enteros y 2 decimales.');
+                        }
+                    }
+                    
+                    // Validación de descuento
+                    if (isset($variacion['dPrecio_descuento']) && !empty($variacion['dPrecio_descuento'])) {
+                        if (!preg_match('/^\d{1,7}(\.\d{1,2})?$/', $variacion['dPrecio_descuento'])) {
+                            $validator->errors()->add("variaciones.{$key}.dPrecio_descuento", 'El precio de descuento debe tener máximo 7 dígitos enteros y 2 decimales.');
+                        }
+                        
+                        if (($variacion['bTiene_descuento'] ?? 0) == 1 && isset($variacion['dPrecio']) && $variacion['dPrecio_descuento'] >= $variacion['dPrecio']) {
+                            $validator->errors()->add("variaciones.{$key}.dPrecio_descuento", 'El precio de descuento debe ser menor que el precio normal.');
+                        }
+                    }
+                    
+                    // Validación de campos requeridos cuando hay descuento
+                    if (isset($variacion['bTiene_descuento']) && $variacion['bTiene_descuento'] == 1) {
+                        if (empty($variacion['dPrecio_descuento'])) {
+                            $validator->errors()->add("variaciones.{$key}.dPrecio_descuento", 'El precio de descuento es obligatorio cuando el descuento está activo.');
+                        }
+                        if (empty($variacion['dFecha_inicio_descuento'])) {
+                            $validator->errors()->add("variaciones.{$key}.dFecha_inicio_descuento", 'La fecha de inicio es obligatoria cuando el descuento está activo.');
+                        }
+                        if (empty($variacion['dFecha_fin_descuento'])) {
+                            $validator->errors()->add("variaciones.{$key}.dFecha_fin_descuento", 'La fecha de fin es obligatoria cuando el descuento está activo.');
+                        }
+                    }
+                }
+            });
+        }
 
         if ($validator->fails()) {
             return redirect()->back()
@@ -1243,7 +1306,7 @@ class ProductoController extends Controller
 
     private function guardarImagenPrincipal($producto, $imagen)
     {
-        $carpeta = 'productos/' . $producto->id_producto;
+        $carpeta = 'products/' . $producto->id_producto;
         
         if (!Storage::disk('public')->exists($carpeta)) {
             Storage::disk('public')->makeDirectory($carpeta);
@@ -1253,14 +1316,16 @@ class ProductoController extends Controller
         $nombreArchivo = 'principal_' . time() . '.' . $extension;
         $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
         
-        // Guardar la ruta en algún campo del producto si es necesario
+        // Guardar la ruta en la tabla del producto si tienes un campo para imagen principal
         // $producto->vImagen_principal = Storage::url($ruta);
-        // $producto->save();
+        // $producto->saveQuietly();
+        
+        Log::info('Imagen principal guardada en: ' . $ruta);
     }
 
     private function eliminarImagenPrincipal($producto)
     {
-        $carpeta = 'productos/' . $producto->id_producto;
+        $carpeta = 'products/' . $producto->id_producto;
         
         if (Storage::disk('public')->exists($carpeta)) {
             $archivos = Storage::disk('public')->files($carpeta);
@@ -1274,7 +1339,7 @@ class ProductoController extends Controller
 
     private function guardarVideo($producto, $video)
     {
-        $carpeta = 'productos/' . $producto->id_producto;
+        $carpeta = 'products/' . $producto->id_producto;
         
         if (!Storage::disk('public')->exists($carpeta)) {
             Storage::disk('public')->makeDirectory($carpeta);
@@ -1284,14 +1349,12 @@ class ProductoController extends Controller
         $nombreArchivo = 'video_' . time() . '.' . $extension;
         $ruta = $video->storeAs($carpeta, $nombreArchivo, 'public');
         
-        // Guardar la ruta en algún campo del producto si es necesario
-        // $producto->vVideo = Storage::url($ruta);
-        // $producto->save();
+        Log::info('Video guardado en: ' . $ruta);
     }
 
     private function eliminarVideo($producto)
     {
-        $carpeta = 'productos/' . $producto->id_producto;
+        $carpeta = 'products/' . $producto->id_producto;
         
         if (Storage::disk('public')->exists($carpeta)) {
             $archivos = Storage::disk('public')->files($carpeta);
@@ -1305,7 +1368,7 @@ class ProductoController extends Controller
 
     private function guardarGif($producto, $gif)
     {
-        $carpeta = 'productos/' . $producto->id_producto;
+        $carpeta = 'products/' . $producto->id_producto;
         
         if (!Storage::disk('public')->exists($carpeta)) {
             Storage::disk('public')->makeDirectory($carpeta);
@@ -1315,14 +1378,12 @@ class ProductoController extends Controller
         $nombreArchivo = 'gif_' . time() . '.' . $extension;
         $ruta = $gif->storeAs($carpeta, $nombreArchivo, 'public');
         
-        // Guardar la ruta en algún campo del producto si es necesario
-        // $producto->vGif = Storage::url($ruta);
-        // $producto->save();
+        Log::info('GIF guardado en: ' . $ruta);
     }
 
     private function eliminarGif($producto)
     {
-        $carpeta = 'productos/' . $producto->id_producto;
+        $carpeta = 'products/' . $producto->id_producto;
         
         if (Storage::disk('public')->exists($carpeta)) {
             $archivos = Storage::disk('public')->files($carpeta);
@@ -1336,22 +1397,27 @@ class ProductoController extends Controller
 
     private function guardarImagenes($producto, $imagenes)
     {
-        $carpeta = 'productos/' . $producto->id_producto . '/adicionales';
+        $carpeta = 'products/' . $producto->id_producto . '/adicionales';
         
         if (!Storage::disk('public')->exists($carpeta)) {
             Storage::disk('public')->makeDirectory($carpeta);
         }
         
+        // Obtener imágenes existentes para numeración
+        $imagenesExistentes = Storage::disk('public')->files($carpeta);
+        $numeroInicio = count($imagenesExistentes);
+        
         foreach ($imagenes as $index => $imagen) {
             $extension = $imagen->getClientOriginalExtension();
-            $nombreArchivo = 'imagen_' . $index . '_' . time() . '.' . $extension;
-            $imagen->storeAs($carpeta, $nombreArchivo, 'public');
+            $nombreArchivo = 'imagen_' . ($numeroInicio + $index + 1) . '_' . time() . '.' . $extension;
+            $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
+            Log::info('Imagen adicional guardada en: ' . $ruta);
         }
     }
 
     private function eliminarImagenesEspecificas($producto, $imagenesAEliminar)
     {
-        $carpeta = 'productos/' . $producto->id_producto . '/adicionales';
+        $carpeta = 'products/' . $producto->id_producto . '/adicionales';
         
         foreach ($imagenesAEliminar as $nombreImagen) {
             $ruta = $carpeta . '/' . $nombreImagen;
@@ -1363,7 +1429,7 @@ class ProductoController extends Controller
 
     private function eliminarTodasLasImagenes($producto)
     {
-        $carpeta = 'productos/' . $producto->id_producto;
+        $carpeta = 'products/' . $producto->id_producto;
         
         if (Storage::disk('public')->exists($carpeta)) {
             Storage::disk('public')->deleteDirectory($carpeta);
@@ -1390,7 +1456,9 @@ class ProductoController extends Controller
         $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
         
         $variacion->vImagen = Storage::url($ruta);
-        $variacion->save();
+        $variacion->saveQuietly();
+        
+        Log::info('Imagen de variación guardada en: ' . $ruta);
     }
 
     private function eliminarImagenVariacion($variacion)
@@ -1412,7 +1480,7 @@ class ProductoController extends Controller
             }
             
             $variacion->vImagen = null;
-            $variacion->save();
+            $variacion->saveQuietly();
         }
     }
 

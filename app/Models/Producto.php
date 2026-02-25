@@ -138,27 +138,135 @@ class Producto extends Model
         $this->saveQuietly(); // Guardar sin disparar eventos para evitar bucles
     }
 
-    // Accesor para imágenes
-    public function getImagenesAttribute()
+    // Accesor para imagen principal - NUEVO
+    public function getImagenPrincipalAttribute()
     {
-        $carpetaImagenes = 'products/' . $this->id_producto;
-        if (Storage::disk('public')->exists($carpetaImagenes)) {
-            $archivos = Storage::disk('public')->files($carpetaImagenes);
-            $imagenes = [];
+        $carpeta = 'products/' . $this->id_producto;
+        
+        if (Storage::disk('public')->exists($carpeta)) {
+            $archivos = Storage::disk('public')->files($carpeta);
+            
+            // Buscar archivo que comience con 'principal_'
+            foreach ($archivos as $archivo) {
+                if (strpos($archivo, 'principal_') !== false) {
+                    return Storage::url($archivo);
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    // Accesor para URL de video - NUEVO
+    public function getVideoUrlAttribute()
+    {
+        $carpeta = 'products/' . $this->id_producto;
+        
+        if (Storage::disk('public')->exists($carpeta)) {
+            $archivos = Storage::disk('public')->files($carpeta);
+            
+            foreach ($archivos as $archivo) {
+                if (strpos($archivo, 'video_') !== false) {
+                    return Storage::url($archivo);
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    // Accesor para URL de GIF - NUEVO
+    public function getGifUrlAttribute()
+    {
+        $carpeta = 'products/' . $this->id_producto;
+        
+        if (Storage::disk('public')->exists($carpeta)) {
+            $archivos = Storage::disk('public')->files($carpeta);
+            
+            foreach ($archivos as $archivo) {
+                if (strpos($archivo, 'gif_') !== false) {
+                    return Storage::url($archivo);
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    // Accesor para imágenes adicionales - NUEVO
+    public function getImagenesAdicionalesAttribute()
+    {
+        $carpetaAdicionales = 'products/' . $this->id_producto . '/adicionales';
+        $imagenes = [];
+        
+        if (Storage::disk('public')->exists($carpetaAdicionales)) {
+            $archivos = Storage::disk('public')->files($carpetaAdicionales);
             
             // Ordenar por nombre para mantener el orden
             sort($archivos);
             
             foreach ($archivos as $archivo) {
-                if (preg_match('/\.(jpg|jpeg|png|gif|webp|jfif|svg)$/i', $archivo)) {
+                if (preg_match('/\.(jpg|jpeg|png|webp)$/i', $archivo)) {
                     $imagenes[] = Storage::url($archivo);
                 }
             }
-            
-            return $imagenes;
         }
         
-        return [];
+        return $imagenes;
+    }
+
+    // Accesor para todas las imágenes en orden correcto: Principal -> Video/GIF -> Adicionales
+    public function getTodasLasImagenesAttribute()
+    {
+        $imagenes = [];
+        
+        // 1. Imagen principal
+        $imagenPrincipal = $this->imagen_principal;
+        if ($imagenPrincipal) {
+            $imagenes[] = [
+                'url' => $imagenPrincipal,
+                'tipo' => 'principal',
+                'nombre' => 'Imagen Principal'
+            ];
+        }
+        
+        // 2. Video (si existe)
+        $videoUrl = $this->video_url;
+        if ($videoUrl) {
+            $imagenes[] = [
+                'url' => $videoUrl,
+                'tipo' => 'video',
+                'nombre' => 'Video'
+            ];
+        }
+        
+        // 3. GIF (si existe)
+        $gifUrl = $this->gif_url;
+        if ($gifUrl) {
+            $imagenes[] = [
+                'url' => $gifUrl,
+                'tipo' => 'gif',
+                'nombre' => 'GIF'
+            ];
+        }
+        
+        // 4. Imágenes adicionales
+        $adicionales = $this->imagenes_adicionales;
+        foreach ($adicionales as $index => $url) {
+            $imagenes[] = [
+                'url' => $url,
+                'tipo' => 'adicional',
+                'nombre' => 'Imagen ' . ($index + 1)
+            ];
+        }
+        
+        return $imagenes;
+    }
+
+    // Mantener el accesor original para compatibilidad
+    public function getImagenesAttribute()
+    {
+        return collect($this->todas_las_imagenes)->pluck('url')->toArray();
     }
 
     // Guardar imágenes
@@ -237,11 +345,12 @@ class Producto extends Model
     public function getNombresArchivosImagenes()
     {
         $carpetaImagenes = 'products/' . $this->id_producto;
+        $imagenes = [];
+        
         if (Storage::disk('public')->exists($carpetaImagenes)) {
             $archivos = Storage::disk('public')->files($carpetaImagenes);
             
             // Filtrar solo imágenes
-            $imagenes = [];
             foreach ($archivos as $archivo) {
                 if (preg_match('/\.(jpg|jpeg|png|gif|webp|jfif|svg)$/i', $archivo)) {
                     // Extraer solo el nombre del archivo
@@ -252,11 +361,25 @@ class Producto extends Model
                     ];
                 }
             }
-            
-            return $imagenes;
         }
         
-        return [];
+        // También buscar en la carpeta de adicionales
+        $carpetaAdicionales = 'products/' . $this->id_producto . '/adicionales';
+        if (Storage::disk('public')->exists($carpetaAdicionales)) {
+            $archivosAdicionales = Storage::disk('public')->files($carpetaAdicionales);
+            
+            foreach ($archivosAdicionales as $archivo) {
+                if (preg_match('/\.(jpg|jpeg|png|gif|webp|jfif|svg)$/i', $archivo)) {
+                    $nombreArchivo = basename($archivo);
+                    $imagenes[] = [
+                        'nombre' => $nombreArchivo,
+                        'url' => Storage::url($archivo)
+                    ];
+                }
+            }
+        }
+        
+        return $imagenes;
     }
 
     // Número de imágenes

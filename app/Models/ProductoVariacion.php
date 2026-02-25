@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class ProductoVariacion extends Model
 {
@@ -18,68 +19,253 @@ class ProductoVariacion extends Model
     protected $fillable = [
         'id_producto',
         'vSKU',
+        'vCodigo_barras',
         'vNombre_variacion',
         'dPrecio',
-        'dPrecio_oferta',
-        'iStock',
+        'dPrecio_adicional',
+        'iStock_variacion',
         'dPeso',
-        'dLargo_cm',
-        'dAncho_cm',
-        'dAlto_cm',
         'vClase_envio',
         'tDescripcion',
         'vImagen',
         'bActivo',
-        'bTiene_oferta', // Agregado
-        'dFecha_inicio_oferta',
-        'dFecha_fin_oferta',
-        'vMotivo_oferta'
+        'tFecha_registro',
+        'tFecha_actualizacion'
     ];
 
     protected $casts = [
-       'bActivo' => 'boolean',
-        'bTiene_oferta' => 'boolean', // Agregado
+        'bActivo' => 'boolean',
         'dPrecio' => 'decimal:2',
-        'dPrecio_oferta' => 'decimal:2',
-        'iStock' => 'integer',
+        'dPrecio_adicional' => 'decimal:2',
+        'iStock_variacion' => 'integer',
         'dPeso' => 'decimal:2',
-        'dLargo_cm' => 'decimal:2',
-        'dAncho_cm' => 'decimal:2',
-        'dAlto_cm' => 'decimal:2'
+        'tFecha_registro' => 'datetime',
+        'tFecha_actualizacion' => 'datetime'
     ];
 
-    // Mutadores para campos de oferta
-    public function setBTieneOfertaAttribute($value)
+    // ============ MÉTODOS PARA IMÁGENES MÚLTIPLES ============
+
+    /**
+     * Guardar imagen principal (reemplaza la imagen existente)
+     */
+    public function guardarImagenPrincipal($imagen)
     {
-        $this->attributes['bTiene_oferta'] = $value ? 1 : 0;
+        $carpeta = 'variaciones/' . $this->id_variacion;
+        
+        if (!Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->makeDirectory($carpeta);
+        }
+        
+        // Eliminar imagen anterior si existe
+        if ($this->vImagen) {
+            $rutaAnterior = str_replace('/storage/', '', $this->vImagen);
+            if (Storage::disk('public')->exists($rutaAnterior)) {
+                Storage::disk('public')->delete($rutaAnterior);
+            }
+        }
+        
+        $extension = $imagen->getClientOriginalExtension();
+        $nombreArchivo = 'principal_' . time() . '.' . $extension;
+        $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
+        
+        $this->vImagen = '/storage/' . $ruta;
+        $this->saveQuietly();
+        
+        return $this->vImagen;
     }
 
-    public function setDPrecioOfertaAttribute($value)
+    /**
+     * Guardar GIF (se guarda en la misma carpeta pero con nombre gif_)
+     */
+    public function guardarGif($gif)
     {
-        if (empty($value) || $value == 0) {
-            $this->attributes['dPrecio_oferta'] = null;
-        } else {
-            $this->attributes['dPrecio_oferta'] = $value;
+        $carpeta = 'variaciones/' . $this->id_variacion;
+        
+        if (!Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->makeDirectory($carpeta);
+        }
+        
+        $extension = $gif->getClientOriginalExtension();
+        $nombreArchivo = 'gif_' . time() . '.' . $extension;
+        $ruta = $gif->storeAs($carpeta, $nombreArchivo, 'public');
+        
+        // Guardamos la ruta del GIF (no hay campo en BD, se buscará por patrón)
+        return '/storage/' . $ruta;
+    }
+
+    /**
+     * Guardar imágenes adicionales
+     */
+    public function guardarImagenesAdicionales($imagenes)
+    {
+        $carpeta = 'variaciones/' . $this->id_variacion . '/adicionales';
+        
+        if (!Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->makeDirectory($carpeta);
+        }
+        
+        $imagenesGuardadas = [];
+        $imagenesExistentes = Storage::disk('public')->files($carpeta);
+        $numeroInicio = count($imagenesExistentes);
+        
+        foreach ($imagenes as $index => $imagen) {
+            if ($numeroInicio + $index >= 7) {
+                break; // Máximo 7 imágenes adicionales
+            }
+            
+            $extension = $imagen->getClientOriginalExtension();
+            $nombreArchivo = 'imagen_' . ($numeroInicio + $index + 1) . '_' . time() . '.' . $extension;
+            $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
+            $imagenesGuardadas[] = '/storage/' . $ruta;
+        }
+        
+        return $imagenesGuardadas;
+    }
+
+    /**
+     * Obtener URL del GIF si existe
+     */
+    public function getGifUrlAttribute()
+    {
+        $carpeta = 'variaciones/' . $this->id_variacion;
+        
+        if (Storage::disk('public')->exists($carpeta)) {
+            $archivos = Storage::disk('public')->files($carpeta);
+            
+            foreach ($archivos as $archivo) {
+                if (strpos($archivo, 'gif_') !== false) {
+                    return '/storage/' . $archivo;
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Obtener imágenes adicionales
+     */
+    public function getImagenesAdicionalesAttribute()
+    {
+        $carpeta = 'variaciones/' . $this->id_variacion . '/adicionales';
+        $imagenes = [];
+        
+        if (Storage::disk('public')->exists($carpeta)) {
+            $archivos = Storage::disk('public')->files($carpeta);
+            sort($archivos);
+            
+            foreach ($archivos as $archivo) {
+                if (preg_match('/\.(jpg|jpeg|png|webp)$/i', $archivo)) {
+                    $imagenes[] = '/storage/' . $archivo;
+                }
+            }
+        }
+        
+        return $imagenes;
+    }
+
+    /**
+     * Obtener todas las imágenes en orden: Principal -> GIF -> Adicionales
+     */
+    public function getTodasLasImagenesAttribute()
+    {
+        $imagenes = [];
+        
+        // 1. Imagen principal (campo vImagen)
+        if ($this->vImagen) {
+            $imagenes[] = [
+                'url' => $this->vImagen,
+                'tipo' => 'principal',
+                'nombre' => 'Principal'
+            ];
+        }
+        
+        // 2. GIF
+        $gifUrl = $this->gif_url;
+        if ($gifUrl) {
+            $imagenes[] = [
+                'url' => $gifUrl,
+                'tipo' => 'gif',
+                'nombre' => 'GIF'
+            ];
+        }
+        
+        // 3. Imágenes adicionales
+        foreach ($this->imagenes_adicionales as $index => $url) {
+            $imagenes[] = [
+                'url' => $url,
+                'tipo' => 'adicional',
+                'nombre' => 'Adicional ' . ($index + 1)
+            ];
+        }
+        
+        return $imagenes;
+    }
+
+    /**
+     * Contar número total de archivos multimedia
+     */
+    public function getNumeroImagenesAttribute()
+    {
+        $count = 0;
+        if ($this->vImagen) $count++;
+        if ($this->gif_url) $count++;
+        $count += count($this->imagenes_adicionales);
+        return $count;
+    }
+
+    /**
+     * Eliminar imágenes adicionales específicas
+     */
+    public function eliminarImagenesAdicionalesEspecificas($nombresArchivos)
+    {
+        $carpeta = 'variaciones/' . $this->id_variacion . '/adicionales';
+        
+        foreach ($nombresArchivos as $nombreArchivo) {
+            $rutaCompleta = $carpeta . '/' . $nombreArchivo;
+            if (Storage::disk('public')->exists($rutaCompleta)) {
+                Storage::disk('public')->delete($rutaCompleta);
+            }
         }
     }
 
-    public function setDFechaInicioOfertaAttribute($value)
+    /**
+     * Eliminar todas las imágenes de la variación
+     */
+    public function eliminarTodasLasImagenes()
     {
-        if (empty($value)) {
-            $this->attributes['dFecha_inicio_oferta'] = null;
-        } else {
-            $this->attributes['dFecha_inicio_oferta'] = $value;
+        $carpeta = 'variaciones/' . $this->id_variacion;
+        
+        if (Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->deleteDirectory($carpeta);
         }
+        
+        $this->vImagen = null;
+        $this->saveQuietly();
     }
 
-    public function setDFechaFinOfertaAttribute($value)
+    /**
+     * Obtener nombres de archivos de imágenes adicionales
+     */
+    public function getNombresArchivosImagenesAdicionales()
     {
-        if (empty($value)) {
-            $this->attributes['dFecha_fin_oferta'] = null;
-        } else {
-            $this->attributes['dFecha_fin_oferta'] = $value;
+        $carpeta = 'variaciones/' . $this->id_variacion . '/adicionales';
+        $archivos = [];
+        
+        if (Storage::disk('public')->exists($carpeta)) {
+            $archivosStorage = Storage::disk('public')->files($carpeta);
+            
+            foreach ($archivosStorage as $archivo) {
+                if (preg_match('/\.(jpg|jpeg|png|webp)$/i', $archivo)) {
+                    $archivos[] = basename($archivo);
+                }
+            }
         }
+        
+        return $archivos;
     }
+
+    // ============ RELACIONES ============
 
     public function producto()
     {
@@ -90,6 +276,8 @@ class ProductoVariacion extends Model
     {
         return $this->hasMany(VariacionAtributo::class, 'id_variacion');
     }
+
+    // ============ MÉTODOS DE UTILIDAD ============
 
     // Calcular volumen cúbico
     public function getVolumenAttribute()
@@ -121,33 +309,6 @@ class ProductoVariacion extends Model
         return 'No especificado';
     }
 
-    // Accesor para verificar si tiene oferta (usando bTiene_oferta como fuente de verdad)
-    public function getTieneOfertaAttribute()
-    {
-        return $this->bTiene_oferta == 1 && 
-               $this->dPrecio_oferta && 
-               $this->dPrecio_oferta > 0 && 
-               $this->dPrecio_oferta < $this->dPrecio &&
-               $this->esOfertaVigente();
-    }
-
-    // Verificar si la oferta está vigente (entre fechas)
-    public function esOfertaVigente()
-    {
-        if (!$this->bTiene_oferta || !$this->dFecha_inicio_oferta || !$this->dFecha_fin_oferta) {
-            return false;
-        }
-        
-        $hoy = now()->toDateString();
-        return $hoy >= $this->dFecha_inicio_oferta && $hoy <= $this->dFecha_fin_oferta;
-    }
-
-    // Método para compatibilidad con llamadas antiguas
-    public function tieneOferta()
-    {
-        return $this->tiene_oferta;
-    }
-
     // Accesor para nombre de la combinación
     public function getNombreCombinacionAttribute()
     {
@@ -160,153 +321,28 @@ class ProductoVariacion extends Model
         return !empty($nombres) ? implode(' / ', $nombres) : 'Sin atributos';
     }
 
-    // Método para obtener el atributo activo
-    public function estaActivo()
-    {
-        return $this->bActivo;
-    }
-
-    // Accesor para obtener el precio final (considerando oferta)
-    public function getPrecioFinalAttribute()
-    {
-        if ($this->tiene_oferta) {
-            return $this->dPrecio_oferta;
-        }
-        return $this->dPrecio;
-    }
-
-    // Accesor para verificar si hay stock disponible
-    public function getHayStockAttribute()
-    {
-        return $this->iStock > 0;
-    }
-
-    // Accesor para nivel de stock
-    public function getNivelStockAttribute()
-    {
-        if ($this->iStock <= 0) {
-            return 'agotado';
-        } elseif ($this->iStock <= 5) {
-            return 'bajo';
-        } elseif ($this->iStock <= 20) {
-            return 'medio';
-        } else {
-            return 'alto';
-        }
-    }
-
-    // Método para reducir stock
-    public function reducirStock($cantidad = 1)
-    {
-        if ($this->iStock >= $cantidad) {
-            $this->iStock -= $cantidad;
-            return $this->save();
-        }
-        return false;
-    }
-
-    // Método para aumentar stock
-    public function aumentarStock($cantidad = 1)
-    {
-        $this->iStock += $cantidad;
-        return $this->save();
-    }
-
-    // Accesor para obtener los atributos como array
-    public function getAtributosArrayAttribute()
-    {
-        $atributosArray = [];
-        foreach ($this->atributos as $atributo) {
-            if ($atributo->valor) {
-                $atributosArray[$atributo->atributo->vNombre] = $atributo->valor->vValor;
-            }
-        }
-        return $atributosArray;
-    }
-
-    // Método para obtener el nombre completo de la variación
-    public function getNombreCompletoAttribute()
-    {
-        $nombreProducto = $this->producto ? $this->producto->vNombre : '';
-        $combinacion = $this->nombre_combinacion;
-        
-        if ($combinacion && $combinacion !== 'Sin atributos') {
-            return $nombreProducto . ' - ' . $combinacion;
-        }
-        
-        return $nombreProducto . ' - ' . $this->vSKU;
-    }
-
-    // Accesor para obtener la URL de la imagen
+    // Accesor para URL de imagen (compatibilidad)
     public function getImagenUrlAttribute()
     {
         if ($this->vImagen) {
-            if (filter_var($this->vImagen, FILTER_VALIDATE_URL)) {
-                return $this->vImagen;
-            }
-            return asset('storage/' . $this->vImagen);
+            return $this->vImagen;
         }
         
-        if ($this->producto && count($this->producto->imagenes) > 0) {
-            return $this->producto->imagenes[0];
+        if ($this->gif_url) {
+            return $this->gif_url;
+        }
+        
+        if (count($this->imagenes_adicionales) > 0) {
+            return $this->imagenes_adicionales[0];
         }
         
         return asset('images/default-product.png');
     }
 
-    // Scope para variaciones activas
-    public function scopeActivas($query)
-    {
-        return $query->where('bActivo', true);
-    }
-
-    // Scope para variaciones con stock
-    public function scopeConStock($query)
-    {
-        return $query->where('iStock', '>', 0);
-    }
-
-    // Scope para variaciones en oferta
-    public function scopeEnOferta($query)
-    {
-        $hoy = now()->toDateString();
-        return $query->where('bTiene_oferta', 1)
-                     ->whereNotNull('dPrecio_oferta')
-                     ->where('dPrecio_oferta', '>', 0)
-                     ->whereRaw('dPrecio_oferta < dPrecio')
-                     ->where('dFecha_inicio_oferta', '<=', $hoy)
-                     ->where('dFecha_fin_oferta', '>=', $hoy);
-    }
-
-    // Método para verificar si es la variación predeterminada
-    public function esPredeterminada()
-    {
-        return $this->atributos()->count() === 0;
-    }
-
-    // Método para obtener el porcentaje de descuento
-    public function getPorcentajeDescuentoAttribute()
-    {
-        if (!$this->tiene_oferta || $this->dPrecio <= 0) {
-            return 0;
-        }
-        
-        $descuento = (($this->dPrecio - $this->dPrecio_oferta) / $this->dPrecio) * 100;
-        return max(0, min(100, round($descuento, 0)));
-    }
-
-    // Método para formatear el precio con símbolo de moneda
+    // Método para formatear el precio
     public function getPrecioFormateadoAttribute()
     {
         return '$' . number_format($this->dPrecio, 2);
-    }
-
-    public function getPrecioOfertaFormateadoAttribute()
-    {
-        if ($this->tiene_oferta) {
-            return '$' . number_format($this->dPrecio_oferta, 2);
-        }
-        return null;
     }
 
     // Método para obtener el peso formateado
@@ -318,21 +354,56 @@ class ProductoVariacion extends Model
         return 'No especificado';
     }
 
-    // Eventos del modelo
+    // Badge para clase de envío
+    public function getClaseEnvioBadgeAttribute()
+    {
+        switch ($this->vClase_envio) {
+            case 'estandar':
+                return '<span class="badge bg-primary">Estándar</span>';
+            case 'express':
+                return '<span class="badge bg-success">Express</span>';
+            case 'fragil':
+                return '<span class="badge bg-warning">Frágil</span>';
+            case 'grandes_dimensiones':
+                return '<span class="badge bg-danger">Grandes dimensiones</span>';
+            default:
+                return '<span class="badge bg-secondary">No especificada</span>';
+        }
+    }
+
+    // ============ SCOPES ============
+
+    public function scopeActivas($query)
+    {
+        return $query->where('bActivo', true);
+    }
+
+    public function scopeConStock($query)
+    {
+        return $query->where('iStock_variacion', '>', 0);
+    }
+
+    // ============ EVENTOS DEL MODELO ============
+
     protected static function boot()
     {
         parent::boot();
 
         static::creating(function ($variacion) {
+            if (empty($variacion->tFecha_registro)) {
+                $variacion->tFecha_registro = now();
+            }
             if (!isset($variacion->bActivo)) {
                 $variacion->bActivo = true;
             }
-            if (!isset($variacion->bTiene_oferta)) {
-                $variacion->bTiene_oferta = false;
-            }
+        });
+
+        static::updating(function ($variacion) {
+            $variacion->tFecha_actualizacion = now();
         });
 
         static::deleting(function ($variacion) {
+            $variacion->eliminarTodasLasImagenes();
             $variacion->atributos()->delete();
         });
     }
