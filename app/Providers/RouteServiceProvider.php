@@ -23,7 +23,7 @@ class RouteServiceProvider extends ServiceProvider
     public function boot(): void
     {
         RateLimiter::for('consulta-pedido', function (Request $request) {
-            return Limit::perMinute(4)->by(
+            return Limit::perMinute(3)->by(
                 $request->ip() . '|' . $request->input('email')
             );
         });

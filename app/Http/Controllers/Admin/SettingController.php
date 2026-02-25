@@ -22,4 +22,17 @@ class SettingController extends Controller
 
         return back()->with('success', 'Configuración actualizada');
     }
+
+    public function updateAllowReturns(Request $request)
+    {
+        Setting::updateOrCreate(
+            ['key' => 'allow_order_returns'],
+            ['value' => $request->boolean('value')]
+        );
+
+        return back()->with(
+            'success',
+            'Configuración de postventa actualizada'
+        );
+    }
 }

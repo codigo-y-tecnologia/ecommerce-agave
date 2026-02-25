@@ -18,6 +18,13 @@ class PostventaController extends Controller
      */
     public function cancelar(Request $request, Pedido $pedido)
     {
+
+        abort_if(
+            !\App\Models\Setting::getValue('allow_order_returns'),
+            403,
+            'Las solicitudes de postventa están deshabilitadas'
+        );
+
         $request->validate([
             'motivo' => 'required|string|min:5|max:255',
         ]);
@@ -67,6 +74,13 @@ class PostventaController extends Controller
      */
     public function devolver(Request $request, Pedido $pedido)
     {
+
+        abort_if(
+            !\App\Models\Setting::getValue('allow_order_returns'),
+            403,
+            'Las solicitudes de postventa están deshabilitadas'
+        );
+
         $request->validate([
             'motivo' => 'required|string|min:5|max:255',
         ]);

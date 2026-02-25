@@ -102,6 +102,8 @@
                     {{ estadoPedidoTexto($pedido->eEstado) }}
                 </span>
 
+            @if($allowOrderReturns)
+
                 @if(
     $pedido->ultimaSolicitudPostventa &&
     !(
@@ -121,6 +123,8 @@
 ">
 Postventa: {{ ucfirst($s->eEstado) }}
 </div>
+@endif
+
 @endif
 
                 <div class="mt-2 d-flex flex-column gap-2">
