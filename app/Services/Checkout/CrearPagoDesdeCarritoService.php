@@ -2,7 +2,7 @@
 
 namespace App\Services\Checkout;
 
-use App\Models\Carrito;
+use App\Models\{Carrito, CheckoutSnapshot};
 use Illuminate\Support\Facades\DB;
 use App\Services\Stock\ReservarStockService;
 use App\Services\Cupones\ReservarCuponService;
@@ -33,19 +33,30 @@ class CrearPagoDesdeCarritoService
 
             $totalFinal = max(0, $total - $descuento + $envio);
 
+
             // 4. Guardar snapshot
-            DB::table('tbl_checkout_snapshots')->updateOrInsert(
+            $snapshot = CheckoutSnapshot::updateOrCreate(
                 ['id_carrito' => $carrito->id_carrito],
                 [
-                    'subtotal' => $subtotal,
-                    'impuestos' => $impuestos,
-                    'envio' => $envio,
-                    'descuento' => $descuento,
-                    'total_final' => $totalFinal,
+                    'subtotal'     => $subtotal,
+                    'impuestos'    => $impuestos,
+                    'envio'        => $envio,
+                    'descuento'    => $descuento,
+                    'total_final'  => $totalFinal,
+                    'payment_session' => null,
                 ]
             );
 
-            return compact('subtotal', 'impuestos', 'envio', 'descuento', 'totalFinal', 'cupon');
+            // 5. Retornar datos para el proceso de pago
+            return [
+                'snapshot'   => $snapshot,
+                'cupon'      => $cupon,
+                'subtotal'   => $subtotal,
+                'impuestos'  => $impuestos,
+                'envio'      => $envio,
+                'descuento'  => $descuento,
+                'totalFinal' => $totalFinal,
+            ];
         });
     }
 }

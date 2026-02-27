@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use App\Helpers\CarritoHelper;
 use App\Services\Stock\{ReservarStockService, ConsumirReservaService, LiberarReservaPorCarritoService, LiberarReservaService};
+use App\Services\Checkout\CrearPagoDesdeCarritoService;
 use App\Exceptions\StockException;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -122,12 +123,12 @@ class PaymentController extends Controller
                 'stripe_carrito_id' => $carrito->id_carrito,
             ]);
 
-            // Calcular totales
-            [$subtotal, $totalImpuestos, $total] =
-                (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
-
             // Cupón
             $codigoCupon = session('codigo_cupon');
+
+            $result = app(CrearPagoDesdeCarritoService::class)
+                ->ejecutar($carrito, $codigoCupon);
+
             $descuento = 0;
             $cupon = null;
 

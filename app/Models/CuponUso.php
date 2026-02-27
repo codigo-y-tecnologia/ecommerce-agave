@@ -12,6 +12,7 @@ class CuponUso extends Model
     protected $table = 'tbl_cupon_usos';
     protected $primaryKey = null;
     public $incrementing = false;
+    protected $keyType = 'int';
     public $timestamps = false;
 
     protected $fillable = [
@@ -20,6 +21,13 @@ class CuponUso extends Model
         'id_usuario',
         'guest_token',
         'tFecha_uso',
+    ];
+
+    protected $casts = [
+        'id_cupon'   => 'integer',
+        'id_venta'   => 'integer',
+        'id_usuario' => 'integer',
+        'tFecha_uso' => 'datetime',
     ];
 
     public function cupon()

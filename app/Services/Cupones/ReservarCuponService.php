@@ -95,7 +95,7 @@ class ReservarCuponService
             CuponReserva::create([
                 'id_cupon'   => $cupon->id_cupon,
                 'id_carrito' => $carrito->id_carrito,
-                'session_id' => session()->getId(),
+                'session_id' => null,
                 'expires_at' => Carbon::now()->addMinutes(
                     config('stock.reserva_minutos', 30)
                 ),

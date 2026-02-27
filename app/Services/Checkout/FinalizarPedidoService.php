@@ -7,6 +7,13 @@ use App\Services\Stock\ConsumirReservaService;
 use App\Services\Cupones\ConsumirCuponService;
 use App\Services\Checkout\CrearPedidoDesdeSnapshotService;
 use Exception;
+use App\Models\{
+    Carrito,
+    CheckoutSnapshot,
+    Pedido,
+    Venta,
+    Pago
+};
 
 class FinalizarPedidoService
 {
@@ -14,13 +21,25 @@ class FinalizarPedidoService
     {
         DB::transaction(function () use ($paymentSession, $metodo, $referencia) {
 
-            $snapshot = DB::table('tbl_checkout_snapshots')
-                ->where('payment_session', $paymentSession)
+            $snapshot = CheckoutSnapshot::where('payment_session', $paymentSession)
                 ->lockForUpdate()
                 ->first();
 
             if (!$snapshot) {
                 throw new Exception('Snapshot de checkout no encontrado');
+            }
+
+            // Obtenemos el carrito asociado al snapshot
+            $carrito = Carrito::where('id_carrito', $snapshot->id_carrito)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$carrito) {
+                throw new Exception('Carrito no encontrado.');
+            }
+
+            if ($carrito->eEstado !== 'activo') {
+                return;
             }
 
             // Consumir stock
