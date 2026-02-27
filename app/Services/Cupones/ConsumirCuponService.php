@@ -3,6 +3,7 @@
 namespace App\Services\Cupones;
 
 use Illuminate\Support\Facades\DB;
+use App\Models\{CuponReserva, CuponUso};
 
 class ConsumirCuponService
 {
@@ -10,25 +11,29 @@ class ConsumirCuponService
     {
         DB::transaction(function () use ($sessionId, $ventaId, $userId, $guestToken) {
 
-            $reserva = DB::table('tbl_cupon_reservas')
-                ->where('session_id', $sessionId)
+            // Obtener reserva activa con lock
+            $reserva = CuponReserva::where('session_id', $sessionId)
                 ->lockForUpdate()
                 ->first();
 
-            if (!$reserva) {
+            if (!$reserva || !$reserva->estaActiva()) {
                 return;
             }
 
-            DB::table('tbl_cupon_usos')->insert([
-                'id_cupon' => $reserva->id_cupon,
-                'id_venta' => $ventaId,
-                'id_usuario' => $userId,
-                'guest_token' => $guestToken,
-            ]);
+            // Registrar uso definitivo (idempotente)
+            CuponUso::firstOrCreate(
+                [
+                    'id_cupon' => $reserva->id_cupon,
+                    'id_venta' => $ventaId,
+                ],
+                [
+                    'id_usuario' => $userId,
+                    'guest_token' => $guestToken,
+                ]
+            );
 
-            DB::table('tbl_cupon_reservas')
-                ->where('id_cupon_reserva', $reserva->id_cupon_reserva)
-                ->delete();
+            // Eliminar reserva temporal para liberar el cupón
+            $reserva->delete();
         });
     }
 }
