@@ -15,8 +15,9 @@ return new class extends Migration
 
             $table->id('id_cupon_reserva');
 
-            $table->foreignId('id_cupon')->constrained('tbl_cupones');
-            $table->foreignId('id_carrito')->unique()->constrained('tbl_carritos');
+            $table->foreignId('id_cupon')->constrained('tbl_cupones', 'id_cupon');
+
+            $table->foreignId('id_carrito')->unique()->constrained('tbl_carritos', 'id_carrito');
 
             $table->string('session_id')->nullable();
 

@@ -17,6 +17,8 @@ class CuponUso extends Model
     protected $fillable = [
         'id_cupon',
         'id_venta',
+        'id_usuario',
+        'guest_token',
         'tFecha_uso',
     ];
 
@@ -25,4 +27,3 @@ class CuponUso extends Model
         return $this->belongsTo(Cupon::class, 'id_cupon', 'id_cupon');
     }
 }
-
