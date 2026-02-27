@@ -138,7 +138,11 @@ class Producto extends Model
         $this->saveQuietly(); // Guardar sin disparar eventos para evitar bucles
     }
 
-    // Accesor para imagen principal - NUEVO
+    // ============ ACCESORES PARA IMÁGENES ============
+
+    /**
+     * Accesor para imagen principal - Devuelve la URL completa
+     */
     public function getImagenPrincipalAttribute()
     {
         $carpeta = 'products/' . $this->id_producto;
@@ -157,7 +161,9 @@ class Producto extends Model
         return null;
     }
 
-    // Accesor para URL de video - NUEVO
+    /**
+     * Accesor para URL de video
+     */
     public function getVideoUrlAttribute()
     {
         $carpeta = 'products/' . $this->id_producto;
@@ -175,7 +181,9 @@ class Producto extends Model
         return null;
     }
 
-    // Accesor para URL de GIF - NUEVO
+    /**
+     * Accesor para URL de GIF
+     */
     public function getGifUrlAttribute()
     {
         $carpeta = 'products/' . $this->id_producto;
@@ -193,7 +201,9 @@ class Producto extends Model
         return null;
     }
 
-    // Accesor para imágenes adicionales - NUEVO
+    /**
+     * Accesor para imágenes adicionales - Devuelve un array de URLs
+     */
     public function getImagenesAdicionalesAttribute()
     {
         $carpetaAdicionales = 'products/' . $this->id_producto . '/adicionales';
@@ -215,61 +225,42 @@ class Producto extends Model
         return $imagenes;
     }
 
-    // Accesor para todas las imágenes en orden correcto: Principal -> Video/GIF -> Adicionales
-    public function getTodasLasImagenesAttribute()
+    /**
+     * Método CORREGIDO para obtener TODAS las imágenes en un array simple de URLs
+     * Este es el accesor principal que se usa en las vistas
+     */
+    public function getImagenesAttribute()
     {
         $imagenes = [];
         
         // 1. Imagen principal
         $imagenPrincipal = $this->imagen_principal;
         if ($imagenPrincipal) {
-            $imagenes[] = [
-                'url' => $imagenPrincipal,
-                'tipo' => 'principal',
-                'nombre' => 'Imagen Principal'
-            ];
+            $imagenes[] = $imagenPrincipal;
         }
         
-        // 2. Video (si existe)
-        $videoUrl = $this->video_url;
-        if ($videoUrl) {
-            $imagenes[] = [
-                'url' => $videoUrl,
-                'tipo' => 'video',
-                'nombre' => 'Video'
-            ];
-        }
-        
-        // 3. GIF (si existe)
+        // 2. GIF (si existe)
         $gifUrl = $this->gif_url;
         if ($gifUrl) {
-            $imagenes[] = [
-                'url' => $gifUrl,
-                'tipo' => 'gif',
-                'nombre' => 'GIF'
-            ];
+            $imagenes[] = $gifUrl;
         }
+        
+        // 3. Video NO se incluye en imágenes porque no es una imagen
         
         // 4. Imágenes adicionales
         $adicionales = $this->imagenes_adicionales;
-        foreach ($adicionales as $index => $url) {
-            $imagenes[] = [
-                'url' => $url,
-                'tipo' => 'adicional',
-                'nombre' => 'Imagen ' . ($index + 1)
-            ];
+        foreach ($adicionales as $url) {
+            $imagenes[] = $url;
         }
         
-        return $imagenes;
+        return $imagenes; // Retorna: ["/storage/products/1/principal.jpg", "/storage/products/1/adicionales/imagen_1.jpg"]
     }
 
-    // Mantener el accesor original para compatibilidad
-    public function getImagenesAttribute()
-    {
-        return collect($this->todas_las_imagenes)->pluck('url')->toArray();
-    }
+    // ============ MÉTODOS PARA GUARDAR Y ELIMINAR IMÁGENES ============
 
-    // Guardar imágenes
+    /**
+     * Guardar imágenes
+     */
     public function guardarImagenes($imagenes)
     {
         if (!$this->id_producto) {
@@ -319,7 +310,9 @@ class Producto extends Model
         return $imagenesGuardadas;
     }
 
-    // Eliminar imágenes específicas
+    /**
+     * Eliminar imágenes específicas
+     */
     public function eliminarImagenesEspecificas($nombresArchivos)
     {
         $carpetaImagenes = 'products/' . $this->id_producto;
@@ -330,9 +323,20 @@ class Producto extends Model
                 Storage::disk('public')->delete($rutaCompleta);
             }
         }
+        
+        // También buscar en la carpeta de adicionales
+        $carpetaAdicionales = 'products/' . $this->id_producto . '/adicionales';
+        foreach ($nombresArchivos as $nombreArchivo) {
+            $rutaCompleta = $carpetaAdicionales . '/' . $nombreArchivo;
+            if (Storage::disk('public')->exists($rutaCompleta)) {
+                Storage::disk('public')->delete($rutaCompleta);
+            }
+        }
     }
 
-    // Eliminar todas las imágenes
+    /**
+     * Eliminar todas las imágenes
+     */
     public function eliminarTodasLasImagenes()
     {
         $carpetaImagenes = 'products/' . $this->id_producto;
@@ -341,7 +345,9 @@ class Producto extends Model
         }
     }
 
-    // Obtener nombres de archivos de imágenes
+    /**
+     * Obtener nombres de archivos de imágenes
+     */
     public function getNombresArchivosImagenes()
     {
         $carpetaImagenes = 'products/' . $this->id_producto;
@@ -382,17 +388,23 @@ class Producto extends Model
         return $imagenes;
     }
 
-    // Número de imágenes
+    /**
+     * Número de imágenes
+     */
     public function getNumeroImagenes()
     {
         return count($this->imagenes);
     }
 
-    // Verificar si tiene espacio para más imágenes
+    /**
+     * Verificar si tiene espacio para más imágenes
+     */
     public function puedeAgregarMasImagenes()
     {
         return $this->getNumeroImagenes() < 8;
     }
+
+    // ============ RELACIONES ============
 
     public function marca()
     {
@@ -422,13 +434,29 @@ class Producto extends Model
     }
 
     /**
-     * Relación con impuestos (muchos a muchos) - CORREGIDA
+     * Relación con impuestos (muchos a muchos)
      */
     public function impuestos()
     {
         return $this->belongsToMany(Impuesto::class, 'tbl_producto_impuestos', 'id_producto', 'id_impuesto');
-        // El método withTimestamps() ha sido eliminado para evitar que Laravel busque las columnas created_at y updated_at
     }
+
+    public function favoritos()
+    {
+        return $this->hasMany(Favorito::class, 'id_producto');
+    }
+
+    public function variaciones()
+    {
+        return $this->hasMany(ProductoVariacion::class, 'id_producto');
+    }
+
+    public function variacionesActivas()
+    {
+        return $this->hasMany(ProductoVariacion::class, 'id_producto')->where('bActivo', true);
+    }
+
+    // ============ MÉTODOS DE UTILIDAD ============
 
     /**
      * Obtener impuestos activos del producto
@@ -499,7 +527,9 @@ class Producto extends Model
         return $detalle;
     }
 
-    // Método para obtener atributos agrupados
+    /**
+     * Método para obtener atributos agrupados
+     */
     public function getAtributosAgrupadosAttribute()
     {
         $atributos = [];
@@ -525,17 +555,17 @@ class Producto extends Model
         return $atributos;
     }
 
-    // Método para verificar si tiene atributos
+    /**
+     * Método para verificar si tiene atributos
+     */
     public function tieneAtributos()
     {
         return $this->valoresAtributos()->count() > 0;
     }
 
-    public function favoritos()
-    {
-        return $this->hasMany(Favorito::class, 'id_producto');
-    }
-
+    /**
+     * Verificar si el producto es favorito del usuario actual
+     */
     public function esFavorito()
     {
         try {
@@ -552,12 +582,27 @@ class Producto extends Model
         }
     }
 
+    /**
+     * Verificar si está bajo en stock
+     */
     public function estaBajoEnStock()
     {
         return $this->iStock > 0 && $this->iStock <= 5;
     }
 
-    // NUEVO: Método para verificar si la oferta está vigente
+    /**
+     * Verificar si tiene variaciones
+     */
+    public function tieneVariaciones()
+    {
+        return $this->variaciones()->count() > 0;
+    }
+
+    // ============ MÉTODOS DE OFERTA/DESCUENTO ============
+
+    /**
+     * Verificar si la oferta está vigente
+     */
     public function ofertaVigente()
     {
         if (!$this->bTiene_oferta || !$this->dPrecio_oferta) {
@@ -583,7 +628,9 @@ class Producto extends Model
         return $this->ofertaVigente();
     }
 
-    // NUEVO: Método para obtener el precio de oferta si está vigente
+    /**
+     * Obtener el precio de oferta si está vigente
+     */
     public function getPrecioOfertaVigenteAttribute()
     {
         if ($this->ofertaVigente()) {
@@ -592,7 +639,9 @@ class Producto extends Model
         return $this->dPrecio_venta;
     }
 
-    // NUEVO: Método para obtener porcentaje de descuento
+    /**
+     * Obtener porcentaje de descuento
+     */
     public function getPorcentajeDescuentoAttribute()
     {
         if ($this->ofertaVigente() && $this->dPrecio_oferta < $this->dPrecio_venta) {
@@ -602,7 +651,9 @@ class Producto extends Model
         return 0;
     }
 
-    // NUEVO: Badge para oferta
+    /**
+     * Badge para oferta
+     */
     public function getOfertaBadgeAttribute()
     {
         if ($this->ofertaVigente()) {
@@ -611,14 +662,15 @@ class Producto extends Model
         return '';
     }
 
+    /**
+     * Verificar si tiene descuento (por cualquier motivo)
+     */
     public function tieneDescuento()
     {
-        // Si hay oferta vigente
         if ($this->ofertaVigente() && $this->dPrecio_oferta < $this->dPrecio_venta) {
             return true;
         }
         
-        // Descuento normal por precio de compra
         if (!$this->dPrecio_compra || $this->dPrecio_compra <= 0) {
             return false;
         }
@@ -626,15 +678,16 @@ class Producto extends Model
         return $this->dPrecio_venta < $this->dPrecio_compra;
     }
 
+    /**
+     * Calcular porcentaje de descuento (prioriza oferta)
+     */
     public function porcentajeDescuento()
     {
-        // Prioridad a la oferta vigente
         if ($this->ofertaVigente() && $this->dPrecio_oferta < $this->dPrecio_venta) {
             $descuento = (($this->dPrecio_venta - $this->dPrecio_oferta) / $this->dPrecio_venta) * 100;
             return max(0, min(100, round($descuento)));
         }
         
-        // Descuento normal
         if (!$this->tieneDescuento()) {
             return 0;
         }
@@ -643,28 +696,19 @@ class Producto extends Model
         return max(0, min(100, round($descuento)));
     }
 
-    public function variaciones()
-    {
-        return $this->hasMany(ProductoVariacion::class, 'id_producto');
-    }
+    // ============ MÉTODOS DE PRECIOS Y STOCK ============
 
-    public function variacionesActivas()
-    {
-        return $this->hasMany(ProductoVariacion::class, 'id_producto')->where('bActivo', true);
-    }
-
-    public function tieneVariaciones()
-    {
-        return $this->variaciones()->count() > 0;
-    }
-
-    // Accesor para precio de venta
+    /**
+     * Accesor para precio de venta
+     */
     public function getDPrecioVentaAttribute()
     {
         return $this->attributes['dPrecio_venta'];
     }
 
-    // Nuevo método para mostrar rango de precios cuando hay variaciones
+    /**
+     * Mostrar rango de precios cuando hay variaciones
+     */
     public function getRangoPreciosAttribute()
     {
         if ($this->tieneVariaciones()) {
@@ -680,7 +724,9 @@ class Producto extends Model
         return number_format($this->dPrecio_venta, 2);
     }
 
-    // Método para obtener el precio numérico (el más bajo si hay variaciones)
+    /**
+     * Obtener el precio a mostrar (el más bajo si hay variaciones)
+     */
     public function getPrecioMostrarAttribute()
     {
         if ($this->tieneVariaciones()) {
@@ -691,7 +737,9 @@ class Producto extends Model
         return $this->attributes['dPrecio_venta'];
     }
 
-    // Sobrescribe el accesor de stock
+    /**
+     * Sobrescribe el accesor de stock para considerar variaciones
+     */
     public function getIStockAttribute()
     {
         if ($this->tieneVariaciones()) {
@@ -701,7 +749,9 @@ class Producto extends Model
         return $this->attributes['iStock'];
     }
 
-    // Método para obtener el precio mínimo
+    /**
+     * Obtener el precio mínimo
+     */
     public function getPrecioMinimoAttribute()
     {
         if ($this->tieneVariaciones()) {
@@ -711,7 +761,9 @@ class Producto extends Model
         return $this->attributes['dPrecio_venta'];
     }
 
-    // Método para obtener el precio máximo
+    /**
+     * Obtener el precio máximo
+     */
     public function getPrecioMaximoAttribute()
     {
         if ($this->tieneVariaciones()) {
@@ -721,7 +773,11 @@ class Producto extends Model
         return $this->attributes['dPrecio_venta'];
     }
 
-    // Accesor para dimensiones
+    // ============ MÉTODOS DE DIMENSIONES Y ENVÍO ============
+
+    /**
+     * Accesor para dimensiones formateadas
+     */
     public function getDimensionesFormateadasAttribute()
     {
         if ($this->dLargo_cm && $this->dAncho_cm && $this->dAlto_cm) {
@@ -732,7 +788,9 @@ class Producto extends Model
         return 'No especificado';
     }
 
-    // Accesor para peso formateado
+    /**
+     * Accesor para peso formateado
+     */
     public function getPesoFormateadoAttribute()
     {
         if ($this->dPeso) {
@@ -741,7 +799,9 @@ class Producto extends Model
         return 'No especificado';
     }
 
-    // Accesor para volumen (largo × ancho × alto)
+    /**
+     * Accesor para volumen (largo × ancho × alto)
+     */
     public function getVolumenAttribute()
     {
         if ($this->dLargo_cm && $this->dAncho_cm && $this->dAlto_cm) {
@@ -750,7 +810,9 @@ class Producto extends Model
         return null;
     }
 
-    // Accesor para volumen formateado
+    /**
+     * Accesor para volumen formateado
+     */
     public function getVolumenFormateadoAttribute()
     {
         if ($this->volumen) {
@@ -759,13 +821,17 @@ class Producto extends Model
         return 'No calculable';
     }
 
-    // Método para verificar si tiene dimensiones completas
+    /**
+     * Verificar si tiene dimensiones completas
+     */
     public function tieneDimensionesCompletas()
     {
         return $this->dLargo_cm && $this->dAncho_cm && $this->dAlto_cm;
     }
 
-    // Accesor para clase de envío formateada
+    /**
+     * Accesor para clase de envío formateada
+     */
     public function getClaseEnvioFormateadaAttribute()
     {
         switch ($this->vClase_envio) {
@@ -782,7 +848,9 @@ class Producto extends Model
         }
     }
 
-    // Accesor para badge de clase de envío
+    /**
+     * Accesor para badge de clase de envío
+     */
     public function getClaseEnvioBadgeAttribute()
     {
         switch ($this->vClase_envio) {
@@ -799,7 +867,9 @@ class Producto extends Model
         }
     }
 
-    // Método para calcular peso volumétrico
+    /**
+     * Calcular peso volumétrico
+     */
     public function getPesoVolumetricoAttribute()
     {
         if ($this->volumen) {
@@ -809,7 +879,9 @@ class Producto extends Model
         return null;
     }
 
-    // Accesor para peso volumétrico formateado
+    /**
+     * Accesor para peso volumétrico formateado
+     */
     public function getPesoVolumetricoFormateadoAttribute()
     {
         if ($this->peso_volumetrico) {
@@ -818,7 +890,9 @@ class Producto extends Model
         return 'No calculable';
     }
 
-    // Método para determinar el peso facturable (el mayor entre peso real y volumétrico)
+    /**
+     * Determinar el peso facturable (el mayor entre peso real y volumétrico)
+     */
     public function getPesoFacturableAttribute()
     {
         $pesoReal = $this->dPeso ?: 0;
@@ -827,7 +901,11 @@ class Producto extends Model
         return max($pesoReal, $pesoVolumetrico);
     }
 
-    // Método para buscar productos por nombre o SKU
+    // ============ SCOPES ============
+
+    /**
+     * Buscar productos por nombre o SKU
+     */
     public static function buscarPorNombreOSKU($busqueda)
     {
         return self::where(function($query) use ($busqueda) {
@@ -836,7 +914,9 @@ class Producto extends Model
         })->where('bActivo', true);
     }
 
-    // Scope para productos con dimensiones
+    /**
+     * Scope para productos con dimensiones
+     */
     public function scopeConDimensiones($query)
     {
         return $query->whereNotNull('dLargo_cm')
@@ -844,14 +924,18 @@ class Producto extends Model
                      ->whereNotNull('dAlto_cm');
     }
 
-    // Scope para productos con peso
+    /**
+     * Scope para productos con peso
+     */
     public function scopeConPeso($query)
     {
         return $query->whereNotNull('dPeso')
                      ->where('dPeso', '>', 0);
     }
 
-    // Scope para productos por clase de envío
+    /**
+     * Scope para productos por clase de envío
+     */
     public function scopePorClaseEnvio($query, $clase)
     {
         return $query->where('vClase_envio', $clase);

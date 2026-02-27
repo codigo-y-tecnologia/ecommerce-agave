@@ -21,6 +21,9 @@ use Illuminate\Support\Str;
 
 class ProductoController extends Controller
 {
+    /**
+     * Display a listing of the resource.
+     */
     public function index(Request $request)
     {
         $query = Producto::with(['marca', 'categoria', 'etiquetas', 'impuestos']);
@@ -34,11 +37,14 @@ class ProductoController extends Controller
             });
         }
         
-        $productos = $query->get();
+        $productos = $query->orderBy('id_producto', 'desc')->get();
         
         return view('productos.index', compact('productos'));
     }
 
+    /**
+     * Show the form for creating a new resource.
+     */
     public function create()
     {
         $categorias = Categoria::with(['hijos' => function($query) {
@@ -72,6 +78,9 @@ class ProductoController extends Controller
         return view('productos.create', compact('categorias', 'marcas', 'etiquetas', 'atributos', 'impuestos', 'etiquetasEspeciales'));
     }
 
+    /**
+     * Store a newly created resource in storage.
+     */
     public function store(Request $request)
     {
         // Validación personalizada para precio de descuento
@@ -570,6 +579,7 @@ class ProductoController extends Controller
                         'vClase_envio' => $claseEnvio,
                         'tDescripcion' => $variacionData['tDescripcion'] ?? null,
                         'bActivo' => isset($variacionData['bActivo']) ? 1 : 0,
+                        'id_impuesto' => $variacionData['id_impuesto'] ?? null, // NUEVO CAMPO
                     ]);
 
                     Log::info('Variación creada con ID:', ['id' => $variacion->id_variacion]);
@@ -609,35 +619,54 @@ class ProductoController extends Controller
         }
     }
 
+    /**
+     * Display the specified resource (Vista pública para clientes).
+     */
     public function showPublic($id)
     {
-        $producto = Producto::with(['marca', 'categoria', 'etiquetas', 'impuestos', 'variaciones' => function($query) {
-            $query->where('bActivo', true);
-        }])
+        $producto = Producto::with([
+            'marca', 
+            'categoria', 
+            'etiquetas', 
+            'impuestos', 
+            'variaciones' => function($query) {
+                $query->where('bActivo', true);
+            },
+            'variaciones.atributos.valor', 
+            'variaciones.atributos.atributo',
+            'variaciones.impuesto'
+        ])
         ->where('bActivo', true)
         ->findOrFail($id);
         
         return view('productos.show-public', compact('producto'));
     }
 
-    public function catalogo()
-    {
-        $productos = Producto::with(['marca', 'categoria', 'etiquetas', 'impuestos', 'variaciones' => function($query) {
-            $query->where('bActivo', true);
-        }])
-        ->where('bActivo', true)
-        ->orderBy('vNombre')
-        ->get();
-        
-        return view('productos.catalogo', compact('productos'));
-    }
-
+    /**
+     * Display the specified resource (Vista de administración).
+     */
     public function show(Producto $producto)
     {
-        $producto->load(['marca', 'categoria', 'etiquetas', 'impuestos', 'variaciones.atributos.valor', 'variaciones.atributos.atributo']);
+        // Cargar todas las relaciones necesarias para la vista de administración
+        $producto->load([
+            'marca', 
+            'categoria', 
+            'etiquetas', 
+            'impuestos', 
+            'variaciones' => function ($query) {
+                $query->where('bActivo', true); // Solo variaciones activas
+            },
+            'variaciones.atributos.valor', 
+            'variaciones.atributos.atributo',
+            'variaciones.impuesto'
+        ]);
+        
         return view('productos.show', compact('producto'));
     }
 
+    /**
+     * Show the form for editing the specified resource.
+     */
     public function edit(Producto $producto)
     {
         $categorias = Categoria::with(['hijos' => function($query) {
@@ -667,11 +696,14 @@ class ProductoController extends Controller
         
         $etiquetasEspeciales = Etiqueta::whereIn('vNombre', ['nuevo', 'popular', 'oferta', 'destacado'])->get();
         
-        $producto->load(['etiquetas', 'impuestos', 'variaciones.atributos', 'valoresAtributos.atributo']);
+        $producto->load(['etiquetas', 'impuestos', 'variaciones.atributos', 'valoresAtributos.atributo', 'variaciones.impuesto']);
         
         return view('productos.edit', compact('producto', 'categorias', 'marcas', 'etiquetas', 'atributos', 'impuestos', 'etiquetasEspeciales'));
     }
 
+    /**
+     * Update the specified resource in storage.
+     */
     public function update(Request $request, Producto $producto)
     {
         // Similar al store pero con ignore para unique
@@ -1075,6 +1107,7 @@ class ProductoController extends Controller
                                 'vClase_envio' => $claseEnvio,
                                 'tDescripcion' => $variacionData['tDescripcion'] ?? null,
                                 'bActivo' => isset($variacionData['bActivo']) ? 1 : 0,
+                                'id_impuesto' => $variacionData['id_impuesto'] ?? null, // NUEVO CAMPO
                             ]);
 
                             $idsVariacionesProcesadas[] = $variacion->id_variacion;
@@ -1125,6 +1158,7 @@ class ProductoController extends Controller
                             'vClase_envio' => $claseEnvio,
                             'tDescripcion' => $variacionData['tDescripcion'] ?? null,
                             'bActivo' => isset($variacionData['bActivo']) ? 1 : 0,
+                            'id_impuesto' => $variacionData['id_impuesto'] ?? null, // NUEVO CAMPO
                         ]);
 
                         $idsVariacionesProcesadas[] = $variacion->id_variacion;
@@ -1174,6 +1208,9 @@ class ProductoController extends Controller
         }
     }
 
+    /**
+     * Remove the specified resource from storage.
+     */
     public function destroy(Producto $producto)
     {
         try {
@@ -1216,6 +1253,234 @@ class ProductoController extends Controller
         }
     }
 
+    /**
+     * Show the catalog page (public).
+     */
+    public function catalogo()
+    {
+        $productos = Producto::with(['marca', 'categoria', 'etiquetas', 'impuestos', 'variaciones' => function($query) {
+            $query->where('bActivo', true);
+        }])
+        ->where('bActivo', true)
+        ->orderBy('vNombre')
+        ->get();
+        
+        return view('productos.catalogo', compact('productos'));
+    }
+
+    // ============ FUNCIONES PARA MANEJO DE IMÁGENES ============
+
+    /**
+     * Guardar imagen principal del producto
+     */
+    private function guardarImagenPrincipal($producto, $imagen)
+    {
+        $carpeta = 'products/' . $producto->id_producto;
+        
+        if (!Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->makeDirectory($carpeta);
+        }
+        
+        $extension = $imagen->getClientOriginalExtension();
+        $nombreArchivo = 'principal_' . time() . '.' . $extension;
+        $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
+        
+        Log::info('Imagen principal guardada en: ' . $ruta);
+    }
+
+    /**
+     * Eliminar imagen principal del producto
+     */
+    private function eliminarImagenPrincipal($producto)
+    {
+        $carpeta = 'products/' . $producto->id_producto;
+        
+        if (Storage::disk('public')->exists($carpeta)) {
+            $archivos = Storage::disk('public')->files($carpeta);
+            foreach ($archivos as $archivo) {
+                if (strpos($archivo, 'principal_') !== false) {
+                    Storage::disk('public')->delete($archivo);
+                }
+            }
+        }
+    }
+
+    /**
+     * Guardar video del producto
+     */
+    private function guardarVideo($producto, $video)
+    {
+        $carpeta = 'products/' . $producto->id_producto;
+        
+        if (!Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->makeDirectory($carpeta);
+        }
+        
+        $extension = $video->getClientOriginalExtension();
+        $nombreArchivo = 'video_' . time() . '.' . $extension;
+        $ruta = $video->storeAs($carpeta, $nombreArchivo, 'public');
+        
+        Log::info('Video guardado en: ' . $ruta);
+    }
+
+    /**
+     * Eliminar video del producto
+     */
+    private function eliminarVideo($producto)
+    {
+        $carpeta = 'products/' . $producto->id_producto;
+        
+        if (Storage::disk('public')->exists($carpeta)) {
+            $archivos = Storage::disk('public')->files($carpeta);
+            foreach ($archivos as $archivo) {
+                if (strpos($archivo, 'video_') !== false) {
+                    Storage::disk('public')->delete($archivo);
+                }
+            }
+        }
+    }
+
+    /**
+     * Guardar GIF del producto
+     */
+    private function guardarGif($producto, $gif)
+    {
+        $carpeta = 'products/' . $producto->id_producto;
+        
+        if (!Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->makeDirectory($carpeta);
+        }
+        
+        $extension = $gif->getClientOriginalExtension();
+        $nombreArchivo = 'gif_' . time() . '.' . $extension;
+        $ruta = $gif->storeAs($carpeta, $nombreArchivo, 'public');
+        
+        Log::info('GIF guardado en: ' . $ruta);
+    }
+
+    /**
+     * Eliminar GIF del producto
+     */
+    private function eliminarGif($producto)
+    {
+        $carpeta = 'products/' . $producto->id_producto;
+        
+        if (Storage::disk('public')->exists($carpeta)) {
+            $archivos = Storage::disk('public')->files($carpeta);
+            foreach ($archivos as $archivo) {
+                if (strpos($archivo, 'gif_') !== false) {
+                    Storage::disk('public')->delete($archivo);
+                }
+            }
+        }
+    }
+
+    /**
+     * Guardar imágenes adicionales del producto
+     */
+    private function guardarImagenes($producto, $imagenes)
+    {
+        $carpeta = 'products/' . $producto->id_producto . '/adicionales';
+        
+        if (!Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->makeDirectory($carpeta);
+        }
+        
+        // Obtener imágenes existentes para numeración
+        $imagenesExistentes = Storage::disk('public')->files($carpeta);
+        $numeroInicio = count($imagenesExistentes);
+        
+        foreach ($imagenes as $index => $imagen) {
+            $extension = $imagen->getClientOriginalExtension();
+            $nombreArchivo = 'imagen_' . ($numeroInicio + $index + 1) . '_' . time() . '.' . $extension;
+            $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
+            Log::info('Imagen adicional guardada en: ' . $ruta);
+        }
+    }
+
+    /**
+     * Eliminar imágenes específicas del producto
+     */
+    private function eliminarImagenesEspecificas($producto, $imagenesAEliminar)
+    {
+        $carpeta = 'products/' . $producto->id_producto . '/adicionales';
+        
+        foreach ($imagenesAEliminar as $nombreImagen) {
+            $ruta = $carpeta . '/' . $nombreImagen;
+            if (Storage::disk('public')->exists($ruta)) {
+                Storage::disk('public')->delete($ruta);
+            }
+        }
+    }
+
+    /**
+     * Eliminar todas las imágenes del producto
+     */
+    private function eliminarTodasLasImagenes($producto)
+    {
+        $carpeta = 'products/' . $producto->id_producto;
+        
+        if (Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->deleteDirectory($carpeta);
+        }
+    }
+
+    /**
+     * Guardar imagen de variación
+     */
+    private function guardarImagenVariacion($variacion, $imagen)
+    {
+        $carpeta = 'variaciones/' . $variacion->id_variacion;
+        
+        if (!Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->makeDirectory($carpeta);
+        }
+        
+        $extension = strtolower($imagen->getClientOriginalExtension());
+        
+        $extensionesValidas = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'tiff', 'ico', 'heic', 'heif'];
+        
+        if (!$extension || !in_array($extension, $extensionesValidas)) {
+            $extension = 'jpg';
+        }
+        
+        $nombreArchivo = 'imagen_' . time() . '_' . uniqid() . '.' . $extension;
+        $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
+        
+        $variacion->vImagen = $ruta;
+        $variacion->saveQuietly();
+        
+        Log::info('Imagen de variación guardada en: ' . $ruta);
+    }
+
+    /**
+     * Eliminar imagen de variación
+     */
+    private function eliminarImagenVariacion($variacion)
+    {
+        if ($variacion->vImagen) {
+            if (Storage::disk('public')->exists($variacion->vImagen)) {
+                Storage::disk('public')->delete($variacion->vImagen);
+            }
+            
+            $carpeta = 'variaciones/' . $variacion->id_variacion;
+            if (Storage::disk('public')->exists($carpeta)) {
+                $archivos = Storage::disk('public')->files($carpeta);
+                if (empty($archivos)) {
+                    Storage::disk('public')->deleteDirectory($carpeta);
+                }
+            }
+            
+            $variacion->vImagen = null;
+            $variacion->saveQuietly();
+        }
+    }
+
+    // ============ MÉTODOS PARA ATRIBUTOS ============
+
+    /**
+     * Show atributos page.
+     */
     public function atributos($id)
     {
         $producto = Producto::with(['variaciones.atributos.atributo', 'variaciones.atributos.valor'])
@@ -1224,6 +1489,9 @@ class ProductoController extends Controller
         return view('productos.atributos', compact('producto'));
     }
 
+    /**
+     * Show form to assign atributos.
+     */
     public function asignarAtributos($id)
     {
         $producto = Producto::with(['valoresAtributos.atributo'])->findOrFail($id);
@@ -1235,6 +1503,9 @@ class ProductoController extends Controller
         return view('productos.asignar-atributos', compact('producto', 'atributos'));
     }
 
+    /**
+     * Save atributos assignment.
+     */
     public function guardarAtributos(Request $request, $id)
     {
         $producto = Producto::findOrFail($id);
@@ -1292,6 +1563,11 @@ class ProductoController extends Controller
         }
     }
 
+    // ============ MÉTODOS PARA VARIACIONES ============
+
+    /**
+     * Show variaciones page.
+     */
     public function variaciones()
     {
         $productos = Producto::with(['variaciones.atributos.valor', 'variaciones.atributos.atributo', 'marca', 'categoria'])
@@ -1302,189 +1578,11 @@ class ProductoController extends Controller
         return view('productos.variaciones', compact('productos'));
     }
 
-    // ============ FUNCIONES PARA MANEJO DE IMÁGENES ============
+    // ============ MÉTODOS API PARA FORMULARIOS RÁPIDOS ============
 
-    private function guardarImagenPrincipal($producto, $imagen)
-    {
-        $carpeta = 'products/' . $producto->id_producto;
-        
-        if (!Storage::disk('public')->exists($carpeta)) {
-            Storage::disk('public')->makeDirectory($carpeta);
-        }
-        
-        $extension = $imagen->getClientOriginalExtension();
-        $nombreArchivo = 'principal_' . time() . '.' . $extension;
-        $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
-        
-        // Guardar la ruta en la tabla del producto si tienes un campo para imagen principal
-        // $producto->vImagen_principal = Storage::url($ruta);
-        // $producto->saveQuietly();
-        
-        Log::info('Imagen principal guardada en: ' . $ruta);
-    }
-
-    private function eliminarImagenPrincipal($producto)
-    {
-        $carpeta = 'products/' . $producto->id_producto;
-        
-        if (Storage::disk('public')->exists($carpeta)) {
-            $archivos = Storage::disk('public')->files($carpeta);
-            foreach ($archivos as $archivo) {
-                if (strpos($archivo, 'principal_') !== false) {
-                    Storage::disk('public')->delete($archivo);
-                }
-            }
-        }
-    }
-
-    private function guardarVideo($producto, $video)
-    {
-        $carpeta = 'products/' . $producto->id_producto;
-        
-        if (!Storage::disk('public')->exists($carpeta)) {
-            Storage::disk('public')->makeDirectory($carpeta);
-        }
-        
-        $extension = $video->getClientOriginalExtension();
-        $nombreArchivo = 'video_' . time() . '.' . $extension;
-        $ruta = $video->storeAs($carpeta, $nombreArchivo, 'public');
-        
-        Log::info('Video guardado en: ' . $ruta);
-    }
-
-    private function eliminarVideo($producto)
-    {
-        $carpeta = 'products/' . $producto->id_producto;
-        
-        if (Storage::disk('public')->exists($carpeta)) {
-            $archivos = Storage::disk('public')->files($carpeta);
-            foreach ($archivos as $archivo) {
-                if (strpos($archivo, 'video_') !== false) {
-                    Storage::disk('public')->delete($archivo);
-                }
-            }
-        }
-    }
-
-    private function guardarGif($producto, $gif)
-    {
-        $carpeta = 'products/' . $producto->id_producto;
-        
-        if (!Storage::disk('public')->exists($carpeta)) {
-            Storage::disk('public')->makeDirectory($carpeta);
-        }
-        
-        $extension = $gif->getClientOriginalExtension();
-        $nombreArchivo = 'gif_' . time() . '.' . $extension;
-        $ruta = $gif->storeAs($carpeta, $nombreArchivo, 'public');
-        
-        Log::info('GIF guardado en: ' . $ruta);
-    }
-
-    private function eliminarGif($producto)
-    {
-        $carpeta = 'products/' . $producto->id_producto;
-        
-        if (Storage::disk('public')->exists($carpeta)) {
-            $archivos = Storage::disk('public')->files($carpeta);
-            foreach ($archivos as $archivo) {
-                if (strpos($archivo, 'gif_') !== false) {
-                    Storage::disk('public')->delete($archivo);
-                }
-            }
-        }
-    }
-
-    private function guardarImagenes($producto, $imagenes)
-    {
-        $carpeta = 'products/' . $producto->id_producto . '/adicionales';
-        
-        if (!Storage::disk('public')->exists($carpeta)) {
-            Storage::disk('public')->makeDirectory($carpeta);
-        }
-        
-        // Obtener imágenes existentes para numeración
-        $imagenesExistentes = Storage::disk('public')->files($carpeta);
-        $numeroInicio = count($imagenesExistentes);
-        
-        foreach ($imagenes as $index => $imagen) {
-            $extension = $imagen->getClientOriginalExtension();
-            $nombreArchivo = 'imagen_' . ($numeroInicio + $index + 1) . '_' . time() . '.' . $extension;
-            $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
-            Log::info('Imagen adicional guardada en: ' . $ruta);
-        }
-    }
-
-    private function eliminarImagenesEspecificas($producto, $imagenesAEliminar)
-    {
-        $carpeta = 'products/' . $producto->id_producto . '/adicionales';
-        
-        foreach ($imagenesAEliminar as $nombreImagen) {
-            $ruta = $carpeta . '/' . $nombreImagen;
-            if (Storage::disk('public')->exists($ruta)) {
-                Storage::disk('public')->delete($ruta);
-            }
-        }
-    }
-
-    private function eliminarTodasLasImagenes($producto)
-    {
-        $carpeta = 'products/' . $producto->id_producto;
-        
-        if (Storage::disk('public')->exists($carpeta)) {
-            Storage::disk('public')->deleteDirectory($carpeta);
-        }
-    }
-
-    private function guardarImagenVariacion($variacion, $imagen)
-    {
-        $carpeta = 'variaciones/' . $variacion->id_variacion;
-        
-        if (!Storage::disk('public')->exists($carpeta)) {
-            Storage::disk('public')->makeDirectory($carpeta);
-        }
-        
-        $extension = strtolower($imagen->getClientOriginalExtension());
-        
-        $extensionesValidas = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'tiff', 'ico', 'heic', 'heif'];
-        
-        if (!$extension || !in_array($extension, $extensionesValidas)) {
-            $extension = 'jpg';
-        }
-        
-        $nombreArchivo = 'imagen_' . time() . '_' . uniqid() . '.' . $extension;
-        $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
-        
-        $variacion->vImagen = Storage::url($ruta);
-        $variacion->saveQuietly();
-        
-        Log::info('Imagen de variación guardada en: ' . $ruta);
-    }
-
-    private function eliminarImagenVariacion($variacion)
-    {
-        if ($variacion->vImagen) {
-            $urlBase = Storage::url('');
-            $rutaRelativa = str_replace($urlBase, '', $variacion->vImagen);
-            
-            if (Storage::disk('public')->exists($rutaRelativa)) {
-                Storage::disk('public')->delete($rutaRelativa);
-            }
-            
-            $carpeta = 'variaciones/' . $variacion->id_variacion;
-            if (Storage::disk('public')->exists($carpeta)) {
-                $archivos = Storage::disk('public')->files($carpeta);
-                if (empty($archivos)) {
-                    Storage::disk('public')->deleteDirectory($carpeta);
-                }
-            }
-            
-            $variacion->vImagen = null;
-            $variacion->saveQuietly();
-        }
-    }
-
-    // Funciones para formularios rápidos (API)
+    /**
+     * Quick create categoria via AJAX.
+     */
     public function quickCreateCategoria(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -1531,6 +1629,9 @@ class ProductoController extends Controller
         }
     }
 
+    /**
+     * Quick create marca via AJAX.
+     */
     public function quickCreateMarca(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -1567,6 +1668,9 @@ class ProductoController extends Controller
         }
     }
 
+    /**
+     * Quick create etiqueta via AJAX.
+     */
     public function quickCreateEtiqueta(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -1605,6 +1709,9 @@ class ProductoController extends Controller
         }
     }
 
+    /**
+     * Quick create atributo via AJAX.
+     */
     public function quickCreateAtributo(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -1644,6 +1751,9 @@ class ProductoController extends Controller
         }
     }
 
+    /**
+     * Quick create valor de atributo via AJAX.
+     */
     public function quickCreateValorAtributo(Request $request, $atributo_id)
     {
         $validator = Validator::make($request->all(), [
@@ -1692,7 +1802,11 @@ class ProductoController extends Controller
         }
     }
 
-    // Funciones para obtener datos en JSON
+    // ============ MÉTODOS API PARA OBTENER DATOS JSON ============
+
+    /**
+     * Get categorias in JSON format.
+     */
     public function getJsonCategorias()
     {
         $categorias = Categoria::where('bActivo', true)
@@ -1705,6 +1819,9 @@ class ProductoController extends Controller
         ]);
     }
 
+    /**
+     * Get marcas in JSON format.
+     */
     public function getJsonMarcas()
     {
         $marcas = Marca::orderBy('vNombre')
@@ -1716,6 +1833,9 @@ class ProductoController extends Controller
         ]);
     }
 
+    /**
+     * Get etiquetas in JSON format.
+     */
     public function getJsonEtiquetas()
     {
         $etiquetas = Etiqueta::orderBy('vNombre')
@@ -1727,6 +1847,9 @@ class ProductoController extends Controller
         ]);
     }
 
+    /**
+     * Get atributos in JSON format.
+     */
     public function getJsonAtributos()
     {
         $atributos = Atributo::with(['valoresActivos' => function($query) {
@@ -1741,6 +1864,9 @@ class ProductoController extends Controller
         ]);
     }
 
+    /**
+     * Get impuestos in JSON format.
+     */
     public function getJsonImpuestos()
     {
         $impuestos = Impuesto::where('bActivo', true)

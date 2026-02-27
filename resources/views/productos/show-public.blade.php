@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $producto->vNombre }} - Detalles del Producto</title>
+    <title>{{ $producto->vNombre }} - Ecommerce Agave</title>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
             background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.5;
+            overflow-x: hidden;
+            width: 100%;
         }
 
         /* Header Styles */
@@ -19,6 +22,8 @@
             text-align: center;
             border-bottom: 1px solid #dee2e6;
         }
+        header h1 { font-size: clamp(1.5rem, 5vw, 2rem); padding: 0 15px; }
+        header p { font-size: clamp(0.9rem, 3vw, 1rem); padding: 0 15px; color: #666; }
 
         .user-welcome {
             background: #e3f2fd;
@@ -26,25 +31,25 @@
             text-align: center;
             border-bottom: 1px solid #bbdefb;
         }
-
         .user-welcome p {
             margin: 0;
             font-weight: bold;
             color: #1976d2;
+            font-size: clamp(0.85rem, 3vw, 1rem);
+            padding: 0 15px;
+            word-break: break-word;
         }
 
-        /* Navbar Styles */
+        /* Navbar */
         .navbar {
             background-color: #e9ecef;
             padding: 10px 0;
         }
-
         .nav-container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 0 20px;
+            padding: 0 15px;
         }
-
         .nav-links {
             list-style: none;
             display: flex;
@@ -52,44 +57,39 @@
             gap: 25px;
             padding: 0;
             margin: 0;
+            flex-wrap: wrap;
         }
-
-        .nav-links li {
-            display: inline;
-        }
-
         .nav-links li a {
             color: #495057;
             text-decoration: none;
             font-weight: bold;
+            font-size: clamp(0.85rem, 2.5vw, 1rem);
+            white-space: nowrap;
         }
+        .nav-links li a:hover { text-decoration: underline; }
+        .nav-links li button { font-size: clamp(0.85rem, 2.5vw, 1rem); }
 
-        .nav-links li a:hover {
-            text-decoration: underline;
-        }
-
-        /* Search Bar */
+        /* Barra de búsqueda */
         .barra-busqueda-principal {
             text-align: center;
-            margin: 20px 0;
-            padding: 0 20px;
+            margin: 15px 0;
+            padding: 0 15px;
         }
-
         .barra-busqueda-principal form {
-            display: inline-block;
+            display: flex;
             max-width: 600px;
             width: 100%;
+            margin: 0 auto;
         }
-
         .barra-busqueda-principal input[type="text"] {
+            flex: 1;
             padding: 12px 20px;
-            width: 70%;
             border: 2px solid #007bff;
             border-radius: 25px 0 0 25px;
             font-size: 16px;
             outline: none;
+            min-width: 0;
         }
-
         .barra-busqueda-principal button {
             padding: 12px 25px;
             background: #007bff;
@@ -98,15 +98,15 @@
             border-radius: 0 25px 25px 0;
             font-size: 16px;
             cursor: pointer;
-            margin-left: -5px;
+            white-space: nowrap;
+            transition: all 0.3s ease;
         }
-
         .barra-busqueda-principal button:hover {
             background: #0056b3;
             border-color: #0056b3;
         }
 
-        /* Main Container */
+        /* Contenedor principal */
         .container {
             max-width: 1200px;
             margin: 20px auto;
@@ -115,7 +115,6 @@
             padding: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-
         .back-btn {
             color: #495057;
             text-decoration: none;
@@ -128,7 +127,6 @@
             display: inline-block;
             transition: all 0.3s ease;
         }
-
         .back-btn:hover {
             color: #007bff;
             border-color: #007bff;
@@ -136,6 +134,7 @@
             transform: translateY(-2px);
         }
 
+        /* Grid principal del producto */
         .producto-detalle {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -143,27 +142,72 @@
             margin-top: 20px;
         }
 
-        .imagenes-container {
-            position: relative;
-        }
-
-        .imagen-principal {
-            width: 100%;
+        /* --- Sección de Imágenes --- */
+        .imagenes-container { position: relative; }
+        .imagen-principal-container {
             height: 400px;
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 15px;
+        }
+        .imagen-wrapper {
+            position: relative;
+            height: 350px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .imagen-principal {
+            max-height: 340px;
+            max-width: 100%;
             object-fit: contain;
             border-radius: 8px;
-            background: #f8f9fa;
-            padding: 20px;
         }
-
+        .image-controls {
+            position: absolute;
+            width: 100%;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+            display: flex;
+            justify-content: space-between;
+            padding: 0 10px;
+            pointer-events: none;
+        }
+        .image-controls button {
+            pointer-events: auto;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            opacity: 0.7;
+        }
+        .image-controls button:hover { opacity: 1; transform: scale(1.1); }
+        .image-controls button:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+        .image-counter {
+            text-align: center;
+            margin: 10px 0;
+            color: #666;
+            font-size: 14px;
+        }
         .miniaturas {
             display: flex;
             gap: 10px;
             margin-top: 15px;
             overflow-x: auto;
             padding: 10px 0;
+            scrollbar-width: thin;
         }
-
         .miniatura {
             width: 70px;
             height: 70px;
@@ -172,96 +216,43 @@
             cursor: pointer;
             border: 2px solid transparent;
             transition: all 0.3s ease;
+            flex-shrink: 0;
         }
-
-        .miniatura:hover {
-            border-color: #007bff;
-            transform: scale(1.05);
-        }
-
+        .miniatura:hover { border-color: #007bff; transform: scale(1.05); }
         .miniatura.activa {
             border-color: #007bff;
             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
         }
 
-        .btn-favorito-detalle {
-            background: #fff;
-            border: 2px solid #3483fa;
-            color: #3483fa;
-            padding: 16px 30px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 18px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            transition: all 0.3s ease;
-            margin: 20px 0;
-            width: 100%;
-            max-width: 400px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn-favorito-detalle:hover {
-            background: #f8f9fa;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(52, 131, 250, 0.3);
-            border-color: #2968c8;
-        }
-
-        .btn-favorito-detalle:active {
-            transform: translateY(0);
-        }
-
-        .btn-favorito-detalle.activo {
-            background: #3483fa;
-            border-color: #3483fa;
-            color: white;
-        }
-
-        .btn-favorito-detalle.activo:hover {
-            background: #2968c8;
-            border-color: #2968c8;
-        }
-
-        .btn-favorito-detalle .btn-icon {
-            font-size: 22px;
-            transition: transform 0.3s ease;
-        }
-
-        .btn-favorito-detalle:hover .btn-icon {
-            transform: scale(1.2);
-        }
-
-        .btn-favorito-detalle.activo .btn-icon {
-            animation: latido 0.5s ease;
-        }
-
-        @keyframes latido {
-            0% { transform: scale(1); }
-            25% { transform: scale(1.3); }
-            50% { transform: scale(1.1); }
-            75% { transform: scale(1.25); }
-            100% { transform: scale(1); }
-        }
-
+        /* --- Información del Producto --- */
         .producto-info-detalle h1 {
             color: #333;
             margin-bottom: 15px;
             font-size: 28px;
             line-height: 1.3;
         }
-
         .producto-precio-detalle {
             font-size: 32px;
             font-weight: bold;
             color: #2e7d32;
             margin-bottom: 15px;
         }
-
+        .precio-original {
+            text-decoration: line-through;
+            color: #6c757d;
+            font-size: 22px;
+            margin-right: 10px;
+        }
+        .descuento-badge {
+            background: #dc3545;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            display: inline-block;
+            margin-left: 10px;
+        }
         .stock-info-detalle {
             font-size: 16px;
             margin-bottom: 15px;
@@ -271,52 +262,88 @@
             align-items: center;
             gap: 8px;
         }
+        .stock-bueno { background: #e8f5e8; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .stock-bajo { background: #fff3e0; color: #ef6c00; border: 1px solid #ffcc80; }
+        .sin-stock { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
 
-        .stock-bueno {
-            background: #e8f5e8;
-            color: #2e7d32;
-            border: 1px solid #c8e6c9;
+        /* Selector de variaciones */
+        .variaciones-selector {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        .variaciones-selector h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 18px;
+            color: #333;
+        }
+        .variacion-opcion {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: white;
+        }
+        .variacion-opcion:hover {
+            border-color: #007bff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .variacion-opcion.seleccionada {
+            border-color: #007bff;
+            background: #e3f2fd;
+        }
+        .variacion-imagen-mini {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-right: 15px;
+            border: 1px solid #dee2e6;
+            flex-shrink: 0;
+        }
+        .variacion-info { flex: 1; }
+        .variacion-nombre { font-weight: bold; color: #333; margin-bottom: 5px; }
+        .variacion-precio { color: #28a745; font-weight: bold; font-size: 16px; }
+        .variacion-stock { font-size: 14px; color: #6c757d; }
+
+        /* Descripción de variación seleccionada */
+        .variacion-descripcion {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
         }
 
-        .stock-bajo {
-            background: #fff3e0;
-            color: #ef6c00;
-            border: 1px solid #ffcc80;
-        }
-
-        .sin-stock {
-            background: #ffebee;
-            color: #c62828;
-            border: 1px solid #ffcdd2;
-        }
-
-        .detalles-adicionales {
-            margin-top: 30px;
-        }
-
+        /* Detalles adicionales */
+        .detalles-adicionales { margin-top: 30px; }
         .detalle-item {
             margin-bottom: 15px;
             padding: 12px 0;
             border-bottom: 1px solid #f0f0f0;
         }
+        .detalle-item:last-child { border-bottom: none; }
+        .detalle-item strong { color: #333; display: inline-block; margin-bottom: 5px; }
+        .detalle-item h3 { margin: 0 0 10px 0; color: #333; font-size: 18px; }
 
-        .detalle-item:last-child {
-            border-bottom: none;
+        .sku-badge {
+            background: #f8f9fa;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+            border: 1px solid #dee2e6;
         }
 
-        .detalle-item strong {
-            color: #333;
-            display: inline-block;
-            margin-bottom: 5px;
-        }
-
-        .detalle-item h3 {
-            margin: 0 0 10px 0;
-            color: #333;
-            font-size: 18px;
-        }
-
-        /* NOTIFICACIÓN ÚNICA */
+        /* NOTIFICACIÓN */
         .toast-notification {
             position: fixed;
             top: 30px;
@@ -337,47 +364,47 @@
             max-width: 350px;
             transform: translateX(120%);
         }
-
-        .toast-notification.show {
-            transform: translateX(0);
-        }
-
-        .image-controls {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin: 15px 0;
-        }
-
-        .image-controls button {
-            padding: 10px 20px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            transition: all 0.3s ease;
-        }
-
-        .image-controls button:hover {
-            background: #0056b3;
-            transform: translateY(-2px);
-        }
-
-        .image-counter {
-            text-align: center;
-            margin: 10px 0;
-            color: #666;
-            font-size: 14px;
-        }
+        .toast-notification.show { transform: translateX(0); }
 
         .action-buttons {
             display: flex;
             gap: 15px;
             margin-top: 20px;
         }
+        .btn-favorito-detalle {
+            background: #fff;
+            border: 2px solid #3483fa;
+            color: #3483fa;
+            padding: 16px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all 0.3s ease;
+            margin: 20px 0;
+            width: 100%;
+            max-width: 400px;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-favorito-detalle:hover {
+            background: #f8f9fa;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 131, 250, 0.3);
+            border-color: #2968c8;
+        }
+        .btn-favorito-detalle.activo {
+            background: #3483fa;
+            border-color: #3483fa;
+            color: white;
+        }
+        .btn-favorito-detalle.activo:hover { background: #2968c8; border-color: #2968c8; }
+        .btn-favorito-detalle .btn-icon { font-size: 22px; transition: transform 0.3s ease; }
+        .btn-favorito-detalle:hover .btn-icon { transform: scale(1.2); }
 
         .btn-comprar {
             background: #28a745;
@@ -391,92 +418,50 @@
             flex: 1;
             transition: all 0.3s ease;
         }
-
         .btn-comprar:hover {
             background: #218838;
             transform: translateY(-2px);
             box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
         }
 
+        /* Media Queries */
         @media (max-width: 768px) {
-            .producto-detalle {
-                grid-template-columns: 1fr;
-                gap: 20px;
-            }
-            
-            .imagen-principal {
-                height: 300px;
-            }
-            
-            .btn-favorito-detalle,
-            .btn-comprar {
-                width: 100%;
-                max-width: 100%;
-            }
-            
-            .action-buttons {
-                flex-direction: column;
-            }
-
-            .barra-busqueda-principal input[type="text"] {
-                width: 60%;
-            }
-
-            .nav-links {
-                flex-wrap: wrap;
-                gap: 15px;
-            }
+            .producto-detalle { grid-template-columns: 1fr; gap: 20px; }
+            .imagen-principal-container { height: 350px; }
+            .imagen-wrapper { height: 300px; }
+            .btn-favorito-detalle, .btn-comprar { width: 100%; max-width: 100%; }
+            .action-buttons { flex-direction: column; }
+            .barra-busqueda-principal input[type="text"] { width: 60%; }
+            .nav-links { flex-wrap: wrap; gap: 15px; }
+            .variacion-opcion { flex-direction: column; text-align: center; }
+            .variacion-imagen-mini { margin-right: 0; margin-bottom: 10px; }
         }
-
         @media (max-width: 480px) {
-            .container {
-                padding: 15px;
-            }
-            
-            .producto-info-detalle h1 {
-                font-size: 24px;
-            }
-            
-            .producto-precio-detalle {
-                font-size: 28px;
-            }
-            
-            .imagen-principal {
-                height: 250px;
-            }
-            
-            .miniatura {
-                width: 60px;
-                height: 60px;
-            }
-
+            .container { padding: 15px; }
+            .producto-info-detalle h1 { font-size: 24px; }
+            .producto-precio-detalle { font-size: 28px; }
+            .imagen-principal-container { height: 300px; }
+            .imagen-wrapper { height: 250px; }
+            .miniatura { width: 60px; height: 60px; }
             .barra-busqueda-principal input[type="text"] {
                 width: 100%;
                 border-radius: 25px;
                 margin-bottom: 10px;
             }
-            
             .barra-busqueda-principal button {
                 width: 100%;
                 border-radius: 25px;
                 margin-left: 0;
             }
-            
-            .barra-busqueda-principal form {
-                display: flex;
-                flex-direction: column;
-            }
+            .barra-busqueda-principal form { flex-direction: column; }
+            .image-controls button { width: 32px; height: 32px; font-size: 14px; }
         }
-
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(52, 131, 250, 0.4); }
             70% { box-shadow: 0 0 0 10px rgba(52, 131, 250, 0); }
             100% { box-shadow: 0 0 0 0 rgba(52, 131, 250, 0); }
         }
-
-        .nuevo-favorito {
-            animation: pulse 1s ease;
-        }
+        .nuevo-favorito { animation: pulse 1s ease; }
     </style>
 </head>
 <body>
@@ -486,7 +471,7 @@
         <p>Detalles del producto</p>
     </header>
 
-    <!-- Mostrar bienvenida al usuario si está autenticado -->
+    <!-- Bienvenida al usuario si está autenticado -->
     @auth
     <div class="user-welcome">
         <p>¡Hola {{ Auth::user()->vNombre }}! 👋</p>
@@ -535,80 +520,183 @@
     <div class="container">
         <a href="javascript:history.back()" class="back-btn">← Volver</a>
         
+        @php
+            // --- DATOS DEL PRODUCTO PADRE ---
+            $imagenesProducto = $producto->imagenes ?? []; // Array simple de URLs
+            
+            $productoData = [
+                'sku' => $producto->vCodigo_barras,
+                'precio' => (float)$producto->dPrecio_venta,
+                'precio_oferta' => (float)($producto->dPrecio_oferta ?? 0),
+                'tiene_oferta' => (bool)$producto->bTiene_oferta,
+                'stock' => (int)$producto->iStock,
+                'imagenes' => $imagenesProducto,
+                'descripcion_corta' => $producto->tDescripcion_corta ?? ''
+            ];
+
+            // --- DATOS DE LAS VARIACIONES ---
+            $variacionesData = [];
+            foreach ($producto->variaciones as $var) {
+                $atributosTexto = [];
+                foreach($var->atributos as $atributoRel) {
+                    if($atributoRel->atributo && $atributoRel->valor) {
+                        $atributosTexto[] = $atributoRel->atributo->vNombre . ': ' . $atributoRel->valor->vValor;
+                    }
+                }
+                $variacionesData[$var->id_variacion] = [
+                    'id' => $var->id_variacion,
+                    'sku' => $var->vSKU,
+                    'precio' => (float)$var->dPrecio,
+                    'precio_oferta' => (float)($var->dPrecio_oferta ?? 0),
+                    'tiene_oferta' => (bool)$var->bTiene_oferta,
+                    'stock' => (int)$var->iStock,
+                    'atributos_texto' => $atributosTexto,
+                    'imagenes' => $var->imagenes ?? [],
+                    'descripcion' => $var->tDescripcion ?? ''
+                ];
+            }
+        @endphp
+        
         <div class="producto-detalle">
+            <!-- SECCIÓN DE IMÁGENES DEL PRODUCTO/VARIACIÓN ACTIVA -->
             <div class="imagenes-container">
-                @if(count($producto->imagenes) > 0)
-                    <div>
-                        <img id="mainImage" src="{{ $producto->imagenes[0] }}" 
-                             alt="{{ $producto->vNombre }}" class="imagen-principal">
+                <div class="imagen-principal-container">
+                    <div class="imagen-wrapper">
+                        <img id="mainImage" 
+                             src="{{ !empty($imagenesProducto) ? $imagenesProducto[0] : 'https://via.placeholder.com/400x400?text=Sin+Imagen' }}" 
+                             alt="{{ $producto->vNombre }}" class="imagen-principal"
+                             onerror="this.onerror=null; this.src='https://via.placeholder.com/400x400?text=Sin+Imagen';">
                         
-                        @if(count($producto->imagenes) > 1)
-                            <div class="image-counter">
-                                <span id="currentImage">1</span> / <span id="totalImages">{{ count($producto->imagenes) }}</span>
-                            </div>
-                            <div class="image-controls">
-                                <button onclick="changeImage(-1)">← Anterior</button>
-                                <button onclick="changeImage(1)">Siguiente →</button>
-                            </div>
-                        @endif
+                        <!-- Controles de navegación -->
+                        <div class="image-controls">
+                            <button onclick="cambiarImagen(-1)" {{ count($imagenesProducto) <= 1 ? 'disabled' : '' }}>←</button>
+                            <button onclick="cambiarImagen(1)" {{ count($imagenesProducto) <= 1 ? 'disabled' : '' }}>→</button>
+                        </div>
                     </div>
                     
-                    @if(count($producto->imagenes) > 1)
-                        <div class="miniaturas">
-                            @foreach($producto->imagenes as $index => $imagen)
-                                <img src="{{ $imagen }}" 
-                                     alt="{{ $producto->vNombre }} - Imagen {{ $index + 1 }}"
-                                     class="miniatura {{ $index === 0 ? 'activa' : '' }}"
-                                     onclick="selectImage({{ $index }})">
-                            @endforeach
-                        </div>
-                    @endif
-                @else
-                    <div style="text-align: center; padding: 60px;">
-                        <div style="font-size: 48px; color: #6c757d; margin-bottom: 15px;">🛒</div>
-                        <p style="color: #6c757d;">No hay imágenes disponibles</p>
+                    <!-- Contador de imágenes -->
+                    <div class="image-counter">
+                        <span id="imagen-actual">1</span> / <span id="total-imagenes">{{ count($imagenesProducto) }}</span>
                     </div>
-                @endif
+                </div>
+                
+                <!-- Miniaturas -->
+                <div class="miniaturas" id="miniaturas-container">
+                    @foreach($imagenesProducto as $index => $imgUrl)
+                        <img src="{{ $imgUrl }}" 
+                             alt="{{ $producto->vNombre }} - Imagen {{ $index + 1 }}"
+                             class="miniatura {{ $index === 0 ? 'activa' : '' }}"
+                             onclick="seleccionarImagen({{ $index }})"
+                             onerror="this.onerror=null; this.src='https://via.placeholder.com/70x70?text=Error';">
+                    @endforeach
+                </div>
             </div>
 
+            <!-- INFORMACIÓN DEL PRODUCTO -->
             <div class="producto-info-detalle">
-                <h1>{{ $producto->vNombre }}</h1>
+                <h1 id="producto-nombre">{{ $producto->vNombre }}</h1>
                 
-                <!-- SECCIÓN DE PRECIO CORREGIDA -->
-                <div class="producto-precio-detalle">
-                    @if($producto->tieneVariaciones())
-                        ${{ $producto->rangoPrecios }}
+                <!-- SECCIÓN DE PRECIO -->
+                <div class="producto-precio-detalle" id="precio-container">
+                    @if($producto->tieneDescuentoActivo())
+                        <span class="precio-original" id="precio-original">${{ number_format($producto->dPrecio_venta, 2) }}</span>
+                        <span class="descuento-badge" id="descuento-badge">-{{ $producto->porcentajeDescuento }}%</span>
+                        <div id="precio-actual">${{ number_format($producto->dPrecio_oferta, 2) }}</div>
                     @else
-                        @if($producto->tieneDescuento())
-                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
-                                <span style="text-decoration: line-through; color: #6c757d; font-size: 22px;">
-                                    ${{ number_format($producto->dPrecio_compra, 2) }}
-                                </span>
-                                <span style="color: #dc3545; font-size: 16px; font-weight: bold; background: #ffebee; padding: 4px 8px; border-radius: 4px;">
-                                    -{{ $producto->porcentajeDescuento() }}%
-                                </span>
-                            </div>
+                        <div id="precio-actual">${{ number_format($producto->dPrecio_venta, 2) }}</div>
+                        <span id="precio-original" style="display: none;"></span>
+                        <span id="descuento-badge" style="display: none;"></span>
+                    @endif
+                </div>
+
+                <!-- STOCK -->
+                <div class="stock-info-detalle" id="stock-container">
+                    <span id="stock-texto">
+                        @if($producto->iStock > 10)
+                            ✅ En stock ({{ $producto->iStock }} unidades disponibles)
+                        @elseif($producto->iStock > 0)
+                            ⚠️ Stock bajo (Solo {{ $producto->iStock }} unidades disponibles)
+                        @else
+                            ❌ Sin stock (Próximamente)
                         @endif
-                        ${{ number_format($producto->dPrecio_venta, 2) }}
-                    @endif
+                    </span>
                 </div>
 
-                <div class="stock-info-detalle {{ $producto->iStock > 10 ? 'stock-bueno' : ($producto->iStock > 0 ? 'stock-bajo' : 'sin-stock') }}">
-                    @if($producto->iStock > 10)
-                        ✅ En stock ({{ $producto->iStock }} unidades disponibles)
-                    @elseif($producto->iStock > 0)
-                        ⚠️ Stock bajo (Solo {{ $producto->iStock }} unidades disponibles)
-                    @else
-                        ❌ Sin stock (Próximamente)
-                    @endif
+                <!-- SKU -->
+                <div style="margin: 15px 0;">
+                    <strong>Código de barras:</strong> 
+                    <span class="sku-badge" id="sku-texto">{{ $producto->vCodigo_barras }}</span>
                 </div>
 
-                <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin: 15px 0; border: 1px solid #bbdefb;">
-                    <div style="display: flex; align-items: center; gap: 8px; color: #1976d2; font-weight: bold;">
-                        📦 <span>Envío gratis a todo el país</span>
+                <!-- DESCRIPCIÓN DE VARIACIÓN SELECCIONADA (dinámico) -->
+                <div id="variacion-descripcion-container" class="variacion-descripcion" style="display: none;">
+                    <p id="variacion-descripcion-texto" style="margin: 0;"></p>
+                </div>
+
+                <!-- SELECTOR DE VARIACIONES CON TOGGLE -->
+                @if($producto->tieneVariaciones() && $producto->variaciones->count() > 0)
+                    <div class="variaciones-selector">
+                        <h3><i class="fas fa-cubes"></i> Selecciona una variación:</h3>
+                        <div id="variaciones-container">
+                            @foreach($producto->variaciones as $variacion)
+                                @php
+                                    $imagenVariacion = $variacion->imagen_principal;
+                                    $stockClase = $variacion->iStock > 10 ? 'bueno' : ($variacion->iStock > 0 ? 'bajo' : 'sin-stock');
+                                    $precioActual = $variacion->ofertaVigente() ? $variacion->dPrecio_oferta : $variacion->dPrecio;
+                                    $atributosTexto = [];
+                                    foreach($variacion->atributos as $atributoRel) {
+                                        if($atributoRel->atributo && $atributoRel->valor) {
+                                            $atributosTexto[] = $atributoRel->atributo->vNombre . ': ' . $atributoRel->valor->vValor;
+                                        }
+                                    }
+                                @endphp
+                                <div class="variacion-opcion" 
+                                     onclick="toggleVariacion({{ $variacion->id_variacion }})"
+                                     data-variacion-id="{{ $variacion->id_variacion }}"
+                                     data-sku="{{ $variacion->vSKU }}"
+                                     data-precio="{{ $variacion->dPrecio }}"
+                                     data-precio-oferta="{{ $variacion->dPrecio_oferta ?? 0 }}"
+                                     data-tiene-oferta="{{ $variacion->bTiene_oferta ? 'true' : 'false' }}"
+                                     data-stock="{{ $variacion->iStock }}"
+                                     data-descripcion="{{ $variacion->tDescripcion ?? '' }}"
+                                     data-imagenes='@json($variacion->imagenes ?? [])'
+                                     data-atributos='@json($atributosTexto)'>
+                                    
+                                    @if($imagenVariacion)
+                                        <img src="{{ $imagenVariacion }}" alt="Variación" class="variacion-imagen-mini"
+                                             onerror="this.onerror=null; this.src='https://via.placeholder.com/60x60?text=Var';">
+                                    @else
+                                        <div class="variacion-imagen-mini" style="background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+                                            <span style="font-size: 24px;">🔄</span>
+                                        </div>
+                                    @endif
+                                    
+                                    <div class="variacion-info">
+                                        <div class="variacion-nombre">
+                                            {{ implode(' | ', $atributosTexto) }}
+                                        </div>
+                                        <div class="variacion-precio">
+                                            @if($variacion->ofertaVigente())
+                                                <span style="text-decoration: line-through; color: #999; font-size: 14px; margin-right: 8px;">
+                                                    ${{ number_format($variacion->dPrecio, 2) }}
+                                                </span>
+                                                <span style="color: #dc3545;">${{ number_format($variacion->dPrecio_oferta, 2) }}</span>
+                                                <span class="descuento-badge" style="margin-left: 8px;">-{{ $variacion->porcentajeDescuento }}%</span>
+                                            @else
+                                                ${{ number_format($variacion->dPrecio, 2) }}
+                                            @endif
+                                        </div>
+                                        <div class="variacion-stock">
+                                            Stock: {{ $variacion->iStock }} unidades
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
                     </div>
-                </div>
+                @endif
 
+                <!-- Botón de favoritos -->
                 <button class="btn-favorito-detalle {{ $producto->esFavorito() ? 'activo' : '' }}" 
                         onclick="toggleFavoritoDetalle(this, {{ $producto->id_producto }})"
                         id="btn-favorito-{{ $producto->id_producto }}">
@@ -618,19 +706,15 @@
                     </span>
                 </button>
 
+                <!-- Botón de compra -->
                 <div class="action-buttons">
                     <button class="btn-comprar" onclick="agregarAlCarrito({{ $producto->id_producto }})">
                         🛒 Comprar Ahora
                     </button>
                 </div>
 
+                <!-- Detalles adicionales (categoría, marca, etiquetas) -->
                 <div class="detalles-adicionales">
-                    <div class="detalle-item">
-                        <strong>Código de barras:</strong> 
-                        <span style="background: #f8f9fa; padding: 4px 8px; border-radius: 4px; font-family: monospace;">
-                            {{ $producto->vCodigo_barras }}
-                        </span>
-                    </div>
                     <div class="detalle-item">
                         <strong>Categoría:</strong> 
                         <span style="background: #e9ecef; padding: 4px 12px; border-radius: 4px;">
@@ -657,80 +741,279 @@
                         </div>
                     @endif
 
+                    <!-- DESCRIPCIÓN CORTA (estática del producto padre) -->
                     @if($producto->tDescripcion_corta)
                         <div class="detalle-item">
                             <h3>Descripción</h3>
-                            <p style="line-height: 1.6; color: #555;">{{ $producto->tDescripcion_corta }}</p>
+                            <p style="line-height: 1.6; color: #555;" id="producto-descripcion-corta">{{ $producto->tDescripcion_corta }}</p>
                         </div>
                     @endif
 
+                    <!-- DESCRIPCIÓN LARGA (estática del producto padre) -->
                     @if($producto->tDescripcion_larga)
                         <div class="detalle-item">
                             <h3>Información detallada</h3>
-                            <p style="line-height: 1.6; color: #555; white-space: pre-line;">{{ $producto->tDescripcion_larga }}</p>
+                            <p style="line-height: 1.6; color: #555; white-space: pre-line;" id="producto-descripcion-larga">{{ $producto->tDescripcion_larga }}</p>
                         </div>
                     @endif
                 </div>
             </div>
         </div>
-        
-        <!-- NOTA: Se han eliminado las líneas que mostraban elementos de paginación no deseados -->
     </div>
 
     <script>
-        // VARIABLE GLOBAL ÚNICA para controlar la notificación
-        let currentToast = null;
-        let toastTimeout = null;
-
+        // --- VARIABLES GLOBALES ---
         let currentImageIndex = 0;
-        const totalImages = {{ count($producto->imagenes) }};
-        const images = @json($producto->imagenes);
+        let imagenesActuales = @json($imagenesProducto); // Solo imágenes del producto activo
+        const variacionesData = @json($variacionesData);
+        const productoOriginal = @json($productoData);
+        let variacionSeleccionadaId = null;
 
-        function changeImage(direction) {
-            currentImageIndex += direction;
-            
-            if (currentImageIndex < 0) {
-                currentImageIndex = totalImages - 1;
-            } else if (currentImageIndex >= totalImages) {
-                currentImageIndex = 0;
-            }
-            
+        // --- FUNCIONES DE IMÁGENES (galería principal) ---
+        function cambiarImagen(direccion) {
+            if (imagenesActuales.length <= 1) return;
+            currentImageIndex += direccion;
+            if (currentImageIndex < 0) currentImageIndex = imagenesActuales.length - 1;
+            if (currentImageIndex >= imagenesActuales.length) currentImageIndex = 0;
             updateMainImage();
         }
 
-        function selectImage(index) {
+        function seleccionarImagen(index) {
+            if (imagenesActuales.length === 0) return;
             currentImageIndex = index;
             updateMainImage();
         }
 
         function updateMainImage() {
-            document.getElementById('mainImage').src = images[currentImageIndex];
-            document.getElementById('currentImage').textContent = currentImageIndex + 1;
-            
-            document.querySelectorAll('.miniatura').forEach((thumb, index) => {
-                if (index === currentImageIndex) {
-                    thumb.classList.add('activa');
-                } else {
-                    thumb.classList.remove('activa');
+            const mainImage = document.getElementById('mainImage');
+            if (mainImage && imagenesActuales[currentImageIndex]) {
+                mainImage.src = imagenesActuales[currentImageIndex];
+                document.getElementById('imagen-actual').textContent = currentImageIndex + 1;
+                
+                // Actualizar clase activa en miniaturas
+                document.querySelectorAll('.miniatura').forEach((thumb, index) => {
+                    if (index === currentImageIndex) {
+                        thumb.classList.add('activa');
+                    } else {
+                        thumb.classList.remove('activa');
+                    }
+                });
+                
+                // Habilitar/deshabilitar controles
+                const botones = document.querySelectorAll('.image-controls button');
+                if (botones.length === 2) {
+                    botones[0].disabled = imagenesActuales.length <= 1;
+                    botones[1].disabled = imagenesActuales.length <= 1;
                 }
-            });
+            }
         }
 
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'ArrowLeft') {
-                changeImage(-1);
-            } else if (e.key === 'ArrowRight') {
-                changeImage(1);
-            }
+            if (e.key === 'ArrowLeft') cambiarImagen(-1);
+            if (e.key === 'ArrowRight') cambiarImagen(1);
         });
 
-        // FUNCIÓN PRINCIPAL MEJORADA - SOLO UNA NOTIFICACIÓN
+        // --- FUNCIÓN DE TOGGLE PARA VARIACIONES ---
+        function toggleVariacion(variacionId) {
+            const opcionSeleccionada = document.querySelector(`.variacion-opcion[data-variacion-id="${variacionId}"]`);
+            
+            // Si ya está seleccionada, se deselecciona
+            if (variacionSeleccionadaId === variacionId) {
+                variacionSeleccionadaId = null;
+                document.querySelectorAll('.variacion-opcion').forEach(op => op.classList.remove('seleccionada'));
+                restaurarProductoOriginal();
+                showSingleToast('Mostrando producto original', 2000);
+            } else {
+                // Seleccionar nueva variación
+                document.querySelectorAll('.variacion-opcion').forEach(op => op.classList.remove('seleccionada'));
+                if (opcionSeleccionada) opcionSeleccionada.classList.add('seleccionada');
+                
+                variacionSeleccionadaId = variacionId;
+                const variacion = variacionesData[variacionId];
+                if (!variacion) return;
+                
+                aplicarDatosVariacion(variacion);
+                showSingleToast('Variación seleccionada: ' + (variacion.atributos_texto?.join(' | ') || ''), 2000);
+            }
+        }
+
+        // --- RESTAURAR DATOS DEL PRODUCTO ORIGINAL ---
+        function restaurarProductoOriginal() {
+            imagenesActuales = productoOriginal.imagenes;
+            actualizarMiniaturas();
+            currentImageIndex = 0;
+            updateMainImage();
+            document.getElementById('total-imagenes').textContent = imagenesActuales.length;
+            
+            document.getElementById('sku-texto').textContent = productoOriginal.sku;
+            
+            // Precio
+            const precioOriginal = document.getElementById('precio-original');
+            const descuentoBadge = document.getElementById('descuento-badge');
+            const precioActual = document.getElementById('precio-actual');
+            
+            if (productoOriginal.tiene_oferta && productoOriginal.precio_oferta > 0 && productoOriginal.precio_oferta < productoOriginal.precio) {
+                const porcentaje = Math.round(((productoOriginal.precio - productoOriginal.precio_oferta) / productoOriginal.precio) * 100);
+                precioOriginal.style.display = 'inline';
+                precioOriginal.textContent = '$' + productoOriginal.precio.toFixed(2);
+                descuentoBadge.style.display = 'inline';
+                descuentoBadge.textContent = '-' + porcentaje + '%';
+                precioActual.textContent = '$' + productoOriginal.precio_oferta.toFixed(2);
+            } else {
+                precioOriginal.style.display = 'none';
+                descuentoBadge.style.display = 'none';
+                precioActual.textContent = '$' + productoOriginal.precio.toFixed(2);
+            }
+            
+            // Stock
+            const stockContainer = document.getElementById('stock-container');
+            const stockTexto = document.getElementById('stock-texto');
+            let stockMensaje = '', stockClase = '';
+            if (productoOriginal.stock > 10) {
+                stockMensaje = `✅ En stock (${productoOriginal.stock} unidades disponibles)`;
+                stockClase = 'stock-bueno';
+            } else if (productoOriginal.stock > 0) {
+                stockMensaje = `⚠️ Stock bajo (Solo ${productoOriginal.stock} unidades disponibles)`;
+                stockClase = 'stock-bajo';
+            } else {
+                stockMensaje = '❌ Sin stock (Próximamente)';
+                stockClase = 'sin-stock';
+            }
+            stockContainer.className = `stock-info-detalle ${stockClase}`;
+            stockTexto.textContent = stockMensaje;
+            
+            // Descripción de variación oculta
+            document.getElementById('variacion-descripcion-container').style.display = 'none';
+            document.getElementById('producto-nombre').textContent = '{{ $producto->vNombre }}';
+        }
+
+        // --- APLICAR DATOS DE UNA VARIACIÓN SELECCIONADA ---
+        function aplicarDatosVariacion(variacion) {
+            imagenesActuales = (variacion.imagenes && variacion.imagenes.length > 0) ? variacion.imagenes : productoOriginal.imagenes;
+            actualizarMiniaturas();
+            currentImageIndex = 0;
+            updateMainImage();
+            document.getElementById('total-imagenes').textContent = imagenesActuales.length;
+            
+            document.getElementById('sku-texto').textContent = variacion.sku;
+            
+            // Precio
+            const precioOriginal = document.getElementById('precio-original');
+            const descuentoBadge = document.getElementById('descuento-badge');
+            const precioActual = document.getElementById('precio-actual');
+            
+            if (variacion.tiene_oferta && variacion.precio_oferta > 0 && variacion.precio_oferta < variacion.precio) {
+                const porcentaje = Math.round(((variacion.precio - variacion.precio_oferta) / variacion.precio) * 100);
+                precioOriginal.style.display = 'inline';
+                precioOriginal.textContent = '$' + variacion.precio.toFixed(2);
+                descuentoBadge.style.display = 'inline';
+                descuentoBadge.textContent = '-' + porcentaje + '%';
+                precioActual.textContent = '$' + variacion.precio_oferta.toFixed(2);
+            } else {
+                precioOriginal.style.display = 'none';
+                descuentoBadge.style.display = 'none';
+                precioActual.textContent = '$' + variacion.precio.toFixed(2);
+            }
+            
+            // Stock
+            const stockContainer = document.getElementById('stock-container');
+            const stockTexto = document.getElementById('stock-texto');
+            let stockMensaje = '', stockClase = '';
+            if (variacion.stock > 10) {
+                stockMensaje = `✅ En stock (${variacion.stock} unidades disponibles)`;
+                stockClase = 'stock-bueno';
+            } else if (variacion.stock > 0) {
+                stockMensaje = `⚠️ Stock bajo (Solo ${variacion.stock} unidades disponibles)`;
+                stockClase = 'stock-bajo';
+            } else {
+                stockMensaje = '❌ Sin stock (Próximamente)';
+                stockClase = 'sin-stock';
+            }
+            stockContainer.className = `stock-info-detalle ${stockClase}`;
+            stockTexto.textContent = stockMensaje;
+            
+            // Descripción de variación
+            const descripcionContainer = document.getElementById('variacion-descripcion-container');
+            const descripcionTexto = document.getElementById('variacion-descripcion-texto');
+            if (variacion.descripcion && variacion.descripcion.trim() !== '') {
+                descripcionTexto.textContent = variacion.descripcion;
+                descripcionContainer.style.display = 'block';
+            } else {
+                descripcionContainer.style.display = 'none';
+            }
+            
+            // Nombre del producto + atributos
+            if (variacion.atributos_texto && variacion.atributos_texto.length > 0) {
+                document.getElementById('producto-nombre').textContent = 
+                    '{{ $producto->vNombre }} - ' + variacion.atributos_texto.join(' | ');
+            }
+        }
+
+        // --- ACTUALIZAR MINIATURAS ---
+        function actualizarMiniaturas() {
+            const miniaturasContainer = document.getElementById('miniaturas-container');
+            if (!miniaturasContainer) return;
+            miniaturasContainer.innerHTML = '';
+            
+            imagenesActuales.forEach((imgUrl, idx) => {
+                const img = document.createElement('img');
+                img.src = imgUrl;
+                img.alt = `Imagen ${idx + 1}`;
+                img.className = `miniatura ${idx === 0 ? 'activa' : ''}`;
+                img.onclick = function() { seleccionarImagen(idx); };
+                img.onerror = function() { this.src = 'https://via.placeholder.com/70x70?text=Error'; };
+                miniaturasContainer.appendChild(img);
+            });
+            
+            document.getElementById('total-imagenes').textContent = imagenesActuales.length;
+            document.getElementById('imagen-actual').textContent = 1;
+        }
+
+        // --- TOGGLE FAVORITOS ---
+        let currentToast = null;
+        let toastTimeout = null;
+
+        function removeExistingToast() {
+            if (currentToast) {
+                currentToast.classList.remove('show');
+                setTimeout(() => {
+                    if (currentToast && currentToast.parentNode) currentToast.parentNode.removeChild(currentToast);
+                    currentToast = null;
+                }, 300);
+            }
+            if (toastTimeout) clearTimeout(toastTimeout);
+            const allToasts = document.querySelectorAll('.toast-notification');
+            allToasts.forEach(toast => {
+                toast.classList.remove('show');
+                setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+            });
+        }
+
+        function showSingleToast(message, duration = 3000) {
+            removeExistingToast();
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification';
+            const emoji = message.includes('✅') ? '✅' : message.includes('❌') ? '❌' : 'ℹ️';
+            const cleanMessage = message.replace('✅', '').replace('❌', '').trim();
+            toast.innerHTML = `<span style="font-size: 20px;">${emoji}</span><span>${cleanMessage}</span>`;
+            document.body.appendChild(toast);
+            currentToast = toast;
+            setTimeout(() => toast.classList.add('show'), 10);
+            toastTimeout = setTimeout(() => {
+                if (currentToast === toast) {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        if (toast.parentNode) toast.parentNode.removeChild(toast);
+                        if (currentToast === toast) currentToast = null;
+                    }, 400);
+                }
+            }, duration);
+        }
+
         function toggleFavoritoDetalle(button, productoId) {
             if (button.disabled) return;
-            
-            // Bloquear botón inmediatamente
             button.disabled = true;
-            
+
             @if(!Auth::check())
                 window.location.href = '{{ route("login") }}?from_favoritos=true&redirect=' + encodeURIComponent(window.location.href);
                 return;
@@ -739,20 +1022,12 @@
             const esFavorito = button.classList.contains('activo');
             const iconSpan = button.querySelector('.btn-icon');
             const textSpan = button.querySelector('.btn-text');
-            
-            // Animación simple
             button.style.transform = 'scale(0.95)';
-            
-            // 1. ELIMINAR NOTIFICACIÓN ANTERIOR SI EXISTE
             removeExistingToast();
-            
+
             fetch(`/favoritos/toggle/${productoId}`, {
                 method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                }
+                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Content-Type': 'application/json', 'Accept': 'application/json' }
             })
             .then(response => {
                 if (response.status === 401) {
@@ -763,22 +1038,16 @@
             })
             .then(data => {
                 if (!data) return;
-                
                 if (data.success) {
                     if (data.action === 'added') {
                         button.classList.add('activo');
                         iconSpan.textContent = '❤️';
                         textSpan.textContent = 'En tu lista de deseos';
-                        
-                        // 2. MOSTRAR SOLO UNA NOTIFICACIÓN - 3 SEGUNDOS PARA AMBOS
                         showSingleToast('Producto agregado a favoritos ✅', 3000);
-                        
                     } else {
                         button.classList.remove('activo');
                         iconSpan.textContent = '🤍';
                         textSpan.textContent = 'Añadir a la lista de deseos';
-                        
-                        // 3. MOSTRAR SOLO UNA NOTIFICACIÓN - 3 SEGUNDOS PARA AMBOS
                         showSingleToast('Producto eliminado de favoritos ❌', 3000);
                     }
                 }
@@ -788,94 +1057,21 @@
                 showSingleToast('Error de conexión ❌', 3000);
             })
             .finally(() => {
-                setTimeout(() => {
-                    button.disabled = false;
-                    button.style.transform = '';
-                }, 300);
+                setTimeout(() => { button.disabled = false; button.style.transform = ''; }, 300);
             });
         }
 
-        // FUNCIÓN PARA ELIMINAR NOTIFICACIONES EXISTENTES
-        function removeExistingToast() {
-            if (currentToast) {
-                currentToast.classList.remove('show');
-                setTimeout(() => {
-                    if (currentToast && currentToast.parentNode) {
-                        currentToast.parentNode.removeChild(currentToast);
-                    }
-                    currentToast = null;
-                }, 300);
-            }
-            
-            if (toastTimeout) {
-                clearTimeout(toastTimeout);
-                toastTimeout = null;
-            }
-            
-            // Eliminar también cualquier otro toast que pueda existir
-            const allToasts = document.querySelectorAll('.toast-notification');
-            allToasts.forEach(toast => {
-                toast.classList.remove('show');
-                setTimeout(() => {
-                    if (toast.parentNode) {
-                        toast.parentNode.removeChild(toast);
-                    }
-                }, 300);
-            });
-        }
-
-        // FUNCIÓN PARA MOSTRAR UNA SOLA NOTIFICACIÓN
-        function showSingleToast(message, duration = 3000) {
-            // 1. Eliminar notificación anterior
-            removeExistingToast();
-            
-            // 2. Crear nueva notificación
-            const toast = document.createElement('div');
-            toast.className = 'toast-notification';
-            toast.innerHTML = `
-                <span style="font-size: 20px;">${message.includes('✅') ? '✅' : '❌'}</span>
-                <span>${message.replace('✅', '').replace('❌', '').trim()}</span>
-            `;
-            
-            document.body.appendChild(toast);
-            currentToast = toast;
-            
-            // 3. Mostrar con animación
-            setTimeout(() => {
-                toast.classList.add('show');
-            }, 10);
-            
-            // 4. Configurar para eliminar después del tiempo especificado (3 SEGUNDOS PARA AMBOS)
-            toastTimeout = setTimeout(() => {
-                if (currentToast === toast) {
-                    toast.classList.remove('show');
-                    setTimeout(() => {
-                        if (toast.parentNode) {
-                            toast.parentNode.removeChild(toast);
-                        }
-                        if (currentToast === toast) {
-                            currentToast = null;
-                        }
-                    }, 400);
-                }
-            }, duration);
-        }
-
-        // Eliminar código redundante de localStorage
-        document.addEventListener('DOMContentLoaded', function() {
-            // Limpiar localStorage al cargar
-            localStorage.removeItem('last_favorito_action');
-            localStorage.removeItem('last_favorito_id');
-            localStorage.removeItem('last_favorito_time');
-            localStorage.removeItem('favorito_removed');
-            localStorage.removeItem('favorito_removed_time');
-            localStorage.removeItem('favorito_added');
-            localStorage.removeItem('favorito_added_time');
-        });
-
+        // --- AGREGAR AL CARRITO (placeholder) ---
         function agregarAlCarrito(productoId) {
             showSingleToast('Producto agregado al carrito 🛒', 3000);
         }
+
+        // --- INICIALIZACIÓN ---
+        document.addEventListener('DOMContentLoaded', function() {
+            if (imagenesActuales.length > 0 && document.getElementById('mainImage')) {
+                document.getElementById('mainImage').src = imagenesActuales[0];
+            }
+        });
     </script>
 </body>
 </html>

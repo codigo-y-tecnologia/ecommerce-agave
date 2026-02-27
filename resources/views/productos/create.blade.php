@@ -203,7 +203,7 @@
                                            id="dPrecio_descuento" 
                                            class="form-control @error('dPrecio_descuento') is-invalid @enderror"
                                            value="{{ old('dPrecio_descuento') }}" 
-                                           oninput="validarPrecio(this); validarPrecioDescuentoProductoInstantaneo(this);"
+                                           oninput="validarPrecio(this); validarPrecioDescuentoProductoInstantaneo(this); actualizarPrecioFinal();"
                                            onblur="validarPrecioDescuentoProducto()"
                                            placeholder="0.00"
                                            autocomplete="off">
@@ -781,8 +781,9 @@
                     <div class="col-md-4">
                         <div class="card bg-white text-dark">
                             <div class="card-body text-center">
-                                <h6 class="text-muted">Precio base (sin impuesto)</h6>
+                                <h6 class="text-muted">Precio base (con descuento aplicado)</h6>
                                 <h3 class="fw-bold" id="precio-base-display">$0.00</h3>
+                                <small class="text-muted" id="precio-original-display" style="display: none;"></small>
                             </div>
                         </div>
                     </div>
@@ -1564,7 +1565,7 @@ let limiteExcedido = false;
 // Variable para almacenar la imagen de categoría seleccionada
 let categoriaImagenFile = null;
 
-// Almacenar imágenes de variaciones
+// Almacenar imágenes de variaciones por pestaña
 let imagenesVariacion = {};
 
 // Inicializar modal cuando el DOM esté listo
@@ -1579,14 +1580,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function actualizarPrecioFinal() {
     const precioVentaInput = document.getElementById('dPrecio_venta');
+    const tieneDescuento = document.getElementById('bTiene_descuento')?.checked;
+    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
     const impuestoSelect = document.getElementById('id_impuesto');
     
     if (!precioVentaInput) return;
     
-    const precioVenta = parseFloat(precioVentaInput.value) || 0;
+    // Determinar qué precio usar (original o con descuento)
+    let precioBase = parseFloat(precioVentaInput.value) || 0;
+    let precioOriginal = precioBase;
     
-    // Mostrar precio base
-    document.getElementById('precio-base-display').textContent = '$' + precioVenta.toFixed(2);
+    if (tieneDescuento && precioDescuentoInput && precioDescuentoInput.value) {
+        const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
+        if (precioDescuento > 0 && precioDescuento < precioBase) {
+            precioBase = precioDescuento;
+        }
+    }
+    
+    // Mostrar precio base (el que se usará para calcular impuestos)
+    document.getElementById('precio-base-display').textContent = '$' + precioBase.toFixed(2);
+    
+    // Mostrar precio original si hay descuento
+    const precioOriginalDisplay = document.getElementById('precio-original-display');
+    if (tieneDescuento && precioBase < precioOriginal) {
+        precioOriginalDisplay.style.display = 'block';
+        precioOriginalDisplay.textContent = 'Precio original: $' + precioOriginal.toFixed(2);
+        precioOriginalDisplay.className = 'text-muted';
+    } else {
+        precioOriginalDisplay.style.display = 'none';
+    }
     
     // Obtener impuesto seleccionado
     let totalImpuestos = 0;
@@ -1596,10 +1618,10 @@ function actualizarPrecioFinal() {
         const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
         porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
         
-        totalImpuestos = precioVenta * (porcentaje / 100);
+        totalImpuestos = precioBase * (porcentaje / 100);
     }
     
-    const precioFinal = precioVenta + totalImpuestos;
+    const precioFinal = precioBase + totalImpuestos;
     
     // Mostrar resultados
     document.getElementById('total-impuestos-display').textContent = '$' + totalImpuestos.toFixed(2);
@@ -1609,6 +1631,53 @@ function actualizarPrecioFinal() {
         document.getElementById('porcentaje-impuestos-display').textContent = porcentaje.toFixed(2) + '%';
     } else {
         document.getElementById('porcentaje-impuestos-display').textContent = '0%';
+    }
+}
+
+function actualizarPrecioFinalVariacion(valorKey) {
+    const precioInput = document.getElementById(`precio-${valorKey}`);
+    const descuentoCheckbox = document.getElementById(`descuento-${valorKey}`);
+    const precioDescuentoInput = document.getElementById(`precio_descuento-${valorKey}`);
+    const impuestoSelect = document.getElementById(`impuesto-${valorKey}`);
+    const precioFinalSpan = document.getElementById(`precio-final-${valorKey}`);
+    const detalleImpuestoSpan = document.getElementById(`detalle-impuesto-${valorKey}`);
+    
+    if (!precioInput || !precioFinalSpan) return;
+    
+    // Determinar qué precio usar (original o con descuento)
+    let precioBase = parseFloat(precioInput.value) || 0;
+    
+    if (descuentoCheckbox && descuentoCheckbox.checked && precioDescuentoInput && precioDescuentoInput.value) {
+        const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
+        if (precioDescuento > 0 && precioDescuento < precioBase) {
+            precioBase = precioDescuento;
+        }
+    }
+    
+    // Obtener impuesto seleccionado
+    let totalImpuestos = 0;
+    let porcentaje = 0;
+    let nombreImpuesto = '';
+    
+    if (impuestoSelect && impuestoSelect.value) {
+        const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
+        porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
+        nombreImpuesto = selectedOption.text.split('(')[0].trim();
+        
+        totalImpuestos = precioBase * (porcentaje / 100);
+    }
+    
+    const precioFinal = precioBase + totalImpuestos;
+    
+    // Mostrar resultados
+    precioFinalSpan.textContent = '$' + precioFinal.toFixed(2);
+    
+    if (detalleImpuestoSpan) {
+        if (porcentaje > 0) {
+            detalleImpuestoSpan.textContent = `${nombreImpuesto}: ${porcentaje.toFixed(2)}% ($${totalImpuestos.toFixed(2)})`;
+        } else {
+            detalleImpuestoSpan.textContent = 'Sin impuesto';
+        }
     }
 }
 
@@ -1642,6 +1711,7 @@ function validarFechasDescuento() {
 function validarFechasDescuentoVariacion(inicioId, finId, valorKey) {
     const fechaInicio = document.getElementById(inicioId);
     const fechaFin = document.getElementById(finId);
+    const errorDiv = document.getElementById(`error-fechas-descuento-${valorKey}`);
     
     if (!fechaInicio || !fechaFin) return true;
     
@@ -1651,22 +1721,12 @@ function validarFechasDescuentoVariacion(inicioId, finId, valorKey) {
         
         if (fin < inicio) {
             fechaFin.classList.add('is-invalid');
-            
-            let errorDiv = fechaFin.parentNode.querySelector('.invalid-feedback');
-            if (!errorDiv) {
-                errorDiv = document.createElement('div');
-                errorDiv.className = 'invalid-feedback';
-                fechaFin.parentNode.appendChild(errorDiv);
-            }
             errorDiv.style.display = 'block';
             errorDiv.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio';
             return false;
         } else {
             fechaFin.classList.remove('is-invalid');
-            let errorDiv = fechaFin.parentNode.querySelector('.invalid-feedback');
-            if (errorDiv) {
-                errorDiv.style.display = 'none';
-            }
+            errorDiv.style.display = 'none';
             return true;
         }
     }
@@ -1714,6 +1774,60 @@ function validarPrecioDescuentoProducto() {
         errorDiv.style.display = 'none';
         return true;
     }
+}
+
+function validarPrecioDescuentoVariacionInstantaneo(input) {
+    const precioNormalId = input.dataset.precioNormalId;
+    const precioNormal = document.getElementById(precioNormalId);
+    const valorKey = input.dataset.valorKey;
+    const checkbox = document.getElementById(`descuento-${valorKey}`);
+    const errorDiv = document.getElementById(`error-precio-descuento-${valorKey}`);
+    
+    if (!checkbox || !checkbox.checked) return true;
+    
+    if (precioNormal && input.value) {
+        const precioNormalValor = parseFloat(precioNormal.value) || 0;
+        const precioDescuentoValor = parseFloat(input.value) || 0;
+        
+        if (precioDescuentoValor >= precioNormalValor && precioDescuentoValor > 0 && input.value !== '') {
+            input.classList.add('is-invalid');
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio normal';
+            return false;
+        } else {
+            input.classList.remove('is-invalid');
+            errorDiv.style.display = 'none';
+            return true;
+        }
+    }
+    return true;
+}
+
+function validarPrecioDescuentoVariacion(input) {
+    const precioNormalId = input.dataset.precioNormalId;
+    const precioNormal = document.getElementById(precioNormalId);
+    const valorKey = input.dataset.valorKey;
+    const checkbox = document.getElementById(`descuento-${valorKey}`);
+    const errorDiv = document.getElementById(`error-precio-descuento-${valorKey}`);
+    
+    if (!checkbox || !checkbox.checked) return true;
+    
+    if (precioNormal && input.value) {
+        const precioNormalValor = parseFloat(precioNormal.value) || 0;
+        const precioDescuentoValor = parseFloat(input.value) || 0;
+        
+        if (precioDescuentoValor >= precioNormalValor && precioDescuentoValor > 0) {
+            input.classList.add('is-invalid');
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio normal';
+            return false;
+        } else {
+            input.classList.remove('is-invalid');
+            errorDiv.style.display = 'none';
+            return true;
+        }
+    }
+    return true;
 }
 
 function validarDimension(input, maxDecimales, maxValor) {
@@ -1953,7 +2067,10 @@ function toggleDescuentoFields() {
         fechaInicio.required = true;
         fechaFin.required = true;
         
-        setTimeout(() => validarPrecioDescuentoProducto(), 100);
+        setTimeout(() => {
+            validarPrecioDescuentoProducto();
+            actualizarPrecioFinal();
+        }, 100);
     } else {
         descuentoFields.style.display = 'none';
         precioDescuento.required = false;
@@ -1964,6 +2081,40 @@ function toggleDescuentoFields() {
         document.getElementById('error-precio-descuento').style.display = 'none';
         fechaFin.classList.remove('is-invalid');
         document.getElementById('error-fechas-descuento').style.display = 'none';
+        
+        actualizarPrecioFinal();
+    }
+}
+
+function toggleDescuentoVariacion(checkbox, valorKey) {
+    const fields = document.querySelector(`.descuento-fields-${valorKey}`);
+    const precioDescuento = document.getElementById(`precio_descuento-${valorKey}`);
+    const fechaInicio = document.getElementById(`fecha-inicio-${valorKey}`);
+    const fechaFin = document.getElementById(`fecha-fin-${valorKey}`);
+    const errorDiv = document.getElementById(`error-precio-descuento-${valorKey}`);
+    
+    if (checkbox.checked) {
+        fields.style.display = 'block';
+        precioDescuento.required = true;
+        fechaInicio.required = true;
+        fechaFin.required = true;
+        
+        setTimeout(() => {
+            validarPrecioDescuentoVariacion(precioDescuento);
+            actualizarPrecioFinalVariacion(valorKey);
+        }, 100);
+    } else {
+        fields.style.display = 'none';
+        precioDescuento.required = false;
+        fechaInicio.required = false;
+        fechaFin.required = false;
+        
+        precioDescuento.classList.remove('is-invalid');
+        if (errorDiv) errorDiv.style.display = 'none';
+        fechaFin.classList.remove('is-invalid');
+        document.getElementById(`error-fechas-descuento-${valorKey}`).style.display = 'none';
+        
+        actualizarPrecioFinalVariacion(valorKey);
     }
 }
 
@@ -2758,8 +2909,8 @@ function actualizarPestanasValores() {
         Object.values(atributo.valores).forEach(valor => {
             todosLosValores.push({
                 ...valor,
-                atributoNombre: atributo.nombre,
-                atributoId: atributo.id
+                atributoId: atributo.id,
+                atributoNombre: atributo.nombre
             });
         });
     });
@@ -2804,7 +2955,7 @@ function actualizarPestanasValores() {
         icon.className = 'fas fa-cube me-1';
         tabButton.appendChild(icon);
         
-        tabButton.appendChild(document.createTextNode(' ' + valor.atributoNombre + ': ' + valor.nombre));
+        tabButton.appendChild(document.createTextNode(' ' + valor.nombre));
         
         tabItem.appendChild(tabButton);
         navTabs.appendChild(tabItem);
@@ -2829,7 +2980,8 @@ function actualizarPestanasValores() {
                         <div class="col-md-8">
                             <h6 class="fw-bold mb-2">
                                 <i class="fas fa-cube me-2"></i>
-                                Variación: <span class="text-warning">${valor.atributoNombre}: ${valor.nombre}</span>
+                                Variación: <span class="text-warning">${valor.nombre}</span>
+                                <small class="d-block text-white-50 mt-1">Atributo: ${valor.atributoNombre}</small>
                             </h6>
                             <p class="small mb-0 opacity-75">
                                 <i class="fas fa-info-circle me-1"></i>
@@ -2839,7 +2991,7 @@ function actualizarPestanasValores() {
                         <div class="col-md-4 text-end">
                             <span class="badge bg-white text-dark p-2">
                                 <i class="fas fa-barcode me-1"></i>
-                                ID: ${valor.atributoNombre.substring(0,3)}-${valor.nombre.substring(0,3)}
+                                SKU: ${skuSugerido}
                             </span>
                         </div>
                     </div>
@@ -2915,7 +3067,7 @@ function actualizarPestanasValores() {
                                            class="form-control"
                                            multiple
                                            accept="image/jpeg,image/jpg,image/png,image/webp"
-                                           onchange="handleImagenesAdicionalesVariacion(this, 'container_adicionales_${valorKey}', 'count_adicionales_${valorKey}')">
+                                           onchange="handleImagenesAdicionalesVariacion(event, '${valorKey}')">
                                     <small class="form-text text-muted">
                                         JPG, JPEG, PNG, WEBP. Máx: 5MB c/u
                                     </small>
@@ -2995,7 +3147,7 @@ function actualizarPestanasValores() {
                                        class="form-control"
                                        value=""
                                        required
-                                       oninput="validarPrecio(this)"
+                                       oninput="validarPrecio(this); actualizarPrecioFinalVariacion('${valorKey}')"
                                        placeholder="0.00"
                                        title="Máximo: 9,999,999.99"
                                        autocomplete="off">
@@ -3042,6 +3194,53 @@ function actualizarPestanasValores() {
                                 <option value="grandes_dimensiones">Grandes dimensiones</option>
                             </select>
                             <small class="form-text text-muted">Dejar vacío para heredar del producto</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN DE IMPUESTO PARA LA VARIACIÓN -->
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="card border">
+                            <div class="card-header bg-light py-2">
+                                <h6 class="mb-0"><i class="fas fa-file-invoice-dollar me-2"></i>Impuesto para la Variación</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="form-group mb-3">
+                                            <label for="impuesto-${valorKey}" class="form-label fw-bold">
+                                                Impuesto Aplicable
+                                            </label>
+                                            <select name="variaciones[${valorKey}][id_impuesto]" 
+                                                    id="impuesto-${valorKey}" 
+                                                    class="form-select"
+                                                    onchange="actualizarPrecioFinalVariacion('${valorKey}')">
+                                                <option value="">-- Sin impuesto (heredar del producto) --</option>
+                                                @if(isset($impuestos) && $impuestos->count() > 0)
+                                                    @foreach($impuestos as $impuesto)
+                                                        <option value="{{ $impuesto->id_impuesto }}" 
+                                                                data-porcentaje="{{ $impuesto->dPorcentaje }}"
+                                                                data-tipo="{{ $impuesto->eTipo }}">
+                                                            {{ $impuesto->vNombre }} ({{ $impuesto->eTipo }} - {{ number_format($impuesto->dPorcentaje, 2) }}%)
+                                                        </option>
+                                                    @endforeach
+                                                @endif
+                                            </select>
+                                            <small class="form-text text-muted">
+                                                Selecciona un impuesto específico para esta variación. Si no seleccionas, se usará el impuesto del producto.
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="bg-light p-3 rounded text-center">
+                                            <small class="text-muted d-block">Precio con impuesto</small>
+                                            <h5 class="fw-bold mb-0" id="precio-final-${valorKey}">$0.00</h5>
+                                            <small class="text-muted" id="detalle-impuesto-${valorKey}"></small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3122,72 +3321,112 @@ function actualizarPestanasValores() {
                     </div>
                 </div>
 
+                <!-- DESCUENTO ESPECIAL DE LA VARIACIÓN -->
                 <div class="row mb-3">
                     <div class="col-md-12">
-                        <div class="card bg-light border">
-                            <div class="card-body py-2">
-                                <div class="row align-items-center">
-                                    <div class="col-md-4">
-                                        <div class="form-check form-switch">
-                                            <input type="checkbox" 
-                                                   name="variaciones[${valorKey}][bTiene_descuento]" 
-                                                   id="descuento-${valorKey}" 
-                                                   class="form-check-input" 
-                                                   value="1"
-                                                   onchange="toggleDescuentoVariacion(this, '${valorKey}')">
-                                            <label class="form-check-label fw-bold" for="descuento-${valorKey}">
-                                                <i class="fas fa-percentage me-1"></i>
-                                                Activar descuento para esta variación
+                        <div class="card border">
+                            <div class="card-header bg-light py-2">
+                                <h6 class="mb-0"><i class="fas fa-percentage me-2"></i>Descuento Especial de la Variación</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label class="form-label fw-bold">
+                                                <i class="fas fa-percentage me-1"></i>Descuento Especial
                                             </label>
+                                            <div class="form-check form-switch">
+                                                <input type="checkbox" 
+                                                       name="variaciones[${valorKey}][bTiene_descuento]" 
+                                                       id="descuento-${valorKey}" 
+                                                       class="form-check-input" 
+                                                       value="1"
+                                                       onchange="toggleDescuentoVariacion(this, '${valorKey}')">
+                                                <label class="form-check-label" for="descuento-${valorKey}">
+                                                    Activar Descuento para esta variación
+                                                </label>
+                                            </div>
+                                            <small class="form-text text-muted">
+                                                Permite establecer un precio de descuento por tiempo limitado
+                                            </small>
                                         </div>
-                                        <small class="text-muted d-block mt-1">
-                                            Precio especial por tiempo limitado
-                                        </small>
                                     </div>
-                                    <div class="col-md-8">
-                                        <div class="row descuento-fields-${valorKey}" style="display: none;">
-                                            <div class="col-md-4 mb-2 mb-md-0">
-                                                <div class="input-group input-group-sm">
+                                </div>
+
+                                <!-- CAMPOS DE DESCUENTO (OCULTOS INICIALMENTE) -->
+                                <div class="descuento-fields-${valorKey}" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-group mb-3">
+                                                <label for="precio_descuento-${valorKey}" class="form-label fw-bold">
+                                                    Precio de Descuento <span class="text-danger">*</span>
+                                                </label>
+                                                <div class="input-group">
                                                     <span class="input-group-text">$</span>
                                                     <input type="text" 
                                                            name="variaciones[${valorKey}][dPrecio_descuento]" 
+                                                           id="precio_descuento-${valorKey}"
                                                            class="form-control variacion-precio-descuento"
                                                            data-precio-normal-id="precio-${valorKey}"
                                                            data-valor-key="${valorKey}"
                                                            value=""
-                                                           oninput="validarPrecio(this); validarPrecioDescuentoVariacionInstantaneo(this);"
+                                                           oninput="validarPrecio(this); validarPrecioDescuentoVariacionInstantaneo(this); actualizarPrecioFinalVariacion('${valorKey}')"
                                                            onblur="validarPrecioDescuentoVariacion(this)"
-                                                           placeholder="Precio descuento"
+                                                           placeholder="0.00"
                                                            autocomplete="off">
                                                 </div>
-                                                <div class="invalid-feedback" style="display: none;"></div>
+                                                <div id="error-precio-descuento-${valorKey}" class="invalid-feedback" style="display: none;"></div>
+                                                <small class="form-text text-muted">Debe ser menor al precio de venta</small>
                                             </div>
-                                            <div class="col-md-3 mb-2 mb-md-0">
+                                        </div>
+                                        
+                                        <div class="col-md-4">
+                                            <div class="form-group mb-3">
+                                                <label for="fecha-inicio-${valorKey}" class="form-label fw-bold">
+                                                    Fecha inicio <span class="text-danger">*</span>
+                                                </label>
                                                 <input type="date" 
                                                        name="variaciones[${valorKey}][dFecha_inicio_descuento]" 
-                                                       class="form-control form-control-sm fecha-inicio-${valorKey}"
+                                                       class="form-control fecha-inicio-${valorKey}"
                                                        id="fecha-inicio-${valorKey}"
                                                        value=""
                                                        onchange="validarFechasDescuentoVariacion('fecha-inicio-${valorKey}', 'fecha-fin-${valorKey}', '${valorKey}')"
                                                        autocomplete="off">
                                             </div>
-                                            <div class="col-md-3 mb-2 mb-md-0">
+                                        </div>
+                                        
+                                        <div class="col-md-4">
+                                            <div class="form-group mb-3">
+                                                <label for="fecha-fin-${valorKey}" class="form-label fw-bold">
+                                                    Fecha fin <span class="text-danger">*</span>
+                                                </label>
                                                 <input type="date" 
                                                        name="variaciones[${valorKey}][dFecha_fin_descuento]" 
-                                                       class="form-control form-control-sm fecha-fin-${valorKey}"
+                                                       class="form-control fecha-fin-${valorKey}"
                                                        id="fecha-fin-${valorKey}"
                                                        value=""
                                                        onchange="validarFechasDescuentoVariacion('fecha-inicio-${valorKey}', 'fecha-fin-${valorKey}', '${valorKey}')"
                                                        autocomplete="off">
+                                                <div id="error-fechas-descuento-${valorKey}" class="invalid-feedback" style="display: none;"></div>
                                             </div>
-                                            <div class="col-md-2">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="form-group mb-3">
+                                                <label for="motivo-${valorKey}" class="form-label fw-bold">
+                                                    Motivo del descuento
+                                                </label>
                                                 <input type="text" 
                                                        name="variaciones[${valorKey}][vMotivo_descuento]" 
-                                                       class="form-control form-control-sm"
+                                                       id="motivo-${valorKey}"
+                                                       class="form-control"
                                                        value=""
-                                                       placeholder="Motivo"
                                                        maxlength="255"
+                                                       placeholder="Ej: Liquidación de temporada, Black Friday, etc."
                                                        autocomplete="off">
+                                                <small class="form-text text-muted">Opcional</small>
                                             </div>
                                         </div>
                                     </div>
@@ -3232,100 +3471,6 @@ function generarSkuSugerido(productoSku, combinacion) {
         sku += `-${attrCode}${valCode}`;
     });
     return sku;
-}
-
-function toggleDescuentoVariacion(checkbox, valorKey) {
-    const fields = document.querySelector(`.descuento-fields-${valorKey}`);
-    const precioDescuento = fields.querySelector('.variacion-precio-descuento');
-    const fechaInicio = document.getElementById(`fecha-inicio-${valorKey}`);
-    const fechaFin = document.getElementById(`fecha-fin-${valorKey}`);
-    
-    if (checkbox.checked) {
-        fields.style.display = 'flex';
-        precioDescuento.required = true;
-        fechaInicio.required = true;
-        fechaFin.required = true;
-    } else {
-        fields.style.display = 'none';
-        precioDescuento.required = false;
-        fechaInicio.required = false;
-        fechaFin.required = false;
-        precioDescuento.classList.remove('is-invalid');
-        
-        if (fechaFin) {
-            fechaFin.classList.remove('is-invalid');
-            const errorDiv = fechaFin.parentNode.querySelector('.invalid-feedback');
-            if (errorDiv) {
-                errorDiv.style.display = 'none';
-            }
-        }
-    }
-}
-
-function validarPrecioDescuentoVariacionInstantaneo(input) {
-    const precioNormalId = input.dataset.precioNormalId;
-    const precioNormal = document.getElementById(precioNormalId);
-    const valorKey = input.dataset.valorKey;
-    const checkbox = document.getElementById(`descuento-${valorKey}`);
-    
-    if (!checkbox || !checkbox.checked) return true;
-    
-    if (precioNormal && input.value) {
-        const precioNormalValor = parseFloat(precioNormal.value) || 0;
-        const precioDescuentoValor = parseFloat(input.value) || 0;
-        
-        let errorDiv = input.closest('.col-md-4').querySelector('.invalid-feedback');
-        if (!errorDiv) {
-            errorDiv = document.createElement('div');
-            errorDiv.className = 'invalid-feedback';
-            input.closest('.col-md-4').appendChild(errorDiv);
-        }
-        
-        if (precioDescuentoValor >= precioNormalValor && precioDescuentoValor > 0 && input.value !== '') {
-            input.classList.add('is-invalid');
-            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio normal';
-            errorDiv.style.display = 'block';
-            return false;
-        } else {
-            input.classList.remove('is-invalid');
-            errorDiv.style.display = 'none';
-            return true;
-        }
-    }
-    return true;
-}
-
-function validarPrecioDescuentoVariacion(input) {
-    const precioNormalId = input.dataset.precioNormalId;
-    const precioNormal = document.getElementById(precioNormalId);
-    const valorKey = input.dataset.valorKey;
-    const checkbox = document.getElementById(`descuento-${valorKey}`);
-    
-    if (!checkbox || !checkbox.checked) return true;
-    
-    if (precioNormal && input.value) {
-        const precioNormalValor = parseFloat(precioNormal.value) || 0;
-        const precioDescuentoValor = parseFloat(input.value) || 0;
-        
-        let errorDiv = input.closest('.col-md-4').querySelector('.invalid-feedback');
-        if (!errorDiv) {
-            errorDiv = document.createElement('div');
-            errorDiv.className = 'invalid-feedback';
-            input.closest('.col-md-4').appendChild(errorDiv);
-        }
-        
-        if (precioDescuentoValor >= precioNormalValor && precioDescuentoValor > 0) {
-            input.classList.add('is-invalid');
-            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio normal';
-            errorDiv.style.display = 'block';
-            return false;
-        } else {
-            input.classList.remove('is-invalid');
-            errorDiv.style.display = 'none';
-            return true;
-        }
-    }
-    return true;
 }
 
 // ============ FUNCIONES PARA IMÁGENES DE VARIACIONES ============
@@ -3407,53 +3552,141 @@ function previewGifVariacion(input, previewId) {
     }
 }
 
-function handleImagenesAdicionalesVariacion(input, containerId, countId) {
-    const container = document.getElementById(containerId);
-    const countSpan = document.getElementById(countId);
+function handleImagenesAdicionalesVariacion(event, valorKey) {
+    const input = event.target;
+    const container = document.getElementById(`container_adicionales_${valorKey}`);
+    const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
     
     if (!container || !countSpan) return;
     
-    const files = input.files;
+    const files = Array.from(input.files);
     const maxFiles = 7;
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     
-    container.innerHTML = '';
-    let archivosValidos = 0;
+    // Inicializar el array para esta variación si no existe
+    if (!imagenesVariacion[valorKey]) {
+        imagenesVariacion[valorKey] = {
+            imagenes: []
+        };
+    }
     
-    for (let i = 0; i < Math.min(files.length, maxFiles); i++) {
-        const file = files[i];
-        
+    // Validar límite
+    if (imagenesVariacion[valorKey].imagenes.length + files.length > maxFiles) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de imágenes',
+            text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales. Ya tienes ${imagenesVariacion[valorKey].imagenes.length} seleccionadas.`
+        });
+        input.value = '';
+        return;
+    }
+    
+    // Procesar cada archivo
+    files.forEach(file => {
         if (!validTypes.includes(file.type)) {
-            continue;
+            Swal.fire({
+                icon: 'warning',
+                title: 'Formato no válido',
+                text: `El archivo "${file.name}" no es un formato válido. Formatos aceptados: JPG, JPEG, PNG, WEBP.`
+            });
+            return;
         }
         
         if (file.size > 5 * 1024 * 1024) {
-            continue;
+            Swal.fire({
+                icon: 'warning',
+                title: 'Archivo demasiado grande',
+                text: `La imagen "${file.name}" excede el límite de 5MB.`
+            });
+            return;
         }
         
-        archivosValidos++;
+        // Crear objeto de imagen
+        const imageId = 'var_img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const preview = URL.createObjectURL(file);
         
-        const reader = new FileReader();
+        imagenesVariacion[valorKey].imagenes.push({
+            id: imageId,
+            file: file,
+            preview: preview,
+            name: file.name,
+            size: file.size
+        });
+    });
+    
+    // Renderizar las imágenes
+    renderImagenesAdicionalesVariacion(valorKey);
+    
+    // Actualizar contador
+    countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
+    
+    // Limpiar el input para permitir seleccionar los mismos archivos nuevamente
+    input.value = '';
+}
+
+function renderImagenesAdicionalesVariacion(valorKey) {
+    const container = document.getElementById(`container_adicionales_${valorKey}`);
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (!imagenesVariacion[valorKey] || imagenesVariacion[valorKey].imagenes.length === 0) {
+        container.innerHTML = '<div class="col-12 text-muted small">No hay imágenes seleccionadas</div>';
+        return;
+    }
+    
+    imagenesVariacion[valorKey].imagenes.forEach((img, index) => {
         const col = document.createElement('div');
         col.className = 'col-4 col-md-3 mb-2';
         
-        reader.onload = function(e) {
-            col.innerHTML = `
-                <div class="border rounded p-1 text-center bg-light">
-                    <img src="${e.target.result}" class="img-fluid" style="height: 60px; object-fit: contain;">
-                    <small class="d-block text-truncate">${file.name.substring(0, 10)}...</small>
-                </div>
-            `;
+        const card = document.createElement('div');
+        card.className = 'border rounded p-1 text-center bg-light position-relative';
+        
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1';
+        btn.style.cssText = 'width: 20px; height: 20px; padding: 0; border-radius: 50%; font-size: 10px;';
+        btn.onclick = function(e) {
+            e.preventDefault();
+            eliminarImagenAdicionalVariacion(valorKey, img.id);
         };
         
-        reader.readAsDataURL(file);
+        const btnIcon = document.createElement('i');
+        btnIcon.className = 'fas fa-times';
+        btn.appendChild(btnIcon);
+        
+        const imgElement = document.createElement('img');
+        imgElement.src = img.preview;
+        imgElement.className = 'img-fluid';
+        imgElement.style.cssText = 'height: 60px; object-fit: contain;';
+        
+        const small = document.createElement('small');
+        small.className = 'd-block text-truncate';
+        small.textContent = img.name.length > 10 ? img.name.substring(0, 10) + '...' : img.name;
+        
+        card.appendChild(btn);
+        card.appendChild(imgElement);
+        card.appendChild(small);
+        col.appendChild(card);
         container.appendChild(col);
-    }
-    
-    countSpan.textContent = archivosValidos + ' seleccionadas';
-    
-    if (archivosValidos === 0) {
-        container.innerHTML = '<div class="col-12 text-muted small">No se seleccionaron imágenes válidas</div>';
+    });
+}
+
+function eliminarImagenAdicionalVariacion(valorKey, imageId) {
+    if (imagenesVariacion[valorKey]) {
+        const image = imagenesVariacion[valorKey].imagenes.find(img => img.id === imageId);
+        if (image && image.preview) {
+            URL.revokeObjectURL(image.preview);
+        }
+        
+        imagenesVariacion[valorKey].imagenes = imagenesVariacion[valorKey].imagenes.filter(img => img.id !== imageId);
+        
+        renderImagenesAdicionalesVariacion(valorKey);
+        
+        const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
+        if (countSpan) {
+            countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
+        }
     }
 }
 
@@ -4185,8 +4418,15 @@ document.addEventListener('DOMContentLoaded', function() {
             if (document.getElementById('bTiene_descuento')?.checked) {
                 validarPrecioDescuentoProducto();
             }
+            actualizarPrecioFinal();
         });
     }
+    
+    document.getElementById('dPrecio_descuento')?.addEventListener('input', function() {
+        actualizarPrecioFinal();
+    });
+    
+    document.getElementById('id_impuesto')?.addEventListener('change', actualizarPrecioFinal);
     
     if (document.getElementById('bTiene_descuento')) {
         if (document.getElementById('bTiene_descuento').checked) {
@@ -4207,8 +4447,21 @@ document.addEventListener('DOMContentLoaded', function() {
     actualizarPestanasValores();
     actualizarContadorImagenes();
     actualizarPrecioFinal();
-
-    document.getElementById('id_impuesto')?.addEventListener('change', actualizarPrecioFinal);
+    
+    // Delegación de eventos para los selects de impuestos de variaciones
+    document.addEventListener('change', function(e) {
+        if (e.target.id && e.target.id.startsWith('impuesto-')) {
+            const valorKey = e.target.id.replace('impuesto-', '');
+            actualizarPrecioFinalVariacion(valorKey);
+        }
+    });
+    
+    document.addEventListener('input', function(e) {
+        if (e.target.id && e.target.id.startsWith('precio-') && !e.target.id.startsWith('precio_descuento-')) {
+            const valorKey = e.target.id.replace('precio-', '');
+            actualizarPrecioFinalVariacion(valorKey);
+        }
+    });
     
     const productoForm = document.getElementById('productoForm');
     if (productoForm) {

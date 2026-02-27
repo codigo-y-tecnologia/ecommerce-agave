@@ -12,8 +12,8 @@ class ProductoVariacion extends Model
 
     protected $table = 'tbl_producto_variaciones';
     protected $primaryKey = 'id_variacion';
-
-    // Desactivar timestamps
+    
+    // Desactivar timestamps de Laravel porque usamos campos personalizados
     public $timestamps = false;
 
     protected $fillable = [
@@ -22,108 +22,214 @@ class ProductoVariacion extends Model
         'vCodigo_barras',
         'vNombre_variacion',
         'dPrecio',
-        'dPrecio_adicional',
-        'iStock_variacion',
+        'dPrecio_oferta',
+        'dFecha_inicio_oferta',
+        'dFecha_fin_oferta',
+        'vMotivo_oferta',
+        'bTiene_oferta',
+        'iStock',
         'dPeso',
+        'dLargo_cm',
+        'dAncho_cm',
+        'dAlto_cm',
         'vClase_envio',
         'tDescripcion',
         'vImagen',
         'bActivo',
+        'id_impuesto', // NUEVO CAMPO
         'tFecha_registro',
         'tFecha_actualizacion'
     ];
 
     protected $casts = [
-        'bActivo' => 'boolean',
         'dPrecio' => 'decimal:2',
-        'dPrecio_adicional' => 'decimal:2',
-        'iStock_variacion' => 'integer',
-        'dPeso' => 'decimal:2',
+        'dPrecio_oferta' => 'decimal:2',
+        'iStock' => 'integer',
+        'bTiene_oferta' => 'boolean',
+        'bActivo' => 'boolean',
+        'dPeso' => 'decimal:3',
+        'dLargo_cm' => 'decimal:2',
+        'dAncho_cm' => 'decimal:2',
+        'dAlto_cm' => 'decimal:2',
         'tFecha_registro' => 'datetime',
         'tFecha_actualizacion' => 'datetime'
     ];
 
-    // ============ MÉTODOS PARA IMÁGENES MÚLTIPLES ============
-
-    /**
-     * Guardar imagen principal (reemplaza la imagen existente)
-     */
-    public function guardarImagenPrincipal($imagen)
+    protected static function boot()
     {
-        $carpeta = 'variaciones/' . $this->id_variacion;
-        
-        if (!Storage::disk('public')->exists($carpeta)) {
-            Storage::disk('public')->makeDirectory($carpeta);
-        }
-        
-        // Eliminar imagen anterior si existe
-        if ($this->vImagen) {
-            $rutaAnterior = str_replace('/storage/', '', $this->vImagen);
-            if (Storage::disk('public')->exists($rutaAnterior)) {
-                Storage::disk('public')->delete($rutaAnterior);
-            }
-        }
-        
-        $extension = $imagen->getClientOriginalExtension();
-        $nombreArchivo = 'principal_' . time() . '.' . $extension;
-        $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
-        
-        $this->vImagen = '/storage/' . $ruta;
-        $this->saveQuietly();
-        
-        return $this->vImagen;
-    }
+        parent::boot();
 
-    /**
-     * Guardar GIF (se guarda en la misma carpeta pero con nombre gif_)
-     */
-    public function guardarGif($gif)
-    {
-        $carpeta = 'variaciones/' . $this->id_variacion;
-        
-        if (!Storage::disk('public')->exists($carpeta)) {
-            Storage::disk('public')->makeDirectory($carpeta);
-        }
-        
-        $extension = $gif->getClientOriginalExtension();
-        $nombreArchivo = 'gif_' . time() . '.' . $extension;
-        $ruta = $gif->storeAs($carpeta, $nombreArchivo, 'public');
-        
-        // Guardamos la ruta del GIF (no hay campo en BD, se buscará por patrón)
-        return '/storage/' . $ruta;
-    }
-
-    /**
-     * Guardar imágenes adicionales
-     */
-    public function guardarImagenesAdicionales($imagenes)
-    {
-        $carpeta = 'variaciones/' . $this->id_variacion . '/adicionales';
-        
-        if (!Storage::disk('public')->exists($carpeta)) {
-            Storage::disk('public')->makeDirectory($carpeta);
-        }
-        
-        $imagenesGuardadas = [];
-        $imagenesExistentes = Storage::disk('public')->files($carpeta);
-        $numeroInicio = count($imagenesExistentes);
-        
-        foreach ($imagenes as $index => $imagen) {
-            if ($numeroInicio + $index >= 7) {
-                break; // Máximo 7 imágenes adicionales
+        static::creating(function ($variacion) {
+            if (empty($variacion->tFecha_registro)) {
+                $variacion->tFecha_registro = now();
             }
             
-            $extension = $imagen->getClientOriginalExtension();
-            $nombreArchivo = 'imagen_' . ($numeroInicio + $index + 1) . '_' . time() . '.' . $extension;
-            $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
-            $imagenesGuardadas[] = '/storage/' . $ruta;
-        }
+            // Si no tiene SKU, generar uno basado en el producto y atributos
+            if (empty($variacion->vSKU)) {
+                $producto = $variacion->producto;
+                if ($producto) {
+                    $variacion->vSKU = $producto->vCodigo_barras . '-VAR-' . uniqid();
+                }
+            }
+        });
+
+        static::updating(function ($variacion) {
+            $variacion->tFecha_actualizacion = now();
+        });
         
-        return $imagenesGuardadas;
+        static::deleting(function ($variacion) {
+            $variacion->eliminarTodasLasImagenes();
+            $variacion->atributos()->delete();
+        });
+    }
+
+    // ============ RELACIONES ============
+
+    public function producto()
+    {
+        return $this->belongsTo(Producto::class, 'id_producto');
+    }
+
+    public function atributos()
+    {
+        return $this->hasMany(VariacionAtributo::class, 'id_variacion');
     }
 
     /**
-     * Obtener URL del GIF si existe
+     * Relación con impuesto (una variación puede tener un impuesto)
+     */
+    public function impuesto()
+    {
+        return $this->belongsTo(Impuesto::class, 'id_impuesto');
+    }
+
+    // ============ MÉTODOS DE OFERTA/DESCUENTO ============
+
+    /**
+     * Verificar si la oferta está vigente
+     */
+    public function ofertaVigente()
+    {
+        if (!$this->bTiene_oferta || !$this->dPrecio_oferta) {
+            return false;
+        }
+        
+        $fechaActual = now()->toDateString();
+        
+        if ($this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
+            return $fechaActual >= $this->dFecha_inicio_oferta && 
+                   $fechaActual <= $this->dFecha_fin_oferta;
+        }
+        
+        return $this->bTiene_oferta;
+    }
+
+    /**
+     * Obtener el precio actual (normal o de oferta si está vigente)
+     */
+    public function getPrecioActualAttribute()
+    {
+        if ($this->ofertaVigente()) {
+            return $this->dPrecio_oferta;
+        }
+        return $this->dPrecio;
+    }
+
+    /**
+     * Obtener el porcentaje de descuento
+     */
+    public function getPorcentajeDescuentoAttribute()
+    {
+        if ($this->ofertaVigente() && $this->dPrecio_oferta < $this->dPrecio) {
+            $descuento = (($this->dPrecio - $this->dPrecio_oferta) / $this->dPrecio) * 100;
+            return round($descuento);
+        }
+        return 0;
+    }
+
+    /**
+     * Verificar si tiene descuento activo
+     */
+    public function tieneDescuentoActivo()
+    {
+        return $this->ofertaVigente();
+    }
+
+    // ============ MÉTODOS DE IMPUESTOS ============
+
+    /**
+     * Calcular el precio final con impuesto incluido
+     */
+    public function getPrecioFinalAttribute()
+    {
+        $precioBase = $this->precio_actual;
+        $totalImpuestos = 0;
+        
+        if ($this->impuesto && $this->impuesto->bActivo) {
+            $totalImpuestos = $precioBase * ($this->impuesto->dPorcentaje / 100);
+        }
+        
+        return $precioBase + $totalImpuestos;
+    }
+
+    /**
+     * Obtener el total de impuesto aplicado
+     */
+    public function getTotalImpuestoAttribute()
+    {
+        if ($this->impuesto && $this->impuesto->bActivo) {
+            return $this->precio_actual * ($this->impuesto->dPorcentaje / 100);
+        }
+        return 0;
+    }
+
+    /**
+     * Obtener el porcentaje de impuesto
+     */
+    public function getPorcentajeImpuestoAttribute()
+    {
+        return $this->impuesto ? $this->impuesto->dPorcentaje : 0;
+    }
+
+    /**
+     * Obtener el nombre del impuesto
+     */
+    public function getNombreImpuestoAttribute()
+    {
+        return $this->impuesto ? $this->impuesto->vNombre : 'Sin impuesto';
+    }
+
+    // ============ ACCESORES PARA IMÁGENES ============
+
+    /**
+     * Obtener la URL de la imagen principal de la variación
+     */
+    public function getImagenPrincipalAttribute()
+    {
+        if ($this->vImagen) {
+            // Si ya tiene una imagen guardada en el campo vImagen
+            return Storage::url($this->vImagen);
+        }
+        
+        // Buscar en la carpeta específica de la variación
+        $carpeta = 'variaciones/' . $this->id_variacion;
+        
+        if (Storage::disk('public')->exists($carpeta)) {
+            $archivos = Storage::disk('public')->files($carpeta);
+            
+            // Buscar archivo que comience con 'principal_'
+            foreach ($archivos as $archivo) {
+                if (strpos($archivo, 'principal_') !== false) {
+                    return Storage::url($archivo);
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Obtener la URL del GIF de la variación
      */
     public function getGifUrlAttribute()
     {
@@ -134,7 +240,7 @@ class ProductoVariacion extends Model
             
             foreach ($archivos as $archivo) {
                 if (strpos($archivo, 'gif_') !== false) {
-                    return '/storage/' . $archivo;
+                    return Storage::url($archivo);
                 }
             }
         }
@@ -143,20 +249,22 @@ class ProductoVariacion extends Model
     }
 
     /**
-     * Obtener imágenes adicionales
+     * Obtener todas las imágenes adicionales de la variación
      */
     public function getImagenesAdicionalesAttribute()
     {
-        $carpeta = 'variaciones/' . $this->id_variacion . '/adicionales';
+        $carpetaAdicionales = 'variaciones/' . $this->id_variacion . '/adicionales';
         $imagenes = [];
         
-        if (Storage::disk('public')->exists($carpeta)) {
-            $archivos = Storage::disk('public')->files($carpeta);
+        if (Storage::disk('public')->exists($carpetaAdicionales)) {
+            $archivos = Storage::disk('public')->files($carpetaAdicionales);
+            
+            // Ordenar por nombre
             sort($archivos);
             
             foreach ($archivos as $archivo) {
                 if (preg_match('/\.(jpg|jpeg|png|webp)$/i', $archivo)) {
-                    $imagenes[] = '/storage/' . $archivo;
+                    $imagenes[] = Storage::url($archivo);
                 }
             }
         }
@@ -165,53 +273,144 @@ class ProductoVariacion extends Model
     }
 
     /**
-     * Obtener todas las imágenes en orden: Principal -> GIF -> Adicionales
+     * Obtener TODAS las imágenes de la variación en un array simple (para la vista show-public)
      */
-    public function getTodasLasImagenesAttribute()
+    public function getImagenesAttribute()
     {
         $imagenes = [];
         
-        // 1. Imagen principal (campo vImagen)
-        if ($this->vImagen) {
-            $imagenes[] = [
-                'url' => $this->vImagen,
-                'tipo' => 'principal',
-                'nombre' => 'Principal'
-            ];
+        // 1. Imagen principal
+        $imagenPrincipal = $this->imagen_principal;
+        if ($imagenPrincipal) {
+            $imagenes[] = $imagenPrincipal;
         }
         
-        // 2. GIF
+        // 2. GIF (si existe)
         $gifUrl = $this->gif_url;
         if ($gifUrl) {
-            $imagenes[] = [
-                'url' => $gifUrl,
-                'tipo' => 'gif',
-                'nombre' => 'GIF'
-            ];
+            $imagenes[] = $gifUrl;
         }
         
         // 3. Imágenes adicionales
-        foreach ($this->imagenes_adicionales as $index => $url) {
-            $imagenes[] = [
-                'url' => $url,
-                'tipo' => 'adicional',
-                'nombre' => 'Adicional ' . ($index + 1)
-            ];
+        $adicionales = $this->imagenes_adicionales;
+        foreach ($adicionales as $url) {
+            $imagenes[] = $url;
         }
         
-        return $imagenes;
+        return $imagenes; // Retorna: ["/storage/variaciones/1/principal.jpg", "/storage/variaciones/1/adicionales/imagen_1.jpg"]
+    }
+
+    // ============ MÉTODOS PARA GUARDAR Y ELIMINAR IMÁGENES ============
+
+    /**
+     * Guardar imagen principal de la variación
+     */
+    public function guardarImagenPrincipal($imagen)
+    {
+        $carpeta = 'variaciones/' . $this->id_variacion;
+        
+        if (!Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->makeDirectory($carpeta);
+        }
+        
+        // Eliminar imagen principal anterior si existe
+        $this->eliminarImagenPrincipal();
+        
+        $extension = $imagen->getClientOriginalExtension();
+        $nombreArchivo = 'principal_' . time() . '.' . $extension;
+        $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
+        
+        // Actualizar campo vImagen con la ruta relativa
+        $this->vImagen = $ruta;
+        $this->saveQuietly();
+        
+        return Storage::url($ruta);
     }
 
     /**
-     * Contar número total de archivos multimedia
+     * Guardar GIF de la variación
      */
-    public function getNumeroImagenesAttribute()
+    public function guardarGif($gif)
     {
-        $count = 0;
-        if ($this->vImagen) $count++;
-        if ($this->gif_url) $count++;
-        $count += count($this->imagenes_adicionales);
-        return $count;
+        $carpeta = 'variaciones/' . $this->id_variacion;
+        
+        if (!Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->makeDirectory($carpeta);
+        }
+        
+        // Eliminar GIF anterior si existe
+        $gifAnterior = $this->gif_url;
+        if ($gifAnterior) {
+            $rutaGifAnterior = str_replace('/storage/', '', $gifAnterior);
+            if (Storage::disk('public')->exists($rutaGifAnterior)) {
+                Storage::disk('public')->delete($rutaGifAnterior);
+            }
+        }
+        
+        $extension = $gif->getClientOriginalExtension();
+        $nombreArchivo = 'gif_' . time() . '.' . $extension;
+        $ruta = $gif->storeAs($carpeta, $nombreArchivo, 'public');
+        
+        return Storage::url($ruta);
+    }
+
+    /**
+     * Guardar imágenes adicionales de la variación
+     */
+    public function guardarImagenesAdicionales($imagenes)
+    {
+        $carpeta = 'variaciones/' . $this->id_variacion . '/adicionales';
+        
+        if (!Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->makeDirectory($carpeta);
+        }
+        
+        $imagenesExistentes = Storage::disk('public')->files($carpeta);
+        $numeroInicio = count($imagenesExistentes);
+        
+        $imagenesGuardadas = [];
+        $contador = 0;
+        $maxImagenes = 7;
+        
+        foreach ($imagenes as $imagen) {
+            // Verificar límite máximo
+            if (($numeroInicio + $contador) >= $maxImagenes) {
+                break;
+            }
+            
+            $extension = $imagen->getClientOriginalExtension();
+            $nombreArchivo = 'imagen_' . ($numeroInicio + $contador + 1) . '_' . time() . '.' . $extension;
+            $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
+            $imagenesGuardadas[] = Storage::url($ruta);
+            $contador++;
+        }
+        
+        return $imagenesGuardadas;
+    }
+
+    /**
+     * Eliminar imagen principal
+     */
+    public function eliminarImagenPrincipal()
+    {
+        if ($this->vImagen) {
+            if (Storage::disk('public')->exists($this->vImagen)) {
+                Storage::disk('public')->delete($this->vImagen);
+            }
+            $this->vImagen = null;
+            $this->saveQuietly();
+        }
+        
+        // También buscar en la carpeta
+        $carpeta = 'variaciones/' . $this->id_variacion;
+        if (Storage::disk('public')->exists($carpeta)) {
+            $archivos = Storage::disk('public')->files($carpeta);
+            foreach ($archivos as $archivo) {
+                if (strpos($archivo, 'principal_') !== false) {
+                    Storage::disk('public')->delete($archivo);
+                }
+            }
+        }
     }
 
     /**
@@ -250,161 +449,137 @@ class ProductoVariacion extends Model
     public function getNombresArchivosImagenesAdicionales()
     {
         $carpeta = 'variaciones/' . $this->id_variacion . '/adicionales';
-        $archivos = [];
+        $imagenes = [];
         
         if (Storage::disk('public')->exists($carpeta)) {
-            $archivosStorage = Storage::disk('public')->files($carpeta);
+            $archivos = Storage::disk('public')->files($carpeta);
             
-            foreach ($archivosStorage as $archivo) {
-                if (preg_match('/\.(jpg|jpeg|png|webp)$/i', $archivo)) {
-                    $archivos[] = basename($archivo);
+            foreach ($archivos as $archivo) {
+                if (preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $archivo)) {
+                    $imagenes[] = basename($archivo);
                 }
             }
         }
         
-        return $archivos;
+        return $imagenes;
     }
 
-    // ============ RELACIONES ============
-
-    public function producto()
+    /**
+     * Número total de imágenes
+     */
+    public function getNumeroImagenesAttribute()
     {
-        return $this->belongsTo(Producto::class, 'id_producto');
+        $total = 0;
+        
+        if ($this->imagen_principal) $total++;
+        if ($this->gif_url) $total++;
+        $total += count($this->imagenes_adicionales);
+        
+        return $total;
     }
 
-    public function atributos()
+    /**
+     * Verificar si tiene espacio para más imágenes
+     */
+    public function puedeAgregarMasImagenes()
     {
-        return $this->hasMany(VariacionAtributo::class, 'id_variacion');
+        return $this->numero_imagenes < 9; // 1 principal + 1 gif + 7 adicionales
     }
 
     // ============ MÉTODOS DE UTILIDAD ============
 
-    // Calcular volumen cúbico
+    /**
+     * Accesor para dimensiones formateadas
+     */
+    public function getDimensionesFormateadasAttribute()
+    {
+        if ($this->dLargo_cm && $this->dAncho_cm && $this->dAlto_cm) {
+            return number_format($this->dLargo_cm, 2) . ' × ' . 
+                   number_format($this->dAncho_cm, 2) . ' × ' . 
+                   number_format($this->dAlto_cm, 2) . ' cm';
+        }
+        return 'No especificado';
+    }
+
+    /**
+     * Accesor para peso formateado
+     */
+    public function getPesoFormateadoAttribute()
+    {
+        if ($this->dPeso) {
+            return number_format($this->dPeso, 3) . ' kg';
+        }
+        return 'No especificado';
+    }
+
+    /**
+     * Accesor para volumen
+     */
     public function getVolumenAttribute()
     {
         if ($this->dLargo_cm && $this->dAncho_cm && $this->dAlto_cm) {
             return $this->dLargo_cm * $this->dAncho_cm * $this->dAlto_cm;
         }
-        return 0;
+        return null;
     }
 
-    // Calcular peso volumétrico (para envíos)
-    public function getPesoVolumetricoAttribute()
-    {
-        $volumen = $this->getVolumenAttribute();
-        if ($volumen > 0) {
-            return $volumen / 5000;
-        }
-        return 0;
-    }
-
-    // Método para obtener dimensiones formateadas
-    public function getDimensionesFormateadasAttribute()
-    {
-        if ($this->dLargo_cm && $this->dAncho_cm && $this->dAlto_cm) {
-            return number_format($this->dLargo_cm, 1) . ' × ' . 
-                   number_format($this->dAncho_cm, 1) . ' × ' . 
-                   number_format($this->dAlto_cm, 1) . ' cm';
-        }
-        return 'No especificado';
-    }
-
-    // Accesor para nombre de la combinación
-    public function getNombreCombinacionAttribute()
-    {
-        $nombres = [];
-        foreach ($this->atributos as $atributo) {
-            if ($atributo->valor) {
-                $nombres[] = $atributo->valor->vValor;
-            }
-        }
-        return !empty($nombres) ? implode(' / ', $nombres) : 'Sin atributos';
-    }
-
-    // Accesor para URL de imagen (compatibilidad)
-    public function getImagenUrlAttribute()
-    {
-        if ($this->vImagen) {
-            return $this->vImagen;
-        }
-        
-        if ($this->gif_url) {
-            return $this->gif_url;
-        }
-        
-        if (count($this->imagenes_adicionales) > 0) {
-            return $this->imagenes_adicionales[0];
-        }
-        
-        return asset('images/default-product.png');
-    }
-
-    // Método para formatear el precio
-    public function getPrecioFormateadoAttribute()
-    {
-        return '$' . number_format($this->dPrecio, 2);
-    }
-
-    // Método para obtener el peso formateado
-    public function getPesoFormateadoAttribute()
-    {
-        if ($this->dPeso) {
-            return number_format($this->dPeso, 2) . ' kg';
-        }
-        return 'No especificado';
-    }
-
-    // Badge para clase de envío
-    public function getClaseEnvioBadgeAttribute()
+    /**
+     * Accesor para clase de envío formateada
+     */
+    public function getClaseEnvioFormateadaAttribute()
     {
         switch ($this->vClase_envio) {
             case 'estandar':
-                return '<span class="badge bg-primary">Estándar</span>';
+                return 'Estándar';
             case 'express':
-                return '<span class="badge bg-success">Express</span>';
+                return 'Express';
             case 'fragil':
-                return '<span class="badge bg-warning">Frágil</span>';
+                return 'Frágil';
             case 'grandes_dimensiones':
-                return '<span class="badge bg-danger">Grandes dimensiones</span>';
+                return 'Grandes dimensiones';
             default:
-                return '<span class="badge bg-secondary">No especificada</span>';
+                return $this->vClase_envio ?: 'No especificada';
         }
     }
 
-    // ============ SCOPES ============
-
-    public function scopeActivas($query)
+    /**
+     * Calcular peso volumétrico
+     */
+    public function getPesoVolumetricoAttribute()
     {
-        return $query->where('bActivo', true);
+        if ($this->volumen) {
+            return $this->volumen / 5000;
+        }
+        return null;
     }
 
-    public function scopeConStock($query)
+    /**
+     * Obtener el precio con formato
+     */
+    public function getPrecioFormateadoAttribute()
     {
-        return $query->where('iStock_variacion', '>', 0);
+        return '$' . number_format($this->precio_actual, 2);
     }
 
-    // ============ EVENTOS DEL MODELO ============
-
-    protected static function boot()
+    /**
+     * Obtener el precio final con formato
+     */
+    public function getPrecioFinalFormateadoAttribute()
     {
-        parent::boot();
+        return '$' . number_format($this->precio_final, 2);
+    }
 
-        static::creating(function ($variacion) {
-            if (empty($variacion->tFecha_registro)) {
-                $variacion->tFecha_registro = now();
-            }
-            if (!isset($variacion->bActivo)) {
-                $variacion->bActivo = true;
-            }
-        });
-
-        static::updating(function ($variacion) {
-            $variacion->tFecha_actualizacion = now();
-        });
-
-        static::deleting(function ($variacion) {
-            $variacion->eliminarTodasLasImagenes();
-            $variacion->atributos()->delete();
-        });
+    /**
+     * Obtener el stock con formato
+     */
+    public function getStockFormateadoAttribute()
+    {
+        if ($this->iStock > 10) {
+            return '<span class="text-success">' . $this->iStock . ' unidades</span>';
+        } elseif ($this->iStock > 0) {
+            return '<span class="text-warning">' . $this->iStock . ' unidades (bajo stock)</span>';
+        } else {
+            return '<span class="text-danger">Sin stock</span>';
+        }
     }
 }
