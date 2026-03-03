@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use App\Helpers\CarritoHelper;
 use App\Services\Stock\LiberarReservaPorCarritoService;
 use Illuminate\Support\Facades\Log;
+use App\Services\Checkout\CalcularDescuentoService;
 
 class CheckoutController extends Controller
 {
@@ -26,38 +27,7 @@ class CheckoutController extends Controller
             session()->forget('codigo_cupon');
         }
 
-        if (session('stripe_checkout_in_progress')) {
-
-            $carritoId = session('stripe_carrito_id');
-
-            $carrito = Carrito::find($carritoId);
-
-            if ($carrito && $carrito->eEstado === 'reservado') {
-                app(LiberarReservaPorCarritoService::class)->ejecutar($carrito);
-            }
-
-            session()->forget([
-                'stripe_checkout_in_progress',
-                'stripe_carrito_id',
-            ]);
-        }
-
-        if (session('paypal_context')) {
-
-            $context = session('paypal_context');
-
-            $carritoId = $context['paypal_carrito_id'] ?? null;
-
-            $carrito = Carrito::find($carritoId);
-
-            if ($carrito && $carrito->eEstado === 'reservado') {
-                app(LiberarReservaPorCarritoService::class)->ejecutar($carrito);
-            }
-
-            session()->forget([
-                'paypal_context',
-            ]);
-        }
+        $this->liberarStockReservas();
 
         $carrito = CarritoHelper::carritoCheckout();
 
@@ -100,49 +70,34 @@ class CheckoutController extends Controller
             ->first() ?? $direcciones->first();
 
         $codigoCupon = session('codigo_cupon');
-        $descuento = 0;
 
         if ($codigoCupon) {
-            $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])
-                ->where('bActivo', 1)
-                ->whereDate('dValido_desde', '<=', now())
-                ->whereDate('dValido_hasta', '>=', now())
-                ->first();
 
-            if ($cupon) {
-                $descuento = $cupon->eTipo === 'porcentaje'
-                    ? $total * ($cupon->dDescuento / 100)
-                    : $cupon->dDescuento;
-            }
+            $cupon = Cupon::disponible()
+                ->whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])
+                ->first();
         }
 
-        $totalFinal = max(0, $total - $descuento);
+        $tipoCupon = $cupon?->eTipo ?? null;
 
         // Definir reglas de envío
         $montoEnvioGratis = 1500; // Envío gratis si el total >= 1500
         $costoEnvioFijo = 150;   // Costo de envío si no alcanza
         $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
 
-        // === Aplicar cupón ===
         $descuento = 0;
 
         if (!empty($codigoCupon) && isset($cupon)) {
-            if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
-                // Cupón especial: solo elimina el costo de envío
-                $envio = 0;
-            } else {
-                // Cupones normales (porcentaje o monto)
-                if ($cupon->eTipo === 'porcentaje') {
-                    $descuento = $total * ($cupon->dDescuento / 100);
-                } elseif ($cupon->eTipo === 'monto') {
-                    $descuento = $cupon->dDescuento;
-                }
-            }
+            // 💸 Cálculo de descuento
+            $resultado = app(CalcularDescuentoService::class)
+                ->ejecutar($cupon, $total, $envio);
+
+            $descuento = $resultado['descuento'];
+            $envio = $resultado['envio'];
         }
 
         // Recalcular total final
         $totalFinal = max(0, $total - $descuento + $envio);
-
 
         return view('checkout.index', compact(
             'carrito',
@@ -154,7 +109,8 @@ class CheckoutController extends Controller
             'codigoCupon',
             'direcciones',
             'direccionPrincipal',
-            'envio'
+            'envio',
+            'tipoCupon'
         ));
     }
 
@@ -613,6 +569,8 @@ class CheckoutController extends Controller
                 'codigo' => 'required|string|max:50'
             ]);
 
+            $this->liberarStockReservas();
+
             $codigo = $request->codigo;
 
             $carrito = CarritoHelper::carritoCheckout();
@@ -626,10 +584,8 @@ class CheckoutController extends Controller
 
             [$subtotal, $totalImpuestos, $total] = $this->calcularTotales($carrito);
 
-            $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigo])
-                ->where('bActivo', 1)
-                ->whereDate('dValido_desde', '<=', now())
-                ->whereDate('dValido_hasta', '>=', now())
+            $cupon = Cupon::disponible()
+                ->whereRaw('BINARY vCodigo_cupon = ?', [$codigo])
                 ->first();
 
             if (!$cupon) {
@@ -640,13 +596,33 @@ class CheckoutController extends Controller
             }
 
             // Validar uso máximo
-            $usosActuales = CuponUso::where('id_cupon', $cupon->id_cupon)->count();
-
-            if ($usosActuales >= $cupon->iUso_maximo) {
+            if (
+                !is_null($cupon->iUso_maximo) &&
+                $cupon->iUsos_actuales >= $cupon->iUso_maximo
+            ) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Este cupón ya alcanzó su límite de usos.'
                 ]);
+            }
+
+            // Validar límite por usuario
+            if ($cupon->iUsos_por_usuario) {
+
+                $usosUsuario = CuponUso::where('id_cupon', $cupon->id_cupon)
+                    ->when(Auth::check(), function ($q) {
+                        $q->where('id_usuario', Auth::id());
+                    }, function ($q) {
+                        $q->where('guest_token', session('guest_token'));
+                    })
+                    ->count();
+
+                if ($usosUsuario >= $cupon->iUsos_por_usuario) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Ya alcanzaste el límite de uso de este cupón.'
+                    ]);
+                }
             }
 
             // 🚚 Cálculo de envío
@@ -655,20 +631,19 @@ class CheckoutController extends Controller
             $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
 
             // 💸 Cálculo de descuento
-            $descuento = 0;
-            $mensaje = "Cupón aplicado correctamente: {$cupon->vCodigo_cupon}";
+            $resultado = app(CalcularDescuentoService::class)
+                ->ejecutar($cupon, $total, $envio);
 
-            if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
-                // Solo quitar el envío
-                $envio = 0;
-                $mensaje .= " — Envío gratis activado 🚚";
-            } else {
-                if ($cupon->eTipo === 'porcentaje') {
-                    $descuento = $total * ($cupon->dDescuento / 100);
-                } elseif ($cupon->eTipo === 'monto') {
-                    $descuento = $cupon->dDescuento;
-                }
-                $mensaje .= " — Descuento: $" . number_format($descuento, 2, '.', ',');
+            $descuento = $resultado['descuento'];
+            $envio = $resultado['envio'];
+            $mensaje = $resultado['mensaje'];
+            $warning = $resultado['warning'];
+
+            if ($warning) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $mensaje
+                ]);
             }
 
             // 🧮 Recalcular total
@@ -738,6 +713,48 @@ class CheckoutController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function liberarStockReservas()
+    {
+        if (session('stripe_checkout_in_progress')) {
+
+            $carritoId = session('stripe_carrito_id');
+
+            $carrito = Carrito::find($carritoId);
+
+            if ($carrito && $carrito->eEstado === 'reservado') {
+                app(LiberarReservaPorCarritoService::class)->ejecutar($carrito);
+            }
+
+            session()->forget([
+                'stripe_checkout_in_progress',
+                'stripe_carrito_id',
+            ]);
+
+            return response()->json(['status' => 'released']);
+        }
+
+        if (session('paypal_context')) {
+
+            $context = session('paypal_context');
+
+            $carritoId = $context['paypal_carrito_id'] ?? null;
+
+            $carrito = Carrito::find($carritoId);
+
+            if ($carrito && $carrito->eEstado === 'reservado') {
+                app(LiberarReservaPorCarritoService::class)->ejecutar($carrito);
+            }
+
+            session()->forget([
+                'paypal_context',
+            ]);
+
+            return response()->json(['status' => 'released']);
+        }
+
+        return response()->json(['status' => 'no_reservation']);
     }
 
     public function cancel()

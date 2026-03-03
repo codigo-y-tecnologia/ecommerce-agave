@@ -79,7 +79,6 @@ class ReservarCuponService
             }
 
             // Incremento atómico del contador global
-
             $updated = Cupon::where('id_cupon', $cupon->id_cupon)
                 ->where(function ($q) use ($cupon) {
                     if (!is_null($cupon->iUso_maximo)) {

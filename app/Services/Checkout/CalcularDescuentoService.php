@@ -6,44 +6,61 @@ use App\Models\Cupon;
 
 class CalcularDescuentoService
 {
-    public function ejecutar(?Cupon $cupon, string $subtotal, string $envioBase): array
+    public function ejecutar(?Cupon $cupon, float $subtotal, float $envioBase): array
     {
-        $descuento = '0.00';
+        $descuento = 0.0;
         $envio = $envioBase;
+        $mensaje = null;
+        $warning = false;
 
         if (!$cupon) {
-            return [$descuento, $envio];
+            return [
+                'descuento' => $descuento,
+                'envio' => $envio,
+                'mensaje' => $mensaje,
+                'warning' => $warning
+            ];
         }
 
+        $mensaje = "Cupón aplicado correctamente: {$cupon->vCodigo_cupon}";
+
         // Validar monto mínimo
-        if ($cupon->dMonto_minimo && bccomp($subtotal, $cupon->dMonto_minimo, 2) === -1) {
-            return ['0.00', $envioBase];
+        if ($cupon->dMonto_minimo && $subtotal < $cupon->dMonto_minimo) {
+            return [
+                'descuento' => 0.0,
+                'envio' => $envioBase,
+                'mensaje' => "El monto mínimo para aplicar este cupón es de: $" . $cupon->dMonto_minimo,
+                'warning' => true
+            ];
         }
 
         switch ($cupon->eTipo) {
             case 'envio_gratis':
-                $envio = '0.00';
+                $envio = 0.0;
+                $mensaje .= " — Envío gratis activado 🚚";
                 break;
 
             case 'porcentaje':
-                $descuento = bcmul($subtotal, bcdiv($cupon->dDescuento, '100', 4), 2);
-
-                // Evitar descuento mayor al subtotal
-                if (bccomp($descuento, $subtotal, 2) === 1) {
-                    $descuento = $subtotal;
-                }
+                $descuento = $subtotal * ($cupon->dDescuento / 100);
+                $mensaje .= " — Descuento: $" . number_format($descuento, 2, '.', ',');
                 break;
 
             case 'monto':
                 $descuento = $cupon->dDescuento;
-
-                // Evitar descuento mayor al subtotal
-                if (bccomp($descuento, $subtotal, 2) === 1) {
-                    $descuento = $subtotal;
-                }
+                $mensaje .= " — Descuento: $" . number_format($descuento, 2, '.', ',');
                 break;
         }
 
-        return [$descuento, $envio];
+        // 🔒 Protección contra descuento mayor al subtotal
+        if ($descuento > $subtotal) {
+            $descuento = $subtotal;
+        }
+
+        return [
+            'descuento' => $descuento,
+            'envio' => $envio,
+            'mensaje' => $mensaje,
+            'warning' => $warning
+        ];
     }
 }

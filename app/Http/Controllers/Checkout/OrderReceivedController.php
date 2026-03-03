@@ -36,6 +36,7 @@ class OrderReceivedController extends Controller
         }
 
         $pedido = $query->firstOrFail();
+        Log::info('📦 Mostrando pedido', ['pedido' => $pedido]);
 
         // Método de pago
         $payment_method = $pedido->venta->eMetodo_pago ?? 'No disponible';
@@ -96,7 +97,7 @@ class OrderReceivedController extends Controller
         }
 
         if ($cupon) {
-            if ($cupon->vCodigo_cupon !== 'ENVIOGRATIS') {
+            if ($cupon->eTipo !== 'envio_gratis') {
                 if ($cupon->eTipo === 'porcentaje') {
                     $descuento = $subtotalConImpuestos * ($cupon->dDescuento / 100);
                 } else {
@@ -114,7 +115,7 @@ class OrderReceivedController extends Controller
 
         $envio = ($subtotalConImpuestos >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
 
-        if ($cupon && $cupon->vCodigo_cupon === 'ENVIOGRATIS') {
+        if ($cupon && $cupon->eTipo === 'envio_gratis') {
             $envio = 0;
         }
 
@@ -123,6 +124,13 @@ class OrderReceivedController extends Controller
         // -------------------------
 
         $totalFinal = max(0, $subtotalConImpuestos - $descuento + $envio);
+
+        if ($pedido->id_usuario && $pedido->vGuest_token) {
+            Pedido::where('vGuest_token', $guestToken)
+                ->update([
+                    'vGuest_token' => null
+                ]);
+        }
 
         return view('checkout.order-received', [
             'pedido' => $pedido,
@@ -203,7 +211,7 @@ class OrderReceivedController extends Controller
         }
 
         if ($cupon) {
-            if ($cupon->vCodigo_cupon !== 'ENVIOGRATIS') {
+            if ($cupon->eTipo !== 'envio_gratis') {
                 if ($cupon->eTipo === 'porcentaje') {
                     $descuento = $subtotalConImpuestos * ($cupon->dDescuento / 100);
                 } else {
@@ -217,7 +225,7 @@ class OrderReceivedController extends Controller
 
         $envio = ($subtotalConImpuestos >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
 
-        if ($cupon && $cupon->vCodigo_cupon === 'ENVIOGRATIS') {
+        if ($cupon && $cupon->eTipo === 'envio_gratis') {
             $envio = 0;
         }
 

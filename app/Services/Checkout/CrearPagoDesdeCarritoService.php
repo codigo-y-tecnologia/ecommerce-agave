@@ -28,11 +28,13 @@ class CrearPagoDesdeCarritoService
 
             $envioBase = $total >= 1500 ? 0 : 150;
 
-            [$descuento, $envio] = app(CalcularDescuentoService::class)
+            $resultado = app(CalcularDescuentoService::class)
                 ->ejecutar($cupon, $total, $envioBase);
 
-            $totalFinal = max(0, $total - $descuento + $envio);
+            $descuento = $resultado['descuento'];
+            $envio = $resultado['envio'];
 
+            $totalFinal = max(0, $total - $descuento + $envio);
 
             // 4. Guardar snapshot
             $snapshot = CheckoutSnapshot::updateOrCreate(

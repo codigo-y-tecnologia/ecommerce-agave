@@ -312,7 +312,7 @@
                             <div id="mensaje-cupon-container">
                                 @if(!empty($codigoCupon))
                                     <p class="text-success fw-bold mb-2" id="mensaje-cupon">
-                                        @if($codigoCupon === 'ENVIOGRATIS')
+                                        @if($tipoCupon === 'envio_gratis')
                                             Cupón aplicado correctamente: {{ $codigoCupon }} — Envío gratis activado 🚚
                                         @else
                                             Cupón aplicado correctamente: {{ $codigoCupon }} — Descuento: ${{ number_format($descuento, 2) }}

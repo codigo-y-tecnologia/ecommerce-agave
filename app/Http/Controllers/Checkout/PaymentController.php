@@ -32,9 +32,11 @@ use App\Models\{
     Envio,
     Producto,
     StockReserva,
-    Setting
+    Setting,
+    CheckoutSnapshot,
+    CuponReserva
 };
-
+use App\Services\Cupones\ConsumirCuponService;
 use Stripe\Stripe;
 use Stripe\Checkout\Session as StripeSession;
 use Stripe\Webhook as StripeWebhook;
@@ -123,46 +125,10 @@ class PaymentController extends Controller
                 'stripe_carrito_id' => $carrito->id_carrito,
             ]);
 
-            // Cupón
-            $codigoCupon = session('codigo_cupon');
-
             $result = app(CrearPagoDesdeCarritoService::class)
-                ->ejecutar($carrito, $codigoCupon);
+                ->ejecutar($carrito, session('codigo_cupon'));
 
-            $descuento = 0;
-            $cupon = null;
-
-            if ($codigoCupon) {
-                $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])
-                    ->where('bActivo', 1)
-                    ->whereDate('dValido_desde', '<=', now())
-                    ->whereDate('dValido_hasta', '>=', now())
-                    ->first();
-
-                if ($cupon && $cupon->vCodigo_cupon !== 'ENVIOGRATIS') {
-                    if ($cupon->eTipo === 'porcentaje') {
-                        $descuento = $total * ($cupon->dDescuento / 100);
-                    } else {
-                        $descuento = $cupon->dDescuento;
-                    }
-                }
-            }
-
-            // Envío
-            $montoEnvioGratis = 1500;
-            $costoEnvioFijo = 150;
-
-            $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
-
-            if ($cupon && $cupon->vCodigo_cupon === 'ENVIOGRATIS') {
-                $envio = 0;
-            }
-
-            if ($cupon && $cupon->vCodigo_cupon === 'enviogratis') {
-                $envio = 0;
-            }
-
-            $totalFinal = max(0, $total - $descuento + $envio);
+            $totalFinal = $result['totalFinal'];
 
             // Stripe
             Stripe::setApiKey(env('STRIPE_SECRET'));
@@ -178,7 +144,7 @@ class PaymentController extends Controller
                 'email_invitado' => session('email_invitado') ?? null,
                 'id_direccion_facturacion' => session('id_direccion_facturacion'),
                 'nota_pedido' => session('nota_pedido') ?? '',
-                'codigo_cupon' => $codigoCupon ?? ''
+                'codigo_cupon' => session('codigo_cupon') ?? '',
             ];
 
             // Crear sesión Stripe
@@ -202,12 +168,21 @@ class PaymentController extends Controller
 
             DB::transaction(function () use ($carrito, $session) {
 
-                // Reservar stock (lock + validación)
-                app(ReservarStockService::class)->ejecutar($carrito);
-
                 // Asociar session_id a TODAS las reservas del carrito
                 StockReserva::where('id_carrito', $carrito->id_carrito)
                     ->whereNull('session_id')
+                    ->update([
+                        'session_id' => $session->id
+                    ]);
+
+                // Asociar session_id a snapshot para validación futura (webhook)
+                CheckoutSnapshot::where('id_carrito', $carrito->id_carrito)
+                    ->update([
+                        'payment_session' => $session->id
+                    ]);
+
+                // Asociar session_id a TODAS las reservas de cupón del carrito
+                CuponReserva::where('id_carrito', $carrito->id_carrito)
                     ->update([
                         'session_id' => $session->id
                     ]);
@@ -324,10 +299,21 @@ class PaymentController extends Controller
 
                         Log::info('Referencia a guardar: ' . $reference);
 
+                        // Obtener snapshot con lock
+                        $snapshot = CheckoutSnapshot::where('payment_session', $session->id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if (!$snapshot) {
+                            throw new Exception('Snapshot no encontrado.');
+                        }
+
                         // buscamos carrito
                         if ($carritoId) {
 
-                            $carrito = Carrito::where('id_carrito', $carritoId)->first();
+                            $carrito = Carrito::where('id_carrito', $carritoId)
+                                ->lockForUpdate()
+                                ->first();
 
                             if (!$carrito) {
                                 throw new Exception("Carrito no encontrado para finalizar pedido (Stripe webhook).");
@@ -335,12 +321,8 @@ class PaymentController extends Controller
                         } else {
                             Log::warning('No se encontró carrito_id en metadata de Stripe.');
 
-                            throw new \Exception('Carrito no encontrado');
+                            throw new Exception('Carrito no encontrado');
                         }
-
-                        // Consumir reserva (validación + stock real)
-                        app(ConsumirReservaService::class)
-                            ->ejecutar($session->id);
 
                         $this->finalizeOrderFromCart(
                             $userId,
@@ -353,7 +335,8 @@ class PaymentController extends Controller
                             $idDireccion,
                             $idDireccionFact,
                             $notaPedido,
-                            $session->id
+                            $session->id,
+                            $snapshot
                         );
 
                         Log::info('Pedido finalizado exitosamente');
@@ -767,7 +750,7 @@ class PaymentController extends Controller
         }
     }
 
-    private function finalizeOrderFromCart($userId, $guestToken, $emailGuest, $carritoId, $method, $reference, $codigoCupon = null, $idDireccion = null, $idDireccionFact = null, $notaPedido = null, $sessionId = null)
+    private function finalizeOrderFromCart($userId, $guestToken, $emailGuest, $carritoId, $method, $reference, $codigoCupon = null, $idDireccion = null, $idDireccionFact = null, $notaPedido = null, $sessionId = null, $snapshot = null)
     {
         Log::info('Iniciando finalizeOrderFromCart', [
             'userId' => $userId,
@@ -780,7 +763,8 @@ class PaymentController extends Controller
             'idDireccion' => $idDireccion,
             'idDireccionFacturacion' => $idDireccionFact,
             'notaPedido' => $notaPedido,
-            'sessionId' => $sessionId
+            'sessionId' => $sessionId,
+            'snapshot' => $snapshot
         ]);
 
         // Buscar carrito
@@ -788,43 +772,12 @@ class PaymentController extends Controller
             ->where('id_carrito', $carritoId)
             ->firstOrFail();
 
-        // Recalcular totales
-        [$subtotal, $totalImpuestos, $total] =
-            (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
-
-        $montoEnvioGratis = 1500;
-        $costoEnvioFijo = 150;
-        $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
-
-        $descuento = 0;
         $cupon = null;
 
         if ($codigoCupon) {
             $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])
-                ->where('bActivo', 1)
                 ->first();
-
-            if ($cupon) {
-
-                // Verificar usos actuales vs máximo
-                $usosActuales = CuponUso::where('id_cupon', $cupon->id_cupon)->count();
-
-                if ($usosActuales >= $cupon->iUso_maximo) {
-                    Log::warning("Cupón {$codigoCupon} excedió el límite de usos ({$usosActuales}/{$cupon->iUso_maximo})");
-                    $cupon = null;
-                } else {
-                    if ($cupon->vCodigo_cupon === 'ENVIOGRATIS') {
-                        $envio = 0;
-                    } else {
-                        $descuento = ($cupon->eTipo === 'porcentaje')
-                            ? $total * ($cupon->dDescuento / 100)
-                            : $cupon->dDescuento;
-                    }
-                }
-            }
         }
-
-        $totalFinal = max(0, $total - $descuento + $envio);
 
         if ($userId) {
             $usuario = Usuario::findOrFail($userId);
@@ -932,6 +885,10 @@ class PaymentController extends Controller
             $userId = $nuevoUserId;
         }
 
+        // Consumir reserva (validación + stock real)
+        app(ConsumirReservaService::class)
+            ->ejecutar($sessionId);
+
         // Crear pedido
         $pedido = Pedido::create([
             'id_usuario' => $userId,
@@ -939,7 +896,7 @@ class PaymentController extends Controller
             'id_direccion_facturacion' => null,
             'vNombre' => $nombre,
             'eEstado' => 'pagado',
-            'dTotal' => $totalFinal,
+            'dTotal' => $snapshot->total_final,
             'tNota' => $notaPedido,
             'vApaterno' => $apaterno,
             'vAmaterno' => $amaterno,
@@ -983,9 +940,9 @@ class PaymentController extends Controller
         $venta = Venta::create([
             'id_pedido' => $pedido->id_pedido,
             'id_usuario' => $userId,
-            'dTotal' => $totalFinal,
-            'dDescuento' => $descuento,
-            'dCosto_envio' => $envio,
+            'dTotal' => $snapshot->total_final,
+            'dDescuento' => $snapshot->descuento,
+            'dCosto_envio' => $snapshot->envio,
             'eMetodo_pago' => $method,
         ]);
 
@@ -1001,7 +958,7 @@ class PaymentController extends Controller
         Log::info('Creando registro de pago', [
             'id_pedido' => $pedido->id_pedido,
             'metodo' => $method,
-            'monto' => $totalFinal,
+            'monto' => $snapshot->total_final,
             'referencia' => $reference,
             'session_id' => $sessionId,
             'estado' => 'exitoso',
@@ -1011,7 +968,7 @@ class PaymentController extends Controller
         $pago = Pago::create([
             'id_pedido' => $pedido->id_pedido,
             'eMetodo_pago' => $method,
-            'dMonto' => $totalFinal,
+            'dMonto' => $snapshot->total_final,
             'eEstado' => 'exitoso',
             'vReferencia' => $reference,
             'vSessionID' => $sessionId,
@@ -1022,31 +979,12 @@ class PaymentController extends Controller
             'referencia' => $pago->vReferencia
         ]);
 
-        // Cupón uso
-        if ($cupon) {
-
-            // Verificar nuevamente antes de registrar
-            $usosActuales = CuponUso::where('id_cupon', $cupon->id_cupon)->count();
-
-            if ($usosActuales < $cupon->iUso_maximo) {
-
-                CuponUso::create([
-                    'id_cupon' => $cupon->id_cupon,
-                    'id_venta' => $venta->id_venta,
-                ]);
-
-                $nuevosUsos = $usosActuales + 1;
-
-                Log::info("Cupón {$cupon->vCodigo_cupon} aplicado. Usos: {$nuevosUsos}/{$cupon->iUso_maximo}");
-
-                if ($nuevosUsos >= $cupon->iUso_maximo) {
-                    $cupon->update(['bActivo' => 0]);
-                    Log::info("Cupón {$cupon->vCodigo_cupon} desactivado por alcanzar el límite de usos");
-                }
-            } else {
-                Log::warning("Cupón {$cupon->vCodigo_cupon} ya no tiene usos disponibles al momento de guardar");
-            }
-        }
+        app(ConsumirCuponService::class)->ejecutar(
+            $sessionId,
+            $venta->id_venta,
+            $carrito->id_usuario ?? null,
+            $carrito->vGuest_token ?? null
+        );
 
         // Limpiar carrito
         $carrito->detalles()->delete();
@@ -1065,7 +1003,7 @@ class PaymentController extends Controller
 
         // Email cliente
         Mail::to($email)->send(
-            new \App\Mail\PedidoRealizadoCliente($pedido, $subtotal, $envio, $descuento, $totalFinal, $cupon)
+            new \App\Mail\PedidoRealizadoCliente($pedido, $snapshot->subtotal, $snapshot->envio, $snapshot->descuento, $snapshot->total_final, $cupon)
         );
 
         // Email admin
@@ -1075,14 +1013,16 @@ class PaymentController extends Controller
             Mail::to($adminEmails)->send(
                 new \App\Mail\PedidoNuevoAdmin(
                     $pedido,
-                    $subtotal,
-                    $envio,
-                    $descuento,
-                    $totalFinal,
+                    $snapshot->subtotal,
+                    $snapshot->envio,
+                    $snapshot->descuento,
+                    $snapshot->total_final,
                     $cupon
                 )
             );
         }
+
+        $snapshot->delete();
 
         return true;
     }
