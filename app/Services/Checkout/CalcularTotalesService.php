@@ -10,12 +10,13 @@ class CalcularTotalesService
     {
         $subtotal = 0;
         $totalImpuestos = 0;
+        $impuestosPorTipo = [];
 
         foreach ($carrito->detalles as $detalle) {
 
             $producto = $detalle->producto;
-            $precio_base = $producto->dPrecio_venta;
             $cantidad = $detalle->cantidad;
+            $precio_base = $producto->dPrecio_venta;
 
             // Obtener impuestos
             $impuestos = $producto->impuestos->where('bActivo', 1);
@@ -35,8 +36,13 @@ class CalcularTotalesService
                 }
             }
 
-            // Precio final unitario
-            $precio_final_unitario = $precio_base + $ieps + $iva;
+            // Impuestos por tipo
+            if ($ieps > 0) {
+                $impuestosPorTipo['IEPS'] = ($impuestosPorTipo['IEPS'] ?? 0) + ($ieps * $cantidad);
+            }
+            if ($iva > 0) {
+                $impuestosPorTipo['IVA'] = ($impuestosPorTipo['IVA'] ?? 0) + ($iva * $cantidad);
+            }
 
             // Totales por cantidad
             $subtotal_producto = $precio_base * $cantidad;
@@ -46,8 +52,17 @@ class CalcularTotalesService
             $totalImpuestos += $impuestos_producto;
         }
 
+        // Subtotal CON impuestos 
+        $subtotalConImpuestos = $subtotal + $totalImpuestos;
+
         $total = $subtotal + $totalImpuestos;
 
-        return [$subtotal, $totalImpuestos, $total];
+        return [
+            'subtotal' => $subtotal,
+            'total_impuestos' => $totalImpuestos,
+            'total' => $total,
+            'impuestos_por_tipo' => $impuestosPorTipo,
+            'subtotal_con_impuestos' => $subtotalConImpuestos,
+        ];
     }
 }

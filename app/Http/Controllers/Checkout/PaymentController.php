@@ -772,13 +772,6 @@ class PaymentController extends Controller
             ->where('id_carrito', $carritoId)
             ->firstOrFail();
 
-        $cupon = null;
-
-        if ($codigoCupon) {
-            $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])
-                ->first();
-        }
-
         if ($userId) {
             $usuario = Usuario::findOrFail($userId);
 
@@ -1003,7 +996,7 @@ class PaymentController extends Controller
 
         // Email cliente
         Mail::to($email)->send(
-            new \App\Mail\PedidoRealizadoCliente($pedido, $snapshot->subtotal, $snapshot->envio, $snapshot->descuento, $snapshot->total_final, $cupon)
+            new \App\Mail\PedidoRealizadoCliente($pedido, $snapshot)
         );
 
         // Email admin
@@ -1011,18 +1004,9 @@ class PaymentController extends Controller
 
         if ($adminEmails->isNotEmpty()) {
             Mail::to($adminEmails)->send(
-                new \App\Mail\PedidoNuevoAdmin(
-                    $pedido,
-                    $snapshot->subtotal,
-                    $snapshot->envio,
-                    $snapshot->descuento,
-                    $snapshot->total_final,
-                    $cupon
-                )
+                new \App\Mail\PedidoNuevoAdmin($pedido, $snapshot)
             );
         }
-
-        $snapshot->delete();
 
         return true;
     }

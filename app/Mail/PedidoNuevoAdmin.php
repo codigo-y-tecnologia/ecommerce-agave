@@ -15,23 +15,15 @@ class PedidoNuevoAdmin extends Mailable
     use Queueable, SerializesModels;
 
     public $pedido;
-    public $subtotal;
-    public $envio;
-    public $descuento;
-    public $totalFinal;
-    public $cupon;
+    public $snapshot;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(Pedido $pedido, $subtotal, $envio, $descuento, $totalFinal, $cupon = null)
+    public function __construct(Pedido $pedido, $snapshot)
     {
         $this->pedido = $pedido;
-        $this->subtotal = $subtotal;
-        $this->envio = $envio;
-        $this->descuento = $descuento;
-        $this->totalFinal = $totalFinal;
-        $this->cupon = $cupon;
+        $this->snapshot = $snapshot;
     }
 
     /**

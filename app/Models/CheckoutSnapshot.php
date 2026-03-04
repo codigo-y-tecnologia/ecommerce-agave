@@ -17,8 +17,14 @@ class CheckoutSnapshot extends Model
         'id_carrito',
         'subtotal',
         'impuestos',
+        'impuestos_por_tipo',
+        'subtotal_con_impuestos',
         'envio',
         'descuento',
+        'cupon_codigo',
+        'cupon_tipo',
+        'cupon_valor',
+        'cupon_monto_aplicado',
         'total_final',
         'payment_session',
     ];
@@ -38,8 +44,12 @@ class CheckoutSnapshot extends Model
     protected $casts = [
         'subtotal'     => 'decimal:2',
         'impuestos'    => 'decimal:2',
+        'subtotal_con_impuestos' => 'decimal:2',
         'envio'        => 'decimal:2',
         'descuento'    => 'decimal:2',
+        'cupon_valor' => 'decimal:2',
+        'cupon_monto_aplicado' => 'decimal:2',
         'total_final'  => 'decimal:2',
+        'impuestos_por_tipo' => 'array',
     ];
 }

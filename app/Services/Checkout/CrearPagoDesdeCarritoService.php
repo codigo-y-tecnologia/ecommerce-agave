@@ -23,8 +23,14 @@ class CrearPagoDesdeCarritoService
                 ->ejecutar($carrito, $codigoCupon);
 
             // 3. Calcular totales
-            [$subtotal, $impuestos, $total] = app(CalcularTotalesService::class)
+            $totales = app(CalcularTotalesService::class)
                 ->ejecutar($carrito);
+
+            $subtotal = $totales['subtotal'];
+            $impuestos = $totales['total_impuestos'];
+            $total = $totales['total'];
+            $impuestosPorTipo = $totales['impuestos_por_tipo'];
+            $subtotalConImpuestos = $totales['subtotal_con_impuestos'];
 
             $envioBase = $total >= 1500 ? 0 : 150;
 
@@ -42,8 +48,14 @@ class CrearPagoDesdeCarritoService
                 [
                     'subtotal'     => $subtotal,
                     'impuestos'    => $impuestos,
+                    'impuestos_por_tipo' => $impuestosPorTipo,
+                    'subtotal_con_impuestos' => $subtotalConImpuestos,
                     'envio'        => $envio,
                     'descuento'    => $descuento,
+                    'cupon_codigo' => $cupon?->vCodigo_cupon,
+                    'cupon_tipo' => $cupon?->eTipo,
+                    'cupon_valor' => $cupon?->dDescuento,
+                    'cupon_monto_aplicado' => $descuento,
                     'total_final'  => $totalFinal,
                     'payment_session' => null,
                 ]

@@ -149,7 +149,7 @@
                     @if($descuento > 0)
                         <tr>
                             <th>Descuento 
-                                @if($cupon) ({{ $cupon->vCodigo_cupon }}) @endif:
+                                @if($cuponCodigo) ({{ $cuponCodigo }}) @endif:
                             </th>
                             <td class="text-end text-success">
                                 - ${{ number_format($descuento, 2) }}
