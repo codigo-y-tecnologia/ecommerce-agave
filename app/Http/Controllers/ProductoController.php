@@ -83,6 +83,19 @@ class ProductoController extends Controller
      */
     public function store(Request $request)
     {
+        // Validar el tamaño total de la solicitud primero
+        $contentLength = $request->server('CONTENT_LENGTH');
+        $maxSize = 52 * 1024 * 1024; // 52MB en bytes
+        
+        if ($contentLength > $maxSize) {
+            Log::warning('Intento de subida de archivos demasiado grande: ' . $contentLength . ' bytes');
+            return redirect()->back()
+                ->withInput()
+                ->with('post_max_size_error', true)
+                ->with('error', 'El tamaño total de los archivos (' . round($contentLength / (1024 * 1024), 2) . 'MB) excede el límite permitido de 50MB. Por favor, reduce el tamaño de los archivos o súbelos en menos cantidad.')
+                ->with('swal_error', true);
+        }
+
         // Validación personalizada para precio de descuento
         $validator = Validator::make($request->all(), [
             'vCodigo_barras' => [
@@ -127,7 +140,6 @@ class ProductoController extends Controller
             'etiquetas' => 'nullable|array',
             'etiquetas.*' => 'exists:tbl_etiquetas,id_etiqueta',
             'imagen_principal' => 'required|image|mimes:jpeg,jpg,png|max:5120',
-            'video_producto' => 'nullable|mimes:mp4,webm,ogg,avi,mov,mkv|max:51200',
             'gif_producto' => 'nullable|mimes:gif|max:10240',
             'imagenes' => 'nullable|array|max:7',
             'imagenes.*' => 'image|mimes:jpeg,jpg,png,webp|max:5120',
@@ -276,8 +288,6 @@ class ProductoController extends Controller
             'imagen_principal.image' => 'El archivo debe ser una imagen',
             'imagen_principal.mimes' => 'La imagen principal debe ser JPG, JPEG o PNG',
             'imagen_principal.max' => 'La imagen principal no debe superar los 5MB',
-            'video_producto.mimes' => 'El video debe ser MP4, WebM, OGG, AVI, MOV o MKV',
-            'video_producto.max' => 'El video no debe superar los 50MB',
             'gif_producto.mimes' => 'El archivo debe ser un GIF',
             'gif_producto.max' => 'El GIF no debe superar los 10MB',
             'imagenes.max' => 'No puedes subir más de 7 imágenes adicionales',
@@ -349,68 +359,7 @@ class ProductoController extends Controller
                         }
                     }
                     
-                    // Validaciones para dimensiones en variaciones
-                    if (isset($variacion['dPeso']) && !empty($variacion['dPeso'])) {
-                        if (!is_numeric($variacion['dPeso'])) {
-                            $validator->errors()->add("variaciones.{$key}.dPeso", 'El peso debe ser un número válido.');
-                        } elseif ($variacion['dPeso'] < 0) {
-                            $validator->errors()->add("variaciones.{$key}.dPeso", 'El peso no puede ser negativo.');
-                        } elseif ($variacion['dPeso'] > 999.999) {
-                            $validator->errors()->add("variaciones.{$key}.dPeso", 'El peso no puede ser mayor a 999.999 kg.');
-                        } else {
-                            $partes = explode('.', (string)$variacion['dPeso']);
-                            if (isset($partes[1]) && strlen($partes[1]) > 3) {
-                                $validator->errors()->add("variaciones.{$key}.dPeso", 'El peso debe tener máximo 3 decimales.');
-                            }
-                        }
-                    }
-                    
-                    if (isset($variacion['dLargo_cm']) && !empty($variacion['dLargo_cm'])) {
-                        if (!is_numeric($variacion['dLargo_cm'])) {
-                            $validator->errors()->add("variaciones.{$key}.dLargo_cm", 'El largo debe ser un número válido.');
-                        } elseif ($variacion['dLargo_cm'] < 0) {
-                            $validator->errors()->add("variaciones.{$key}.dLargo_cm", 'El largo no puede ser negativo.');
-                        } elseif ($variacion['dLargo_cm'] > 999.99) {
-                            $validator->errors()->add("variaciones.{$key}.dLargo_cm", 'El largo no puede ser mayor a 999.99 cm.');
-                        } else {
-                            $partes = explode('.', (string)$variacion['dLargo_cm']);
-                            if (isset($partes[1]) && strlen($partes[1]) > 2) {
-                                $validator->errors()->add("variaciones.{$key}.dLargo_cm", 'El largo debe tener máximo 2 decimales.');
-                            }
-                        }
-                    }
-                    
-                    if (isset($variacion['dAncho_cm']) && !empty($variacion['dAncho_cm'])) {
-                        if (!is_numeric($variacion['dAncho_cm'])) {
-                            $validator->errors()->add("variaciones.{$key}.dAncho_cm", 'El ancho debe ser un número válido.');
-                        } elseif ($variacion['dAncho_cm'] < 0) {
-                            $validator->errors()->add("variaciones.{$key}.dAncho_cm", 'El ancho no puede ser negativo.');
-                        } elseif ($variacion['dAncho_cm'] > 999.99) {
-                            $validator->errors()->add("variaciones.{$key}.dAncho_cm", 'El ancho no puede ser mayor a 999.99 cm.');
-                        } else {
-                            $partes = explode('.', (string)$variacion['dAncho_cm']);
-                            if (isset($partes[1]) && strlen($partes[1]) > 2) {
-                                $validator->errors()->add("variaciones.{$key}.dAncho_cm", 'El ancho debe tener máximo 2 decimales.');
-                            }
-                        }
-                    }
-                    
-                    if (isset($variacion['dAlto_cm']) && !empty($variacion['dAlto_cm'])) {
-                        if (!is_numeric($variacion['dAlto_cm'])) {
-                            $validator->errors()->add("variaciones.{$key}.dAlto_cm", 'El alto debe ser un número válido.');
-                        } elseif ($variacion['dAlto_cm'] < 0) {
-                            $validator->errors()->add("variaciones.{$key}.dAlto_cm", 'El alto no puede ser negativo.');
-                        } elseif ($variacion['dAlto_cm'] > 999.99) {
-                            $validator->errors()->add("variaciones.{$key}.dAlto_cm", 'El alto no puede ser mayor a 999.99 cm.');
-                        } else {
-                            $partes = explode('.', (string)$variacion['dAlto_cm']);
-                            if (isset($partes[1]) && strlen($partes[1]) > 2) {
-                                $validator->errors()->add("variaciones.{$key}.dAlto_cm", 'El alto debe tener máximo 2 decimales.');
-                            }
-                        }
-                    }
-                    
-                    // Validación de campos requeridos cuando hay descuento en variación
+                    // Validación de campos requeridos cuando hay descuento
                     if (isset($variacion['bTiene_descuento']) && $variacion['bTiene_descuento'] == 1) {
                         if (empty($variacion['dPrecio_descuento'])) {
                             $validator->errors()->add("variaciones.{$key}.dPrecio_descuento", 'El precio de descuento es obligatorio cuando el descuento está activo.');
@@ -420,6 +369,13 @@ class ProductoController extends Controller
                         }
                         if (empty($variacion['dFecha_fin_descuento'])) {
                             $validator->errors()->add("variaciones.{$key}.dFecha_fin_descuento", 'La fecha de fin es obligatoria cuando el descuento está activo.');
+                        }
+                        
+                        // Validar que la fecha de fin sea igual o posterior a la fecha de inicio
+                        if (!empty($variacion['dFecha_inicio_descuento']) && !empty($variacion['dFecha_fin_descuento'])) {
+                            if ($variacion['dFecha_fin_descuento'] < $variacion['dFecha_inicio_descuento']) {
+                                $validator->errors()->add("variaciones.{$key}.dFecha_fin_descuento", 'La fecha de fin debe ser igual o posterior a la fecha de inicio.');
+                            }
                         }
                     }
                 }
@@ -495,24 +451,19 @@ class ProductoController extends Controller
                 'dAlto_cm' => $producto->dAlto_cm,
             ]);
 
-            // Guardar imagen principal
+            // Guardar imagen principal (ACTUALIZADO PARA GUARDAR EN BD)
             if ($request->hasFile('imagen_principal')) {
-                $this->guardarImagenPrincipal($producto, $request->file('imagen_principal'));
+                $producto->guardarImagenPrincipal($request->file('imagen_principal'));
             }
 
-            // Guardar video si existe
-            if ($request->hasFile('video_producto')) {
-                $this->guardarVideo($producto, $request->file('video_producto'));
-            }
-
-            // Guardar GIF si existe
+            // Guardar GIF si existe (ACTUALIZADO PARA GUARDAR EN BD)
             if ($request->hasFile('gif_producto')) {
-                $this->guardarGif($producto, $request->file('gif_producto'));
+                $producto->guardarGif($request->file('gif_producto'));
             }
 
-            // Guardar imágenes adicionales
+            // Guardar imágenes adicionales (ACTUALIZADO PARA GUARDAR EN BD)
             if ($request->hasFile('imagenes')) {
-                $this->guardarImagenes($producto, $request->file('imagenes'));
+                $producto->guardarImagenesAdicionales($request->file('imagenes'));
             }
 
             // Sincronizar etiquetas
@@ -542,7 +493,7 @@ class ProductoController extends Controller
                 }
             }
 
-            // Guardar variaciones
+            // Guardar variaciones (ACTUALIZADO PARA GUARDAR IMÁGENES EN BD)
             if ($request->has('variaciones')) {
                 foreach ($request->variaciones as $key => $variacionData) {
                     if (!isset($variacionData['vSKU']) || empty($variacionData['vSKU'])) {
@@ -579,7 +530,7 @@ class ProductoController extends Controller
                         'vClase_envio' => $claseEnvio,
                         'tDescripcion' => $variacionData['tDescripcion'] ?? null,
                         'bActivo' => isset($variacionData['bActivo']) ? 1 : 0,
-                        'id_impuesto' => $variacionData['id_impuesto'] ?? null, // NUEVO CAMPO
+                        'id_impuesto' => $variacionData['id_impuesto'] ?? null,
                     ]);
 
                     Log::info('Variación creada con ID:', ['id' => $variacion->id_variacion]);
@@ -593,9 +544,24 @@ class ProductoController extends Controller
                         ]);
                     }
 
-                    // Guardar imagen de la variación si existe
-                    if ($request->hasFile("variaciones.{$key}.vImagen")) {
-                        $this->guardarImagenVariacion($variacion, $request->file("variaciones.{$key}.vImagen"));
+                    // Guardar imagen de la variación si existe (ACTUALIZADO)
+                    if ($request->hasFile("variaciones.{$key}.imagen_principal")) {
+                        $variacion->guardarImagenPrincipal($request->file("variaciones.{$key}.imagen_principal"));
+                    }
+                    
+                    // Guardar GIF de la variación si existe (ACTUALIZADO)
+                    if ($request->hasFile("variaciones.{$key}.gif")) {
+                        $variacion->guardarGif($request->file("variaciones.{$key}.gif"));
+                    }
+                    
+                    // Guardar imágenes adicionales de la variación si existen (ACTUALIZADO)
+                    if ($request->hasFile("variaciones.{$key}.imagenes_adicionales")) {
+                        $imagenes = $request->file("variaciones.{$key}.imagenes_adicionales");
+                        if (is_array($imagenes)) {
+                            $variacion->guardarImagenesAdicionales($imagenes);
+                        } else {
+                            $variacion->guardarImagenesAdicionales([$imagenes]);
+                        }
                     }
                 }
             }
@@ -611,6 +577,15 @@ class ProductoController extends Controller
             
             Log::error('Error al crear producto: ' . $e->getMessage());
             Log::error('Trace: ' . $e->getTraceAsString());
+            
+            // Verificar si es error de tamaño POST
+            if ($e instanceof \Illuminate\Http\Exceptions\PostTooLargeException) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('post_max_size_error', true)
+                    ->with('error', 'El tamaño total de los archivos excede el límite del servidor (50MB). Por favor, reduce el tamaño de los archivos.')
+                    ->with('swal_error', true);
+            }
             
             return redirect()->back()
                 ->withInput()
@@ -706,6 +681,19 @@ class ProductoController extends Controller
      */
     public function update(Request $request, Producto $producto)
     {
+        // Validar el tamaño total de la solicitud primero
+        $contentLength = $request->server('CONTENT_LENGTH');
+        $maxSize = 52 * 1024 * 1024; // 52MB en bytes
+        
+        if ($contentLength > $maxSize) {
+            Log::warning('Intento de subida de archivos demasiado grande en actualización: ' . $contentLength . ' bytes');
+            return redirect()->back()
+                ->withInput()
+                ->with('post_max_size_error', true)
+                ->with('error', 'El tamaño total de los archivos (' . round($contentLength / (1024 * 1024), 2) . 'MB) excede el límite permitido de 50MB. Por favor, reduce el tamaño de los archivos.')
+                ->with('swal_error', true);
+        }
+
         // Similar al store pero con ignore para unique
         $validator = Validator::make($request->all(), [
             'vCodigo_barras' => [
@@ -750,7 +738,6 @@ class ProductoController extends Controller
             'etiquetas' => 'nullable|array',
             'etiquetas.*' => 'exists:tbl_etiquetas,id_etiqueta',
             'imagen_principal' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
-            'video_producto' => 'nullable|mimes:mp4,webm,ogg,avi,mov,mkv|max:51200',
             'gif_producto' => 'nullable|mimes:gif|max:10240',
             'imagenes' => 'nullable|array|max:7',
             'imagenes.*' => 'image|mimes:jpeg,jpg,png,webp|max:5120',
@@ -939,6 +926,13 @@ class ProductoController extends Controller
                         if (empty($variacion['dFecha_fin_descuento'])) {
                             $validator->errors()->add("variaciones.{$key}.dFecha_fin_descuento", 'La fecha de fin es obligatoria cuando el descuento está activo.');
                         }
+                        
+                        // Validar que la fecha de fin sea igual o posterior a la fecha de inicio
+                        if (!empty($variacion['dFecha_inicio_descuento']) && !empty($variacion['dFecha_fin_descuento'])) {
+                            if ($variacion['dFecha_fin_descuento'] < $variacion['dFecha_inicio_descuento']) {
+                                $validator->errors()->add("variaciones.{$key}.dFecha_fin_descuento", 'La fecha de fin debe ser igual o posterior a la fecha de inicio.');
+                            }
+                        }
                     }
                 }
             });
@@ -970,7 +964,7 @@ class ProductoController extends Controller
 
             // Eliminar imágenes seleccionadas SOLO si se especifica
             if ($request->has('imagenes_a_eliminar') && is_array($request->imagenes_a_eliminar) && count($request->imagenes_a_eliminar) > 0) {
-                $this->eliminarImagenesEspecificas($producto, $request->imagenes_a_eliminar);
+                $producto->eliminarImagenesAdicionalesEspecificas($request->imagenes_a_eliminar);
             }
 
             // Actualizar producto
@@ -1014,27 +1008,19 @@ class ProductoController extends Controller
                 $producto->recalcularPrecioFinal();
             }
 
-            // Guardar imagen principal si se subió una nueva
+            // Guardar imagen principal si se subió una nueva (ACTUALIZADO)
             if ($request->hasFile('imagen_principal')) {
-                $this->eliminarImagenPrincipal($producto);
-                $this->guardarImagenPrincipal($producto, $request->file('imagen_principal'));
+                $producto->guardarImagenPrincipal($request->file('imagen_principal'));
             }
 
-            // Guardar video si se subió uno nuevo
-            if ($request->hasFile('video_producto')) {
-                $this->eliminarVideo($producto);
-                $this->guardarVideo($producto, $request->file('video_producto'));
-            }
-
-            // Guardar GIF si se subió uno nuevo
+            // Guardar GIF si se subió uno nuevo (ACTUALIZADO)
             if ($request->hasFile('gif_producto')) {
-                $this->eliminarGif($producto);
-                $this->guardarGif($producto, $request->file('gif_producto'));
+                $producto->guardarGif($request->file('gif_producto'));
             }
 
-            // Guardar nuevas imágenes adicionales
+            // Guardar nuevas imágenes adicionales (ACTUALIZADO)
             if ($request->hasFile('imagenes') && count($request->file('imagenes')) > 0) {
-                $this->guardarImagenes($producto, $request->file('imagenes'));
+                $producto->guardarImagenesAdicionales($request->file('imagenes'));
             }
 
             // Sincronizar etiquetas
@@ -1107,7 +1093,7 @@ class ProductoController extends Controller
                                 'vClase_envio' => $claseEnvio,
                                 'tDescripcion' => $variacionData['tDescripcion'] ?? null,
                                 'bActivo' => isset($variacionData['bActivo']) ? 1 : 0,
-                                'id_impuesto' => $variacionData['id_impuesto'] ?? null, // NUEVO CAMPO
+                                'id_impuesto' => $variacionData['id_impuesto'] ?? null,
                             ]);
 
                             $idsVariacionesProcesadas[] = $variacion->id_variacion;
@@ -1123,14 +1109,29 @@ class ProductoController extends Controller
                                 ]);
                             }
 
-                            // Actualizar imagen SOLO si se sube una nueva
-                            if ($request->hasFile("variaciones.{$key}.vImagen")) {
-                                $this->eliminarImagenVariacion($variacion);
-                                $this->guardarImagenVariacion($variacion, $request->file("variaciones.{$key}.vImagen"));
-                            } 
+                            // Actualizar imagen SOLO si se sube una nueva (ACTUALIZADO)
+                            if ($request->hasFile("variaciones.{$key}.imagen_principal")) {
+                                $variacion->guardarImagenPrincipal($request->file("variaciones.{$key}.imagen_principal"));
+                            }
+                            
+                            // Actualizar GIF SOLO si se sube uno nuevo (ACTUALIZADO)
+                            if ($request->hasFile("variaciones.{$key}.gif")) {
+                                $variacion->guardarGif($request->file("variaciones.{$key}.gif"));
+                            }
+                            
+                            // Actualizar imágenes adicionales SOLO si se suben nuevas (ACTUALIZADO)
+                            if ($request->hasFile("variaciones.{$key}.imagenes_adicionales")) {
+                                $imagenes = $request->file("variaciones.{$key}.imagenes_adicionales");
+                                if (is_array($imagenes)) {
+                                    $variacion->guardarImagenesAdicionales($imagenes);
+                                } else {
+                                    $variacion->guardarImagenesAdicionales([$imagenes]);
+                                }
+                            }
+                            
                             // Eliminar imagen SOLO si se marca explícitamente
-                            elseif (isset($variacionData['eliminar_imagen']) && $variacionData['eliminar_imagen'] == '1') {
-                                $this->eliminarImagenVariacion($variacion);
+                            if (isset($variacionData['eliminar_imagen']) && $variacionData['eliminar_imagen'] == '1') {
+                                $variacion->eliminarImagenPrincipal();
                             }
                         }
                     } else {
@@ -1158,7 +1159,7 @@ class ProductoController extends Controller
                             'vClase_envio' => $claseEnvio,
                             'tDescripcion' => $variacionData['tDescripcion'] ?? null,
                             'bActivo' => isset($variacionData['bActivo']) ? 1 : 0,
-                            'id_impuesto' => $variacionData['id_impuesto'] ?? null, // NUEVO CAMPO
+                            'id_impuesto' => $variacionData['id_impuesto'] ?? null,
                         ]);
 
                         $idsVariacionesProcesadas[] = $variacion->id_variacion;
@@ -1171,8 +1172,21 @@ class ProductoController extends Controller
                             ]);
                         }
 
-                        if ($request->hasFile("variaciones.{$key}.vImagen")) {
-                            $this->guardarImagenVariacion($variacion, $request->file("variaciones.{$key}.vImagen"));
+                        if ($request->hasFile("variaciones.{$key}.imagen_principal")) {
+                            $variacion->guardarImagenPrincipal($request->file("variaciones.{$key}.imagen_principal"));
+                        }
+                        
+                        if ($request->hasFile("variaciones.{$key}.gif")) {
+                            $variacion->guardarGif($request->file("variaciones.{$key}.gif"));
+                        }
+                        
+                        if ($request->hasFile("variaciones.{$key}.imagenes_adicionales")) {
+                            $imagenes = $request->file("variaciones.{$key}.imagenes_adicionales");
+                            if (is_array($imagenes)) {
+                                $variacion->guardarImagenesAdicionales($imagenes);
+                            } else {
+                                $variacion->guardarImagenesAdicionales([$imagenes]);
+                            }
                         }
                     }
                 }
@@ -1182,7 +1196,7 @@ class ProductoController extends Controller
                 foreach ($variacionesAEliminar as $idVariacion) {
                     $variacion = ProductoVariacion::find($idVariacion);
                     if ($variacion) {
-                        $this->eliminarImagenVariacion($variacion);
+                        $variacion->eliminarTodasLasImagenes();
                         $variacion->atributos()->delete();
                         $variacion->delete();
                     }
@@ -1218,7 +1232,7 @@ class ProductoController extends Controller
 
             // Eliminar imágenes de variaciones
             foreach ($producto->variaciones as $variacion) {
-                $this->eliminarImagenVariacion($variacion);
+                $variacion->eliminarTodasLasImagenes();
                 $variacion->atributos()->delete();
             }
 
@@ -1226,7 +1240,7 @@ class ProductoController extends Controller
             $producto->variaciones()->delete();
 
             // Eliminar imágenes principales
-            $this->eliminarTodasLasImagenes($producto);
+            $producto->eliminarTodasLasImagenes();
 
             // Eliminar relaciones
             $producto->etiquetas()->detach();
@@ -1268,212 +1282,78 @@ class ProductoController extends Controller
         return view('productos.catalogo', compact('productos'));
     }
 
-    // ============ FUNCIONES PARA MANEJO DE IMÁGENES ============
+    // ============ FUNCIONES PARA MANEJO DE IMÁGENES (AHORA USAN LOS MÉTODOS DEL MODELO) ============
 
     /**
-     * Guardar imagen principal del producto
+     * Guardar imagen principal del producto - MANTENIDO POR COMPATIBILIDAD
      */
     private function guardarImagenPrincipal($producto, $imagen)
     {
-        $carpeta = 'products/' . $producto->id_producto;
-        
-        if (!Storage::disk('public')->exists($carpeta)) {
-            Storage::disk('public')->makeDirectory($carpeta);
-        }
-        
-        $extension = $imagen->getClientOriginalExtension();
-        $nombreArchivo = 'principal_' . time() . '.' . $extension;
-        $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
-        
-        Log::info('Imagen principal guardada en: ' . $ruta);
+        return $producto->guardarImagenPrincipal($imagen);
     }
 
     /**
-     * Eliminar imagen principal del producto
-     */
-    private function eliminarImagenPrincipal($producto)
-    {
-        $carpeta = 'products/' . $producto->id_producto;
-        
-        if (Storage::disk('public')->exists($carpeta)) {
-            $archivos = Storage::disk('public')->files($carpeta);
-            foreach ($archivos as $archivo) {
-                if (strpos($archivo, 'principal_') !== false) {
-                    Storage::disk('public')->delete($archivo);
-                }
-            }
-        }
-    }
-
-    /**
-     * Guardar video del producto
-     */
-    private function guardarVideo($producto, $video)
-    {
-        $carpeta = 'products/' . $producto->id_producto;
-        
-        if (!Storage::disk('public')->exists($carpeta)) {
-            Storage::disk('public')->makeDirectory($carpeta);
-        }
-        
-        $extension = $video->getClientOriginalExtension();
-        $nombreArchivo = 'video_' . time() . '.' . $extension;
-        $ruta = $video->storeAs($carpeta, $nombreArchivo, 'public');
-        
-        Log::info('Video guardado en: ' . $ruta);
-    }
-
-    /**
-     * Eliminar video del producto
-     */
-    private function eliminarVideo($producto)
-    {
-        $carpeta = 'products/' . $producto->id_producto;
-        
-        if (Storage::disk('public')->exists($carpeta)) {
-            $archivos = Storage::disk('public')->files($carpeta);
-            foreach ($archivos as $archivo) {
-                if (strpos($archivo, 'video_') !== false) {
-                    Storage::disk('public')->delete($archivo);
-                }
-            }
-        }
-    }
-
-    /**
-     * Guardar GIF del producto
+     * Guardar GIF del producto - MANTENIDO POR COMPATIBILIDAD
      */
     private function guardarGif($producto, $gif)
     {
-        $carpeta = 'products/' . $producto->id_producto;
-        
-        if (!Storage::disk('public')->exists($carpeta)) {
-            Storage::disk('public')->makeDirectory($carpeta);
-        }
-        
-        $extension = $gif->getClientOriginalExtension();
-        $nombreArchivo = 'gif_' . time() . '.' . $extension;
-        $ruta = $gif->storeAs($carpeta, $nombreArchivo, 'public');
-        
-        Log::info('GIF guardado en: ' . $ruta);
+        return $producto->guardarGif($gif);
     }
 
     /**
-     * Eliminar GIF del producto
-     */
-    private function eliminarGif($producto)
-    {
-        $carpeta = 'products/' . $producto->id_producto;
-        
-        if (Storage::disk('public')->exists($carpeta)) {
-            $archivos = Storage::disk('public')->files($carpeta);
-            foreach ($archivos as $archivo) {
-                if (strpos($archivo, 'gif_') !== false) {
-                    Storage::disk('public')->delete($archivo);
-                }
-            }
-        }
-    }
-
-    /**
-     * Guardar imágenes adicionales del producto
+     * Guardar imágenes adicionales del producto - MANTENIDO POR COMPATIBILIDAD
      */
     private function guardarImagenes($producto, $imagenes)
     {
-        $carpeta = 'products/' . $producto->id_producto . '/adicionales';
-        
-        if (!Storage::disk('public')->exists($carpeta)) {
-            Storage::disk('public')->makeDirectory($carpeta);
-        }
-        
-        // Obtener imágenes existentes para numeración
-        $imagenesExistentes = Storage::disk('public')->files($carpeta);
-        $numeroInicio = count($imagenesExistentes);
-        
-        foreach ($imagenes as $index => $imagen) {
-            $extension = $imagen->getClientOriginalExtension();
-            $nombreArchivo = 'imagen_' . ($numeroInicio + $index + 1) . '_' . time() . '.' . $extension;
-            $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
-            Log::info('Imagen adicional guardada en: ' . $ruta);
-        }
+        return $producto->guardarImagenesAdicionales($imagenes);
     }
 
     /**
-     * Eliminar imágenes específicas del producto
+     * Eliminar imagen principal del producto - MANTENIDO POR COMPATIBILIDAD
+     */
+    private function eliminarImagenPrincipal($producto)
+    {
+        $producto->eliminarImagenPrincipal();
+    }
+
+    /**
+     * Eliminar GIF del producto - MANTENIDO POR COMPATIBILIDAD
+     */
+    private function eliminarGif($producto)
+    {
+        $producto->eliminarGif();
+    }
+
+    /**
+     * Eliminar imágenes específicas del producto - MANTENIDO POR COMPATIBILIDAD
      */
     private function eliminarImagenesEspecificas($producto, $imagenesAEliminar)
     {
-        $carpeta = 'products/' . $producto->id_producto . '/adicionales';
-        
-        foreach ($imagenesAEliminar as $nombreImagen) {
-            $ruta = $carpeta . '/' . $nombreImagen;
-            if (Storage::disk('public')->exists($ruta)) {
-                Storage::disk('public')->delete($ruta);
-            }
-        }
+        $producto->eliminarImagenesAdicionalesEspecificas($imagenesAEliminar);
     }
 
     /**
-     * Eliminar todas las imágenes del producto
+     * Eliminar todas las imágenes del producto - MANTENIDO POR COMPATIBILIDAD
      */
     private function eliminarTodasLasImagenes($producto)
     {
-        $carpeta = 'products/' . $producto->id_producto;
-        
-        if (Storage::disk('public')->exists($carpeta)) {
-            Storage::disk('public')->deleteDirectory($carpeta);
-        }
+        $producto->eliminarTodasLasImagenes();
     }
 
     /**
-     * Guardar imagen de variación
+     * Guardar imagen de variación - MANTENIDO POR COMPATIBILIDAD
      */
     private function guardarImagenVariacion($variacion, $imagen)
     {
-        $carpeta = 'variaciones/' . $variacion->id_variacion;
-        
-        if (!Storage::disk('public')->exists($carpeta)) {
-            Storage::disk('public')->makeDirectory($carpeta);
-        }
-        
-        $extension = strtolower($imagen->getClientOriginalExtension());
-        
-        $extensionesValidas = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'tiff', 'ico', 'heic', 'heif'];
-        
-        if (!$extension || !in_array($extension, $extensionesValidas)) {
-            $extension = 'jpg';
-        }
-        
-        $nombreArchivo = 'imagen_' . time() . '_' . uniqid() . '.' . $extension;
-        $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
-        
-        $variacion->vImagen = $ruta;
-        $variacion->saveQuietly();
-        
-        Log::info('Imagen de variación guardada en: ' . $ruta);
+        return $variacion->guardarImagenPrincipal($imagen);
     }
 
     /**
-     * Eliminar imagen de variación
+     * Eliminar imagen de variación - MANTENIDO POR COMPATIBILIDAD
      */
     private function eliminarImagenVariacion($variacion)
     {
-        if ($variacion->vImagen) {
-            if (Storage::disk('public')->exists($variacion->vImagen)) {
-                Storage::disk('public')->delete($variacion->vImagen);
-            }
-            
-            $carpeta = 'variaciones/' . $variacion->id_variacion;
-            if (Storage::disk('public')->exists($carpeta)) {
-                $archivos = Storage::disk('public')->files($carpeta);
-                if (empty($archivos)) {
-                    Storage::disk('public')->deleteDirectory($carpeta);
-                }
-            }
-            
-            $variacion->vImagen = null;
-            $variacion->saveQuietly();
-        }
+        $variacion->eliminarImagenPrincipal();
     }
 
     // ============ MÉTODOS PARA ATRIBUTOS ============

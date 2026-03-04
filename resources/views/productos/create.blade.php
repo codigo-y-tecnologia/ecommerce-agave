@@ -135,16 +135,16 @@
                                    value="{{ old('iStock', 0) }}" 
                                    required 
                                    oninput="validarStock(this)"
-                                   pattern="[0-9]{1,4}"
-                                   title="Máximo 4 dígitos (0-9999)"
+                                   pattern="[0-9]{1,6}"
+                                   title="Máximo 6 dígitos (0-999999)"
                                    inputmode="numeric"
                                    min="0"
-                                   max="9999"
+                                   max="999999"
                                    autocomplete="off">
                             @error('iStock')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            <small class="form-text text-muted">Máximo 4 dígitos (0-9999)</small>
+                            <small class="form-text text-muted">Máximo 999,999 unidades</small>
                         </div>
                     </div>
                 </div>
@@ -515,7 +515,7 @@
             </div>
         </div>
 
-        <!-- IMAGEN PRINCIPAL, VIDEO E IMÁGENES ADICIONALES DEL PRODUCTO -->
+        <!-- IMAGEN PRINCIPAL, GIF E IMÁGENES ADICIONALES DEL PRODUCTO -->
         <div class="card mb-4">
             <div class="card-header bg-secondary text-white">
                 <h5 class="mb-0"><i class="fas fa-images me-2"></i>Multimedia del Producto Principal</h5>
@@ -523,12 +523,35 @@
             <div class="card-body">
                 <div class="alert alert-warning" id="limiteArchivosMsg" style="display: none;">
                     <i class="fas fa-exclamation-triangle me-2"></i>
-                    <strong>¡Atención!</strong> Has excedido el límite de tamaño total de archivos.
+                    <strong>¡Atención!</strong> Has excedido el límite de tamaño total de archivos (50MB).
+                </div>
+
+                <!-- Barra de progreso de tamaño total -->
+                <div class="alert alert-info py-2 mb-3">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <i class="fas fa-camera me-1"></i>
+                            <strong>Total de archivos multimedia:</strong> 
+                            <span id="total-imagenes">0</span> archivos
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Tamaño total:</strong>
+                            <span id="total-size">0 KB</span>
+                            <span class="text-muted ms-2">(Máx: 50MB)</span>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <div class="progress" style="height: 8px;">
+                                <div id="size-progress-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="row">
                     <!-- IMAGEN PRINCIPAL -->
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <div class="form-group mb-3">
                             <label for="imagen_principal" class="form-label fw-bold">
                                 <i class="fas fa-star text-warning me-1"></i>Imagen Principal <span class="text-danger">*</span>
@@ -564,44 +587,8 @@
                         </div>
                     </div>
                     
-                    <!-- VIDEO DEL PRODUCTO (OPCIONAL) -->
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label for="video_producto" class="form-label fw-bold">
-                                <i class="fas fa-video text-danger me-1"></i>Video del Producto (Opcional)
-                            </label>
-                            <input type="file" name="video_producto" id="video_producto" 
-                                   class="form-control @error('video_producto') is-invalid @enderror" 
-                                   accept="video/mp4,video/webm,video/ogg,video/avi,video/mov,video/mkv"
-                                   onchange="previewVideo(this)">
-                            @error('video_producto')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <small class="form-text text-muted">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Formatos: MP4, WebM, OGG, AVI, MOV, MKV. Máximo 50MB.
-                            </small>
-                            
-                            <!-- Preview de video -->
-                            <div id="preview_video_container" class="mt-2" style="display: none;">
-                                <div class="border rounded p-2 text-center bg-light">
-                                    <video id="preview_video" controls style="max-width: 100%; max-height: 150px;">
-                                        <source src="#" type="video/mp4">
-                                        Tu navegador no soporta el elemento de video.
-                                    </video>
-                                    <div class="mt-2">
-                                        <small class="text-muted d-block">Video seleccionado</small>
-                                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarVideo()">
-                                            <i class="fas fa-times me-1"></i>Quitar video
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
                     <!-- GIF DEL PRODUCTO (OPCIONAL) -->
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <div class="form-group mb-3">
                             <label for="gif_producto" class="form-label fw-bold">
                                 <i class="fas fa-file-image text-success me-1"></i>GIF Animado (Opcional)
@@ -657,29 +644,6 @@
                             </small>
                             <div class="mt-2">
                                 <span class="badge bg-info" id="selected-images-count">0 archivos</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Contador de imágenes del producto -->
-                <div class="alert alert-info py-2 mt-2">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <i class="fas fa-camera me-1"></i>
-                            <strong>Total de archivos multimedia:</strong> 
-                            <span id="total-imagenes">0</span> archivos
-                        </div>
-                        <div class="col-md-6">
-                            <strong>Tamaño total:</strong>
-                            <span id="total-size">0 KB</span>
-                            <span class="text-muted ms-2">(Máx: 50MB)</span>
-                        </div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col-12">
-                            <div class="progress" style="height: 8px;">
-                                <div id="size-progress-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
                             </div>
                         </div>
                     </div>
@@ -1272,9 +1236,8 @@
                                 <select class="form-control" id="eTipo_impuesto" name="eTipo" required>
                                     <option value="">Seleccionar tipo</option>
                                     <option value="IVA">IVA</option>
-                                    <option value="ISR">ISR</option>
                                     <option value="IEPS">IEPS</option>
-                                    <option value="Otro">Otro</option>
+                                    <option value="OTRO">OTRO</option>
                                 </select>
                             </div>
                             
@@ -1555,7 +1518,6 @@ let selectedImages = [];
 let imageCounter = 0;
 let atributosActivos = {};
 let imagenPrincipalFile = null;
-let videoFile = null;
 let gifFile = null;
 let variacionCounter = 0;
 let valorModal = null;
@@ -1575,6 +1537,111 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inicializar los formularios rápidos
     initQuickForms();
 });
+
+// ============ VALIDACIÓN DE TAMAÑO ANTES DE ENVIAR ============
+function validarTamañoTotalAntesDeEnviar() {
+    const totalSize = calcularTamañoTotal();
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    
+    // Lista de archivos para mostrar al usuario
+    let archivosGrandes = [];
+    
+    // Verificar archivos individualmente
+    if (imagenPrincipalFile && imagenPrincipalFile.size > 5 * 1024 * 1024) {
+        archivosGrandes.push(`Imagen principal: ${(imagenPrincipalFile.size / (1024 * 1024)).toFixed(2)}MB (máx 5MB)`);
+    }
+    
+    if (gifFile && gifFile.size > 10 * 1024 * 1024) {
+        archivosGrandes.push(`GIF: ${(gifFile.size / (1024 * 1024)).toFixed(2)}MB (máx 10MB)`);
+    }
+    
+    selectedImages.forEach(img => {
+        if (img.file.size > 5 * 1024 * 1024) {
+            archivosGrandes.push(`Imagen adicional "${img.file.name}": ${(img.file.size / (1024 * 1024)).toFixed(2)}MB (máx 5MB)`);
+        }
+    });
+    
+    // Verificar imágenes de variaciones
+    Object.keys(imagenesVariacion).forEach(valorKey => {
+        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+            imagenesVariacion[valorKey].imagenes.forEach(img => {
+                if (img.file.size > 5 * 1024 * 1024) {
+                    archivosGrandes.push(`Imagen adicional de variación "${img.name}": ${(img.file.size / (1024 * 1024)).toFixed(2)}MB (máx 5MB)`);
+                }
+            });
+        }
+    });
+    
+    if (archivosGrandes.length > 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Archivos demasiado grandes',
+            html: `
+                <div class="text-left">
+                    <p class="mb-3">Los siguientes archivos exceden su límite individual:</p>
+                    <ul class="text-left">
+                        ${archivosGrandes.map(msg => `<li class="mb-2">⚠️ ${msg}</li>`).join('')}
+                    </ul>
+                    <hr>
+                    <p class="text-muted small mb-0">Por favor, reduce el tamaño de estos archivos antes de continuar.</p>
+                </div>
+            `,
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#3085d6'
+        });
+        return false;
+    }
+    
+    if (totalSize > maxSize) {
+        // Calcular cuánto hay que reducir
+        const exceso = totalSize - maxSize;
+        
+        Swal.fire({
+            icon: 'error',
+            title: 'Archivos demasiado grandes',
+            html: `
+                <div class="text-center">
+                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                    <h5 class="mb-3">El tamaño total excede el límite del servidor</h5>
+                    <p class="mb-2"><strong>Tamaño actual:</strong> ${(totalSize / (1024 * 1024)).toFixed(2)}MB</p>
+                    <p class="mb-2"><strong>Límite permitido:</strong> 50MB</p>
+                    <p class="mb-3"><strong>Debes reducir:</strong> ${(exceso / (1024 * 1024)).toFixed(2)}MB</p>
+                    
+                    <div class="bg-light p-3 rounded mt-3">
+                        <p class="fw-bold mb-2">📊 Desglose de archivos:</p>
+                        <ul class="text-left small">
+                            ${imagenPrincipalFile ? `<li>📷 Imagen principal: ${(imagenPrincipalFile.size / (1024 * 1024)).toFixed(2)}MB</li>` : ''}
+                            ${gifFile ? `<li>🎬 GIF: ${(gifFile.size / (1024 * 1024)).toFixed(2)}MB</li>` : ''}
+                            ${selectedImages.map(img => `<li>🖼️ ${img.file.name.substring(0, 20)}...: ${(img.file.size / (1024 * 1024)).toFixed(2)}MB</li>`).join('')}
+                        </ul>
+                    </div>
+                    
+                    <hr>
+                    <p class="text-muted small mt-3">💡 Recomendaciones:</p>
+                    <ul class="text-left small">
+                        <li>Comprime las imágenes antes de subirlas</li>
+                        <li>Sube menos imágenes adicionales</li>
+                    </ul>
+                </div>
+            `,
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#3085d6',
+            width: '600px'
+        });
+        return false;
+    }
+    
+    if (!imagenPrincipalFile) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Imagen principal requerida',
+            text: 'Debes seleccionar una imagen principal para el producto'
+        });
+        return false;
+    }
+    
+    return true;
+}
 
 // ============ FUNCIÓN DE CÁLCULO DE IMPUESTO Y PRECIO FINAL ============
 
@@ -2039,8 +2106,8 @@ function validarPrecio(input) {
 
 function validarStock(input) {
     input.value = input.value.replace(/[^0-9]/g, '');
-    if (input.value.length > 4) {
-        input.value = input.value.substring(0, 4);
+    if (input.value.length > 6) {
+        input.value = input.value.substring(0, 6);
     }
     if (input.value && parseInt(input.value) < 0) {
         input.value = '0';
@@ -2124,11 +2191,19 @@ function calcularTamañoTotal() {
     let total = 0;
     
     if (imagenPrincipalFile) total += imagenPrincipalFile.size;
-    if (videoFile) total += videoFile.size;
     if (gifFile) total += gifFile.size;
     
     selectedImages.forEach(img => {
         total += img.file.size;
+    });
+    
+    // Agregar imágenes de variaciones
+    Object.keys(imagenesVariacion).forEach(valorKey => {
+        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+            imagenesVariacion[valorKey].imagenes.forEach(img => {
+                total += img.file.size;
+            });
+        }
     });
     
     return total;
@@ -2229,51 +2304,6 @@ function cancelarImagenPrincipal() {
     imagenPrincipalFile = null;
     actualizarBarraProgresoTamaño();
     actualizarContadorImagenes();
-}
-
-function previewVideo(input) {
-    const previewContainer = document.getElementById('preview_video_container');
-    const previewVideo = document.getElementById('preview_video');
-    const source = previewVideo.querySelector('source');
-    
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        
-        if (file.size > 50 * 1024 * 1024) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Archivo demasiado grande',
-                text: 'El video no puede exceder los 50MB'
-            });
-            input.value = '';
-            return;
-        }
-        
-        videoFile = file;
-        const url = URL.createObjectURL(file);
-        source.src = url;
-        source.type = file.type;
-        previewVideo.load();
-        previewContainer.style.display = 'block';
-        actualizarBarraProgresoTamaño();
-    } else {
-        previewContainer.style.display = 'none';
-        videoFile = null;
-        actualizarBarraProgresoTamaño();
-    }
-}
-
-function cancelarVideo() {
-    const input = document.getElementById('video_producto');
-    const previewContainer = document.getElementById('preview_video_container');
-    const previewVideo = document.getElementById('preview_video');
-    const source = previewVideo.querySelector('source');
-    
-    input.value = '';
-    previewContainer.style.display = 'none';
-    source.src = '#';
-    videoFile = null;
-    actualizarBarraProgresoTamaño();
 }
 
 function previewGif(input) {
@@ -2533,6 +2563,32 @@ function handleImageSelection(event) {
     const currentCount = selectedImages.length;
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     
+    // Calcular tamaño actual
+    const tamanioActual = calcularTamañoTotal();
+    
+    // Verificar si con estos archivos nuevos se excede el límite
+    let nuevoTamanio = tamanioActual;
+    for (let i = 0; i < files.length; i++) {
+        nuevoTamanio += files[i].size;
+    }
+    
+    if (nuevoTamanio > maxTotalSize) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de tamaño excedido',
+            html: `
+                <div class="text-center">
+                    <p>Si agregas estos archivos, excederás el límite de 50MB.</p>
+                    <p class="mb-0"><strong>Tamaño actual:</strong> ${(tamanioActual / (1024 * 1024)).toFixed(2)}MB</p>
+                    <p><strong>Tamaño con nuevos archivos:</strong> ${(nuevoTamanio / (1024 * 1024)).toFixed(2)}MB</p>
+                </div>
+            `,
+            confirmButtonText: 'Entendido'
+        });
+        event.target.value = '';
+        return;
+    }
+    
     if (currentCount + files.length > maxFiles) {
         Swal.fire({
             icon: 'warning',
@@ -2561,16 +2617,6 @@ function handleImageSelection(event) {
                 icon: 'warning',
                 title: 'Archivo demasiado grande',
                 text: `La imagen "${file.name}" excede el límite de 5MB.`
-            });
-            continue;
-        }
-        
-        const tamanioActual = calcularTamañoTotal();
-        if (tamanioActual + file.size > maxTotalSize) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Límite de tamaño excedido',
-                text: `No puedes agregar "${file.name}" porque excede el límite total de 50MB.`
             });
             continue;
         }
@@ -2695,7 +2741,15 @@ function renderSelectedImages() {
 }
 
 function actualizarContadorImagenes() {
-    const total = (imagenPrincipalFile ? 1 : 0) + (gifFile ? 1 : 0) + selectedImages.length;
+    let total = (imagenPrincipalFile ? 1 : 0) + (gifFile ? 1 : 0) + selectedImages.length;
+    
+    // Agregar imágenes de variaciones
+    Object.keys(imagenesVariacion).forEach(valorKey => {
+        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+            total += imagenesVariacion[valorKey].imagenes.length;
+        }
+    });
+    
     document.getElementById('total-imagenes').textContent = total;
 }
 
@@ -3170,13 +3224,13 @@ function actualizarPestanasValores() {
                                        value="0"
                                        required
                                        oninput="validarStock(this)"
-                                       pattern="[0-9]{1,4}"
+                                       pattern="[0-9]{1,6}"
                                        min="0"
-                                       max="9999"
+                                       max="999999"
                                        placeholder="0"
                                        autocomplete="off">
                             </div>
-                            <small class="form-text text-muted">Máximo 9,999 unidades</small>
+                            <small class="form-text text-muted">Máximo 999,999 unidades</small>
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -3473,7 +3527,7 @@ function generarSkuSugerido(productoSku, combinacion) {
     return sku;
 }
 
-// ============ FUNCIONES PARA IMÁGENES DE VARIACIONES ============
+// ============ FUNCIONES PARA IMÁGENES DE VARIACIONES (NUEVAS) ============
 
 function previewImagenPrincipalVariacion(input, previewId) {
     const previewContainer = document.getElementById(previewId);
@@ -3509,6 +3563,10 @@ function previewImagenPrincipalVariacion(input, previewId) {
             img.src = e.target.result;
         }
         reader.readAsDataURL(file);
+        
+        // Actualizar barra de progreso
+        actualizarBarraProgresoTamaño();
+        actualizarContadorImagenes();
     } else {
         previewContainer.style.display = 'none';
     }
@@ -3547,6 +3605,10 @@ function previewGifVariacion(input, previewId) {
             img.src = e.target.result;
         }
         reader.readAsDataURL(file);
+        
+        // Actualizar barra de progreso
+        actualizarBarraProgresoTamaño();
+        actualizarContadorImagenes();
     } else {
         previewContainer.style.display = 'none';
     }
@@ -3576,6 +3638,32 @@ function handleImagenesAdicionalesVariacion(event, valorKey) {
             icon: 'warning',
             title: 'Límite de imágenes',
             text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales. Ya tienes ${imagenesVariacion[valorKey].imagenes.length} seleccionadas.`
+        });
+        input.value = '';
+        return;
+    }
+    
+    // Calcular tamaño actual
+    const tamanioActual = calcularTamañoTotal();
+    
+    // Verificar si con estos archivos nuevos se excede el límite
+    let nuevoTamanio = tamanioActual;
+    files.forEach(file => {
+        nuevoTamanio += file.size;
+    });
+    
+    if (nuevoTamanio > maxTotalSize) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de tamaño excedido',
+            html: `
+                <div class="text-center">
+                    <p>Si agregas estas imágenes, excederás el límite de 50MB.</p>
+                    <p class="mb-0"><strong>Tamaño actual:</strong> ${(tamanioActual / (1024 * 1024)).toFixed(2)}MB</p>
+                    <p><strong>Tamaño con nuevas imágenes:</strong> ${(nuevoTamanio / (1024 * 1024)).toFixed(2)}MB</p>
+                </div>
+            `,
+            confirmButtonText: 'Entendido'
         });
         input.value = '';
         return;
@@ -3619,6 +3707,10 @@ function handleImagenesAdicionalesVariacion(event, valorKey) {
     
     // Actualizar contador
     countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
+    
+    // Actualizar barra de progreso y contador total
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
     
     // Limpiar el input para permitir seleccionar los mismos archivos nuevamente
     input.value = '';
@@ -3687,6 +3779,10 @@ function eliminarImagenAdicionalVariacion(valorKey, imageId) {
         if (countSpan) {
             countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
         }
+        
+        // Actualizar barra de progreso y contador total
+        actualizarBarraProgresoTamaño();
+        actualizarContadorImagenes();
     }
 }
 
@@ -4480,31 +4576,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Validación del formulario antes de enviar
+// ============ FUNCIÓN PRINCIPAL DE ENVÍO DEL FORMULARIO ============
+
 document.getElementById('productoForm').addEventListener('submit', function(e) {
+    // Primero validar con JavaScript
+    if (!validarTamañoTotalAntesDeEnviar()) {
+        e.preventDefault();
+        return false;
+    }
+    
     const btnSubmit = document.getElementById('btnSubmit');
     
-    const totalSize = calcularTamañoTotal();
-    if (totalSize > maxTotalSize) {
-        e.preventDefault();
-        Swal.fire({
-            icon: 'error',
-            title: 'Límite de tamaño excedido',
-            text: `El tamaño total de los archivos (${(totalSize / (1024 * 1024)).toFixed(2)}MB) excede el límite permitido de 50MB.`
-        });
-        return false;
-    }
-    
-    if (!imagenPrincipalFile) {
-        e.preventDefault();
-        Swal.fire({
-            icon: 'error',
-            title: 'Imagen principal requerida',
-            text: 'Debes seleccionar una imagen principal para el producto'
-        });
-        return false;
-    }
-    
+    // Validación de fechas de descuento en producto principal
     if (document.getElementById('bTiene_descuento') && document.getElementById('bTiene_descuento').checked) {
         const precioVenta = parseFloat(document.getElementById('dPrecio_venta').value) || 0;
         const precioDescuento = parseFloat(document.getElementById('dPrecio_descuento').value) || 0;
@@ -4542,6 +4625,35 @@ document.getElementById('productoForm').addEventListener('submit', function(e) {
             });
             return false;
         }
+    }
+    
+    // Validación de fechas de descuento en variaciones
+    let erroresFechasVariaciones = [];
+    document.querySelectorAll('[id^="fecha-fin-"]').forEach(input => {
+        const valorKey = input.id.replace('fecha-fin-', '');
+        const fechaInicio = document.getElementById(`fecha-inicio-${valorKey}`);
+        const fechaFin = input;
+        
+        if (fechaInicio && fechaInicio.value && fechaFin.value) {
+            const inicio = new Date(fechaInicio.value);
+            const fin = new Date(fechaFin.value);
+            
+            if (fin < inicio) {
+                erroresFechasVariaciones.push('En una variación, la fecha de fin no puede ser anterior a la fecha de inicio');
+                fechaFin.classList.add('is-invalid');
+                document.getElementById(`error-fechas-descuento-${valorKey}`).style.display = 'block';
+            }
+        }
+    });
+    
+    if (erroresFechasVariaciones.length > 0) {
+        e.preventDefault();
+        Swal.fire({
+            icon: 'error',
+            title: 'Errores en fechas de descuento',
+            html: erroresFechasVariaciones.join('<br>')
+        });
+        return false;
     }
     
     let errorVariaciones = [];
@@ -4597,12 +4709,158 @@ document.getElementById('productoForm').addEventListener('submit', function(e) {
         return false;
     }
     
+    // Aquí agregamos la función para incluir todas las imágenes de variaciones en el FormData
+    // Esta función se ejecutará antes de que el formulario se envíe
+    
+    // Crear un nuevo FormData para asegurar que todas las imágenes se incluyan
+    const form = this;
+    const originalSubmit = form.submit;
+    
+    // Reemplazar temporalmente el método submit para asegurar que las imágenes se agreguen
+    form.submit = function() { 
+        // Este es solo un placeholder, no se ejecutará realmente
+    };
+    
+    // Crear un nuevo FormData basado en el formulario actual
+    const formData = new FormData(form);
+    
+    // Eliminar las entradas de variaciones que ya existen para reemplazarlas
+    const keysToRemove = [];
+    for (let pair of formData.entries()) {
+        if (pair[0].startsWith('variaciones[')) {
+            keysToRemove.push(pair[0]);
+        }
+    }
+    keysToRemove.forEach(key => formData.delete(key));
+    
+    // Reconstruir las variaciones con todas las imágenes
+    const variacionesKeys = new Set();
+    
+    // Primero, recolectar todas las claves de variaciones
+    document.querySelectorAll('input[name*="[vSKU]"]').forEach(input => {
+        const match = input.name.match(/variaciones\[([^\]]+)\]/);
+        if (match && match[1]) {
+            variacionesKeys.add(match[1]);
+        }
+    });
+    
+    // Para cada variación, agregar todos los campos
+    variacionesKeys.forEach(valorKey => {
+        // Campos básicos
+        const idAtributo = document.querySelector(`input[name="variaciones[${valorKey}][id_atributo]"]`);
+        const idAtributoValor = document.querySelector(`input[name="variaciones[${valorKey}][id_atributo_valor]"]`);
+        const vNombreVariacion = document.querySelector(`input[name="variaciones[${valorKey}][vNombre_variacion]"]`);
+        const vSKU = document.querySelector(`input[name="variaciones[${valorKey}][vSKU]"]`);
+        const bActivo = document.querySelector(`input[name="variaciones[${valorKey}][bActivo]"]`);
+        const dPrecio = document.querySelector(`input[name="variaciones[${valorKey}][dPrecio]"]`);
+        const iStock = document.querySelector(`input[name="variaciones[${valorKey}][iStock]"]`);
+        const vClaseEnvio = document.querySelector(`select[name="variaciones[${valorKey}][vClase_envio]"]`);
+        const idImpuesto = document.querySelector(`select[name="variaciones[${valorKey}][id_impuesto]"]`);
+        const dPeso = document.querySelector(`input[name="variaciones[${valorKey}][dPeso]"]`);
+        const dLargoCm = document.querySelector(`input[name="variaciones[${valorKey}][dLargo_cm]"]`);
+        const dAnchoCm = document.querySelector(`input[name="variaciones[${valorKey}][dAncho_cm]"]`);
+        const dAltoCm = document.querySelector(`input[name="variaciones[${valorKey}][dAlto_cm]"]`);
+        const bTieneDescuento = document.querySelector(`input[name="variaciones[${valorKey}][bTiene_descuento]"]`);
+        const dPrecioDescuento = document.querySelector(`input[name="variaciones[${valorKey}][dPrecio_descuento]"]`);
+        const dFechaInicioDescuento = document.querySelector(`input[name="variaciones[${valorKey}][dFecha_inicio_descuento]"]`);
+        const dFechaFinDescuento = document.querySelector(`input[name="variaciones[${valorKey}][dFecha_fin_descuento]"]`);
+        const vMotivoDescuento = document.querySelector(`input[name="variaciones[${valorKey}][vMotivo_descuento]"]`);
+        const tDescripcion = document.querySelector(`textarea[name="variaciones[${valorKey}][tDescripcion]"]`);
+        
+        // Agregar campos básicos si existen
+        if (idAtributo) formData.append(`variaciones[${valorKey}][id_atributo]`, idAtributo.value);
+        if (idAtributoValor) formData.append(`variaciones[${valorKey}][id_atributo_valor]`, idAtributoValor.value);
+        if (vNombreVariacion) formData.append(`variaciones[${valorKey}][vNombre_variacion]`, vNombreVariacion.value);
+        if (vSKU) formData.append(`variaciones[${valorKey}][vSKU]`, vSKU.value);
+        if (bActivo && bActivo.checked) formData.append(`variaciones[${valorKey}][bActivo]`, '1');
+        if (dPrecio) formData.append(`variaciones[${valorKey}][dPrecio]`, dPrecio.value);
+        if (iStock) formData.append(`variaciones[${valorKey}][iStock]`, iStock.value);
+        if (vClaseEnvio && vClaseEnvio.value) formData.append(`variaciones[${valorKey}][vClase_envio]`, vClaseEnvio.value);
+        if (idImpuesto && idImpuesto.value) formData.append(`variaciones[${valorKey}][id_impuesto]`, idImpuesto.value);
+        if (dPeso && dPeso.value) formData.append(`variaciones[${valorKey}][dPeso]`, dPeso.value);
+        if (dLargoCm && dLargoCm.value) formData.append(`variaciones[${valorKey}][dLargo_cm]`, dLargoCm.value);
+        if (dAnchoCm && dAnchoCm.value) formData.append(`variaciones[${valorKey}][dAncho_cm]`, dAnchoCm.value);
+        if (dAltoCm && dAltoCm.value) formData.append(`variaciones[${valorKey}][dAlto_cm]`, dAltoCm.value);
+        if (bTieneDescuento && bTieneDescuento.checked) formData.append(`variaciones[${valorKey}][bTiene_descuento]`, '1');
+        if (dPrecioDescuento && dPrecioDescuento.value) formData.append(`variaciones[${valorKey}][dPrecio_descuento]`, dPrecioDescuento.value);
+        if (dFechaInicioDescuento && dFechaInicioDescuento.value) formData.append(`variaciones[${valorKey}][dFecha_inicio_descuento]`, dFechaInicioDescuento.value);
+        if (dFechaFinDescuento && dFechaFinDescuento.value) formData.append(`variaciones[${valorKey}][dFecha_fin_descuento]`, dFechaFinDescuento.value);
+        if (vMotivoDescuento && vMotivoDescuento.value) formData.append(`variaciones[${valorKey}][vMotivo_descuento]`, vMotivoDescuento.value);
+        if (tDescripcion && tDescripcion.value) formData.append(`variaciones[${valorKey}][tDescripcion]`, tDescripcion.value);
+        
+        // Imagen principal de la variación
+        const imagenPrincipalInput = document.getElementById(`img_principal_${valorKey}`);
+        if (imagenPrincipalInput && imagenPrincipalInput.files && imagenPrincipalInput.files[0]) {
+            formData.append(`variaciones[${valorKey}][imagen_principal]`, imagenPrincipalInput.files[0]);
+        }
+        
+        // GIF de la variación
+        const gifInput = document.getElementById(`gif_${valorKey}`);
+        if (gifInput && gifInput.files && gifInput.files[0]) {
+            formData.append(`variaciones[${valorKey}][gif]`, gifInput.files[0]);
+        }
+        
+        // Imágenes adicionales de la variación
+        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+            imagenesVariacion[valorKey].imagenes.forEach((img, index) => {
+                formData.append(`variaciones[${valorKey}][imagenes_adicionales][]`, img.file);
+            });
+        }
+    });
+    
+    // Reemplazar el contenido del formulario original
+    // Esto es más complicado, así que mejor creamos un formulario temporal y lo enviamos
+    
+    e.preventDefault(); // Prevenir el envío original
+    
     if (btnSubmit) {
         btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Guardando...';
         btnSubmit.disabled = true;
     }
     
-    return true;
+    // Enviar con fetch
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if (response.redirected) {
+            // Redirección exitosa
+            window.location.href = response.url;
+        } else if (response.ok) {
+            return response.json().then(data => {
+                if (data.success && data.redirect) {
+                    window.location.href = data.redirect;
+                } else {
+                    // Éxito pero sin redirección
+                    window.location.href = '{{ route("productos.index") }}';
+                }
+            });
+        } else {
+            // Error
+            return response.json().then(data => {
+                throw new Error(data.message || 'Error al guardar el producto');
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Error al guardar el producto'
+        });
+        if (btnSubmit) {
+            btnSubmit.innerHTML = '<i class="fas fa-save me-2"></i> Guardar Producto';
+            btnSubmit.disabled = false;
+        }
+    });
+    
+    return false; // Cancelar el envío original
 });
 
 document.querySelectorAll('input, select, textarea').forEach(elemento => {

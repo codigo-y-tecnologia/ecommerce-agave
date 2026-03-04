@@ -1,35 +1,35 @@
 @extends('layouts.app')
 
 @section('title', 'Editar Producto - ' . $producto->vNombre)
+
 @section('content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>
-            <i class="fas fa-edit me-2"></i>
-            Editar Producto: {{ $producto->vNombre }}
-        </h1>
+        <h1><i class="fas fa-edit me-2"></i>Editar Producto: {{ $producto->vNombre }}</h1>
         <a href="{{ route('productos.show', $producto->id_producto) }}" class="btn btn-info">
-            <i class="fas fa-eye me-2"></i>Ver detalle
+            <i class="fas fa-eye me-1"></i> Ver Detalle
         </a>
     </div>
 
+    
     @if ($errors->any())
-        <div class="alert alert-danger alert-dismissible fade show">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            <strong>Por favor corrige los siguientes errores:</strong>
-            <ul class="mb-0 mt-2">
+        <div class="alert alert-danger">
+            <ul class="mb-0">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
                 @endforeach
             </ul>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>{{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
-    <form action="{{ route('productos.update', $producto->id_producto) }}" 
-          method="POST" 
-          enctype="multipart/form-data" 
-          id="productoForm">
+    <form action="{{ route('productos.update', $producto->id_producto) }}" method="POST" enctype="multipart/form-data" id="productoForm">
         @csrf
         @method('PUT')
 
@@ -136,32 +136,23 @@
                     <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="iStock" class="form-label fw-bold">
-                                Stock <span class="text-danger">*</span>
+                                Stock inicial <span class="text-danger">*</span>
                             </label>
                             <input type="text" name="iStock" id="iStock" 
                                    class="form-control @error('iStock') is-invalid @enderror"
                                    value="{{ old('iStock', $producto->iStock) }}" 
                                    required 
                                    oninput="validarStock(this)"
-                                   pattern="[0-9]{1,4}"
-                                   title="Máximo 4 dígitos (0-9999)"
+                                   pattern="[0-9]{1,6}"
+                                   title="Máximo 6 dígitos (0-999999)"
                                    inputmode="numeric"
                                    min="0"
-                                   max="9999"
-                                   autocomplete="off"
-                                   {{ $producto->tieneVariaciones() ? 'readonly' : '' }}>
+                                   max="999999"
+                                   autocomplete="off">
                             @error('iStock')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            <small class="form-text text-muted">
-                                Máximo 4 dígitos (0-9999)
-                                @if($producto->tieneVariaciones())
-                                    <span class="text-warning d-block">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        El stock es gestionado por las variaciones
-                                    </span>
-                                @endif
-                            </small>
+                            <small class="form-text text-muted">Máximo 999,999 unidades</small>
                         </div>
                     </div>
                 </div>
@@ -205,8 +196,8 @@
                     </div>
                 </div>
 
-                <!-- CAMPOS DE DESCUENTO -->
-                <div id="descuentoFields" style="display: {{ old('bTiene_descuento', $producto->bTiene_oferta) ? 'block' : 'none' }};">
+                <!-- CAMPOS DE DESCUENTO (OCULTOS INICIALMENTE) -->
+                <div id="descuentoFields" style="{{ $producto->bTiene_oferta ? 'display: block;' : 'display: none;' }}">
                     <div class="row">
                         <div class="col-md-4">
                             <div class="form-group mb-3">
@@ -220,7 +211,7 @@
                                            id="dPrecio_descuento" 
                                            class="form-control @error('dPrecio_descuento') is-invalid @enderror"
                                            value="{{ old('dPrecio_descuento', $producto->dPrecio_oferta) }}" 
-                                           oninput="validarPrecio(this); validarPrecioDescuentoProductoInstantaneo(this);"
+                                           oninput="validarPrecio(this); validarPrecioDescuentoProductoInstantaneo(this); actualizarPrecioFinal();"
                                            onblur="validarPrecioDescuentoProducto()"
                                            placeholder="0.00"
                                            autocomplete="off">
@@ -243,6 +234,7 @@
                                        id="dFecha_inicio_descuento" 
                                        class="form-control @error('dFecha_inicio_descuento') is-invalid @enderror"
                                        value="{{ old('dFecha_inicio_descuento', $producto->dFecha_inicio_oferta ? \Carbon\Carbon::parse($producto->dFecha_inicio_oferta)->format('Y-m-d') : '') }}"
+                                       onchange="validarFechasDescuento()"
                                        autocomplete="off">
                                 @error('dFecha_inicio_descuento')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -260,7 +252,9 @@
                                        id="dFecha_fin_descuento" 
                                        class="form-control @error('dFecha_fin_descuento') is-invalid @enderror"
                                        value="{{ old('dFecha_fin_descuento', $producto->dFecha_fin_oferta ? \Carbon\Carbon::parse($producto->dFecha_fin_oferta)->format('Y-m-d') : '') }}"
+                                       onchange="validarFechasDescuento()"
                                        autocomplete="off">
+                                <div id="error-fechas-descuento" class="invalid-feedback" style="display: none;"></div>
                                 @error('dFecha_fin_descuento')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -400,6 +394,24 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                             <small class="form-text text-muted">Determina el tipo de envío para este producto</small>
+                            
+                            <!-- Mostrar la clase de envío seleccionada actualmente -->
+                            @if($producto->vClase_envio)
+                                <div class="mt-2 p-2 bg-light rounded">
+                                    <strong>Clase actual:</strong> 
+                                    @php
+                                        $claseText = '';
+                                        switch($producto->vClase_envio) {
+                                            case 'estandar': $claseText = 'Estándar'; break;
+                                            case 'express': $claseText = 'Express'; break;
+                                            case 'fragil': $claseText = 'Frágil'; break;
+                                            case 'grandes_dimensiones': $claseText = 'Grandes dimensiones'; break;
+                                            default: $claseText = $producto->vClase_envio;
+                                        }
+                                    @endphp
+                                    <span class="badge bg-primary">{{ $claseText }}</span>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -449,12 +461,12 @@
                                         }
                                     }
                                     
-                                    $oldCategoria = old('id_categoria', $producto->id_categoria);
+                                    $oldCategoria = old('id_categoria');
                                     $categoriasRaiz = $categorias->where('id_categoria_padre', null)->where('bActivo', true);
                                 @endphp
                                 
                                 @php
-                                    mostrarCategoriasJerarquicamenteEdit($categoriasRaiz, 0, $oldCategoria, null);
+                                    mostrarCategoriasJerarquicamenteEdit($categoriasRaiz, 0, $oldCategoria, $producto->id_categoria);
                                 @endphp
                             </select>
                             @error('id_categoria')
@@ -488,7 +500,7 @@
                         </div>
                     </div>
 
-                    <!-- SECCIÓN DE IMPUESTO -->
+                    <!-- SECCIÓN DE IMPUESTO (SELECTOR ÚNICO) -->
                     <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="id_impuesto" class="form-label fw-bold">
@@ -500,18 +512,10 @@
                                         onchange="actualizarPrecioFinal()">
                                     <option value="">-- Sin impuesto --</option>
                                     @foreach($impuestos as $impuesto)
-                                        @php
-                                            $selected = false;
-                                            if(old('id_impuesto') == $impuesto->id_impuesto) {
-                                                $selected = true;
-                                            } elseif(!old('id_impuesto') && $producto->impuestos->first()) {
-                                                $selected = $producto->impuestos->first()->id_impuesto == $impuesto->id_impuesto;
-                                            }
-                                        @endphp
                                         <option value="{{ $impuesto->id_impuesto }}" 
                                             data-porcentaje="{{ $impuesto->dPorcentaje }}"
                                             data-tipo="{{ $impuesto->eTipo }}"
-                                            {{ $selected ? 'selected' : '' }}>
+                                            {{ old('id_impuesto', $producto->impuestos->first()->id_impuesto ?? '') == $impuesto->id_impuesto ? 'selected' : '' }}>
                                             {{ $impuesto->vNombre }} ({{ $impuesto->eTipo }} - {{ number_format($impuesto->dPorcentaje, 2) }}%)
                                         </option>
                                     @endforeach
@@ -537,64 +541,46 @@
             </div>
         </div>
 
-        <!-- IMAGEN PRINCIPAL, VIDEO E IMÁGENES ADICIONALES -->
+        <!-- IMAGEN PRINCIPAL, GIF E IMÁGENES ADICIONALES DEL PRODUCTO -->
         <div class="card mb-4">
             <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0"><i class="fas fa-images me-2"></i>Multimedia del Producto</h5>
+                <h5 class="mb-0"><i class="fas fa-images me-2"></i>Multimedia del Producto Principal</h5>
             </div>
             <div class="card-body">
-                @php
-                    $imagenes = $producto->getNombresArchivosImagenes();
-                    $imagenesAEliminar = [];
-                @endphp
-
-                <!-- IMÁGENES ACTUALES -->
-                @if(count($imagenes) > 0)
-                <div class="alert alert-info mb-4">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Imágenes actuales:</strong> Puedes seleccionar las imágenes que deseas eliminar marcando la casilla correspondiente.
+                <div class="alert alert-warning" id="limiteArchivosMsg" style="display: none;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>¡Atención!</strong> Has excedido el límite de tamaño total de archivos (50MB).
                 </div>
-                
-                <div class="row mb-4">
-                    @foreach($imagenes as $index => $imagen)
-                        <div class="col-md-3 mb-3">
-                            <div class="card border position-relative {{ $index == 0 ? 'bg-light' : '' }}">
-                                @if($index == 0)
-                                    <div class="position-absolute top-0 start-0 bg-warning text-dark px-2 py-1 small fw-bold">
-                                        Principal
-                                    </div>
-                                @endif
-                                <img src="{{ $imagen['url'] }}" 
-                                     class="card-img-top p-2" 
-                                     style="height: 150px; object-fit: contain;"
-                                     alt="Imagen {{ $index + 1 }}">
-                                <div class="card-body p-2">
-                                    <div class="form-check">
-                                        <input type="checkbox" 
-                                               name="imagenes_a_eliminar[]" 
-                                               value="{{ $imagen['nombre'] }}" 
-                                               class="form-check-input"
-                                               id="eliminar_img_{{ $index }}"
-                                               onchange="marcarImagenAEliminar(this, {{ $index }})">
-                                        <label class="form-check-label text-danger small" for="eliminar_img_{{ $index }}">
-                                            <i class="fas fa-trash me-1"></i>Eliminar
-                                        </label>
-                                    </div>
-                                    <small class="text-muted d-block text-truncate mt-1">{{ $imagen['nombre'] }}</small>
-                                </div>
+
+                <!-- Barra de progreso de tamaño total -->
+                <div class="alert alert-info py-2 mb-3">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <i class="fas fa-camera me-1"></i>
+                            <strong>Total de archivos multimedia:</strong> 
+                            <span id="total-imagenes">{{ $producto->getNumeroImagenes() }}</span> archivos
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Tamaño total:</strong>
+                            <span id="total-size">0 KB</span>
+                            <span class="text-muted ms-2">(Máx: 50MB)</span>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <div class="progress" style="height: 8px;">
+                                <div id="size-progress-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
                             </div>
                         </div>
-                    @endforeach
+                    </div>
                 </div>
-                <hr>
-                @endif
 
-                <!-- IMAGEN PRINCIPAL (NUEVA) -->
                 <div class="row">
-                    <div class="col-md-4">
+                    <!-- IMAGEN PRINCIPAL -->
+                    <div class="col-md-6">
                         <div class="form-group mb-3">
                             <label for="imagen_principal" class="form-label fw-bold">
-                                <i class="fas fa-star text-warning me-1"></i>Nueva Imagen Principal (Opcional)
+                                <i class="fas fa-star text-warning me-1"></i>Imagen Principal
                             </label>
                             <input type="file" name="imagen_principal" id="imagen_principal" 
                                    class="form-control @error('imagen_principal') is-invalid @enderror" 
@@ -605,65 +591,58 @@
                             @enderror
                             <small class="form-text text-muted">
                                 <i class="fas fa-info-circle me-1"></i>
-                                Si subes una nueva imagen principal, reemplazará la actual. Formatos: JPG, JPEG, PNG. Máximo 5MB.
+                                Esta será la imagen principal del producto (portada). Formatos: JPG, JPEG, PNG. Máximo 5MB. Dejar vacío para mantener la actual.
                             </small>
                             
-                            <!-- Preview de imagen principal nueva -->
+                            <!-- Preview de imagen principal actual -->
+                            @if($producto->vImagen_principal)
+                                <div id="current_principal_container" class="mt-2">
+                                    <div class="border rounded p-2 text-center bg-light position-relative">
+                                        <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
+                                            <button type="button" class="btn btn-sm btn-outline-danger rounded-circle" 
+                                                    onclick="eliminarImagenPrincipalExistente()"
+                                                    style="width: 30px; height: 30px;"
+                                                    title="Eliminar imagen principal">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                        <img src="{{ $producto->imagen_principal }}" 
+                                             class="img-thumbnail" 
+                                             style="max-width: 200px; max-height: 200px; object-fit: contain;"
+                                             alt="Imagen principal actual">
+                                        <div class="mt-2">
+                                            <small class="text-muted d-block">Imagen principal actual</small>
+                                            <input type="hidden" name="eliminar_imagen_principal" id="eliminar_imagen_principal" value="0">
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+                            
+                            <!-- Preview de nueva imagen principal -->
                             <div id="preview_principal_container" class="mt-2" style="display: none;">
-                                <div class="border rounded p-2 text-center bg-light">
+                                <div class="border rounded p-2 text-center bg-light position-relative">
+                                    <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
+                                        <button type="button" class="btn btn-sm btn-outline-danger rounded-circle" 
+                                                onclick="cancelarImagenPrincipal()"
+                                                style="width: 30px; height: 30px;"
+                                                title="Quitar nueva imagen">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
                                     <img id="preview_principal_img" src="#" 
                                          class="img-thumbnail" 
                                          style="max-width: 200px; max-height: 200px; object-fit: contain;"
                                          alt="Preview imagen principal">
                                     <div class="mt-2">
                                         <small class="text-muted d-block">Nueva imagen principal</small>
-                                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarImagenPrincipal()">
-                                            <i class="fas fa-times me-1"></i>Quitar
-                                        </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- VIDEO DEL PRODUCTO -->
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label for="video_producto" class="form-label fw-bold">
-                                <i class="fas fa-video text-danger me-1"></i>Video del Producto (Opcional)
-                            </label>
-                            <input type="file" name="video_producto" id="video_producto" 
-                                   class="form-control @error('video_producto') is-invalid @enderror" 
-                                   accept="video/mp4,video/webm,video/ogg,video/avi,video/mov,video/mkv"
-                                   onchange="previewVideo(this)">
-                            @error('video_producto')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <small class="form-text text-muted">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Formatos: MP4, WebM, OGG, AVI, MOV, MKV. Máximo 50MB.
-                            </small>
-                            
-                            <!-- Preview de video -->
-                            <div id="preview_video_container" class="mt-2" style="display: none;">
-                                <div class="border rounded p-2 text-center bg-light">
-                                    <video id="preview_video" controls style="max-width: 100%; max-height: 150px;">
-                                        <source src="#" type="video/mp4">
-                                        Tu navegador no soporta el elemento de video.
-                                    </video>
-                                    <div class="mt-2">
-                                        <small class="text-muted d-block">Nuevo video seleccionado</small>
-                                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarVideo()">
-                                            <i class="fas fa-times me-1"></i>Quitar
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- GIF DEL PRODUCTO -->
-                    <div class="col-md-4">
+                    <!-- GIF DEL PRODUCTO (OPCIONAL) -->
+                    <div class="col-md-6">
                         <div class="form-group mb-3">
                             <label for="gif_producto" class="form-label fw-bold">
                                 <i class="fas fa-file-image text-success me-1"></i>GIF Animado (Opcional)
@@ -677,21 +656,50 @@
                             @enderror
                             <small class="form-text text-muted">
                                 <i class="fas fa-info-circle me-1"></i>
-                                Formatos: GIF. Máximo 10MB. Animación del producto.
+                                Formatos: GIF. Máximo 10MB. Animación del producto. Dejar vacío para mantener el actual.
                             </small>
                             
-                            <!-- Preview de GIF -->
+                            <!-- Preview de GIF actual -->
+                            @if($producto->vGif)
+                                <div id="current_gif_container" class="mt-2">
+                                    <div class="border rounded p-2 text-center bg-light position-relative">
+                                        <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
+                                            <button type="button" class="btn btn-sm btn-outline-danger rounded-circle" 
+                                                    onclick="eliminarGifExistente()"
+                                                    style="width: 30px; height: 30px;"
+                                                    title="Eliminar GIF">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                        <img src="{{ $producto->gif_url }}" 
+                                             class="img-thumbnail" 
+                                             style="max-width: 200px; max-height: 200px; object-fit: contain;"
+                                             alt="GIF actual">
+                                        <div class="mt-2">
+                                            <small class="text-muted d-block">GIF actual</small>
+                                            <input type="hidden" name="eliminar_gif" id="eliminar_gif" value="0">
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+                            
+                            <!-- Preview de nuevo GIF -->
                             <div id="preview_gif_container" class="mt-2" style="display: none;">
-                                <div class="border rounded p-2 text-center bg-light">
+                                <div class="border rounded p-2 text-center bg-light position-relative">
+                                    <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
+                                        <button type="button" class="btn btn-sm btn-outline-danger rounded-circle" 
+                                                onclick="cancelarGif()"
+                                                style="width: 30px; height: 30px;"
+                                                title="Quitar nuevo GIF">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
                                     <img id="preview_gif" src="#" 
                                          class="img-thumbnail" 
                                          style="max-width: 200px; max-height: 200px; object-fit: contain;"
                                          alt="Preview GIF">
                                     <div class="mt-2">
                                         <small class="text-muted d-block">Nuevo GIF seleccionado</small>
-                                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarGif()">
-                                            <i class="fas fa-times me-1"></i>Quitar
-                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -699,12 +707,12 @@
                     </div>
                 </div>
                 
-                <!-- IMÁGENES ADICIONALES NUEVAS -->
+                <!-- IMÁGENES ADICIONALES DEL PRODUCTO -->
                 <div class="row mt-3">
                     <div class="col-md-12">
                         <div class="form-group mb-3">
                             <label for="imagenes" class="form-label fw-bold">
-                                <i class="fas fa-images me-1"></i>Agregar Imágenes Adicionales (Máximo 7)
+                                <i class="fas fa-images me-1"></i>Imágenes Adicionales del Producto (Máximo 7)
                             </label>
                             <input type="file" name="imagenes[]" id="imagenes" 
                                    class="form-control @error('imagenes') is-invalid @enderror" 
@@ -715,38 +723,55 @@
                             @enderror
                             <small class="form-text text-muted">
                                 Formatos: JPG, JPEG, PNG, WEBP. Máximo 5MB por imagen.
-                                Puedes seleccionar hasta 7 imágenes adicionales.
+                                Puedes seleccionar hasta 7 imágenes adicionales. Las nuevas imágenes se agregarán a las existentes.
                             </small>
                             <div class="mt-2">
-                                <span class="badge bg-info" id="selected-images-count">0 archivos</span>
+                                <span class="badge bg-info" id="selected-images-count">0 archivos nuevos</span>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Contador de imágenes -->
-                <div class="alert alert-info py-2 mt-2">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <i class="fas fa-camera me-1"></i>
-                            <strong>Total de imágenes del producto:</strong> 
-                            <span id="total-imagenes">{{ count($imagenes) }}</span> de 9 (1 principal + 1 GIF + 7 adicionales)
-                        </div>
-                        <div class="col-md-6 text-end">
-                            <span class="badge bg-primary me-2" id="principal-count">Principal: {{ count($imagenes) > 0 ? '1' : '0' }}</span>
-                            <span class="badge bg-success me-2" id="gif-count">GIF: 0</span>
-                            <span class="badge bg-secondary" id="adicionales-count">Adicionales: {{ count($imagenes) - (count($imagenes) > 0 ? 1 : 0) }}</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Galería de nuevas imágenes seleccionadas -->
+                <!-- Imágenes adicionales actuales -->
+                @if($producto->vImagenes_adicionales && count($producto->vImagenes_adicionales) > 0)
                 <div class="mt-3">
-                    <h6 class="fw-bold mb-2"><i class="fas fa-images me-2"></i>Nuevas imágenes a agregar:</h6>
+                    <h6 class="fw-bold mb-2"><i class="fas fa-images me-2"></i>Imágenes adicionales actuales:</h6>
+                    <div class="row g-2" id="current-images-container">
+                        @foreach($producto->getNombresArchivosImagenesAdicionales() as $index => $nombreArchivo)
+                            <div class="col-6 col-md-3 mb-3 current-image-item" data-filename="{{ $nombreArchivo }}">
+                                <div class="card border image-preview-card position-relative">
+                                    <div class="position-absolute top-0 end-0 m-1 z-index-1">
+                                        <button type="button" 
+                                                class="btn btn-danger btn-sm rounded-circle" 
+                                                style="width: 30px; height: 30px;"
+                                                onclick="eliminarImagenAdicionalExistente('{{ $nombreArchivo }}', {{ $index }})"
+                                                title="Eliminar imagen">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    <img src="{{ Storage::url($producto->vImagenes_adicionales[$index]) }}" 
+                                         class="card-img-top" 
+                                         style="height: 120px; object-fit: contain; background: #f8f9fa; padding: 8px;"
+                                         alt="Imagen adicional {{ $index + 1 }}">
+                                    <div class="card-body p-2 text-center">
+                                        <small class="text-muted d-block text-truncate">{{ $nombreArchivo }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    <!-- Hidden inputs para imágenes a eliminar -->
+                    <div id="imagenes-eliminar-container"></div>
+                </div>
+                @endif
+                
+                <!-- Galería de nuevas imágenes adicionales seleccionadas -->
+                <div class="mt-3">
+                    <h6 class="fw-bold mb-2"><i class="fas fa-images me-2"></i>Nuevas imágenes adicionales seleccionadas:</h6>
                     <div id="selected-images-container" class="row g-2"></div>
-                    <div class="alert alert-warning py-2" id="no-imagenes-msg">
+                    <div class="alert alert-warning py-2" id="no-imagenes-msg" style="{{ count($producto->vImagenes_adicionales ?? []) > 0 ? 'display: none;' : '' }}">
                         <i class="fas fa-info-circle me-1"></i>
-                        <small>No hay imágenes nuevas seleccionadas</small>
+                        <small>No hay imágenes adicionales seleccionadas</small>
                     </div>
                 </div>
             </div>
@@ -778,10 +803,6 @@
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Etiquetas (Opcional)</label>
                             <div class="row">
-                                @php
-                                    $etiquetasSeleccionadas = old('etiquetas', $producto->etiquetas->pluck('id_etiqueta')->toArray());
-                                @endphp
-                                
                                 @if(isset($etiquetas) && $etiquetas->count() > 0)
                                     @foreach ($etiquetas as $etiqueta)
                                         <div class="col-md-6 col-6 mb-2 etiqueta-item" data-etiqueta-id="{{ $etiqueta->id_etiqueta }}">
@@ -790,10 +811,10 @@
                                                        name="etiquetas[]" 
                                                        value="{{ $etiqueta->id_etiqueta }}" 
                                                        class="form-check-input"
-                                                       {{ in_array($etiqueta->id_etiqueta, $etiquetasSeleccionadas) ? 'checked' : '' }}
+                                                       {{ is_array(old('etiquetas', $producto->etiquetas->pluck('id_etiqueta')->toArray())) && in_array($etiqueta->id_etiqueta, old('etiquetas', $producto->etiquetas->pluck('id_etiqueta')->toArray())) ? 'checked' : '' }}
                                                        id="etiqueta_{{ $etiqueta->id_etiqueta }}">
                                                 <label class="form-check-label" for="etiqueta_{{ $etiqueta->id_etiqueta }}">
-                                                    <span class="etiqueta-badge" style="background-color: {{ $etiqueta->color ?? '#007bff' }}; color: white;">
+                                                    <span class="badge bg-secondary">
                                                         {{ $etiqueta->vNombre }}
                                                     </span>
                                                 </label>
@@ -840,8 +861,11 @@
                     <div class="col-md-4">
                         <div class="card bg-white text-dark">
                             <div class="card-body text-center">
-                                <h6 class="text-muted">Precio base (sin impuesto)</h6>
-                                <h3 class="fw-bold" id="precio-base-display">${{ number_format($producto->dPrecio_venta, 2) }}</h3>
+                                <h6 class="text-muted">Precio base (con descuento aplicado)</h6>
+                                <h3 class="fw-bold" id="precio-base-display">${{ number_format($producto->ofertaVigente() ? $producto->dPrecio_oferta : $producto->dPrecio_venta, 2) }}</h3>
+                                <small class="text-muted" id="precio-original-display" style="{{ $producto->ofertaVigente() ? 'display: block;' : 'display: none;' }}">
+                                    Precio original: ${{ number_format($producto->dPrecio_venta, 2) }}
+                                </small>
                             </div>
                         </div>
                     </div>
@@ -850,9 +874,18 @@
                             <div class="card-body text-center">
                                 <h6 class="text-muted">Impuesto</h6>
                                 <h3 class="fw-bold" id="total-impuestos-display">
-                                    ${{ number_format($producto->totalImpuestos, 2) }}
+                                    @php
+                                        $precioBase = $producto->ofertaVigente() ? $producto->dPrecio_oferta : $producto->dPrecio_venta;
+                                        $totalImpuestos = 0;
+                                        $porcentaje = 0;
+                                        if($producto->impuestos->count() > 0) {
+                                            $porcentaje = $producto->impuestos->first()->dPorcentaje ?? 0;
+                                            $totalImpuestos = $precioBase * ($porcentaje / 100);
+                                        }
+                                    @endphp
+                                    ${{ number_format($totalImpuestos, 2) }}
                                 </h3>
-                                <small id="porcentaje-impuestos-display">{{ $producto->porcentajeImpuestos }}%</small>
+                                <small id="porcentaje-impuestos-display">{{ number_format($porcentaje, 2) }}%</small>
                             </div>
                         </div>
                     </div>
@@ -860,7 +893,7 @@
                         <div class="card bg-success text-white">
                             <div class="card-body text-center">
                                 <h6>Precio final (con impuesto)</h6>
-                                <h2 class="fw-bold" id="precio-final-display">${{ number_format($producto->dPrecio_final, 2) }}</h2>
+                                <h2 class="fw-bold" id="precio-final-display">${{ number_format($precioBase + $totalImpuestos, 2) }}</h2>
                                 <small>Este es el precio que verá el cliente</small>
                             </div>
                         </div>
@@ -869,29 +902,29 @@
             </div>
         </div>
 
-        <!-- ATRIBUTOS DEL PRODUCTO -->
+        <!-- ATRIBUTOS DEL PRODUCTO (SELECCIÓN Y CREACIÓN DE VALORES) -->
         <div class="card mb-4">
             <div class="card-header" style="background-color: #45c973ff; color: white;">
-                <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Atributos del Producto</h5>
+                <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Seleccionar Atributos para Variaciones</h5>
             </div>
             <div class="card-body" style="background-color: #f8f9fa;">
-                <div class="alert alert-info mb-4">
+                <div class="alert alert-info mb-4" style="color: #0c5460; background-color: #d1ecf1; border-color: #bee5eb;">
                     <i class="fas fa-info-circle me-2"></i>
-                    <strong>Instrucciones:</strong> 
-                    Marca los atributos que deseas activar y selecciona los valores correspondientes. 
-                    Los valores previamente seleccionados aparecerán marcados.
+                    <strong style="color: #0c5460;">Instrucciones:</strong> 
+                    <span style="color: #0c5460;">Marca los atributos que deseas activar y selecciona los valores correspondientes. También puedes crear nuevos valores para atributos existentes haciendo clic en "Agregar Valor".</span>
                 </div>
                 
                 @php
+                    // Obtener IDs de valores de atributos ya seleccionados en el producto
                     $valoresSeleccionados = $producto->valoresAtributos->pluck('id_atributo_valor')->toArray();
+                    
+                    // Obtener IDs de atributos que tienen al menos un valor seleccionado
+                    $atributosConValores = $producto->valoresAtributos->groupBy('id_atributo')->keys()->toArray();
                 @endphp
                 
                 @if(isset($atributos) && $atributos->count() > 0)
                     <div class="row" id="atributos-container">
                         @foreach($atributos as $atributo)
-                        @php
-                            $tieneValoresSeleccionados = !empty(array_intersect($valoresSeleccionados, $atributo->valoresActivos->pluck('id_atributo_valor')->toArray()));
-                        @endphp
                         <div class="col-md-6 mb-4 atributo-item" data-atributo-id="{{ $atributo->id_atributo }}">
                             <div class="card border h-100">
                                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -901,16 +934,14 @@
                                                id="atributo-activo-{{ $atributo->id_atributo }}"
                                                data-atributo-id="{{ $atributo->id_atributo }}"
                                                data-atributo-nombre="{{ $atributo->vNombre }}"
-                                               {{ $tieneValoresSeleccionados ? 'checked' : '' }}>
+                                               {{ in_array($atributo->id_atributo, $atributosConValores) ? 'checked' : '' }}>
                                         <label class="form-check-label fw-bold" for="atributo-activo-{{ $atributo->id_atributo }}" style="color: #495057;">
                                             {{ $atributo->vNombre }}
                                             <span class="badge bg-secondary ms-2">{{ $atributo->valoresActivos->count() }} valores</span>
                                         </label>
                                     </div>
                                     <div>
-                                        <span class="badge bg-warning text-dark atributo-estado-badge" 
-                                              id="estado-{{ $atributo->id_atributo }}" 
-                                              style="display: {{ $tieneValoresSeleccionados ? 'inline-block' : 'none' }};">
+                                        <span class="badge bg-warning text-dark atributo-estado-badge" id="estado-{{ $atributo->id_atributo }}" style="{{ in_array($atributo->id_atributo, $atributosConValores) ? 'display: inline-block;' : 'display: none;' }}">
                                             <i class="fas fa-check-circle me-1"></i>Activo
                                         </span>
                                         <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="mostrarFormularioValor({{ $atributo->id_atributo }}, '{{ $atributo->vNombre }}')">
@@ -919,10 +950,7 @@
                                     </div>
                                 </div>
                                 
-                                <div class="card-body atributo-valores-container" 
-                                     id="valores-container-{{ $atributo->id_atributo }}" 
-                                     style="display: {{ $tieneValoresSeleccionados ? 'block' : 'none' }}; background-color: white;">
-                                    
+                                <div class="card-body atributo-valores-container" id="valores-container-{{ $atributo->id_atributo }}" style="{{ in_array($atributo->id_atributo, $atributosConValores) ? 'display: block;' : 'display: none;' }} background-color: white;">
                                     @if($atributo->valoresActivos->count() > 0)
                                         <div class="mb-3">
                                             <div class="form-check">
@@ -978,8 +1006,8 @@
                     </div>
                     
                     <!-- Resumen de atributos seleccionados -->
-                    <div class="mt-4 p-3 bg-light border rounded" id="resumen-atributos" style="display: none;">
-                        <h6 class="fw-bold mb-3" style="color: #495037;"><i class="fas fa-check-circle text-success me-2"></i>Atributos activados:</h6>
+                    <div class="mt-4 p-3 bg-light border rounded" id="resumen-atributos" style="{{ count($atributosConValores) > 0 ? 'display: block;' : 'display: none;' }}">
+                        <h6 class="fw-bold mb-3" style="color: #495037;"><i class="fas fa-check-circle text-success me-2"></i>Atributos activados para variaciones:</h6>
                         <div id="atributos-activos-lista" class="d-flex flex-wrap gap-3"></div>
                     </div>
                     
@@ -996,17 +1024,17 @@
             </div>
         </div>
 
-        <!-- VARIACIONES DEL PRODUCTO -->
+        <!-- VARIACIONES DEL PRODUCTO - PESTAÑAS POR VALOR CON IMÁGENES MÚLTIPLES -->
         <div class="card mb-4">
             <div class="card-header" style="background-color: #6f42c1; color: white;">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h5 class="mb-0"><i class="fas fa-cubes me-2"></i>Variaciones del Producto</h5>
-                        <small style="color: rgba(255,255,255,0.9);">Configura cada variación individualmente</small>
+                        <small style="color: rgba(255,255,255,0.9);">Cada valor seleccionado es una pestaña - Configura cada variación individualmente</small>
                     </div>
                     <div>
-                        <span class="badge bg-light text-dark me-2" id="total-atributos-activos-badge">0 atributos activos</span>
-                        <span class="badge bg-warning text-dark" id="total-valores-badge">0 valores</span>
+                        <span class="badge bg-light text-dark me-2" id="total-atributos-activos-badge">{{ count($atributosConValores) }} atributos activos</span>
+                        <span class="badge bg-warning text-dark" id="total-valores-badge">{{ count($valoresSeleccionados) }} valores</span>
                     </div>
                 </div>
             </div>
@@ -1014,21 +1042,21 @@
             <div class="card-body" style="background-color: #f8f9fa;">
                 @if(isset($atributos) && $atributos->count() > 0)
                     <!-- Mensaje cuando no hay atributos activos -->
-                    <div id="no-atributos-activos-message" class="text-center py-5">
+                    <div id="no-atributos-activos-message" class="text-center py-5" style="{{ count($valoresSeleccionados) > 0 ? 'display: none;' : 'display: block;' }}">
                         <i class="fas fa-cubes fa-4x text-muted mb-3"></i>
                         <h5 class="text-muted">No hay atributos activos</h5>
                         <p class="text-muted">
-                            Activa atributos en la sección <strong>"Atributos del Producto"</strong> 
+                            Activa atributos en la sección <strong>"Seleccionar Atributos para Variaciones"</strong> 
                             marcando el checkbox del atributo y seleccionando sus valores.
                         </p>
                     </div>
                     
                     <!-- PESTAÑAS DE VALORES -->
-                    <div id="valores-activos-tabs-container" style="display: none;">
-                        <!-- Cabecera de pestañas -->
+                    <div id="valores-activos-tabs-container" style="{{ count($valoresSeleccionados) > 0 ? 'display: block;' : 'display: none;' }}">
+                        <!-- Cabecera de pestañas - Valores -->
                         <ul class="nav nav-tabs valores-nav" id="valoresTab" role="tablist" style="background-color: white;"></ul>
                         
-                        <!-- Contenido de las pestañas -->
+                        <!-- Contenido de las pestañas - Formularios de variación con imágenes -->
                         <div class="tab-content p-4 border border-top-0 rounded-bottom" id="valoresTabContent" style="background-color: white;"></div>
                     </div>
                 @else
@@ -1047,10 +1075,10 @@
                 <i class="fas fa-save me-2"></i> Actualizar Producto
             </button>
             <a href="{{ route('productos.show', $producto->id_producto) }}" class="btn btn-info btn-lg px-4">
-                <i class="fas fa-eye me-2"></i> Ver detalle
+                <i class="fas fa-eye me-2"></i> Ver Detalle
             </a>
             <a href="{{ route('productos.index') }}" class="btn btn-secondary btn-lg px-4">
-                <i class="fas fa-arrow-left me-2"></i> Cancelar
+                <i class="fas fa-times me-2"></i> Cancelar
             </a>
         </div>
     </form>
@@ -1098,7 +1126,7 @@
                 </li>
             </ul>
             
-            <!-- CONTENIDO DE LOS TABS -->
+            <!-- CONTENIDO DE LOS TABS (FORMULARIOS RÁPIDOS) -->
             <div class="tab-content p-4">
                 <!-- TAB: CATEGORÍAS -->
                 <div class="tab-pane fade show active" id="categorias-content" role="tabpanel">
@@ -1135,7 +1163,7 @@
                                 <select class="form-control" id="id_categoria_padre_quick" name="id_categoria_padre">
                                     <option value="">-- Seleccionar Categoría Padre (Opcional) --</option>
                                     @php
-                                        function mostrarCategoriasParaQuick($categorias, $nivel = 0) {
+                                        function mostrarCategoriasParaQuickEdit($categorias, $nivel = 0) {
                                             foreach($categorias as $categoria) {
                                                 $prefijo = str_repeat('&nbsp;&nbsp;&nbsp;', $nivel);
                                                 $icono = $nivel == 0 ? '🏠 ' : '↳ ';
@@ -1144,7 +1172,7 @@
                                                      '</option>';
                                                 
                                                 if ($categoria->hijos && $categoria->hijos->count() > 0) {
-                                                    mostrarCategoriasParaQuick($categoria->hijos, $nivel + 1);
+                                                    mostrarCategoriasParaQuickEdit($categoria->hijos, $nivel + 1);
                                                 }
                                             }
                                         }
@@ -1152,7 +1180,7 @@
                                         $categoriasRaiz = $categorias->where('id_categoria_padre', null)->where('bActivo', true);
                                     @endphp
                                     
-                                    @php mostrarCategoriasParaQuick($categoriasRaiz, 0); @endphp
+                                    @php mostrarCategoriasParaQuickEdit($categoriasRaiz, 0); @endphp
                                 </select>
                                 <small class="form-text text-muted">Selecciona si esta categoría pertenece a otra</small>
                             </div>
@@ -1261,24 +1289,10 @@
                         
                         <form id="etiquetaQuickForm">
                             @csrf
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="vNombre_eti" class="form-label fw-bold">Nombre de la Etiqueta *</label>
-                                    <input type="text" class="form-control" id="vNombre_eti" name="vNombre" 
-                                           placeholder="Ej: Artesanal, Orgánico, Premium" required>
-                                </div>
-                                
-                                <div class="col-md-6 mb-3">
-                                    <label for="color_eti" class="form-label fw-bold">Color</label>
-                                    <div class="input-group">
-                                        <input type="color" class="form-control form-control-color" 
-                                               id="color_eti" name="color" value="#007bff">
-                                        <input type="text" class="form-control" 
-                                               id="color_text_eti" value="#007bff" 
-                                               placeholder="#007bff" maxlength="7">
-                                    </div>
-                                    <small class="text-muted">Color opcional para identificar la etiqueta</small>
-                                </div>
+                            <div class="mb-3">
+                                <label for="vNombre_eti" class="form-label fw-bold">Nombre de la Etiqueta *</label>
+                                <input type="text" class="form-control" id="vNombre_eti" name="vNombre" 
+                                       placeholder="Ej: Artesanal, Orgánico, Premium" required>
                             </div>
                             
                             <div class="mb-3">
@@ -1305,7 +1319,7 @@
                 <div class="tab-pane fade" id="atributos-content" role="tabpanel">
                     <div class="quick-form" id="quick-atributo-form">
                         <h5><i class="fas fa-list-alt me-2"></i>Crear Nuevo Atributo</h5>
-                        <p class="text-muted small mb-3">Los atributos son características que definen las variaciones de un producto.</p>
+                        <p class="text-muted small mb-3">Los atributos son características que definen las variaciones de un producto (Tamaño, Color, Material, etc.).</p>
                         
                         <form id="atributoQuickForm">
                             @csrf
@@ -1334,7 +1348,7 @@
                             
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle me-2"></i>
-                                <strong>Nota:</strong> Después de crear el atributo, podrás agregar valores específicos usando el botón "Agregar Valor".
+                                <strong>Nota:</strong> Después de crear el atributo, podrás agregar valores específicos en la sección <strong>"Seleccionar Atributos para Variaciones"</strong> usando el botón "Agregar Valor" junto a cada atributo.
                             </div>
                             
                             <div class="d-flex justify-content-end">
@@ -1350,47 +1364,44 @@
                 <div class="tab-pane fade" id="impuestos-content" role="tabpanel">
                     <div class="quick-form" id="quick-impuesto-form">
                         <h5><i class="fas fa-file-invoice-dollar me-2"></i>Crear Nuevo Impuesto</h5>
-                        
                         <form id="impuestoQuickForm">
                             @csrf
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="vNombre_impuesto" class="form-label fw-bold">Nombre del Impuesto *</label>
-                                    <input type="text" class="form-control" id="vNombre_impuesto" name="vNombre" 
-                                           placeholder="Ej: IVA, ISR, IEPS" required>
-                                </div>
-                                
-                                <div class="col-md-3 mb-3">
-                                    <label for="eTipo_impuesto" class="form-label fw-bold">Tipo *</label>
-                                    <select class="form-control" id="eTipo_impuesto" name="eTipo" required>
-                                        <option value="">Seleccionar</option>
-                                        <option value="IVA">IVA</option>
-                                        <option value="ISR">ISR</option>
-                                        <option value="IEPS">IEPS</option>
-                                        <option value="OTRO">Otro</option>
-                                    </select>
-                                </div>
-                                
-                                <div class="col-md-3 mb-3">
-                                    <label for="dPorcentaje_impuesto" class="form-label fw-bold">Porcentaje *</label>
-                                    <div class="input-group">
-                                        <input type="text" class="form-control" id="dPorcentaje_impuesto" name="dPorcentaje" 
-                                               placeholder="16.00" required>
-                                        <span class="input-group-text">%</span>
-                                    </div>
+                            <div class="mb-3">
+                                <label for="vNombre_impuesto" class="form-label fw-bold">Nombre del Impuesto *</label>
+                                <input type="text" class="form-control" id="vNombre_impuesto" name="vNombre" 
+                                       placeholder="Ej: IVA, ISR, IEPS" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="eTipo_impuesto" class="form-label fw-bold">Tipo de Impuesto *</label>
+                                <select class="form-control" id="eTipo_impuesto" name="eTipo" required>
+                                    <option value="">Seleccionar tipo</option>
+                                    <option value="IVA">IVA</option>
+                                    <option value="IEPS">IEPS</option>
+                                    <option value="OTRO">OTRO</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="dPorcentaje_impuesto" class="form-label fw-bold">Porcentaje *</label>
+                                <div class="input-group">
+                                    <input type="number" step="0.01" min="0" max="100" class="form-control" 
+                                           id="dPorcentaje_impuesto" name="dPorcentaje" 
+                                           placeholder="16.00" required>
+                                    <span class="input-group-text">%</span>
                                 </div>
                             </div>
                             
                             <div class="mb-3">
                                 <label for="tDescripcion_impuesto" class="form-label fw-bold">Descripción (Opcional)</label>
-                                <textarea class="form-control" id="tDescripcion_impuesto" name="tDescripcion" rows="2" 
-                                          placeholder="Descripción del impuesto..."></textarea>
+                                <textarea class="form-control" id="tDescripcion_impuesto" name="tDescripcion" rows="2"></textarea>
                             </div>
-
+                            
                             <div class="mb-3">
                                 <div class="form-check">
-                                    <input type="checkbox" class="form-check-input" id="bActivo_impuesto" name="bActivo" value="1" checked>
-                                    <label class="form-check-label" for="bActivo_impuesto">Impuesto activo</label>
+                                    <input type="checkbox" class="form-check-input" 
+                                           id="bActivo_impuesto" name="bActivo" value="1" checked>
+                                    <label class="form-check-label" for="bActivo_impuesto">Activo</label>
                                 </div>
                             </div>
                             
@@ -1401,57 +1412,57 @@
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>  
             </div>
         </div>
     </div>
-</div>
 
-<!-- MODAL PARA CREAR VALOR DE ATRIBUTO -->
-<div class="modal fade" id="crearValorModal" tabindex="-1" aria-labelledby="crearValorModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="crearValorModalLabel">
-                    <i class="fas fa-plus-circle me-2"></i>Crear Nuevo Valor para <span id="atributoNombreModal"></span>
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="valorQuickForm">
-                    @csrf
-                    <input type="hidden" id="valor_atributo_id" name="atributo_id">
-                    
-                    <div class="mb-3">
-                        <label for="vValor_modal" class="form-label fw-bold">Valor <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="vValor_modal" name="vValor" required
-                               placeholder="Ej: 750ml, Rojo, Joven, 6 meses"
-                               oninput="generarSlugValor(this.value)">
-                        <small class="form-text text-muted">El valor que aparecerá en las opciones del producto</small>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="vSlug_valor_modal" class="form-label fw-bold">Slug (URL amigable)</label>
-                        <input type="text" class="form-control" id="vSlug_valor_modal" name="vSlug"
-                               placeholder="Se genera automáticamente">
-                        <small class="form-text text-muted">Versión para URL del valor</small>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="bActivo_valor_modal" name="bActivo" value="1" checked>
-                            <label class="form-check-label" for="bActivo_valor_modal">Activo</label>
+    <!-- MODAL PARA CREAR VALOR DE ATRIBUTO -->
+    <div class="modal fade" id="crearValorModal" tabindex="-1" aria-labelledby="crearValorModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="crearValorModalLabel">
+                        <i class="fas fa-plus-circle me-2"></i>Crear Nuevo Valor para <span id="atributoNombreModal"></span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="valorQuickForm">
+                        @csrf
+                        <input type="hidden" id="valor_atributo_id" name="atributo_id">
+                        
+                        <div class="mb-3">
+                            <label for="vValor_modal" class="form-label fw-bold">Valor <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="vValor_modal" name="vValor" required
+                                   placeholder="Ej: 750ml, Rojo, Joven, 6 meses"
+                                   oninput="generarSlugValor(this.value)">
+                            <small class="form-text text-muted">El valor que aparecerá en las opciones del producto</small>
                         </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-1"></i>Cancelar
-                </button>
-                <button type="button" class="btn btn-primary" onclick="guardarValorAtributo()">
-                    <i class="fas fa-save me-1"></i>Guardar Valor
-                </button>
+                        
+                        <div class="mb-3">
+                            <label for="vSlug_valor_modal" class="form-label fw-bold">Slug (URL amigable)</label>
+                            <input type="text" class="form-control" id="vSlug_valor_modal" name="vSlug"
+                                   placeholder="Se genera automáticamente">
+                            <small class="form-text text-muted">Versión para URL del valor</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="bActivo_valor_modal" name="bActivo" value="1" checked>
+                                <label class="form-check-label" for="bActivo_valor_modal">Activo</label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="guardarValorAtributo()">
+                        <i class="fas fa-save me-1"></i>Guardar Valor
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1629,6 +1640,13 @@
     z-index: 10;
 }
 
+.current-image-item .form-check {
+    background: white;
+    padding: 2px 5px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
 @media (max-width: 768px) {
     .valores-nav .nav-link {
         padding: 8px 12px;
@@ -1648,12 +1666,27 @@ let selectedImages = [];
 let imageCounter = 0;
 let atributosActivos = {};
 let imagenPrincipalFile = null;
-let videoFile = null;
 let gifFile = null;
+let variacionCounter = 0;
 let valorModal = null;
+let maxTotalSize = 50 * 1024 * 1024; // 50MB en bytes
+let limiteExcedido = false;
+
+// Variable para almacenar la imagen de categoría seleccionada
 let categoriaImagenFile = null;
 
-// Array de imágenes a eliminar (para seguimiento visual)
+// Almacenar imágenes de variaciones por pestaña
+let imagenesVariacion = {};
+
+// Datos de variaciones existentes
+let variacionesExistentes = @json($producto->variaciones->keyBy(function($item) {
+    return $item->atributos->first()->id_atributo . '_' . $item->atributos->first()->id_atributo_valor;
+}) ?? []);
+
+// Valores seleccionados en el producto
+let valoresSeleccionadosIniciales = @json($valoresSeleccionados);
+
+// Array para almacenar imágenes adicionales existentes a eliminar
 let imagenesAEliminar = [];
 
 // Inicializar modal cuando el DOM esté listo
@@ -1663,22 +1696,251 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inicializar los formularios rápidos
     initQuickForms();
     
-    // Cargar atributos activos desde el producto
-    cargarAtributosActivosDesdeProducto();
+    // Inicializar atributos activos basados en valores seleccionados
+    inicializarAtributosActivos();
+    
+    // Mostrar la clase de envío seleccionada actualmente
+    console.log('Clase de envío actual:', '{{ $producto->vClase_envio }}');
 });
+
+// ============ FUNCIONES PARA ELIMINAR IMÁGENES EXISTENTES ============
+
+function eliminarImagenPrincipalExistente() {
+    const container = document.getElementById('current_principal_container');
+    if (container) {
+        container.style.display = 'none';
+        document.getElementById('eliminar_imagen_principal').value = '1';
+        
+        // Mostrar notificación
+        Swal.fire({
+            icon: 'success',
+            title: 'Imagen marcada para eliminar',
+            text: 'La imagen principal será eliminada al guardar los cambios',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    }
+}
+
+function eliminarGifExistente() {
+    const container = document.getElementById('current_gif_container');
+    if (container) {
+        container.style.display = 'none';
+        document.getElementById('eliminar_gif').value = '1';
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'GIF marcado para eliminar',
+            text: 'El GIF será eliminado al guardar los cambios',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    }
+}
+
+function eliminarImagenAdicionalExistente(nombreArchivo, index) {
+    // Agregar al array de imágenes a eliminar
+    imagenesAEliminar.push(nombreArchivo);
+    
+    // Ocultar el elemento visualmente
+    const elemento = document.querySelector(`.current-image-item[data-filename="${nombreArchivo}"]`);
+    if (elemento) {
+        elemento.style.display = 'none';
+    }
+    
+    // Crear o actualizar el input hidden
+    const container = document.getElementById('imagenes-eliminar-container');
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'imagenes_a_eliminar[]';
+    input.value = nombreArchivo;
+    input.id = `eliminar_img_${Date.now()}`;
+    container.appendChild(input);
+    
+    // Actualizar contador
+    actualizarContadorImagenes();
+    
+    Swal.fire({
+        icon: 'success',
+        title: 'Imagen marcada para eliminar',
+        text: 'La imagen será eliminada al guardar los cambios',
+        timer: 1500,
+        showConfirmButton: false
+    });
+}
+
+// ============ FUNCIÓN PARA INICIALIZAR ATRIBUTOS ACTIVOS ============
+function inicializarAtributosActivos() {
+    // Limpiar atributos activos
+    atributosActivos = {};
+    
+    // Recorrer todos los checkboxes de valores
+    document.querySelectorAll('.valor-checkbox:checked').forEach(checkbox => {
+        const atributoId = checkbox.dataset.atributoId;
+        const atributoNombre = checkbox.dataset.atributoNombre;
+        const valorId = checkbox.value;
+        const valorNombre = checkbox.dataset.valorNombre;
+        
+        // Asegurar que el atributo esté activo
+        const atributoActivo = document.getElementById(`atributo-activo-${atributoId}`);
+        if (atributoActivo && !atributoActivo.checked) {
+            atributoActivo.checked = true;
+            // Disparar evento change manualmente
+            const event = new Event('change', { bubbles: true });
+            atributoActivo.dispatchEvent(event);
+        }
+        
+        // Agregar a atributosActivos
+        if (!atributosActivos[atributoId]) {
+            atributosActivos[atributoId] = {
+                id: atributoId,
+                nombre: atributoNombre,
+                valores: {}
+            };
+        }
+        
+        atributosActivos[atributoId].valores[valorId] = {
+            id: valorId,
+            nombre: valorNombre,
+            atributoId: atributoId,
+            atributoNombre: atributoNombre
+        };
+    });
+    
+    // Actualizar resumen y pestañas
+    actualizarResumenAtributos();
+    actualizarPestanasValores();
+}
+
+// ============ VALIDACIÓN DE TAMAÑO ANTES DE ENVIAR ============
+function validarTamañoTotalAntesDeEnviar() {
+    const totalSize = calcularTamañoTotal();
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    
+    // Lista de archivos para mostrar al usuario
+    let archivosGrandes = [];
+    
+    // Verificar archivos individualmente
+    if (imagenPrincipalFile && imagenPrincipalFile.size > 5 * 1024 * 1024) {
+        archivosGrandes.push(`Imagen principal: ${(imagenPrincipalFile.size / (1024 * 1024)).toFixed(2)}MB (máx 5MB)`);
+    }
+    
+    if (gifFile && gifFile.size > 10 * 1024 * 1024) {
+        archivosGrandes.push(`GIF: ${(gifFile.size / (1024 * 1024)).toFixed(2)}MB (máx 10MB)`);
+    }
+    
+    selectedImages.forEach(img => {
+        if (img.file.size > 5 * 1024 * 1024) {
+            archivosGrandes.push(`Imagen adicional "${img.file.name}": ${(img.file.size / (1024 * 1024)).toFixed(2)}MB (máx 5MB)`);
+        }
+    });
+    
+    // Verificar imágenes de variaciones
+    Object.keys(imagenesVariacion).forEach(valorKey => {
+        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+            imagenesVariacion[valorKey].imagenes.forEach(img => {
+                if (img.file.size > 5 * 1024 * 1024) {
+                    archivosGrandes.push(`Imagen adicional de variación "${img.name}": ${(img.file.size / (1024 * 1024)).toFixed(2)}MB (máx 5MB)`);
+                }
+            });
+        }
+    });
+    
+    if (archivosGrandes.length > 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Archivos demasiado grandes',
+            html: `
+                <div class="text-left">
+                    <p class="mb-3">Los siguientes archivos exceden su límite individual:</p>
+                    <ul class="text-left">
+                        ${archivosGrandes.map(msg => `<li class="mb-2">⚠️ ${msg}</li>`).join('')}
+                    </ul>
+                    <hr>
+                    <p class="text-muted small mb-0">Por favor, reduce el tamaño de estos archivos antes de continuar.</p>
+                </div>
+            `,
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#3085d6'
+        });
+        return false;
+    }
+    
+    if (totalSize > maxSize) {
+        // Calcular cuánto hay que reducir
+        const exceso = totalSize - maxSize;
+        
+        Swal.fire({
+            icon: 'error',
+            title: 'Archivos demasiado grandes',
+            html: `
+                <div class="text-center">
+                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                    <h5 class="mb-3">El tamaño total excede el límite del servidor</h5>
+                    <p class="mb-2"><strong>Tamaño actual:</strong> ${(totalSize / (1024 * 1024)).toFixed(2)}MB</p>
+                    <p class="mb-2"><strong>Límite permitido:</strong> 50MB</p>
+                    <p class="mb-3"><strong>Debes reducir:</strong> ${(exceso / (1024 * 1024)).toFixed(2)}MB</p>
+                    
+                    <div class="bg-light p-3 rounded mt-3">
+                        <p class="fw-bold mb-2">📊 Desglose de archivos:</p>
+                        <ul class="text-left small">
+                            ${imagenPrincipalFile ? `<li>📷 Imagen principal: ${(imagenPrincipalFile.size / (1024 * 1024)).toFixed(2)}MB</li>` : ''}
+                            ${gifFile ? `<li>🎬 GIF: ${(gifFile.size / (1024 * 1024)).toFixed(2)}MB</li>` : ''}
+                            ${selectedImages.map(img => `<li>🖼️ ${img.file.name.substring(0, 20)}...: ${(img.file.size / (1024 * 1024)).toFixed(2)}MB</li>`).join('')}
+                        </ul>
+                    </div>
+                    
+                    <hr>
+                    <p class="text-muted small mt-3">💡 Recomendaciones:</p>
+                    <ul class="text-left small">
+                        <li>Comprime las imágenes antes de subirlas</li>
+                        <li>Sube menos imágenes adicionales</li>
+                    </ul>
+                </div>
+            `,
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#3085d6',
+            width: '600px'
+        });
+        return false;
+    }
+    
+    return true;
+}
 
 // ============ FUNCIÓN DE CÁLCULO DE IMPUESTO Y PRECIO FINAL ============
 
 function actualizarPrecioFinal() {
     const precioVentaInput = document.getElementById('dPrecio_venta');
+    const tieneDescuento = document.getElementById('bTiene_descuento')?.checked;
+    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
     const impuestoSelect = document.getElementById('id_impuesto');
     
     if (!precioVentaInput) return;
     
-    const precioVenta = parseFloat(precioVentaInput.value) || 0;
+    // Determinar qué precio usar (original o con descuento)
+    let precioBase = parseFloat(precioVentaInput.value) || 0;
+    let precioOriginal = precioBase;
     
-    // Mostrar precio base
-    document.getElementById('precio-base-display').textContent = '$' + precioVenta.toFixed(2);
+    if (tieneDescuento && precioDescuentoInput && precioDescuentoInput.value) {
+        const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
+        if (precioDescuento > 0 && precioDescuento < precioBase) {
+            precioBase = precioDescuento;
+        }
+    }
+    
+    // Mostrar precio base (el que se usará para calcular impuestos)
+    document.getElementById('precio-base-display').textContent = '$' + precioBase.toFixed(2);
+    
+    // Mostrar precio original si hay descuento
+    const precioOriginalDisplay = document.getElementById('precio-original-display');
+    if (tieneDescuento && precioBase < precioOriginal) {
+        precioOriginalDisplay.style.display = 'block';
+        precioOriginalDisplay.textContent = 'Precio original: $' + precioOriginal.toFixed(2);
+        precioOriginalDisplay.className = 'text-muted';
+    } else {
+        precioOriginalDisplay.style.display = 'none';
+    }
     
     // Obtener impuesto seleccionado
     let totalImpuestos = 0;
@@ -1687,18 +1949,123 @@ function actualizarPrecioFinal() {
     if (impuestoSelect && impuestoSelect.value) {
         const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
         porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
-        totalImpuestos = precioVenta * (porcentaje / 100);
+        
+        totalImpuestos = precioBase * (porcentaje / 100);
     }
     
-    const precioFinal = precioVenta + totalImpuestos;
+    const precioFinal = precioBase + totalImpuestos;
     
     // Mostrar resultados
     document.getElementById('total-impuestos-display').textContent = '$' + totalImpuestos.toFixed(2);
     document.getElementById('precio-final-display').textContent = '$' + precioFinal.toFixed(2);
-    document.getElementById('porcentaje-impuestos-display').textContent = porcentaje.toFixed(2) + '%';
+    
+    if (porcentaje > 0) {
+        document.getElementById('porcentaje-impuestos-display').textContent = porcentaje.toFixed(2) + '%';
+    } else {
+        document.getElementById('porcentaje-impuestos-display').textContent = '0%';
+    }
 }
 
-// ============ FUNCIONES DE VALIDACIÓN ============
+function actualizarPrecioFinalVariacion(valorKey) {
+    const precioInput = document.getElementById(`precio-${valorKey}`);
+    const descuentoCheckbox = document.getElementById(`descuento-${valorKey}`);
+    const precioDescuentoInput = document.getElementById(`precio_descuento-${valorKey}`);
+    const impuestoSelect = document.getElementById(`impuesto-${valorKey}`);
+    const precioFinalSpan = document.getElementById(`precio-final-${valorKey}`);
+    const detalleImpuestoSpan = document.getElementById(`detalle-impuesto-${valorKey}`);
+    
+    if (!precioInput || !precioFinalSpan) return;
+    
+    // Determinar qué precio usar (original o con descuento)
+    let precioBase = parseFloat(precioInput.value) || 0;
+    
+    if (descuentoCheckbox && descuentoCheckbox.checked && precioDescuentoInput && precioDescuentoInput.value) {
+        const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
+        if (precioDescuento > 0 && precioDescuento < precioBase) {
+            precioBase = precioDescuento;
+        }
+    }
+    
+    // Obtener impuesto seleccionado
+    let totalImpuestos = 0;
+    let porcentaje = 0;
+    let nombreImpuesto = '';
+    
+    if (impuestoSelect && impuestoSelect.value) {
+        const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
+        porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
+        nombreImpuesto = selectedOption.text.split('(')[0].trim();
+        
+        totalImpuestos = precioBase * (porcentaje / 100);
+    }
+    
+    const precioFinal = precioBase + totalImpuestos;
+    
+    // Mostrar resultados
+    precioFinalSpan.textContent = '$' + precioFinal.toFixed(2);
+    
+    if (detalleImpuestoSpan) {
+        if (porcentaje > 0) {
+            detalleImpuestoSpan.textContent = `${nombreImpuesto}: ${porcentaje.toFixed(2)}% ($${totalImpuestos.toFixed(2)})`;
+        } else {
+            detalleImpuestoSpan.textContent = 'Sin impuesto';
+        }
+    }
+}
+
+// ============ FUNCIONES DE VALIDACIÓN DE FECHAS ============
+
+function validarFechasDescuento() {
+    const fechaInicio = document.getElementById('dFecha_inicio_descuento');
+    const fechaFin = document.getElementById('dFecha_fin_descuento');
+    const errorDiv = document.getElementById('error-fechas-descuento');
+    
+    if (!fechaInicio || !fechaFin) return true;
+    
+    if (fechaInicio.value && fechaFin.value) {
+        const inicio = new Date(fechaInicio.value);
+        const fin = new Date(fechaFin.value);
+        
+        if (fin < inicio) {
+            fechaFin.classList.add('is-invalid');
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio';
+            return false;
+        } else {
+            fechaFin.classList.remove('is-invalid');
+            errorDiv.style.display = 'none';
+            return true;
+        }
+    }
+    return true;
+}
+
+function validarFechasDescuentoVariacion(inicioId, finId, valorKey) {
+    const fechaInicio = document.getElementById(inicioId);
+    const fechaFin = document.getElementById(finId);
+    const errorDiv = document.getElementById(`error-fechas-descuento-${valorKey}`);
+    
+    if (!fechaInicio || !fechaFin) return true;
+    
+    if (fechaInicio.value && fechaFin.value) {
+        const inicio = new Date(fechaInicio.value);
+        const fin = new Date(fechaFin.value);
+        
+        if (fin < inicio) {
+            fechaFin.classList.add('is-invalid');
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio';
+            return false;
+        } else {
+            fechaFin.classList.remove('is-invalid');
+            errorDiv.style.display = 'none';
+            return true;
+        }
+    }
+    return true;
+}
+
+// ============ FUNCIONES DE VALIDACIÓN DE PRECIOS ============
 
 function validarPrecioDescuentoProductoInstantaneo(input) {
     const tieneDescuento = document.getElementById('bTiene_descuento');
@@ -1739,6 +2106,60 @@ function validarPrecioDescuentoProducto() {
         errorDiv.style.display = 'none';
         return true;
     }
+}
+
+function validarPrecioDescuentoVariacionInstantaneo(input) {
+    const precioNormalId = input.dataset.precioNormalId;
+    const precioNormal = document.getElementById(precioNormalId);
+    const valorKey = input.dataset.valorKey;
+    const checkbox = document.getElementById(`descuento-${valorKey}`);
+    const errorDiv = document.getElementById(`error-precio-descuento-${valorKey}`);
+    
+    if (!checkbox || !checkbox.checked) return true;
+    
+    if (precioNormal && input.value) {
+        const precioNormalValor = parseFloat(precioNormal.value) || 0;
+        const precioDescuentoValor = parseFloat(input.value) || 0;
+        
+        if (precioDescuentoValor >= precioNormalValor && precioDescuentoValor > 0 && input.value !== '') {
+            input.classList.add('is-invalid');
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio normal';
+            return false;
+        } else {
+            input.classList.remove('is-invalid');
+            errorDiv.style.display = 'none';
+            return true;
+        }
+    }
+    return true;
+}
+
+function validarPrecioDescuentoVariacion(input) {
+    const precioNormalId = input.dataset.precioNormalId;
+    const precioNormal = document.getElementById(precioNormalId);
+    const valorKey = input.dataset.valorKey;
+    const checkbox = document.getElementById(`descuento-${valorKey}`);
+    const errorDiv = document.getElementById(`error-precio-descuento-${valorKey}`);
+    
+    if (!checkbox || !checkbox.checked) return true;
+    
+    if (precioNormal && input.value) {
+        const precioNormalValor = parseFloat(precioNormal.value) || 0;
+        const precioDescuentoValor = parseFloat(input.value) || 0;
+        
+        if (precioDescuentoValor >= precioNormalValor && precioDescuentoValor > 0) {
+            input.classList.add('is-invalid');
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio normal';
+            return false;
+        } else {
+            input.classList.remove('is-invalid');
+            errorDiv.style.display = 'none';
+            return true;
+        }
+    }
+    return true;
 }
 
 function validarDimension(input, maxDecimales, maxValor) {
@@ -1950,8 +2371,8 @@ function validarPrecio(input) {
 
 function validarStock(input) {
     input.value = input.value.replace(/[^0-9]/g, '');
-    if (input.value.length > 4) {
-        input.value = input.value.substring(0, 4);
+    if (input.value.length > 6) {
+        input.value = input.value.substring(0, 6);
     }
     if (input.value && parseInt(input.value) < 0) {
         input.value = '0';
@@ -1978,7 +2399,10 @@ function toggleDescuentoFields() {
         fechaInicio.required = true;
         fechaFin.required = true;
         
-        setTimeout(() => validarPrecioDescuentoProducto(), 100);
+        setTimeout(() => {
+            validarPrecioDescuentoProducto();
+            actualizarPrecioFinal();
+        }, 100);
     } else {
         descuentoFields.style.display = 'none';
         precioDescuento.required = false;
@@ -1987,18 +2411,106 @@ function toggleDescuentoFields() {
         
         precioDescuento.classList.remove('is-invalid');
         document.getElementById('error-precio-descuento').style.display = 'none';
+        fechaFin.classList.remove('is-invalid');
+        document.getElementById('error-fechas-descuento').style.display = 'none';
+        
+        actualizarPrecioFinal();
     }
 }
 
-// ============ FUNCIONES DE IMÁGENES ============
-
-function marcarImagenAEliminar(checkbox, index) {
+function toggleDescuentoVariacion(checkbox, valorKey) {
+    const fields = document.querySelector(`.descuento-fields-${valorKey}`);
+    const precioDescuento = document.getElementById(`precio_descuento-${valorKey}`);
+    const fechaInicio = document.getElementById(`fecha-inicio-${valorKey}`);
+    const fechaFin = document.getElementById(`fecha-fin-${valorKey}`);
+    const errorDiv = document.getElementById(`error-precio-descuento-${valorKey}`);
+    
     if (checkbox.checked) {
-        imagenesAEliminar.push(checkbox.value);
+        fields.style.display = 'block';
+        precioDescuento.required = true;
+        fechaInicio.required = true;
+        fechaFin.required = true;
+        
+        setTimeout(() => {
+            validarPrecioDescuentoVariacion(precioDescuento);
+            actualizarPrecioFinalVariacion(valorKey);
+        }, 100);
     } else {
-        imagenesAEliminar = imagenesAEliminar.filter(img => img !== checkbox.value);
+        fields.style.display = 'none';
+        precioDescuento.required = false;
+        fechaInicio.required = false;
+        fechaFin.required = false;
+        
+        precioDescuento.classList.remove('is-invalid');
+        if (errorDiv) errorDiv.style.display = 'none';
+        fechaFin.classList.remove('is-invalid');
+        document.getElementById(`error-fechas-descuento-${valorKey}`).style.display = 'none';
+        
+        actualizarPrecioFinalVariacion(valorKey);
     }
-    actualizarContadorImagenes();
+}
+
+// ============ FUNCIONES DE IMÁGENES Y VIDEO DEL PRODUCTO PRINCIPAL ============
+
+function calcularTamañoTotal() {
+    let total = 0;
+    
+    if (imagenPrincipalFile) total += imagenPrincipalFile.size;
+    if (gifFile) total += gifFile.size;
+    
+    selectedImages.forEach(img => {
+        total += img.file.size;
+    });
+    
+    // Agregar imágenes de variaciones
+    Object.keys(imagenesVariacion).forEach(valorKey => {
+        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+            imagenesVariacion[valorKey].imagenes.forEach(img => {
+                total += img.file.size;
+            });
+        }
+    });
+    
+    return total;
+}
+
+function actualizarBarraProgresoTamaño() {
+    const totalSize = calcularTamañoTotal();
+    const porcentaje = (totalSize / maxTotalSize) * 100;
+    const progressBar = document.getElementById('size-progress-bar');
+    const totalSizeSpan = document.getElementById('total-size');
+    const limiteMsg = document.getElementById('limiteArchivosMsg');
+    
+    if (totalSize < 1024) {
+        totalSizeSpan.textContent = totalSize + ' B';
+    } else if (totalSize < 1024 * 1024) {
+        totalSizeSpan.textContent = (totalSize / 1024).toFixed(2) + ' KB';
+    } else {
+        totalSizeSpan.textContent = (totalSize / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+    
+    progressBar.style.width = Math.min(porcentaje, 100) + '%';
+    
+    if (porcentaje > 90) {
+        progressBar.classList.remove('bg-success');
+        progressBar.classList.add('bg-danger');
+    } else if (porcentaje > 70) {
+        progressBar.classList.remove('bg-success');
+        progressBar.classList.add('bg-warning');
+    } else {
+        progressBar.classList.remove('bg-danger', 'bg-warning');
+        progressBar.classList.add('bg-success');
+    }
+    
+    if (totalSize > maxTotalSize) {
+        limiteExcedido = true;
+        limiteMsg.style.display = 'block';
+        document.getElementById('btnSubmit').disabled = true;
+    } else {
+        limiteExcedido = false;
+        limiteMsg.style.display = 'none';
+        document.getElementById('btnSubmit').disabled = false;
+    }
 }
 
 function previewImagenPrincipal(input) {
@@ -2019,18 +2531,30 @@ function previewImagenPrincipal(input) {
             return;
         }
         
+        if (file.size > 5 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Archivo demasiado grande',
+                text: 'La imagen principal no puede exceder los 5MB'
+            });
+            input.value = '';
+            return;
+        }
+        
         imagenPrincipalFile = file;
         const reader = new FileReader();
         
         reader.onload = function(e) {
             previewImg.src = e.target.result;
             previewContainer.style.display = 'block';
+            actualizarBarraProgresoTamaño();
         }
         
         reader.readAsDataURL(input.files[0]);
     } else {
         previewContainer.style.display = 'none';
         imagenPrincipalFile = null;
+        actualizarBarraProgresoTamaño();
     }
     
     actualizarContadorImagenes();
@@ -2043,37 +2567,8 @@ function cancelarImagenPrincipal() {
     input.value = '';
     previewContainer.style.display = 'none';
     imagenPrincipalFile = null;
+    actualizarBarraProgresoTamaño();
     actualizarContadorImagenes();
-}
-
-function previewVideo(input) {
-    const previewContainer = document.getElementById('preview_video_container');
-    const previewVideo = document.getElementById('preview_video');
-    const source = previewVideo.querySelector('source');
-    
-    if (input.files && input.files[0]) {
-        videoFile = input.files[0];
-        const url = URL.createObjectURL(input.files[0]);
-        source.src = url;
-        source.type = input.files[0].type;
-        previewVideo.load();
-        previewContainer.style.display = 'block';
-    } else {
-        previewContainer.style.display = 'none';
-        videoFile = null;
-    }
-}
-
-function cancelarVideo() {
-    const input = document.getElementById('video_producto');
-    const previewContainer = document.getElementById('preview_video_container');
-    const previewVideo = document.getElementById('preview_video');
-    const source = previewVideo.querySelector('source');
-    
-    input.value = '';
-    previewContainer.style.display = 'none';
-    source.src = '#';
-    videoFile = null;
 }
 
 function previewGif(input) {
@@ -2093,18 +2588,30 @@ function previewGif(input) {
             return;
         }
         
+        if (file.size > 10 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Archivo demasiado grande',
+                text: 'El GIF no puede exceder los 10MB'
+            });
+            input.value = '';
+            return;
+        }
+        
         gifFile = file;
         const reader = new FileReader();
         
         reader.onload = function(e) {
             previewImg.src = e.target.result;
             previewContainer.style.display = 'block';
+            actualizarBarraProgresoTamaño();
         }
         
         reader.readAsDataURL(input.files[0]);
     } else {
         previewContainer.style.display = 'none';
         gifFile = null;
+        actualizarBarraProgresoTamaño();
     }
     
     actualizarContadorImagenes();
@@ -2117,8 +2624,11 @@ function cancelarGif() {
     input.value = '';
     previewContainer.style.display = 'none';
     gifFile = null;
+    actualizarBarraProgresoTamaño();
     actualizarContadorImagenes();
 }
+
+// ============ FUNCIONES PARA IMÁGENES DE CATEGORÍA ============
 
 function previewImagenCategoria(input) {
     const preview = document.getElementById('categoriaImagePreview');
@@ -2186,8 +2696,6 @@ function limpiarFormularioMarca() {
 function limpiarFormularioEtiqueta() {
     document.getElementById('vNombre_eti').value = '';
     document.getElementById('tDescripcion_eti').value = '';
-    document.getElementById('color_eti').value = '#007bff';
-    document.getElementById('color_text_eti').value = '#007bff';
 }
 
 function limpiarFormularioImpuesto() {
@@ -2217,8 +2725,12 @@ function generarSlugValor(valor) {
     }
     
     let slug = valor.toLowerCase();
-    slug = slug.replace(/á/gi, 'a').replace(/é/gi, 'e').replace(/í/gi, 'i')
-               .replace(/ó/gi, 'o').replace(/ú/gi, 'u').replace(/ñ/gi, 'n');
+    slug = slug.replace(/á/gi, 'a');
+    slug = slug.replace(/é/gi, 'e');
+    slug = slug.replace(/í/gi, 'i');
+    slug = slug.replace(/ó/gi, 'o');
+    slug = slug.replace(/ú/gi, 'u');
+    slug = slug.replace(/ñ/gi, 'n');
     slug = slug.replace(/[^a-z0-9\s]/g, '');
     slug = slug.replace(/\s+/g, '-');
     slug = slug.replace(/-+/g, '-');
@@ -2281,6 +2793,7 @@ function guardarValorAtributo() {
             });
             
             valorModal.hide();
+            
             agregarValorAlAtributo(data.valor);
             
         } else {
@@ -2309,44 +2822,216 @@ function guardarValorAtributo() {
     });
 }
 
-// ============ FUNCIONES DE ATRIBUTOS Y VARIACIONES ============
-
-function cargarAtributosActivosDesdeProducto() {
-    @php
-        $valoresSeleccionados = $producto->valoresAtributos->pluck('id_atributo_valor')->toArray();
-        $atributosConValores = [];
-        foreach($producto->valoresAtributos as $valor) {
-            $atributosConValores[$valor->id_atributo][] = $valor->id_atributo_valor;
+function handleImageSelection(event) {
+    const files = event.target.files;
+    const maxFiles = 7;
+    const currentCount = selectedImages.length;
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    
+    // Calcular tamaño actual
+    const tamanioActual = calcularTamañoTotal();
+    
+    // Verificar si con estos archivos nuevos se excede el límite
+    let nuevoTamanio = tamanioActual;
+    for (let i = 0; i < files.length; i++) {
+        nuevoTamanio += files[i].size;
+    }
+    
+    if (nuevoTamanio > maxTotalSize) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de tamaño excedido',
+            html: `
+                <div class="text-center">
+                    <p>Si agregas estos archivos, excederás el límite de 50MB.</p>
+                    <p class="mb-0"><strong>Tamaño actual:</strong> ${(tamanioActual / (1024 * 1024)).toFixed(2)}MB</p>
+                    <p><strong>Tamaño con nuevos archivos:</strong> ${(nuevoTamanio / (1024 * 1024)).toFixed(2)}MB</p>
+                </div>
+            `,
+            confirmButtonText: 'Entendido'
+        });
+        event.target.value = '';
+        return;
+    }
+    
+    if (currentCount + files.length > maxFiles) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de imágenes',
+            text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales. Ya tienes ${currentCount} seleccionadas.`
+        });
+        event.target.value = '';
+        return;
+    }
+    
+    let archivosAgregados = 0;
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        if (!validTypes.includes(file.type)) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Formato no válido',
+                text: `El archivo "${file.name}" no es un formato válido. Formatos aceptados: JPG, JPEG, PNG, WEBP.`
+            });
+            continue;
         }
-    @endphp
+        
+        if (file.size > 5 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Archivo demasiado grande',
+                text: `La imagen "${file.name}" excede el límite de 5MB.`
+            });
+            continue;
+        }
+        
+        if (!isImageDuplicate(file)) {
+            const imageId = 'img_' + Date.now() + '_' + imageCounter++;
+            const preview = URL.createObjectURL(file);
+            
+            selectedImages.push({
+                id: imageId,
+                file: file,
+                preview: preview,
+                name: file.name,
+                size: file.size
+            });
+            archivosAgregados++;
+        }
+    }
     
-    // Inicializar atributosActivos con los valores del producto
-    @foreach($atributosConValores as $atributoId => $valores)
-        const atributoNombre = document.querySelector(`[data-atributo-id="${ {{ $atributoId }} }"] .fw-bold`)?.textContent.trim() || '';
-        atributosActivos[{{ $atributoId }}] = {
-            id: {{ $atributoId }},
-            nombre: atributoNombre,
-            valores: {}
-        };
-        @foreach($valores as $valorId)
-            @php
-                $valorNombre = \App\Models\AtributoValor::find($valorId)->vValor ?? '';
-            @endphp
-            atributosActivos[{{ $atributoId }}].valores[{{ $valorId }}] = {
-                id: {{ $valorId }},
-                nombre: '{{ $valorNombre }}',
-                atributoId: {{ $atributoId }},
-                atributoNombre: atributoNombre
-            };
-        @endforeach
-    @endforeach
+    if (archivosAgregados > 0) {
+        document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
+        renderSelectedImages();
+        actualizarBarraProgresoTamaño();
+    }
     
-    // Actualizar UI
-    actualizarResumenAtributos();
-    actualizarPestanasValores();
+    event.target.value = '';
+    actualizarContadorImagenes();
 }
 
-// Event listeners para checkboxes de atributos
+function isImageDuplicate(newFile) {
+    return selectedImages.some(img => 
+        img.file.name === newFile.name && 
+        img.file.size === newFile.size && 
+        img.file.lastModified === newFile.lastModified
+    );
+}
+
+function removeSelectedImage(imageId) {
+    const image = selectedImages.find(img => img.id === imageId);
+    if (image && image.preview) {
+        URL.revokeObjectURL(image.preview);
+    }
+    selectedImages = selectedImages.filter(img => img.id !== imageId);
+    
+    document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
+    renderSelectedImages();
+    actualizarContadorImagenes();
+    actualizarBarraProgresoTamaño();
+}
+
+function renderSelectedImages() {
+    const container = document.getElementById('selected-images-container');
+    const noMsg = document.getElementById('no-imagenes-msg');
+    
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (selectedImages.length === 0) {
+        if (noMsg) noMsg.style.display = 'block';
+        return;
+    }
+    
+    if (noMsg) noMsg.style.display = 'none';
+    
+    selectedImages.forEach((image, index) => {
+        const col = document.createElement('div');
+        col.className = 'col-6 col-md-3 mb-3';
+        
+        const card = document.createElement('div');
+        card.className = 'card border image-preview-card position-relative';
+        
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1 remove-btn';
+        btn.style.cssText = 'width: 28px; height: 28px; padding: 0; border-radius: 50%; z-index: 10;';
+        btn.onclick = function(e) { 
+            e.preventDefault();
+            removeSelectedImage(image.id); 
+        };
+        
+        const btnIcon = document.createElement('i');
+        btnIcon.className = 'fas fa-times';
+        btn.appendChild(btnIcon);
+        
+        const img = document.createElement('img');
+        img.src = image.preview;
+        img.className = 'card-img-top';
+        img.style.cssText = 'height: 120px; object-fit: contain; background: #f8f9fa; padding: 8px;';
+        img.alt = 'Imagen ' + (index + 1);
+        
+        const cardBody = document.createElement('div');
+        cardBody.className = 'card-body p-2 text-center';
+        
+        const small1 = document.createElement('small');
+        small1.className = 'text-muted d-block';
+        small1.style.cssText = 'font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+        small1.textContent = image.file.name.length > 20 ? image.file.name.substring(0, 20) + '...' : image.file.name;
+        
+        const small2 = document.createElement('small');
+        small2.className = 'text-muted d-block';
+        let sizeText = '';
+        if (image.file.size < 1024) {
+            sizeText = image.file.size + ' B';
+        } else if (image.file.size < 1024 * 1024) {
+            sizeText = (image.file.size / 1024).toFixed(2) + ' KB';
+        } else {
+            sizeText = (image.file.size / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+        small2.textContent = sizeText;
+        
+        cardBody.appendChild(small1);
+        cardBody.appendChild(small2);
+        
+        card.appendChild(btn);
+        card.appendChild(img);
+        card.appendChild(cardBody);
+        
+        col.appendChild(card);
+        container.appendChild(col);
+    });
+}
+
+function actualizarContadorImagenes() {
+    let total = (imagenPrincipalFile ? 1 : 0) + (gifFile ? 1 : 0) + selectedImages.length;
+    
+    // Agregar imágenes de variaciones
+    Object.keys(imagenesVariacion).forEach(valorKey => {
+        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+            total += imagenesVariacion[valorKey].imagenes.length;
+        }
+    });
+    
+    // Contar imágenes existentes del producto que no serán eliminadas
+    if (@json($producto->vImagen_principal ? true : false) && document.getElementById('current_principal_container')?.style.display !== 'none') {
+        total += 1;
+    }
+    if (@json($producto->vGif ? true : false) && document.getElementById('current_gif_container')?.style.display !== 'none') {
+        total += 1;
+    }
+    
+    // Contar imágenes adicionales existentes que no están marcadas para eliminar
+    const imagenesExistentesCount = @json(count($producto->vImagenes_adicionales ?? []));
+    total += imagenesExistentesCount - imagenesAEliminar.length;
+    
+    document.getElementById('total-imagenes').textContent = total;
+}
+
+// ============ FUNCIONES DE ATRIBUTOS Y VARIACIONES ============
+
 document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
     checkbox.addEventListener('change', function() {
         const atributoId = this.dataset.atributoId;
@@ -2439,7 +3124,9 @@ document.querySelectorAll('.valor-checkbox').forEach(checkbox => {
         const atributoActivo = document.getElementById(`atributo-activo-${atributoId}`);
         if (!atributoActivo.checked) {
             atributoActivo.checked = true;
-            atributoActivo.dispatchEvent(new Event('change'));
+            // Forzar la actualización de la UI
+            const event = new Event('change', { bubbles: true });
+            atributoActivo.dispatchEvent(event);
         }
         
         if (!atributosActivos[atributoId]) {
@@ -2491,8 +3178,6 @@ function actualizarResumenAtributos() {
     const resumenDiv = document.getElementById('resumen-atributos');
     const lista = document.getElementById('atributos-activos-lista');
     const totalAtributosBadge = document.getElementById('total-atributos-activos-badge');
-    
-    if (!lista) return;
     
     lista.innerHTML = '';
     let atributosCount = 0;
@@ -2557,8 +3242,8 @@ function actualizarPestanasValores() {
         Object.values(atributo.valores).forEach(valor => {
             todosLosValores.push({
                 ...valor,
-                atributoNombre: atributo.nombre,
-                atributoId: atributo.id
+                atributoId: atributo.id,
+                atributoNombre: atributo.nombre
             });
         });
     });
@@ -2584,6 +3269,7 @@ function actualizarPestanasValores() {
     todosLosValores.forEach((valor, index) => {
         const valorId = valor.id;
         const valorKey = `${valor.atributoId}_${valorId}`;
+        const variacionExistente = variacionesExistentes[valorKey] || null;
         
         const tabItem = document.createElement('li');
         tabItem.className = 'nav-item';
@@ -2603,7 +3289,14 @@ function actualizarPestanasValores() {
         icon.className = 'fas fa-cube me-1';
         tabButton.appendChild(icon);
         
-        tabButton.appendChild(document.createTextNode(' ' + valor.atributoNombre + ': ' + valor.nombre));
+        tabButton.appendChild(document.createTextNode(' ' + valor.nombre));
+        
+        if (variacionExistente) {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-success ms-1';
+            badge.textContent = '✓';
+            tabButton.appendChild(badge);
+        }
         
         tabItem.appendChild(tabButton);
         navTabs.appendChild(tabItem);
@@ -2621,21 +3314,40 @@ function actualizarPestanasValores() {
         }];
         const skuSugerido = generarSkuSugerido(productoSku, combinacion);
         
-        // Buscar variación existente para este valor
-        @php
-            $variacionesPorValor = [];
-            foreach($producto->variaciones as $variacion) {
-                foreach($variacion->atributos as $atributo) {
-                    $key = $atributo->id_atributo . '_' . $atributo->id_atributo_valor;
-                    $variacionesPorValor[$key] = $variacion;
-                }
-            }
-        @endphp
+        // Valores pre-cargados si la variación existe - CORREGIDO PARA MOSTRAR FECHAS
+        const precioValue = variacionExistente ? variacionExistente.dPrecio : '';
+        const stockValue = variacionExistente ? variacionExistente.iStock : '0';
+        const claseEnvioValue = variacionExistente ? variacionExistente.vClase_envio : '';
+        const idImpuestoValue = variacionExistente && variacionExistente.id_impuesto ? variacionExistente.id_impuesto : '';
+        const descripcionValue = variacionExistente ? variacionExistente.tDescripcion : '';
+        const pesoValue = variacionExistente && variacionExistente.dPeso ? variacionExistente.dPeso : '';
+        const largoValue = variacionExistente && variacionExistente.dLargo_cm ? variacionExistente.dLargo_cm : '';
+        const anchoValue = variacionExistente && variacionExistente.dAncho_cm ? variacionExistente.dAncho_cm : '';
+        const altoValue = variacionExistente && variacionExistente.dAlto_cm ? variacionExistente.dAlto_cm : '';
+        const tieneDescuento = variacionExistente && variacionExistente.bTiene_oferta ? true : false;
+        const precioDescuentoValue = variacionExistente && variacionExistente.dPrecio_oferta ? variacionExistente.dPrecio_oferta : '';
         
-        @php
-            $valorKey = $valor->atributoId . '_' . $valor->id;
-            $variacionExistente = $variacionesPorValor[$valorKey] ?? null;
-        @endphp
+        // CORRECCIÓN: Extraer fechas correctamente del formato YYYY-MM-DD HH:MM:SS
+        let fechaInicioValue = '';
+        if (variacionExistente && variacionExistente.dFecha_inicio_oferta) {
+            // Si es una cadena completa con fecha y hora, extraer solo la parte de la fecha
+            const fechaStr = variacionExistente.dFecha_inicio_oferta;
+            if (typeof fechaStr === 'string') {
+                // Tomar los primeros 10 caracteres (YYYY-MM-DD)
+                fechaInicioValue = fechaStr.substring(0, 10);
+            }
+        }
+        
+        let fechaFinValue = '';
+        if (variacionExistente && variacionExistente.dFecha_fin_oferta) {
+            const fechaStr = variacionExistente.dFecha_fin_oferta;
+            if (typeof fechaStr === 'string') {
+                fechaFinValue = fechaStr.substring(0, 10);
+            }
+        }
+        
+        const motivoDescuentoValue = variacionExistente && variacionExistente.vMotivo_oferta ? variacionExistente.vMotivo_oferta : '';
+        const activoValue = variacionExistente ? (variacionExistente.bActivo ? true : false) : true;
         
         const formHtml = `
             <div class="variacion-form-container">
@@ -2644,29 +3356,200 @@ function actualizarPestanasValores() {
                         <div class="col-md-8">
                             <h6 class="fw-bold mb-2">
                                 <i class="fas fa-cube me-2"></i>
-                                Variación: <span class="text-warning">${valor.atributoNombre}: ${valor.nombre}</span>
+                                Variación: <span class="text-warning">${valor.nombre}</span>
+                                <small class="d-block text-white-50 mt-1">Atributo: ${valor.atributoNombre}</small>
                             </h6>
                             <p class="small mb-0 opacity-75">
                                 <i class="fas fa-info-circle me-1"></i>
-                                Configura los datos específicos para esta variación
+                                Configura los datos específicos para esta variación del producto
                             </p>
                         </div>
                         <div class="col-md-4 text-end">
                             <span class="badge bg-white text-dark p-2">
                                 <i class="fas fa-barcode me-1"></i>
-                                ID: ${valor.atributoNombre.substring(0,3)}-${valor.nombre.substring(0,3)}
+                                SKU: ${variacionExistente ? variacionExistente.vSKU : skuSugerido}
                             </span>
                         </div>
                     </div>
                 </div>
 
-                @if($variacionExistente)
-                <input type="hidden" name="variaciones[${valorKey}][id_variacion]" value="{{ $variacionExistente->id_variacion }}">
-                @endif
+                ${variacionExistente ? `
+                <input type="hidden" name="variaciones[${valorKey}][id_variacion]" value="${variacionExistente.id_variacion}">
+                ` : ''}
                 <input type="hidden" name="variaciones[${valorKey}][id_atributo]" value="${valor.atributoId}">
                 <input type="hidden" name="variaciones[${valorKey}][id_atributo_valor]" value="${valor.id}">
                 <input type="hidden" name="variaciones[${valorKey}][vNombre_variacion]" 
                        value="${valor.atributoNombre}: ${valor.nombre}">
+
+                <!-- SECCIÓN DE IMÁGENES DE LA VARIACIÓN -->
+                <div class="card mb-4 border-primary">
+                    <div class="card-header bg-primary text-white py-2">
+                        <h6 class="mb-0"><i class="fas fa-images me-2"></i>Imágenes de la Variación</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- IMAGEN PRINCIPAL DE LA VARIACIÓN -->
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label for="img_principal_${valorKey}" class="form-label fw-bold">
+                                        <i class="fas fa-star text-warning me-1"></i>Imagen Principal
+                                    </label>
+                                    <input type="file" 
+                                           name="variaciones[${valorKey}][imagen_principal]" 
+                                           id="img_principal_${valorKey}" 
+                                           class="form-control"
+                                           accept="image/jpeg,image/jpg,image/png"
+                                           onchange="previewImagenPrincipalVariacion(this, 'preview_principal_${valorKey}')">
+                                    <small class="form-text text-muted">
+                                        JPG, JPEG, PNG. Máx: 5MB. Dejar vacío para mantener la actual.
+                                    </small>
+                                    
+                                    ${variacionExistente && variacionExistente.vImagen ? `
+                                    <div id="current_principal_var_${valorKey}" class="mt-2">
+                                        <div class="border rounded p-2 text-center bg-light position-relative">
+                                            <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
+                                                <button type="button" class="btn btn-sm btn-outline-danger rounded-circle" 
+                                                        onclick="eliminarImagenPrincipalVariacionExistente('${valorKey}')"
+                                                        style="width: 30px; height: 30px;">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                            <img src="${variacionExistente.imagen_principal}" 
+                                                 class="img-thumbnail" 
+                                                 style="max-width: 150px; max-height: 150px; object-fit: contain;">
+                                            <div class="mt-2">
+                                                <small class="text-muted d-block">Imagen actual</small>
+                                                <input type="hidden" name="variaciones[${valorKey}][eliminar_imagen]" id="eliminar_img_${valorKey}" value="0">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    ` : ''}
+                                    
+                                    <div id="preview_principal_${valorKey}" class="mt-2" style="display: none;">
+                                        <div class="border rounded p-2 text-center bg-light position-relative">
+                                            <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
+                                                <button type="button" class="btn btn-sm btn-outline-danger rounded-circle" 
+                                                        onclick="cancelarImagenPrincipalVariacion('preview_principal_${valorKey}', 'img_principal_${valorKey}')"
+                                                        style="width: 30px; height: 30px;">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                            <img src="#" class="img-thumbnail" style="max-width: 150px; max-height: 150px; object-fit: contain;">
+                                            <div class="mt-2">
+                                                <small class="text-muted d-block">Nueva imagen</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- GIF DE LA VARIACIÓN -->
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label for="gif_${valorKey}" class="form-label fw-bold">
+                                        <i class="fas fa-file-image text-success me-1"></i>GIF Animado
+                                    </label>
+                                    <input type="file" 
+                                           name="variaciones[${valorKey}][gif]" 
+                                           id="gif_${valorKey}" 
+                                           class="form-control"
+                                           accept="image/gif"
+                                           onchange="previewGifVariacion(this, 'preview_gif_${valorKey}')">
+                                    <small class="form-text text-muted">
+                                        GIF. Máx: 10MB. Dejar vacío para mantener el actual.
+                                    </small>
+                                    
+                                    ${variacionExistente && variacionExistente.gif_url ? `
+                                    <div id="current_gif_var_${valorKey}" class="mt-2">
+                                        <div class="border rounded p-2 text-center bg-light position-relative">
+                                            <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
+                                                <button type="button" class="btn btn-sm btn-outline-danger rounded-circle" 
+                                                        onclick="eliminarGifVariacionExistente('${valorKey}')"
+                                                        style="width: 30px; height: 30px;">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                            <img src="${variacionExistente.gif_url}" 
+                                                 class="img-thumbnail" 
+                                                 style="max-width: 150px; max-height: 150px; object-fit: contain;">
+                                            <div class="mt-2">
+                                                <small class="text-muted d-block">GIF actual</small>
+                                                <input type="hidden" name="variaciones[${valorKey}][eliminar_gif]" id="eliminar_gif_${valorKey}" value="0">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    ` : ''}
+                                    
+                                    <div id="preview_gif_${valorKey}" class="mt-2" style="display: none;">
+                                        <div class="border rounded p-2 text-center bg-light position-relative">
+                                            <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
+                                                <button type="button" class="btn btn-sm btn-outline-danger rounded-circle" 
+                                                        onclick="cancelarGifVariacion('preview_gif_${valorKey}', 'gif_${valorKey}')"
+                                                        style="width: 30px; height: 30px;">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                            <img src="#" class="img-thumbnail" style="max-width: 150px; max-height: 150px; object-fit: contain;">
+                                            <div class="mt-2">
+                                                <small class="text-muted d-block">Nuevo GIF</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- IMÁGENES ADICIONALES DE LA VARIACIÓN -->
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label for="imagenes_adicionales_${valorKey}" class="form-label fw-bold">
+                                        <i class="fas fa-images me-1"></i>Imágenes Adicionales (Máx 7)
+                                    </label>
+                                    <input type="file" 
+                                           name="variaciones[${valorKey}][imagenes_adicionales][]" 
+                                           id="imagenes_adicionales_${valorKey}" 
+                                           class="form-control"
+                                           multiple
+                                           accept="image/jpeg,image/jpg,image/png,image/webp"
+                                           onchange="handleImagenesAdicionalesVariacion(event, '${valorKey}')">
+                                    <small class="form-text text-muted">
+                                        JPG, JPEG, PNG, WEBP. Máx: 5MB c/u. Las nuevas imágenes se agregarán a las existentes.
+                                    </small>
+                                    
+                                    ${variacionExistente && variacionExistente.imagenes_adicionales && variacionExistente.imagenes_adicionales.length > 0 ? `
+                                    <div class="mt-2">
+                                        <label class="fw-bold">Imágenes adicionales actuales:</label>
+                                        <div class="row" id="current_adicionales_var_${valorKey}">
+                                            ${variacionExistente.imagenes_adicionales.map((img, idx) => {
+                                                const nombreArchivo = img.split('/').pop();
+                                                return `
+                                                <div class="col-4 mb-2 current-image-item" data-filename="${nombreArchivo}" data-valor-key="${valorKey}">
+                                                    <div class="border rounded p-1 text-center bg-light position-relative">
+                                                        <div class="position-absolute top-0 end-0 m-1" style="z-index: 10;">
+                                                            <button type="button" 
+                                                                    class="btn btn-danger btn-sm rounded-circle"
+                                                                    style="width: 25px; height: 25px;"
+                                                                    onclick="eliminarImagenAdicionalVariacionExistente('${valorKey}', '${nombreArchivo}')">
+                                                                <i class="fas fa-times"></i>
+                                                            </button>
+                                                        </div>
+                                                        <img src="${img}" class="img-fluid" style="height: 60px; object-fit: contain;">
+                                                    </div>
+                                                </div>
+                                            `}).join('')}
+                                        </div>
+                                        <div id="imagenes_eliminar_${valorKey}" class="hidden-inputs"></div>
+                                    </div>
+                                    ` : ''}
+                                    
+                                    <div id="container_adicionales_${valorKey}" class="row mt-2"></div>
+                                    <div class="mt-2">
+                                        <span class="badge bg-info" id="count_adicionales_${valorKey}">0 nuevas seleccionadas</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="row mb-3">
                     <div class="col-md-8">
@@ -2682,7 +3565,7 @@ function actualizarPestanasValores() {
                                        name="variaciones[${valorKey}][vSKU]" 
                                        id="sku-${valorKey}" 
                                        class="form-control"
-                                       value="{{ $variacionExistente ? $variacionExistente->vSKU : '${skuSugerido}' }}"
+                                       value="${variacionExistente ? variacionExistente.vSKU : skuSugerido}"
                                        maxlength="50"
                                        required
                                        oninput="validarSKU(this)"
@@ -2708,11 +3591,14 @@ function actualizarPestanasValores() {
                                        id="activo-${valorKey}" 
                                        class="form-check-input" 
                                        value="1"
-                                       {{ $variacionExistente && $variacionExistente->bActivo ? 'checked' : 'checked' }}>
+                                       ${activoValue ? 'checked' : ''}>
                                 <label class="form-check-label" for="activo-${valorKey}">
                                     Variación activa
                                 </label>
                             </div>
+                            <small class="form-text text-muted d-block">
+                                Desactivar para ocultar esta variación
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -2729,9 +3615,9 @@ function actualizarPestanasValores() {
                                        name="variaciones[${valorKey}][dPrecio]" 
                                        id="precio-${valorKey}" 
                                        class="form-control"
-                                       value="{{ $variacionExistente ? $variacionExistente->dPrecio : '' }}"
+                                       value="${precioValue}"
                                        required
-                                       oninput="validarPrecio(this)"
+                                       oninput="validarPrecio(this); actualizarPrecioFinalVariacion('${valorKey}')"
                                        placeholder="0.00"
                                        title="Máximo: 9,999,999.99"
                                        autocomplete="off">
@@ -2751,16 +3637,16 @@ function actualizarPestanasValores() {
                                        name="variaciones[${valorKey}][iStock]" 
                                        id="stock-${valorKey}" 
                                        class="form-control"
-                                       value="{{ $variacionExistente ? $variacionExistente->iStock : '0' }}"
+                                       value="${stockValue}"
                                        required
                                        oninput="validarStock(this)"
-                                       pattern="[0-9]{1,4}"
+                                       pattern="[0-9]{1,6}"
                                        min="0"
-                                       max="9999"
+                                       max="999999"
                                        placeholder="0"
                                        autocomplete="off">
                             </div>
-                            <small class="form-text text-muted">Máximo 9,999 unidades</small>
+                            <small class="form-text text-muted">Máximo 999,999 unidades</small>
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -2772,16 +3658,65 @@ function actualizarPestanasValores() {
                                     id="clase-envio-${valorKey}" 
                                     class="form-select">
                                 <option value="">-- Por defecto --</option>
-                                <option value="estandar" {{ $variacionExistente && $variacionExistente->vClase_envio == 'estandar' ? 'selected' : '' }}>Estándar</option>
-                                <option value="express" {{ $variacionExistente && $variacionExistente->vClase_envio == 'express' ? 'selected' : '' }}>Express</option>
-                                <option value="fragil" {{ $variacionExistente && $variacionExistente->vClase_envio == 'fragil' ? 'selected' : '' }}>Frágil</option>
-                                <option value="grandes_dimensiones" {{ $variacionExistente && $variacionExistente->vClase_envio == 'grandes_dimensiones' ? 'selected' : '' }}>Grandes dimensiones</option>
+                                <option value="estandar" ${claseEnvioValue === 'estandar' ? 'selected' : ''}>Estándar</option>
+                                <option value="express" ${claseEnvioValue === 'express' ? 'selected' : ''}>Express</option>
+                                <option value="fragil" ${claseEnvioValue === 'fragil' ? 'selected' : ''}>Frágil</option>
+                                <option value="grandes_dimensiones" ${claseEnvioValue === 'grandes_dimensiones' ? 'selected' : ''}>Grandes dimensiones</option>
                             </select>
+                            <small class="form-text text-muted">Dejar vacío para heredar del producto</small>
                         </div>
                     </div>
                 </div>
 
-                <!-- CAMPOS DE DIMENSIONES -->
+                <!-- SECCIÓN DE IMPUESTO PARA LA VARIACIÓN -->
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="card border">
+                            <div class="card-header bg-light py-2">
+                                <h6 class="mb-0"><i class="fas fa-file-invoice-dollar me-2"></i>Impuesto para la Variación</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="form-group mb-3">
+                                            <label for="impuesto-${valorKey}" class="form-label fw-bold">
+                                                Impuesto Aplicable
+                                            </label>
+                                            <select name="variaciones[${valorKey}][id_impuesto]" 
+                                                    id="impuesto-${valorKey}" 
+                                                    class="form-select"
+                                                    onchange="actualizarPrecioFinalVariacion('${valorKey}')">
+                                                <option value="">-- Sin impuesto (heredar del producto) --</option>
+                                                @if(isset($impuestos) && $impuestos->count() > 0)
+                                                    @foreach($impuestos as $impuesto)
+                                                        <option value="{{ $impuesto->id_impuesto }}" 
+                                                                data-porcentaje="{{ $impuesto->dPorcentaje }}"
+                                                                data-tipo="{{ $impuesto->eTipo }}"
+                                                                ${idImpuestoValue == {{ $impuesto->id_impuesto }} ? 'selected' : ''}>
+                                                            {{ $impuesto->vNombre }} ({{ $impuesto->eTipo }} - {{ number_format($impuesto->dPorcentaje, 2) }}%)
+                                                        </option>
+                                                    @endforeach
+                                                @endif
+                                            </select>
+                                            <small class="form-text text-muted">
+                                                Selecciona un impuesto específico para esta variación. Si no seleccionas, se usará el impuesto del producto.
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="bg-light p-3 rounded text-center">
+                                            <small class="text-muted d-block">Precio con impuesto</small>
+                                            <h5 class="fw-bold mb-0" id="precio-final-${valorKey}">$0.00</h5>
+                                            <small class="text-muted" id="detalle-impuesto-${valorKey}"></small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CAMPOS DE DIMENSIONES PARA VARIACIONES -->
                 <div class="row mb-3">
                     <div class="col-md-3">
                         <div class="form-group">
@@ -2792,12 +3727,12 @@ function actualizarPestanasValores() {
                                    name="variaciones[${valorKey}][dPeso]" 
                                    id="peso-${valorKey}" 
                                    class="form-control"
-                                   value="{{ $variacionExistente ? $variacionExistente->dPeso : '' }}"
+                                   value="${pesoValue}"
                                    oninput="validarPeso(this)"
                                    onblur="formatearPeso(this)"
                                    onkeydown="permitirBorrado(event)"
                                    placeholder="0.000"
-                                   title="Máximo: 999.999 kg"
+                                   title="Máximo: 999.999 kg (máximo 3 decimales)"
                                    autocomplete="off">
                         </div>
                     </div>
@@ -2810,12 +3745,12 @@ function actualizarPestanasValores() {
                                    name="variaciones[${valorKey}][dLargo_cm]" 
                                    id="largo-${valorKey}" 
                                    class="form-control"
-                                   value="{{ $variacionExistente ? $variacionExistente->dLargo_cm : '' }}"
+                                   value="${largoValue}"
                                    oninput="validarDimensionCm(this)"
                                    onblur="formatearDimensionCm(this)"
                                    onkeydown="permitirBorrado(event)"
                                    placeholder="0.00"
-                                   title="Máximo: 999.99 cm"
+                                   title="Máximo: 999.99 cm (máximo 2 decimales)"
                                    autocomplete="off">
                         </div>
                     </div>
@@ -2828,12 +3763,12 @@ function actualizarPestanasValores() {
                                    name="variaciones[${valorKey}][dAncho_cm]" 
                                    id="ancho-${valorKey}" 
                                    class="form-control"
-                                   value="{{ $variacionExistente ? $variacionExistente->dAncho_cm : '' }}"
+                                   value="${anchoValue}"
                                    oninput="validarDimensionCm(this)"
                                    onblur="formatearDimensionCm(this)"
                                    onkeydown="permitirBorrado(event)"
                                    placeholder="0.00"
-                                   title="Máximo: 999.99 cm"
+                                   title="Máximo: 999.99 cm (máximo 2 decimales)"
                                    autocomplete="off">
                         </div>
                     </div>
@@ -2846,77 +3781,124 @@ function actualizarPestanasValores() {
                                    name="variaciones[${valorKey}][dAlto_cm]" 
                                    id="alto-${valorKey}" 
                                    class="form-control"
-                                   value="{{ $variacionExistente ? $variacionExistente->dAlto_cm : '' }}"
+                                   value="${altoValue}"
                                    oninput="validarDimensionCm(this)"
                                    onblur="formatearDimensionCm(this)"
                                    onkeydown="permitirBorrado(event)"
                                    placeholder="0.00"
-                                   title="Máximo: 999.99 cm"
+                                   title="Máximo: 999.99 cm (máximo 2 decimales)"
                                    autocomplete="off">
                         </div>
                     </div>
                 </div>
 
+                <!-- DESCUENTO ESPECIAL DE LA VARIACIÓN -->
                 <div class="row mb-3">
                     <div class="col-md-12">
-                        <div class="card bg-light border">
-                            <div class="card-body py-2">
-                                <div class="row align-items-center">
-                                    <div class="col-md-4">
-                                        <div class="form-check form-switch">
-                                            <input type="checkbox" 
-                                                   name="variaciones[${valorKey}][bTiene_descuento]" 
-                                                   id="descuento-${valorKey}" 
-                                                   class="form-check-input" 
-                                                   value="1"
-                                                   {{ $variacionExistente && $variacionExistente->bTiene_oferta ? 'checked' : '' }}
-                                                   onchange="toggleDescuentoVariacion(this, '${valorKey}')">
-                                            <label class="form-check-label fw-bold" for="descuento-${valorKey}">
-                                                <i class="fas fa-percentage me-1"></i>
-                                                Activar descuento
+                        <div class="card border">
+                            <div class="card-header bg-light py-2">
+                                <h6 class="mb-0"><i class="fas fa-percentage me-2"></i>Descuento Especial de la Variación</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label class="form-label fw-bold">
+                                                <i class="fas fa-percentage me-1"></i>Descuento Especial
                                             </label>
+                                            <div class="form-check form-switch">
+                                                <input type="checkbox" 
+                                                       name="variaciones[${valorKey}][bTiene_descuento]" 
+                                                       id="descuento-${valorKey}" 
+                                                       class="form-check-input" 
+                                                       value="1"
+                                                       ${tieneDescuento ? 'checked' : ''}
+                                                       onchange="toggleDescuentoVariacion(this, '${valorKey}')">
+                                                <label class="form-check-label" for="descuento-${valorKey}">
+                                                    Activar Descuento para esta variación
+                                                </label>
+                                            </div>
+                                            <small class="form-text text-muted">
+                                                Permite establecer un precio de descuento por tiempo limitado
+                                            </small>
                                         </div>
                                     </div>
-                                    <div class="col-md-8">
-                                        <div class="row descuento-fields-${valorKey}" style="display: {{ $variacionExistente && $variacionExistente->bTiene_oferta ? 'flex' : 'none' }};">
-                                            <div class="col-md-4 mb-2 mb-md-0">
-                                                <div class="input-group input-group-sm">
+                                </div>
+
+                                <!-- CAMPOS DE DESCUENTO (OCULTOS INICIALMENTE) -->
+                                <div class="descuento-fields-${valorKey}" style="${tieneDescuento ? 'display: block;' : 'display: none;'}">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-group mb-3">
+                                                <label for="precio_descuento-${valorKey}" class="form-label fw-bold">
+                                                    Precio de Descuento <span class="text-danger">*</span>
+                                                </label>
+                                                <div class="input-group">
                                                     <span class="input-group-text">$</span>
                                                     <input type="text" 
                                                            name="variaciones[${valorKey}][dPrecio_descuento]" 
+                                                           id="precio_descuento-${valorKey}"
                                                            class="form-control variacion-precio-descuento"
                                                            data-precio-normal-id="precio-${valorKey}"
                                                            data-valor-key="${valorKey}"
-                                                           value="{{ $variacionExistente ? $variacionExistente->dPrecio_oferta : '' }}"
-                                                           oninput="validarPrecio(this); validarPrecioDescuentoVariacionInstantaneo(this);"
+                                                           value="${precioDescuentoValue}"
+                                                           oninput="validarPrecio(this); validarPrecioDescuentoVariacionInstantaneo(this); actualizarPrecioFinalVariacion('${valorKey}')"
                                                            onblur="validarPrecioDescuentoVariacion(this)"
-                                                           placeholder="Precio descuento"
+                                                           placeholder="0.00"
                                                            autocomplete="off">
                                                 </div>
-                                                <div class="invalid-feedback" style="display: none;"></div>
+                                                <div id="error-precio-descuento-${valorKey}" class="invalid-feedback" style="display: none;"></div>
+                                                <small class="form-text text-muted">Debe ser menor al precio de venta</small>
                                             </div>
-                                            <div class="col-md-3 mb-2 mb-md-0">
+                                        </div>
+                                        
+                                        <div class="col-md-4">
+                                            <div class="form-group mb-3">
+                                                <label for="fecha-inicio-${valorKey}" class="form-label fw-bold">
+                                                    Fecha inicio <span class="text-danger">*</span>
+                                                </label>
                                                 <input type="date" 
                                                        name="variaciones[${valorKey}][dFecha_inicio_descuento]" 
-                                                       class="form-control form-control-sm fecha-inicio-${valorKey}"
-                                                       value="{{ $variacionExistente && $variacionExistente->dFecha_inicio_oferta ? \Carbon\Carbon::parse($variacionExistente->dFecha_inicio_oferta)->format('Y-m-d') : '' }}"
+                                                       class="form-control"
+                                                       id="fecha-inicio-${valorKey}"
+                                                       value="${fechaInicioValue}"
+                                                       onchange="validarFechasDescuentoVariacion('fecha-inicio-${valorKey}', 'fecha-fin-${valorKey}', '${valorKey}')"
                                                        autocomplete="off">
                                             </div>
-                                            <div class="col-md-3 mb-2 mb-md-0">
+                                        </div>
+                                        
+                                        <div class="col-md-4">
+                                            <div class="form-group mb-3">
+                                                <label for="fecha-fin-${valorKey}" class="form-label fw-bold">
+                                                    Fecha fin <span class="text-danger">*</span>
+                                                </label>
                                                 <input type="date" 
                                                        name="variaciones[${valorKey}][dFecha_fin_descuento]" 
-                                                       class="form-control form-control-sm fecha-fin-${valorKey}"
-                                                       value="{{ $variacionExistente && $variacionExistente->dFecha_fin_oferta ? \Carbon\Carbon::parse($variacionExistente->dFecha_fin_oferta)->format('Y-m-d') : '' }}"
+                                                       class="form-control"
+                                                       id="fecha-fin-${valorKey}"
+                                                       value="${fechaFinValue}"
+                                                       onchange="validarFechasDescuentoVariacion('fecha-inicio-${valorKey}', 'fecha-fin-${valorKey}', '${valorKey}')"
                                                        autocomplete="off">
+                                                <div id="error-fechas-descuento-${valorKey}" class="invalid-feedback" style="display: none;"></div>
                                             </div>
-                                            <div class="col-md-2">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="form-group mb-3">
+                                                <label for="motivo-${valorKey}" class="form-label fw-bold">
+                                                    Motivo del descuento
+                                                </label>
                                                 <input type="text" 
                                                        name="variaciones[${valorKey}][vMotivo_descuento]" 
-                                                       class="form-control form-control-sm"
-                                                       value="{{ $variacionExistente ? $variacionExistente->vMotivo_oferta : '' }}"
-                                                       placeholder="Motivo"
+                                                       id="motivo-${valorKey}"
+                                                       class="form-control"
+                                                       value="${motivoDescuentoValue}"
                                                        maxlength="255"
+                                                       placeholder="Ej: Liquidación de temporada, Black Friday, etc."
                                                        autocomplete="off">
+                                                <small class="form-text text-muted">Opcional</small>
                                             </div>
                                         </div>
                                     </div>
@@ -2938,7 +3920,10 @@ function actualizarPestanasValores() {
                                       rows="2"
                                       placeholder="Descripción específica para esta variación (opcional)"
                                       maxlength="500"
-                                      autocomplete="off">{{ $variacionExistente ? $variacionExistente->tDescripcion : '' }}</textarea>
+                                      autocomplete="off">${descripcionValue}</textarea>
+                            <small class="form-text text-muted">
+                                Máximo 500 caracteres. Descripción específica para esta variación.
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -2947,103 +3932,363 @@ function actualizarPestanasValores() {
         
         contentPane.innerHTML = formHtml;
         tabContent.appendChild(contentPane);
+        
+        // Calcular precio final para esta variación si tiene datos
+        if (precioValue) {
+            setTimeout(() => {
+                actualizarPrecioFinalVariacion(valorKey);
+            }, 100);
+        }
     });
 }
 
 function generarSkuSugerido(productoSku, combinacion) {
     let sku = productoSku || 'PROD';
     combinacion.forEach(item => {
-        const attrCode = item.atributoNombre.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, '');
+        const attrCode = item.atributoNombre.substring(0, 3).toUpperCase();
         const valCode = item.valorNombre.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase();
         sku += `-${attrCode}${valCode}`;
     });
     return sku;
 }
 
-function toggleDescuentoVariacion(checkbox, valorKey) {
-    const fields = document.querySelector(`.descuento-fields-${valorKey}`);
-    const precioDescuento = fields.querySelector('.variacion-precio-descuento');
-    const fechaInicio = fields.querySelector(`.fecha-inicio-${valorKey}`);
-    const fechaFin = fields.querySelector(`.fecha-fin-${valorKey}`);
+// ============ FUNCIONES PARA IMÁGENES DE VARIACIONES ============
+
+function eliminarImagenPrincipalVariacionExistente(valorKey) {
+    const container = document.getElementById(`current_principal_var_${valorKey}`);
+    if (container) {
+        container.style.display = 'none';
+        document.getElementById(`eliminar_img_${valorKey}`).value = '1';
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Imagen marcada para eliminar',
+            text: 'La imagen principal será eliminada al guardar los cambios',
+            timer: 1500,
+            showConfirmButton: false
+        });
+    }
+}
+
+function eliminarGifVariacionExistente(valorKey) {
+    const container = document.getElementById(`current_gif_var_${valorKey}`);
+    if (container) {
+        container.style.display = 'none';
+        document.getElementById(`eliminar_gif_${valorKey}`).value = '1';
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'GIF marcado para eliminar',
+            text: 'El GIF será eliminado al guardar los cambios',
+            timer: 1500,
+            showConfirmButton: false
+        });
+    }
+}
+
+function eliminarImagenAdicionalVariacionExistente(valorKey, nombreArchivo) {
+    // Ocultar el elemento visualmente
+    const elemento = document.querySelector(`.current-image-item[data-filename="${nombreArchivo}"][data-valor-key="${valorKey}"]`);
+    if (elemento) {
+        elemento.style.display = 'none';
+    }
     
-    if (checkbox.checked) {
-        fields.style.display = 'flex';
-        precioDescuento.required = true;
-        fechaInicio.required = true;
-        fechaFin.required = true;
+    // Crear input hidden para eliminar
+    const container = document.getElementById(`imagenes_eliminar_${valorKey}`);
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = `variaciones[${valorKey}][imagenes_a_eliminar][]`;
+    input.value = nombreArchivo;
+    container.appendChild(input);
+    
+    Swal.fire({
+        icon: 'success',
+        title: 'Imagen marcada para eliminar',
+        text: 'La imagen será eliminada al guardar los cambios',
+        timer: 1500,
+        showConfirmButton: false
+    });
+}
+
+function previewImagenPrincipalVariacion(input, previewId) {
+    const previewContainer = document.getElementById(previewId);
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        
+        if (!validTypes.includes(file.type)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Formato no válido',
+                text: 'La imagen principal solo acepta formatos JPG, JPEG y PNG'
+            });
+            input.value = '';
+            return;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Archivo demasiado grande',
+                text: 'La imagen principal no puede exceder los 5MB'
+            });
+            input.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewContainer.style.display = 'block';
+            const img = previewContainer.querySelector('img');
+            img.src = e.target.result;
+        }
+        reader.readAsDataURL(file);
+        
+        // Actualizar barra de progreso
+        actualizarBarraProgresoTamaño();
+        actualizarContadorImagenes();
     } else {
-        fields.style.display = 'none';
-        precioDescuento.required = false;
-        fechaInicio.required = false;
-        fechaFin.required = false;
-        precioDescuento.classList.remove('is-invalid');
+        previewContainer.style.display = 'none';
     }
 }
 
-function validarPrecioDescuentoVariacionInstantaneo(input) {
-    const precioNormalId = input.dataset.precioNormalId;
-    const precioNormal = document.getElementById(precioNormalId);
-    const valorKey = input.dataset.valorKey;
-    const checkbox = document.getElementById(`descuento-${valorKey}`);
+function cancelarImagenPrincipalVariacion(previewId, inputId) {
+    const previewContainer = document.getElementById(previewId);
+    const input = document.getElementById(inputId);
     
-    if (!checkbox || !checkbox.checked) return true;
+    previewContainer.style.display = 'none';
+    input.value = '';
     
-    if (precioNormal && input.value) {
-        const precioNormalValor = parseFloat(precioNormal.value) || 0;
-        const precioDescuentoValor = parseFloat(input.value) || 0;
-        
-        let errorDiv = input.closest('.col-md-4').querySelector('.invalid-feedback');
-        if (!errorDiv) {
-            errorDiv = document.createElement('div');
-            errorDiv.className = 'invalid-feedback';
-            input.closest('.col-md-4').appendChild(errorDiv);
-        }
-        
-        if (precioDescuentoValor >= precioNormalValor && precioDescuentoValor > 0 && input.value !== '') {
-            input.classList.add('is-invalid');
-            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio normal';
-            errorDiv.style.display = 'block';
-            return false;
-        } else {
-            input.classList.remove('is-invalid');
-            errorDiv.style.display = 'none';
-            return true;
-        }
-    }
-    return true;
+    // La imagen existente no se elimina
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
 }
 
-function validarPrecioDescuentoVariacion(input) {
-    const precioNormalId = input.dataset.precioNormalId;
-    const precioNormal = document.getElementById(precioNormalId);
-    const valorKey = input.dataset.valorKey;
-    const checkbox = document.getElementById(`descuento-${valorKey}`);
+function previewGifVariacion(input, previewId) {
+    const previewContainer = document.getElementById(previewId);
     
-    if (!checkbox || !checkbox.checked) return true;
-    
-    if (precioNormal && input.value) {
-        const precioNormalValor = parseFloat(precioNormal.value) || 0;
-        const precioDescuentoValor = parseFloat(input.value) || 0;
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
         
-        let errorDiv = input.closest('.col-md-4').querySelector('.invalid-feedback');
-        if (!errorDiv) {
-            errorDiv = document.createElement('div');
-            errorDiv.className = 'invalid-feedback';
-            input.closest('.col-md-4').appendChild(errorDiv);
+        if (file.type !== 'image/gif') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Formato no válido',
+                text: 'Solo se permiten archivos GIF'
+            });
+            input.value = '';
+            return;
         }
         
-        if (precioDescuentoValor >= precioNormalValor && precioDescuentoValor > 0) {
-            input.classList.add('is-invalid');
-            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio normal';
-            errorDiv.style.display = 'block';
-            return false;
-        } else {
-            input.classList.remove('is-invalid');
-            errorDiv.style.display = 'none';
-            return true;
+        if (file.size > 10 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Archivo demasiado grande',
+                text: 'El GIF no puede exceder los 10MB'
+            });
+            input.value = '';
+            return;
         }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewContainer.style.display = 'block';
+            const img = previewContainer.querySelector('img');
+            img.src = e.target.result;
+        }
+        reader.readAsDataURL(file);
+        
+        // Actualizar barra de progreso
+        actualizarBarraProgresoTamaño();
+        actualizarContadorImagenes();
+    } else {
+        previewContainer.style.display = 'none';
     }
-    return true;
+}
+
+function cancelarGifVariacion(previewId, inputId) {
+    const previewContainer = document.getElementById(previewId);
+    const input = document.getElementById(inputId);
+    
+    previewContainer.style.display = 'none';
+    input.value = '';
+    
+    // El GIF existente no se elimina
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+}
+
+function handleImagenesAdicionalesVariacion(event, valorKey) {
+    const input = event.target;
+    const container = document.getElementById(`container_adicionales_${valorKey}`);
+    const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
+    
+    if (!container || !countSpan) return;
+    
+    const files = Array.from(input.files);
+    const maxFiles = 7;
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    
+    // Inicializar el array para esta variación si no existe
+    if (!imagenesVariacion[valorKey]) {
+        imagenesVariacion[valorKey] = {
+            imagenes: []
+        };
+    }
+    
+    // Validar límite
+    if (imagenesVariacion[valorKey].imagenes.length + files.length > maxFiles) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de imágenes',
+            text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales. Ya tienes ${imagenesVariacion[valorKey].imagenes.length} seleccionadas.`
+        });
+        input.value = '';
+        return;
+    }
+    
+    // Calcular tamaño actual
+    const tamanioActual = calcularTamañoTotal();
+    
+    // Verificar si con estos archivos nuevos se excede el límite
+    let nuevoTamanio = tamanioActual;
+    files.forEach(file => {
+        nuevoTamanio += file.size;
+    });
+    
+    if (nuevoTamanio > maxTotalSize) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de tamaño excedido',
+            html: `
+                <div class="text-center">
+                    <p>Si agregas estas imágenes, excederás el límite de 50MB.</p>
+                    <p class="mb-0"><strong>Tamaño actual:</strong> ${(tamanioActual / (1024 * 1024)).toFixed(2)}MB</p>
+                    <p><strong>Tamaño con nuevas imágenes:</strong> ${(nuevoTamanio / (1024 * 1024)).toFixed(2)}MB</p>
+                </div>
+            `,
+            confirmButtonText: 'Entendido'
+        });
+        input.value = '';
+        return;
+    }
+    
+    // Procesar cada archivo
+    files.forEach(file => {
+        if (!validTypes.includes(file.type)) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Formato no válido',
+                text: `El archivo "${file.name}" no es un formato válido. Formatos aceptados: JPG, JPEG, PNG, WEBP.`
+            });
+            return;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Archivo demasiado grande',
+                text: `La imagen "${file.name}" excede el límite de 5MB.`
+            });
+            return;
+        }
+        
+        // Crear objeto de imagen
+        const imageId = 'var_img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const preview = URL.createObjectURL(file);
+        
+        imagenesVariacion[valorKey].imagenes.push({
+            id: imageId,
+            file: file,
+            preview: preview,
+            name: file.name,
+            size: file.size
+        });
+    });
+    
+    // Renderizar las imágenes
+    renderImagenesAdicionalesVariacion(valorKey);
+    
+    // Actualizar contador
+    countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' nuevas seleccionadas';
+    
+    // Actualizar barra de progreso y contador total
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+    
+    // Limpiar el input para permitir seleccionar los mismos archivos nuevamente
+    input.value = '';
+}
+
+function renderImagenesAdicionalesVariacion(valorKey) {
+    const container = document.getElementById(`container_adicionales_${valorKey}`);
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (!imagenesVariacion[valorKey] || imagenesVariacion[valorKey].imagenes.length === 0) {
+        container.innerHTML = '<div class="col-12 text-muted small">No hay imágenes nuevas seleccionadas</div>';
+        return;
+    }
+    
+    imagenesVariacion[valorKey].imagenes.forEach((img, index) => {
+        const col = document.createElement('div');
+        col.className = 'col-4 col-md-3 mb-2';
+        
+        const card = document.createElement('div');
+        card.className = 'border rounded p-1 text-center bg-light position-relative';
+        
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1';
+        btn.style.cssText = 'width: 20px; height: 20px; padding: 0; border-radius: 50%; font-size: 10px;';
+        btn.onclick = function(e) {
+            e.preventDefault();
+            eliminarImagenAdicionalVariacion(valorKey, img.id);
+        };
+        
+        const btnIcon = document.createElement('i');
+        btnIcon.className = 'fas fa-times';
+        btn.appendChild(btnIcon);
+        
+        const imgElement = document.createElement('img');
+        imgElement.src = img.preview;
+        imgElement.className = 'img-fluid';
+        imgElement.style.cssText = 'height: 60px; object-fit: contain;';
+        
+        const small = document.createElement('small');
+        small.className = 'd-block text-truncate';
+        small.textContent = img.name.length > 10 ? img.name.substring(0, 10) + '...' : img.name;
+        
+        card.appendChild(btn);
+        card.appendChild(imgElement);
+        card.appendChild(small);
+        col.appendChild(card);
+        container.appendChild(col);
+    });
+}
+
+function eliminarImagenAdicionalVariacion(valorKey, imageId) {
+    if (imagenesVariacion[valorKey]) {
+        const image = imagenesVariacion[valorKey].imagenes.find(img => img.id === imageId);
+        if (image && image.preview) {
+            URL.revokeObjectURL(image.preview);
+        }
+        
+        imagenesVariacion[valorKey].imagenes = imagenesVariacion[valorKey].imagenes.filter(img => img.id !== imageId);
+        
+        renderImagenesAdicionalesVariacion(valorKey);
+        
+        const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
+        if (countSpan) {
+            countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' nuevas seleccionadas';
+        }
+        
+        // Actualizar barra de progreso y contador total
+        actualizarBarraProgresoTamaño();
+        actualizarContadorImagenes();
+    }
 }
 
 // ============ FUNCIONES PARA FORMULARIOS RÁPIDOS ============
@@ -3051,8 +4296,12 @@ function validarPrecioDescuentoVariacion(input) {
 function quickGenerarSlug(texto, inputId) {
     if (!texto) return;
     let slug = texto.toLowerCase();
-    slug = slug.replace(/á/gi, 'a').replace(/é/gi, 'e').replace(/í/gi, 'i')
-               .replace(/ó/gi, 'o').replace(/ú/gi, 'u').replace(/ñ/gi, 'n');
+    slug = slug.replace(/á/gi, 'a');
+    slug = slug.replace(/é/gi, 'e');
+    slug = slug.replace(/í/gi, 'i');
+    slug = slug.replace(/ó/gi, 'o');
+    slug = slug.replace(/ú/gi, 'u');
+    slug = slug.replace(/ñ/gi, 'n');
     slug = slug.replace(/[^a-z0-9\s]/g, '');
     slug = slug.replace(/\s+/g, '-');
     slug = slug.replace(/-+/g, '-');
@@ -3064,14 +4313,21 @@ function quickActualizarSlug(nombre, slugId) {
     quickGenerarSlug(nombre, slugId);
 }
 
-// ============ FUNCIONES PARA AGREGAR ELEMENTOS ============
+// ============ FUNCIONES PARA AGREGAR ELEMENTOS DINÁMICAMENTE ============
 
 function agregarCategoriaAlSelect(categoria) {
     const select = document.getElementById('id_categoria');
     
     const option = document.createElement('option');
     option.value = categoria.id_categoria;
-    option.innerHTML = categoria.vNombre;
+    
+    let prefijo = '';
+    for (let i = 0; i < (categoria.nivel || 0); i++) {
+        prefijo += '&nbsp;&nbsp;&nbsp;';
+    }
+    
+    option.innerHTML = prefijo + (categoria.icono || '↳ ') + categoria.vNombre;
+    
     select.appendChild(option);
     select.value = categoria.id_categoria;
 }
@@ -3104,9 +4360,7 @@ function agregarEtiquetaAlListado(etiqueta) {
     label.htmlFor = 'etiqueta_' + etiqueta.id_etiqueta;
     
     const span = document.createElement('span');
-    span.className = 'etiqueta-badge';
-    span.style.backgroundColor = etiqueta.color || '#007bff';
-    span.style.color = 'white';
+    span.className = 'badge bg-secondary';
     span.textContent = etiqueta.vNombre;
     
     label.appendChild(span);
@@ -3139,7 +4393,7 @@ function agregarAtributoAlListado(atributo) {
                    id="atributo-activo-${atributo.id_atributo}"
                    data-atributo-id="${atributo.id_atributo}"
                    data-atributo-nombre="${atributo.vNombre}">
-            <label class="form-check-label fw-bold" for="atributo-activo-${atributo.id_atributo}">
+            <label class="form-check-label fw-bold" for="atributo-activo-${atributo.id_atributo}" style="color: #495057;">
                 ${atributo.vNombre}
                 <span class="badge bg-secondary ms-2">0 valores</span>
             </label>
@@ -3158,6 +4412,7 @@ function agregarAtributoAlListado(atributo) {
     cardBody.className = 'card-body atributo-valores-container';
     cardBody.id = `valores-container-${atributo.id_atributo}`;
     cardBody.style.display = 'none';
+    cardBody.style.backgroundColor = 'white';
     
     const alertDiv = document.createElement('div');
     alertDiv.className = 'alert alert-warning mb-0';
@@ -3204,6 +4459,11 @@ function agregarAtributoAlListado(atributo) {
                 });
                 
                 delete atributosActivos[atributoId];
+                
+                const seleccionarTodos = document.getElementById(`seleccionar-todos-${atributoId}`);
+                if (seleccionarTodos) {
+                    seleccionarTodos.checked = false;
+                }
             }
             
             actualizarPestanasValores();
@@ -3377,170 +4637,6 @@ function agregarValorAlAtributo(valor) {
         const valorCount = container.querySelectorAll('.valor-checkbox').length;
         badge.textContent = valorCount + ' valores';
     }
-}
-
-// ============ FUNCIONES DE IMÁGENES ADICIONALES ============
-
-function handleImageSelection(event) {
-    const files = event.target.files;
-    const maxFiles = 7;
-    const currentCount = selectedImages.length;
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    
-    if (currentCount + files.length > maxFiles) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Límite de imágenes',
-            text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales. Ya tienes ${currentCount} seleccionadas.`
-        });
-        event.target.value = '';
-        return;
-    }
-    
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        
-        if (!validTypes.includes(file.type)) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Formato no válido',
-                text: `El archivo "${file.name}" no es un formato válido. Formatos aceptados: JPG, JPEG, PNG, WEBP.`
-            });
-            continue;
-        }
-        
-        if (file.size > 5 * 1024 * 1024) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Archivo demasiado grande',
-                text: `La imagen "${file.name}" excede el límite de 5MB.`
-            });
-            continue;
-        }
-        
-        if (!isImageDuplicate(file)) {
-            const imageId = 'img_' + Date.now() + '_' + imageCounter++;
-            const preview = URL.createObjectURL(file);
-            
-            selectedImages.push({
-                id: imageId,
-                file: file,
-                preview: preview,
-                name: file.name,
-                size: file.size
-            });
-        }
-    }
-    
-    document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
-    renderSelectedImages();
-    event.target.value = '';
-    actualizarContadorImagenes();
-}
-
-function isImageDuplicate(newFile) {
-    return selectedImages.some(img => 
-        img.file.name === newFile.name && 
-        img.file.size === newFile.size && 
-        img.file.lastModified === newFile.lastModified
-    );
-}
-
-function removeSelectedImage(imageId) {
-    const image = selectedImages.find(img => img.id === imageId);
-    if (image && image.preview) {
-        URL.revokeObjectURL(image.preview);
-    }
-    selectedImages = selectedImages.filter(img => img.id !== imageId);
-    
-    document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
-    renderSelectedImages();
-    actualizarContadorImagenes();
-}
-
-function renderSelectedImages() {
-    const container = document.getElementById('selected-images-container');
-    const noMsg = document.getElementById('no-imagenes-msg');
-    
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    if (selectedImages.length === 0) {
-        if (noMsg) noMsg.style.display = 'block';
-        return;
-    }
-    
-    if (noMsg) noMsg.style.display = 'none';
-    
-    selectedImages.forEach((image, index) => {
-        const col = document.createElement('div');
-        col.className = 'col-6 col-md-3 mb-3';
-        
-        const card = document.createElement('div');
-        card.className = 'card border image-preview-card position-relative';
-        
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1 remove-btn';
-        btn.style.cssText = 'width: 28px; height: 28px; padding: 0; border-radius: 50%; z-index: 10;';
-        btn.onclick = function(e) { 
-            e.preventDefault();
-            removeSelectedImage(image.id); 
-        };
-        
-        const btnIcon = document.createElement('i');
-        btnIcon.className = 'fas fa-times';
-        btn.appendChild(btnIcon);
-        
-        const img = document.createElement('img');
-        img.src = image.preview;
-        img.className = 'card-img-top';
-        img.style.cssText = 'height: 120px; object-fit: contain; background: #f8f9fa; padding: 8px;';
-        img.alt = 'Imagen ' + (index + 1);
-        
-        const cardBody = document.createElement('div');
-        cardBody.className = 'card-body p-2 text-center';
-        
-        const small1 = document.createElement('small');
-        small1.className = 'text-muted d-block';
-        small1.style.cssText = 'font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
-        small1.textContent = image.file.name.length > 20 ? image.file.name.substring(0, 20) + '...' : image.file.name;
-        
-        const small2 = document.createElement('small');
-        small2.className = 'text-muted d-block';
-        small2.textContent = (image.file.size / 1024).toFixed(2) + ' KB';
-        
-        cardBody.appendChild(small1);
-        cardBody.appendChild(small2);
-        
-        card.appendChild(btn);
-        card.appendChild(img);
-        card.appendChild(cardBody);
-        
-        col.appendChild(card);
-        container.appendChild(col);
-    });
-}
-
-function actualizarContadorImagenes() {
-    @php
-        $imagenesActuales = count($imagenes);
-        $imagenesAEliminarCount = 0;
-    @endphp
-    
-    const imagenesAEliminarCount = imagenesAEliminar.length;
-    const nuevasImagenes = selectedImages.length;
-    const nuevaPrincipal = imagenPrincipalFile ? 1 : 0;
-    const nuevoGif = gifFile ? 1 : 0;
-    
-    const imagenesRestantes = {{ $imagenesActuales }} - imagenesAEliminarCount;
-    const total = imagenesRestantes + nuevaPrincipal + nuevoGif + nuevasImagenes;
-    
-    document.getElementById('total-imagenes').textContent = total;
-    document.getElementById('principal-count').textContent = `Principal: ${nuevaPrincipal || {{ $imagenesActuales > 0 ? 1 : 0 }} - imagenesAEliminarCount > 0 ? 1 : 0}`;
-    document.getElementById('gif-count').textContent = `GIF: ${nuevoGif}`;
-    document.getElementById('adicionales-count').textContent = `Adicionales: ${imagenesRestantes + nuevasImagenes}`;
 }
 
 // ============ INICIALIZAR FORMULARIOS RÁPIDOS ============
@@ -3845,8 +4941,8 @@ function initQuickForms() {
                     option.setAttribute('data-tipo', data.impuesto.eTipo);
                     option.textContent = data.impuesto.vNombre + ' (' + data.impuesto.eTipo + ' - ' + parseFloat(data.impuesto.dPorcentaje).toFixed(2) + '%)';
                     select.appendChild(option);
-                    select.value = data.impuesto.id_impuesto;
                     
+                    select.value = data.impuesto.id_impuesto;
                     actualizarPrecioFinal();
                     limpiarFormularioImpuesto();
                 } else {
@@ -3923,8 +5019,15 @@ document.addEventListener('DOMContentLoaded', function() {
             if (document.getElementById('bTiene_descuento')?.checked) {
                 validarPrecioDescuentoProducto();
             }
+            actualizarPrecioFinal();
         });
     }
+    
+    document.getElementById('dPrecio_descuento')?.addEventListener('input', function() {
+        actualizarPrecioFinal();
+    });
+    
+    document.getElementById('id_impuesto')?.addEventListener('change', actualizarPrecioFinal);
     
     if (document.getElementById('bTiene_descuento')) {
         if (document.getElementById('bTiene_descuento').checked) {
@@ -3932,11 +5035,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
-        if (checkbox.checked) {
-            checkbox.dispatchEvent(new Event('change'));
-        }
-    });
+    // Inicializar atributos activos
+    inicializarAtributosActivos();
     
     document.getElementById('selected-images-count').textContent = '0 archivos';
     
@@ -3946,28 +5046,50 @@ document.addEventListener('DOMContentLoaded', function() {
     actualizarContadorImagenes();
     actualizarPrecioFinal();
     
-    const colorPicker = document.getElementById('color_eti');
-    const colorText = document.getElementById('color_text_eti');
+    // Delegación de eventos para los selects de impuestos de variaciones
+    document.addEventListener('change', function(e) {
+        if (e.target.id && e.target.id.startsWith('impuesto-')) {
+            const valorKey = e.target.id.replace('impuesto-', '');
+            actualizarPrecioFinalVariacion(valorKey);
+        }
+    });
     
-    if (colorPicker && colorText) {
-        colorPicker.addEventListener('input', function() {
-            colorText.value = this.value;
-        });
-        
-        colorText.addEventListener('input', function() {
-            if (this.value.match(/^#[0-9A-F]{6}$/i)) {
-                colorPicker.value = this.value;
+    document.addEventListener('input', function(e) {
+        if (e.target.id && e.target.id.startsWith('precio-') && !e.target.id.startsWith('precio_descuento-')) {
+            const valorKey = e.target.id.replace('precio-', '');
+            actualizarPrecioFinalVariacion(valorKey);
+        }
+    });
+    
+    const productoForm = document.getElementById('productoForm');
+    if (productoForm) {
+        productoForm.addEventListener('submit', function(e) {
+            const totalSize = calcularTamañoTotal();
+            if (totalSize > maxTotalSize) {
+                e.preventDefault();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Límite de tamaño excedido',
+                    text: `El tamaño total de los archivos (${(totalSize / (1024 * 1024)).toFixed(2)}MB) excede el límite permitido de 50MB.`
+                });
+                return false;
             }
         });
     }
-
-    document.getElementById('id_impuesto')?.addEventListener('change', actualizarPrecioFinal);
 });
 
-// Validación del formulario
+// ============ FUNCIÓN PRINCIPAL DE ENVÍO DEL FORMULARIO ============
+
 document.getElementById('productoForm').addEventListener('submit', function(e) {
+    // Primero validar con JavaScript
+    if (!validarTamañoTotalAntesDeEnviar()) {
+        e.preventDefault();
+        return false;
+    }
+    
     const btnSubmit = document.getElementById('btnSubmit');
     
+    // Validación de fechas de descuento en producto principal
     if (document.getElementById('bTiene_descuento') && document.getElementById('bTiene_descuento').checked) {
         const precioVenta = parseFloat(document.getElementById('dPrecio_venta').value) || 0;
         const precioDescuento = parseFloat(document.getElementById('dPrecio_descuento').value) || 0;
@@ -4007,6 +5129,35 @@ document.getElementById('productoForm').addEventListener('submit', function(e) {
         }
     }
     
+    // Validación de fechas de descuento en variaciones
+    let erroresFechasVariaciones = [];
+    document.querySelectorAll('[id^="fecha-fin-"]').forEach(input => {
+        const valorKey = input.id.replace('fecha-fin-', '');
+        const fechaInicio = document.getElementById(`fecha-inicio-${valorKey}`);
+        const fechaFin = input;
+        
+        if (fechaInicio && fechaInicio.value && fechaFin.value) {
+            const inicio = new Date(fechaInicio.value);
+            const fin = new Date(fechaFin.value);
+            
+            if (fin < inicio) {
+                erroresFechasVariaciones.push('En una variación, la fecha de fin no puede ser anterior a la fecha de inicio');
+                fechaFin.classList.add('is-invalid');
+                document.getElementById(`error-fechas-descuento-${valorKey}`).style.display = 'block';
+            }
+        }
+    });
+    
+    if (erroresFechasVariaciones.length > 0) {
+        e.preventDefault();
+        Swal.fire({
+            icon: 'error',
+            title: 'Errores en fechas de descuento',
+            html: erroresFechasVariaciones.join('<br>')
+        });
+        return false;
+    }
+    
     let errorVariaciones = [];
     document.querySelectorAll('.variacion-precio-descuento').forEach(input => {
         const valorKey = input.dataset.valorKey;
@@ -4021,7 +5172,7 @@ document.getElementById('productoForm').addEventListener('submit', function(e) {
                 const precioDescuentoValor = parseFloat(input.value) || 0;
                 
                 if (precioDescuentoValor >= precioNormalValor) {
-                    errorVariaciones.push('En una variación, el precio de descuento debe ser menor que el precio normal');
+                    errorVariaciones.push(`En una variación, el precio de descuento debe ser menor que el precio normal`);
                     input.classList.add('is-invalid');
                 } else {
                     input.classList.remove('is-invalid');
@@ -4060,12 +5211,170 @@ document.getElementById('productoForm').addEventListener('submit', function(e) {
         return false;
     }
     
+    // Aquí agregamos la función para incluir todas las imágenes de variaciones en el FormData
+    // Esta función se ejecutará antes de que el formulario se envíe
+    
+    // Crear un nuevo FormData para asegurar que todas las imágenes se incluyan
+    const form = this;
+    
+    // Prevenir el envío original
+    e.preventDefault();
+    
+    // Crear un nuevo FormData basado en el formulario actual
+    const formData = new FormData(form);
+    
+    // Eliminar las entradas de variaciones que ya existen para reemplazarlas
+    const keysToRemove = [];
+    for (let pair of formData.entries()) {
+        if (pair[0].startsWith('variaciones[')) {
+            keysToRemove.push(pair[0]);
+        }
+    }
+    keysToRemove.forEach(key => formData.delete(key));
+    
+    // Reconstruir las variaciones con todas las imágenes
+    const variacionesKeys = new Set();
+    
+    // Primero, recolectar todas las claves de variaciones
+    document.querySelectorAll('input[name*="[vSKU]"]').forEach(input => {
+        const match = input.name.match(/variaciones\[([^\]]+)\]/);
+        if (match && match[1]) {
+            variacionesKeys.add(match[1]);
+        }
+    });
+    
+    // Para cada variación, agregar todos los campos
+    variacionesKeys.forEach(valorKey => {
+        // Campos básicos
+        const idVariacion = document.querySelector(`input[name="variaciones[${valorKey}][id_variacion]"]`);
+        const idAtributo = document.querySelector(`input[name="variaciones[${valorKey}][id_atributo]"]`);
+        const idAtributoValor = document.querySelector(`input[name="variaciones[${valorKey}][id_atributo_valor]"]`);
+        const vNombreVariacion = document.querySelector(`input[name="variaciones[${valorKey}][vNombre_variacion]"]`);
+        const vSKU = document.querySelector(`input[name="variaciones[${valorKey}][vSKU]"]`);
+        const bActivo = document.querySelector(`input[name="variaciones[${valorKey}][bActivo]"]`);
+        const dPrecio = document.querySelector(`input[name="variaciones[${valorKey}][dPrecio]"]`);
+        const iStock = document.querySelector(`input[name="variaciones[${valorKey}][iStock]"]`);
+        const vClaseEnvio = document.querySelector(`select[name="variaciones[${valorKey}][vClase_envio]"]`);
+        const idImpuesto = document.querySelector(`select[name="variaciones[${valorKey}][id_impuesto]"]`);
+        const dPeso = document.querySelector(`input[name="variaciones[${valorKey}][dPeso]"]`);
+        const dLargoCm = document.querySelector(`input[name="variaciones[${valorKey}][dLargo_cm]"]`);
+        const dAnchoCm = document.querySelector(`input[name="variaciones[${valorKey}][dAncho_cm]"]`);
+        const dAltoCm = document.querySelector(`input[name="variaciones[${valorKey}][dAlto_cm]"]`);
+        const bTieneDescuento = document.querySelector(`input[name="variaciones[${valorKey}][bTiene_descuento]"]`);
+        const dPrecioDescuento = document.querySelector(`input[name="variaciones[${valorKey}][dPrecio_descuento]"]`);
+        const dFechaInicioDescuento = document.querySelector(`input[name="variaciones[${valorKey}][dFecha_inicio_descuento]"]`);
+        const dFechaFinDescuento = document.querySelector(`input[name="variaciones[${valorKey}][dFecha_fin_descuento]"]`);
+        const vMotivoDescuento = document.querySelector(`input[name="variaciones[${valorKey}][vMotivo_descuento]"]`);
+        const tDescripcion = document.querySelector(`textarea[name="variaciones[${valorKey}][tDescripcion]"]`);
+        
+        // Agregar campos básicos si existen
+        if (idVariacion) formData.append(`variaciones[${valorKey}][id_variacion]`, idVariacion.value);
+        if (idAtributo) formData.append(`variaciones[${valorKey}][id_atributo]`, idAtributo.value);
+        if (idAtributoValor) formData.append(`variaciones[${valorKey}][id_atributo_valor]`, idAtributoValor.value);
+        if (vNombreVariacion) formData.append(`variaciones[${valorKey}][vNombre_variacion]`, vNombreVariacion.value);
+        if (vSKU) formData.append(`variaciones[${valorKey}][vSKU]`, vSKU.value);
+        if (bActivo && bActivo.checked) formData.append(`variaciones[${valorKey}][bActivo]`, '1');
+        if (dPrecio) formData.append(`variaciones[${valorKey}][dPrecio]`, dPrecio.value);
+        if (iStock) formData.append(`variaciones[${valorKey}][iStock]`, iStock.value);
+        if (vClaseEnvio && vClaseEnvio.value) formData.append(`variaciones[${valorKey}][vClase_envio]`, vClaseEnvio.value);
+        if (idImpuesto && idImpuesto.value) formData.append(`variaciones[${valorKey}][id_impuesto]`, idImpuesto.value);
+        if (dPeso && dPeso.value) formData.append(`variaciones[${valorKey}][dPeso]`, dPeso.value);
+        if (dLargoCm && dLargoCm.value) formData.append(`variaciones[${valorKey}][dLargo_cm]`, dLargoCm.value);
+        if (dAnchoCm && dAnchoCm.value) formData.append(`variaciones[${valorKey}][dAncho_cm]`, dAnchoCm.value);
+        if (dAltoCm && dAltoCm.value) formData.append(`variaciones[${valorKey}][dAlto_cm]`, dAltoCm.value);
+        if (bTieneDescuento && bTieneDescuento.checked) formData.append(`variaciones[${valorKey}][bTiene_descuento]`, '1');
+        if (dPrecioDescuento && dPrecioDescuento.value) formData.append(`variaciones[${valorKey}][dPrecio_descuento]`, dPrecioDescuento.value);
+        if (dFechaInicioDescuento && dFechaInicioDescuento.value) formData.append(`variaciones[${valorKey}][dFecha_inicio_descuento]`, dFechaInicioDescuento.value);
+        if (dFechaFinDescuento && dFechaFinDescuento.value) formData.append(`variaciones[${valorKey}][dFecha_fin_descuento]`, dFechaFinDescuento.value);
+        if (vMotivoDescuento && vMotivoDescuento.value) formData.append(`variaciones[${valorKey}][vMotivo_descuento]`, vMotivoDescuento.value);
+        if (tDescripcion && tDescripcion.value) formData.append(`variaciones[${valorKey}][tDescripcion]`, tDescripcion.value);
+        
+        // Eliminar imagen principal
+        const eliminarImagen = document.querySelector(`input[name="variaciones[${valorKey}][eliminar_imagen]"]`);
+        if (eliminarImagen && eliminarImagen.value === '1') {
+            formData.append(`variaciones[${valorKey}][eliminar_imagen]`, '1');
+        }
+        
+        // Eliminar GIF
+        const eliminarGif = document.querySelector(`input[name="variaciones[${valorKey}][eliminar_gif]"]`);
+        if (eliminarGif && eliminarGif.value === '1') {
+            formData.append(`variaciones[${valorKey}][eliminar_gif]`, '1');
+        }
+        
+        // Imágenes a eliminar
+        const imagenesEliminar = document.querySelectorAll(`#imagenes_eliminar_${valorKey} input`);
+        imagenesEliminar.forEach(input => {
+            formData.append(`variaciones[${valorKey}][imagenes_a_eliminar][]`, input.value);
+        });
+        
+        // Imagen principal de la variación
+        const imagenPrincipalInput = document.getElementById(`img_principal_${valorKey}`);
+        if (imagenPrincipalInput && imagenPrincipalInput.files && imagenPrincipalInput.files[0]) {
+            formData.append(`variaciones[${valorKey}][imagen_principal]`, imagenPrincipalInput.files[0]);
+        }
+        
+        // GIF de la variación
+        const gifInput = document.getElementById(`gif_${valorKey}`);
+        if (gifInput && gifInput.files && gifInput.files[0]) {
+            formData.append(`variaciones[${valorKey}][gif]`, gifInput.files[0]);
+        }
+        
+        // Imágenes adicionales de la variación
+        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+            imagenesVariacion[valorKey].imagenes.forEach((img, index) => {
+                formData.append(`variaciones[${valorKey}][imagenes_adicionales][]`, img.file);
+            });
+        }
+    });
+    
     if (btnSubmit) {
-        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Actualizando...';
+        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Guardando...';
         btnSubmit.disabled = true;
     }
     
-    return true;
+    // Enviar con fetch
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if (response.redirected) {
+            // Redirección exitosa
+            window.location.href = response.url;
+        } else if (response.ok) {
+            return response.json().then(data => {
+                if (data.success && data.redirect) {
+                    window.location.href = data.redirect;
+                } else {
+                    // Éxito pero sin redirección
+                    window.location.href = '{{ route("productos.index") }}';
+                }
+            });
+        } else {
+            // Error
+            return response.json().then(data => {
+                throw new Error(data.message || 'Error al actualizar el producto');
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Error al actualizar el producto'
+        });
+        if (btnSubmit) {
+            btnSubmit.innerHTML = '<i class="fas fa-save me-2"></i> Actualizar Producto';
+            btnSubmit.disabled = false;
+        }
+    });
+    
+    return false; // Cancelar el envío original
 });
 
 document.querySelectorAll('input, select, textarea').forEach(elemento => {

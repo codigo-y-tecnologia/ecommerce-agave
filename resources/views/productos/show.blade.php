@@ -16,7 +16,7 @@
                             <li class="breadcrumb-item active" aria-current="page">{{ $producto->vNombre }}</li>
                         </ol>
                     </nav>
-                    
+
                     <div class="d-flex justify-content-between align-items-center mt-2">
                         <div>
                             <h2 class="fw-bold mb-1">{{ $producto->vNombre }}</h2>
@@ -50,7 +50,8 @@
 
     @php
         // --- DATOS DEL PRODUCTO PADRE ---
-        $imagenesProducto = $producto->imagenes ?? []; // Array simple de URLs
+        $imagenesProducto = $producto->imagenes ?? [];
+        $tieneVariaciones = $producto->tieneVariaciones();
         $productoData = [
             'id' => 'producto',
             'sku' => $producto->vCodigo_barras,
@@ -58,6 +59,7 @@
             'precio_oferta' => (float)($producto->dPrecio_oferta ?? 0),
             'tiene_oferta' => (bool)$producto->bTiene_oferta,
             'stock' => (int)$producto->iStock,
+            'tiene_variaciones' => $tieneVariaciones,
             'imagenes' => $imagenesProducto,
             'descripcion_corta' => $producto->tDescripcion_corta ?? '',
             'descripcion_larga' => $producto->tDescripcion_larga ?? '',
@@ -68,16 +70,34 @@
             'clase_envio' => $producto->vClase_envio,
         ];
 
-        // --- DATOS DE LAS VARIACIONES (separados) ---
+        // --- DATOS DE LAS VARIACIONES ---
         $variacionesData = [];
+        $atributosAgrupados = [];
         foreach ($producto->variaciones as $var) {
             $atributosTexto = [];
+            $atributosParaMapa = [];
             foreach($var->atributos as $atributoRel) {
                 if($atributoRel->atributo && $atributoRel->valor) {
                     $atributosTexto[] = $atributoRel->atributo->vNombre . ': ' . $atributoRel->valor->vValor;
+                    $atributosParaMapa[$atributoRel->id_atributo] = $atributoRel->id_atributo_valor;
+
+                    $nombreAtributo = $atributoRel->atributo->vNombre;
+                    $idAtributo = $atributoRel->id_atributo;
+                    $valor = $atributoRel->valor->vValor;
+                    $idValor = $atributoRel->id_atributo_valor;
+
+                    if (!isset($atributosAgrupados[$idAtributo])) {
+                        $atributosAgrupados[$idAtributo] = [
+                            'nombre' => $nombreAtributo,
+                            'valores' => []
+                        ];
+                    }
+                    if (!isset($atributosAgrupados[$idAtributo]['valores'][$idValor])) {
+                        $atributosAgrupados[$idAtributo]['valores'][$idValor] = $valor;
+                    }
                 }
             }
-            
+
             $variacionesData[$var->id_variacion] = [
                 'id' => $var->id_variacion,
                 'sku' => $var->vSKU,
@@ -86,8 +106,8 @@
                 'tiene_oferta' => (bool)$var->bTiene_oferta,
                 'stock' => (int)$var->iStock,
                 'atributos_texto' => $atributosTexto,
-                // Aquí van SOLO las imágenes de la variación
-                'imagenes' => $var->imagenes ?? [], 
+                'atributos_mapa' => $atributosParaMapa,
+                'imagenes' => $var->imagenes ?? [],
                 'descripcion' => $var->tDescripcion ?? '',
                 'peso' => $var->dPeso,
                 'largo' => $var->dLargo_cm,
@@ -100,61 +120,52 @@
 
     <!-- PRIMERA FILA: Imagen principal + Información básica + Selector de variaciones -->
     <div class="row g-4 mb-4">
-        <!-- Columna de imagen y galería (tamaño fijo) -->
+        <!-- Columna de imagen y galería -->
         <div class="col-lg-4">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-body p-4">
-                    <!-- Contenedor de imagen principal con tamaño fijo y controles -->
-                    <div class="text-center mb-3" style="height: 300px; display: flex; flex-direction: column;">
-                        <div class="position-relative d-flex justify-content-center align-items-center" style="height: 250px; background-color: #f8f9fa; border-radius: 8px;">
+                <div class="card-body p-3">
+                    <!-- Contenedor de imagen principal -->
+                    <div class="text-center mb-3" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e0e0e0; overflow: hidden;">
+                        <div class="position-relative d-flex justify-content-center align-items-center" style="height: 400px; background-color: #ffffff;">
                             <img id="mainImage" 
                                  src="{{ !empty($imagenesProducto) ? $imagenesProducto[0] : 'https://via.placeholder.com/400x400?text=Sin+Imagen' }}" 
-                                 class="img-fluid rounded-3 border" 
-                                 style="max-height: 240px; max-width: 100%; object-fit: contain;"
+                                 class="img-fluid" 
+                                 style="max-height: 380px; max-width: 100%; object-fit: contain; cursor: pointer;"
                                  alt="{{ $producto->vNombre }}"
+                                 onclick="abrirModalImagen()"
                                  onerror="this.onerror=null; this.src='https://via.placeholder.com/400x400?text=Error';">
                             
                             @if($producto->bActivo)
-                                <span class="position-absolute top-0 start-0 badge bg-success mt-2 ms-2 px-3 py-2">
+                                <span class="position-absolute top-0 start-0 badge bg-success mt-2 ms-2 px-3 py-2" style="z-index: 10;">
                                     <i class="fas fa-check-circle me-1"></i>Activo
                                 </span>
                             @endif
-                            
-                            <!-- Controles de navegación de imágenes -->
-                            <div id="imageControls" class="position-absolute w-100 d-flex justify-content-between px-2" style="top: 50%; transform: translateY(-50%);">
-                                <button type="button" class="btn btn-sm btn-light rounded-circle shadow-sm" onclick="cambiarImagen(-1)" style="width: 36px; height: 36px; opacity: 0.8;" {{ count($imagenesProducto) <= 1 ? 'disabled' : '' }}>
+
+                            <!-- Controles de navegación -->
+                            <div id="imageControls" class="position-absolute w-100 d-flex justify-content-between px-2" style="top: 50%; transform: translateY(-50%); z-index: 5;">
+                                <button type="button" class="btn btn-sm btn-light rounded-circle shadow-sm" onclick="event.stopPropagation(); cambiarImagen(-1)" style="width: 36px; height: 36px; opacity: 0.8; background-color: rgba(255,255,255,0.9);" {{ count($imagenesProducto) <= 1 ? 'disabled' : '' }}>
                                     <i class="fas fa-chevron-left"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-light rounded-circle shadow-sm" onclick="cambiarImagen(1)" style="width: 36px; height: 36px; opacity: 0.8;" {{ count($imagenesProducto) <= 1 ? 'disabled' : '' }}>
+                                <button type="button" class="btn btn-sm btn-light rounded-circle shadow-sm" onclick="event.stopPropagation(); cambiarImagen(1)" style="width: 36px; height: 36px; opacity: 0.8; background-color: rgba(255,255,255,0.9);" {{ count($imagenesProducto) <= 1 ? 'disabled' : '' }}>
                                     <i class="fas fa-chevron-right"></i>
                                 </button>
                             </div>
                         </div>
-                        
-                        <!-- Contador de imágenes -->
-                        <div id="imageCounter" class="mt-2">
-                            <span class="badge bg-secondary" id="contador-imagenes">
-                                <span id="imagen-actual">1</span> / <span id="total-imagenes">{{ count($imagenesProducto) }}</span>
-                            </span>
-                        </div>
                     </div>
-                    
-                    <!-- Miniaturas (scroll horizontal) -->
-                    <div id="miniaturas-container" class="d-flex gap-2 overflow-auto pb-2" style="scrollbar-width: thin;">
-                        @foreach($imagenesProducto as $index => $imgUrl)
-                            <div class="miniatura-item flex-shrink-0" onclick="seleccionarImagen({{ $index }})">
-                                <img src="{{ $imgUrl }}" 
-                                     class="img-thumbnail miniatura {{ $index === 0 ? 'activa' : '' }}" 
-                                     style="width: 70px; height: 70px; object-fit: cover; cursor: pointer; border: 2px solid transparent;"
-                                     alt="Miniatura {{ $index + 1 }}"
-                                     onerror="this.onerror=null; this.src='https://via.placeholder.com/70x70?text=Error';">
-                            </div>
-                        @endforeach
+
+                    <!-- Miniaturas horizontales con flex-wrap -->
+                    <div id="miniaturas-container" class="d-flex flex-wrap justify-content-center gap-2 mt-2" style="padding-bottom: 5px; max-height: 170px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 10px;"></div>
+
+                    <!-- Contador de imágenes -->
+                    <div id="imageCounter" class="text-center mt-2" {{ count($imagenesProducto) <= 0 ? 'style=display:none;' : '' }}>
+                        <span class="badge bg-light text-dark" id="contador-imagenes">
+                            <span id="imagen-actual">1</span> / <span id="total-imagenes">{{ count($imagenesProducto) }}</span>
+                        </span>
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <!-- Columna de información básica y selector de variaciones -->
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm mb-4">
@@ -206,13 +217,9 @@
                                 <div>
                                     <small class="text-muted text-uppercase">Stock</small>
                                     <h6 class="fw-bold mb-0" id="producto-stock-display">
-                                        @if($producto->tieneVariaciones())
-                                            <span class="badge bg-info">Variable por variaciones</span>
-                                        @else
-                                            <span class="{{ $producto->iStock > 10 ? 'text-success' : ($producto->iStock > 0 ? 'text-warning' : 'text-danger') }}" id="stock-texto">
-                                                {{ number_format($producto->iStock) }} unidades
-                                            </span>
-                                        @endif
+                                        <span class="{{ $producto->iStock > 10 ? 'text-success' : ($producto->iStock > 0 ? 'text-warning' : 'text-danger') }}" id="stock-texto">
+                                            {{ number_format($producto->iStock) }} unidades
+                                        </span>
                                     </h6>
                                 </div>
                             </div>
@@ -220,8 +227,8 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- SELECTOR DE VARIACIONES CON TOGGLE -->
+
+            <!-- SELECTOR DE VARIACIONES CON BOTONES POR ATRIBUTO -->
             @if($producto->tieneVariaciones() && $producto->variaciones->count() > 0)
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white border-0 pt-4 px-4">
@@ -230,79 +237,33 @@
                     </h5>
                 </div>
                 <div class="card-body px-4">
-                    <div class="row g-3">
-                        @foreach($producto->variaciones as $variacion)
-                            @php
-                                $imagenVar = $variacion->imagen_principal; // Primera imagen de la variación
-                                $stockClase = $variacion->iStock > 10 ? 'success' : ($variacion->iStock > 0 ? 'warning' : 'danger');
-                                $precioActual = $variacion->ofertaVigente() ? $variacion->dPrecio_oferta : $variacion->dPrecio;
-                                $atributosTexto = [];
-                                foreach($variacion->atributos as $atributoRel) {
-                                    if($atributoRel->atributo && $atributoRel->valor) {
-                                        $atributosTexto[] = $atributoRel->atributo->vNombre . ': ' . $atributoRel->valor->vValor;
-                                    }
-                                }
-                            @endphp
-                            <div class="col-md-6">
-                                <div class="variacion-card card border" 
-                                     onclick="toggleVariacion({{ $variacion->id_variacion }})"
-                                     data-variacion-id="{{ $variacion->id_variacion }}"
-                                     data-sku="{{ $variacion->vSKU }}"
-                                     data-precio="{{ $variacion->dPrecio }}"
-                                     data-precio-oferta="{{ $variacion->dPrecio_oferta ?? 0 }}"
-                                     data-tiene-oferta="{{ $variacion->bTiene_oferta ? 'true' : 'false' }}"
-                                     data-stock="{{ $variacion->iStock }}"
-                                     data-descripcion="{{ $variacion->tDescripcion ?? '' }}"
-                                     data-peso="{{ $variacion->dPeso ?? '' }}"
-                                     data-largo="{{ $variacion->dLargo_cm ?? '' }}"
-                                     data-ancho="{{ $variacion->dAncho_cm ?? '' }}"
-                                     data-alto="{{ $variacion->dAlto_cm ?? '' }}"
-                                     data-clase-envio="{{ $variacion->vClase_envio ?? '' }}"
-                                     data-imagenes='@json($variacion->imagenes ?? [])'
-                                     data-atributos='@json($atributosTexto)'
-                                     style="cursor: pointer; transition: all 0.2s;">
-                                    <div class="row g-0">
-                                        <div class="col-4">
-                                            @if($imagenVar)
-                                                <img src="{{ $imagenVar }}" 
-                                                     class="img-fluid rounded-start" 
-                                                     style="height: 100px; width: 100%; object-fit: cover;"
-                                                     onerror="this.onerror=null; this.src='https://via.placeholder.com/100x100?text=Var';">
-                                            @else
-                                                <div style="height: 100px; background: #f8f9fa; display: flex; align-items: center; justify-content: center;">
-                                                    <i class="fas fa-image fa-2x text-muted"></i>
-                                                </div>
-                                            @endif
-                                        </div>
-                                        <div class="col-8">
-                                            <div class="card-body p-2">
-                                                <h6 class="card-title mb-1">{{ implode(' | ', $atributosTexto) }}</h6>
-                                                <p class="card-text mb-1">
-                                                    <small class="text-muted">SKU: {{ $variacion->vSKU }}</small>
-                                                </p>
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <span class="fw-bold text-primary">
-                                                        ${{ number_format($precioActual, 2) }}
-                                                        @if($variacion->ofertaVigente())
-                                                            <small class="text-danger ms-1">-{{ $variacion->porcentajeDescuento }}%</small>
-                                                        @endif
-                                                    </span>
-                                                    <span class="badge bg-{{ $stockClase }}">{{ $variacion->iStock }} uds</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                    <div id="variaciones-selector-container">
+                        @foreach($atributosAgrupados as $idAtributo => $atributo)
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-primary">{{ $atributo['nombre'] }}</label>
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach($atributo['valores'] as $idValor => $valor)
+                                        <button type="button"
+                                                class="btn btn-outline-secondary variacion-atributo-btn"
+                                                data-atributo-id="{{ $idAtributo }}"
+                                                data-valor-id="{{ $idValor }}"
+                                                data-valor-nombre="{{ $valor }}"
+                                                onclick="seleccionarValorAtributo(this)">
+                                            {{ $valor }}
+                                        </button>
+                                    @endforeach
                                 </div>
                             </div>
                         @endforeach
                     </div>
+                    <input type="hidden" id="current-attribute-selection" value="">
                 </div>
             </div>
             @endif
         </div>
     </div>
 
-    <!-- SEGUNDA FILA: Precios e Impuestos (estos se actualizarán dinámicamente) -->
+    <!-- SEGUNDA FILA: Precios e Impuestos (CORREGIDA) -->
     <div class="row g-4 mb-4">
         <div class="col-md-8">
             <div class="card border-0 shadow-sm">
@@ -339,7 +300,7 @@
                                         </span>
                                     </td>
                                     <td class="py-3 px-3" id="precio-container">
-                                        @if($producto->bTiene_oferta && $producto->dPrecio_oferta && $producto->dFecha_inicio_oferta && $producto->dFecha_fin_oferta && now()->between($producto->dFecha_inicio_oferta, $producto->dFecha_fin_oferta))
+                                        @if($producto->ofertaVigente())
                                             <span class="text-decoration-line-through text-muted me-2" id="precio-original">
                                                 ${{ number_format($producto->dPrecio_venta, 2) }}
                                             </span>
@@ -353,12 +314,19 @@
                                     </td>
                                     <td class="py-3 px-3" id="impuestos-container">
                                         @php
+                                            $precioBase = $producto->ofertaVigente() ? $producto->dPrecio_oferta : $producto->dPrecio_venta;
                                             $totalImpuestos = 0;
+                                            $detalleImpuestos = [];
                                             foreach($producto->impuestos as $impuesto) {
-                                                $totalImpuestos += $producto->dPrecio_venta * ($impuesto->dPorcentaje / 100);
+                                                $montoImpuesto = $precioBase * ($impuesto->dPorcentaje / 100);
+                                                $totalImpuestos += $montoImpuesto;
+                                                $detalleImpuestos[] = $impuesto->vNombre . ': $' . number_format($montoImpuesto, 2);
                                             }
                                         @endphp
                                         +${{ number_format($totalImpuestos, 2) }}
+                                        @if(count($detalleImpuestos) > 0)
+                                            <br><small class="text-muted">{{ implode(' | ', $detalleImpuestos) }}</small>
+                                        @endif
                                     </td>
                                 </tr>
                                 <tr class="bg-light">
@@ -367,7 +335,7 @@
                                     </td>
                                     <td class="py-3 px-3">
                                         <span class="fw-bold text-primary fs-5" id="precio-total">
-                                            ${{ number_format($producto->dPrecio_venta + $totalImpuestos, 2) }}
+                                            ${{ number_format($precioBase + $totalImpuestos, 2) }}
                                         </span>
                                     </td>
                                     <td class="py-3 px-3 rounded-end"></td>
@@ -378,7 +346,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="col-md-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white border-0 pt-4 px-4">
@@ -408,7 +376,7 @@
         </div>
     </div>
 
-    <!-- DESCRIPCIÓN DE VARIACIÓN SELECCIONADA (se actualiza dinámicamente) -->
+    <!-- DESCRIPCIÓN DE VARIACIÓN SELECCIONADA -->
     <div id="variacion-descripcion-container" style="display: none;" class="mb-4">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white border-0 pt-4 px-4">
@@ -503,7 +471,7 @@
         </div>
     </div>
 
-    <!-- DESCRIPCIÓN DEL PRODUCTO (Larga y Corta) -->
+    <!-- DESCRIPCIÓN DEL PRODUCTO -->
     @if($producto->tDescripcion_corta || $producto->tDescripcion_larga)
     <div class="row g-4 mb-4">
         <div class="col-12">
@@ -520,7 +488,7 @@
                             <p class="fs-5 mb-0 p-3 bg-light rounded-3">{{ $producto->tDescripcion_corta }}</p>
                         </div>
                     @endif
-                    
+
                     @if($producto->tDescripcion_larga)
                         <div>
                             <small class="text-muted text-uppercase">Descripción detallada</small>
@@ -547,7 +515,7 @@
                 </div>
                 <div class="card-body px-4">
                     @foreach($producto->etiquetas as $etiqueta)
-                        <span class="badge me-2 mb-2 p-3" 
+                        <span class="badge me-2 mb-2 p-3"
                               style="background-color: {{ $etiqueta->color ?? '#6c757d' }}; color: white; font-size: 14px;">
                             <i class="fas fa-tag me-1"></i>{{ $etiqueta->vNombre }}
                         </span>
@@ -558,7 +526,7 @@
     </div>
     @endif
 
-    <!-- ATRIBUTOS DEL PRODUCTO PADRE (NO VARIACIONES) -->
+    <!-- ATRIBUTOS DEL PRODUCTO PADRE -->
     @if($producto->valoresAtributos->count() > 0)
     <div class="row g-4 mb-4">
         <div class="col-12">
@@ -570,26 +538,26 @@
                 </div>
                 <div class="card-body px-4">
                     @php
-                        $atributosAgrupados = [];
+                        $atributosAgrupadosGenerales = [];
                         foreach($producto->valoresAtributos as $valor) {
                             $atributo = $valor->atributo;
                             if($atributo) {
-                                if(!isset($atributosAgrupados[$atributo->id_atributo])) {
-                                    $atributosAgrupados[$atributo->id_atributo] = [
+                                if(!isset($atributosAgrupadosGenerales[$atributo->id_atributo])) {
+                                    $atributosAgrupadosGenerales[$atributo->id_atributo] = [
                                         'nombre' => $atributo->vNombre,
                                         'valores' => []
                                     ];
                                 }
-                                $atributosAgrupados[$atributo->id_atributo]['valores'][] = [
+                                $atributosAgrupadosGenerales[$atributo->id_atributo]['valores'][] = [
                                     'valor' => $valor->vValor,
                                     'precio_extra' => $valor->pivot->dPrecio_extra ?? 0
                                 ];
                             }
                         }
                     @endphp
-                    
+
                     <div class="row">
-                        @foreach($atributosAgrupados as $atributo)
+                        @foreach($atributosAgrupadosGenerales as $atributo)
                             <div class="col-md-4 mb-3">
                                 <div class="bg-light rounded-3 p-3">
                                     <strong class="text-primary">{{ $atributo['nombre'] }}</strong>
@@ -657,10 +625,20 @@
 <script>
 // Variables globales
 let currentImageIndex = 0;
-let imagenesActuales = @json($imagenesProducto); // Solo imágenes del producto activo (padre o variación)
+let imagenesActuales = @json($imagenesProducto);
 let variacionesData = @json($variacionesData);
 let productoData = @json($productoData);
 let variacionSeleccionadaId = null;
+let atributosSeleccionados = {};
+
+// Función para abrir modal con imagen ampliada
+function abrirModalImagen() {
+    if (!imagenesActuales || imagenesActuales.length === 0) return;
+    const modalImg = document.getElementById('imagenAmpliada');
+    modalImg.src = imagenesActuales[currentImageIndex];
+    const modal = new bootstrap.Modal(document.getElementById('imagenModal'));
+    modal.show();
+}
 
 // Función para seleccionar imagen
 function seleccionarImagen(index) {
@@ -686,16 +664,29 @@ function actualizarImagenPrincipal() {
     const mainImage = document.getElementById('mainImage');
     const miniaturas = document.querySelectorAll('.miniatura');
     const imagenActualSpan = document.getElementById('imagen-actual');
+    const imageCounter = document.getElementById('imageCounter');
+    const totalImagenesSpan = document.getElementById('total-imagenes');
+    
+    if (!imagenesActuales || imagenesActuales.length === 0) {
+        mainImage.src = 'https://via.placeholder.com/400x400?text=Sin+Imagen';
+        if (imageCounter) imageCounter.style.display = 'none';
+        
+        const miniaturasContainer = document.getElementById('miniaturas-container');
+        if (miniaturasContainer) {
+            miniaturasContainer.innerHTML = '';
+        }
+        return;
+    }
     
     if (mainImage && imagenesActuales[currentImageIndex]) {
         mainImage.src = imagenesActuales[currentImageIndex];
         
-        // Actualizar contador
         if (imagenActualSpan) {
             imagenActualSpan.textContent = currentImageIndex + 1;
         }
         
-        // Actualizar clase activa en miniaturas
+        if (imageCounter) imageCounter.style.display = 'block';
+        
         miniaturas.forEach((thumb, index) => {
             if (index === currentImageIndex) {
                 thumb.classList.add('activa');
@@ -706,7 +697,10 @@ function actualizarImagenPrincipal() {
             }
         });
         
-        // Habilitar/deshabilitar controles
+        if (totalImagenesSpan) {
+            totalImagenesSpan.textContent = imagenesActuales.length;
+        }
+
         const botones = document.querySelectorAll('#imageControls button');
         if (botones.length === 2) {
             botones[0].disabled = imagenesActuales.length <= 1;
@@ -715,139 +709,105 @@ function actualizarImagenPrincipal() {
     }
 }
 
-// Función de toggle para variaciones
-function toggleVariacion(variacionId) {
-    const cardSeleccionada = document.querySelector(`.variacion-card[data-variacion-id="${variacionId}"]`);
+// Función para seleccionar valor de atributo - CON TOGGLE
+function seleccionarValorAtributo(btn) {
+    const atributoId = btn.getAttribute('data-atributo-id');
+    const valorId = btn.getAttribute('data-valor-id');
     
-    // Si ya hay una variación seleccionada y es la misma que se está dando clic
-    if (variacionSeleccionadaId === variacionId) {
-        // DESELECCIONAR - Volver al producto original
-        variacionSeleccionadaId = null;
+    const estaSeleccionado = btn.classList.contains('btn-primary');
+    
+    if (estaSeleccionado) {
+        btn.classList.remove('btn-primary', 'active');
+        btn.classList.add('btn-outline-secondary');
         
-        // Quitar clase seleccionada de todas las cards
-        document.querySelectorAll('.variacion-card').forEach(card => {
-            card.classList.remove('border-primary', 'bg-light');
-        });
+        delete atributosSeleccionados[atributoId];
         
-        // Restaurar datos del producto original
-        restaurarProductoOriginal();
-        showNotification('Mostrando producto original', 'info');
-    } else {
-        // SELECCIONAR NUEVA VARIACIÓN
-        document.querySelectorAll('.variacion-card').forEach(card => {
-            card.classList.remove('border-primary', 'bg-light');
-        });
-        
-        if (cardSeleccionada) {
-            cardSeleccionada.classList.add('border-primary', 'bg-light');
+        if (Object.keys(atributosSeleccionados).length === 0) {
+            restaurarProductoOriginal();
+            showNotification('Mostrando producto original', 'info');
+        } else {
+            buscarYActualizarVariacion();
         }
+    } else {
+        document.querySelectorAll(`.variacion-atributo-btn[data-atributo-id="${atributoId}"]`).forEach(b => {
+            b.classList.remove('btn-primary', 'active');
+            b.classList.add('btn-outline-secondary');
+        });
         
-        variacionSeleccionadaId = variacionId;
-        const variacion = variacionesData[variacionId];
-        if (!variacion) return;
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-primary', 'active');
         
-        aplicarDatosVariacion(variacion);
-        showNotification('Variación seleccionada: ' + (variacion.atributos_texto?.join(' | ') || ''), 'success');
+        atributosSeleccionados[atributoId] = valorId;
+        
+        buscarYActualizarVariacion();
     }
 }
 
-// Función para restaurar datos del producto original
-function restaurarProductoOriginal() {
-    // 1. RESTAURAR IMÁGENES (solo del producto padre)
-    imagenesActuales = productoData.imagenes;
-    actualizarMiniaturas();
-    currentImageIndex = 0;
-    actualizarImagenPrincipal();
-    document.getElementById('total-imagenes').textContent = imagenesActuales.length;
-    
-    // 2. RESTAURAR SKU
-    document.getElementById('producto-sku-display').textContent = productoData.sku;
-    
-    // 3. RESTAURAR PRECIO
-    const precioContainer = document.getElementById('precio-container');
-    const precioActualSpan = document.getElementById('precio-actual');
-    const precioOriginalSpan = document.getElementById('precio-original');
-    const ofertaBadge = document.getElementById('oferta-badge');
-    
-    if (productoData.tiene_oferta && productoData.precio_oferta > 0 && productoData.precio_oferta < productoData.precio) {
-        precioActualSpan.className = 'fw-bold text-danger';
-        precioActualSpan.textContent = '$' + productoData.precio_oferta.toFixed(2);
-        if (!precioOriginalSpan) {
-            const nuevoOriginal = document.createElement('span');
-            nuevoOriginal.id = 'precio-original';
-            nuevoOriginal.className = 'text-decoration-line-through text-muted me-2';
-            nuevoOriginal.textContent = '$' + productoData.precio.toFixed(2);
-            precioContainer.insertBefore(nuevoOriginal, precioActualSpan);
-        } else {
-            precioOriginalSpan.style.display = 'inline';
-            precioOriginalSpan.textContent = '$' + productoData.precio.toFixed(2);
-        }
-        if (ofertaBadge) ofertaBadge.style.display = 'inline';
-    } else {
-        precioActualSpan.className = 'fw-bold';
-        precioActualSpan.textContent = '$' + productoData.precio.toFixed(2);
-        if (precioOriginalSpan) precioOriginalSpan.style.display = 'none';
-        if (ofertaBadge) ofertaBadge.style.display = 'none';
+// Función para buscar y actualizar variación
+function buscarYActualizarVariacion() {
+    if (Object.keys(atributosSeleccionados).length === 0) {
+        restaurarProductoOriginal();
+        return;
     }
-    
-    // 4. RESTAURAR STOCK
-    const stockDisplay = document.getElementById('producto-stock-display');
-    stockDisplay.innerHTML = '';
-    if ({{ $producto->tieneVariaciones() ? 'true' : 'false' }}) {
-        stockDisplay.innerHTML = '<span class="badge bg-info">Variable por variaciones</span>';
-    } else {
-        const stockSpan = document.createElement('span');
-        stockSpan.id = 'stock-texto';
-        let stockClass = productoData.stock > 10 ? 'text-success' : (productoData.stock > 0 ? 'text-warning' : 'text-danger');
-        stockSpan.className = stockClass;
-        stockSpan.textContent = productoData.stock + ' unidades';
-        stockDisplay.appendChild(stockSpan);
-    }
-    
-    // 5. RESTAURAR DESCRIPCIÓN DE VARIACIÓN (ocultar)
-    document.getElementById('variacion-descripcion-container').style.display = 'none';
-    
-    // 6. RESTAURAR DIMENSIONES
-    document.getElementById('producto-peso').textContent = productoData.peso ? parseFloat(productoData.peso).toFixed(3) + ' kg' : '—';
-    document.getElementById('producto-largo').textContent = productoData.largo ? parseFloat(productoData.largo).toFixed(2) + ' cm' : '—';
-    document.getElementById('producto-ancho').textContent = productoData.ancho ? parseFloat(productoData.ancho).toFixed(2) + ' cm' : '—';
-    document.getElementById('producto-alto').textContent = productoData.alto ? parseFloat(productoData.alto).toFixed(2) + ' cm' : '—';
-    
-    // 7. RESTAURAR CLASE DE ENVÍO
-    const claseEnvioSpan = document.getElementById('producto-clase-envio');
-    if (claseEnvioSpan) {
-        let claseText = '';
-        let claseClass = '';
-        switch(productoData.clase_envio) {
-            case 'estandar': claseText = 'Estándar'; claseClass = 'bg-primary'; break;
-            case 'express': claseText = 'Express'; claseClass = 'bg-success'; break;
-            case 'fragil': claseText = 'Frágil'; claseClass = 'bg-warning text-dark'; break;
-            case 'grandes_dimensiones': claseText = 'Grandes dimensiones'; claseClass = 'bg-danger'; break;
-            default: claseText = productoData.clase_envio ? productoData.clase_envio : 'No especificada'; claseClass = 'bg-secondary';
+
+    let variacionEncontrada = null;
+
+    for (const varId in variacionesData) {
+        const variacion = variacionesData[varId];
+        let coincide = true;
+
+        for (const [atribId, valorId] of Object.entries(atributosSeleccionados)) {
+            if (variacion.atributos_mapa[atribId] != valorId) {
+                coincide = false;
+                break;
+            }
         }
-        claseEnvioSpan.className = 'badge ' + claseClass;
-        claseEnvioSpan.textContent = claseText;
+
+        if (coincide) {
+            variacionEncontrada = variacion;
+            variacionSeleccionadaId = varId;
+            break;
+        }
+    }
+
+    if (variacionEncontrada) {
+        aplicarDatosVariacion(variacionEncontrada);
+    } else {
+        restaurarProductoOriginal();
+        showNotification('Combinación de atributos no disponible', 'warning');
     }
 }
 
 // Función para aplicar datos de una variación
 function aplicarDatosVariacion(variacion) {
-    // 1. ACTUALIZAR IMÁGENES (con las de la variación, si tiene)
-    imagenesActuales = (variacion.imagenes && variacion.imagenes.length > 0) ? variacion.imagenes : productoData.imagenes;
+    console.log('Variación seleccionada:', variacion);
+    console.log('Imágenes de la variación:', variacion.imagenes);
+    
+    // Actualizar las imágenes
+    if (variacion.imagenes && Array.isArray(variacion.imagenes) && variacion.imagenes.length > 0) {
+        imagenesActuales = variacion.imagenes.slice();
+    } else {
+        imagenesActuales = productoData.imagenes.slice();
+    }
+    
+    console.log('Imágenes actuales después de asignar:', imagenesActuales);
+    
+    // Reconstruir las miniaturas
     actualizarMiniaturas();
+    
+    // Reiniciar el índice y mostrar la primera imagen
     currentImageIndex = 0;
     actualizarImagenPrincipal();
-    document.getElementById('total-imagenes').textContent = imagenesActuales.length;
-    
-    // 2. ACTUALIZAR SKU
+
+    // Actualizar SKU
     document.getElementById('producto-sku-display').textContent = variacion.sku;
-    
-    // 3. ACTUALIZAR PRECIO
+
+    // Actualizar precios
     const precioContainer = document.getElementById('precio-container');
     const precioActualSpan = document.getElementById('precio-actual');
     const precioOriginalSpan = document.getElementById('precio-original');
     const ofertaBadge = document.getElementById('oferta-badge');
-    
+
     if (variacion.tiene_oferta && variacion.precio_oferta > 0 && variacion.precio_oferta < variacion.precio) {
         precioActualSpan.className = 'fw-bold text-danger';
         precioActualSpan.textContent = '$' + variacion.precio_oferta.toFixed(2);
@@ -868,8 +828,8 @@ function aplicarDatosVariacion(variacion) {
         if (precioOriginalSpan) precioOriginalSpan.style.display = 'none';
         if (ofertaBadge) ofertaBadge.style.display = 'none';
     }
-    
-    // 4. ACTUALIZAR STOCK
+
+    // Actualizar stock
     const stockDisplay = document.getElementById('producto-stock-display');
     stockDisplay.innerHTML = '';
     const stockSpan = document.createElement('span');
@@ -878,8 +838,8 @@ function aplicarDatosVariacion(variacion) {
     stockSpan.className = stockClass;
     stockSpan.textContent = variacion.stock + ' unidades';
     stockDisplay.appendChild(stockSpan);
-    
-    // 5. ACTUALIZAR DESCRIPCIÓN DE VARIACIÓN
+
+    // Mostrar/ocultar descripción
     const descripcionContainer = document.getElementById('variacion-descripcion-container');
     const descripcionTexto = document.getElementById('variacion-descripcion-texto');
     if (variacion.descripcion && variacion.descripcion.trim() !== '') {
@@ -888,14 +848,14 @@ function aplicarDatosVariacion(variacion) {
     } else {
         descripcionContainer.style.display = 'none';
     }
-    
-    // 6. ACTUALIZAR DIMENSIONES (priorizar las de la variación, si no, las del padre)
+
+    // Actualizar dimensiones
     document.getElementById('producto-peso').textContent = variacion.peso ? parseFloat(variacion.peso).toFixed(3) + ' kg' : (productoData.peso ? parseFloat(productoData.peso).toFixed(3) + ' kg' : '—');
     document.getElementById('producto-largo').textContent = variacion.largo ? parseFloat(variacion.largo).toFixed(2) + ' cm' : (productoData.largo ? parseFloat(productoData.largo).toFixed(2) + ' cm' : '—');
     document.getElementById('producto-ancho').textContent = variacion.ancho ? parseFloat(variacion.ancho).toFixed(2) + ' cm' : (productoData.ancho ? parseFloat(productoData.ancho).toFixed(2) + ' cm' : '—');
     document.getElementById('producto-alto').textContent = variacion.alto ? parseFloat(variacion.alto).toFixed(2) + ' cm' : (productoData.alto ? parseFloat(productoData.alto).toFixed(2) + ' cm' : '—');
-    
-    // 7. ACTUALIZAR CLASE DE ENVÍO
+
+    // Actualizar clase de envío
     const claseEnvioSpan = document.getElementById('producto-clase-envio');
     if (claseEnvioSpan) {
         let claseText = '';
@@ -913,32 +873,97 @@ function aplicarDatosVariacion(variacion) {
     }
 }
 
+// Función para restaurar datos del producto original
+function restaurarProductoOriginal() {
+    document.querySelectorAll('.variacion-atributo-btn').forEach(b => {
+        b.classList.remove('btn-primary', 'active');
+        b.classList.add('btn-outline-secondary');
+    });
+    atributosSeleccionados = {};
+    variacionSeleccionadaId = null;
+
+    imagenesActuales = productoData.imagenes.slice();
+    actualizarMiniaturas();
+    currentImageIndex = 0;
+    actualizarImagenPrincipal();
+
+    document.getElementById('producto-sku-display').textContent = productoData.sku;
+    
+    const precioContainer = document.getElementById('precio-container');
+    const precioActualSpan = document.getElementById('precio-actual');
+    const precioOriginalSpan = document.getElementById('precio-original');
+    const ofertaBadge = document.getElementById('oferta-badge');
+
+    if (productoData.tiene_oferta && productoData.precio_oferta > 0 && productoData.precio_oferta < productoData.precio) {
+        precioActualSpan.className = 'fw-bold text-danger';
+        precioActualSpan.textContent = '$' + productoData.precio_oferta.toFixed(2);
+        if (!precioOriginalSpan) {
+            const nuevoOriginal = document.createElement('span');
+            nuevoOriginal.id = 'precio-original';
+            nuevoOriginal.className = 'text-decoration-line-through text-muted me-2';
+            nuevoOriginal.textContent = '$' + productoData.precio.toFixed(2);
+            precioContainer.insertBefore(nuevoOriginal, precioActualSpan);
+        } else {
+            precioOriginalSpan.style.display = 'inline';
+            precioOriginalSpan.textContent = '$' + productoData.precio.toFixed(2);
+        }
+        if (ofertaBadge) ofertaBadge.style.display = 'inline';
+    } else {
+        precioActualSpan.className = 'fw-bold';
+        precioActualSpan.textContent = '$' + productoData.precio.toFixed(2);
+        if (precioOriginalSpan) precioOriginalSpan.style.display = 'none';
+        if (ofertaBadge) ofertaBadge.style.display = 'none';
+    }
+
+    const stockDisplay = document.getElementById('producto-stock-display');
+    stockDisplay.innerHTML = '';
+    const stockSpan = document.createElement('span');
+    stockSpan.id = 'stock-texto';
+    let stockClass = productoData.stock > 10 ? 'text-success' : (productoData.stock > 0 ? 'text-warning' : 'text-danger');
+    stockSpan.className = stockClass;
+    stockSpan.textContent = productoData.stock + ' unidades';
+    stockDisplay.appendChild(stockSpan);
+
+    document.getElementById('variacion-descripcion-container').style.display = 'none';
+}
+
 // Función para actualizar miniaturas
 function actualizarMiniaturas() {
     const miniaturasContainer = document.getElementById('miniaturas-container');
-    if (!miniaturasContainer) return;
+    const imageCounter = document.getElementById('imageCounter');
+    const totalImagenesSpan = document.getElementById('total-imagenes');
     
+    if (!miniaturasContainer) return;
+
     miniaturasContainer.innerHTML = '';
+    
+    if (!imagenesActuales || imagenesActuales.length === 0) {
+        if (imageCounter) imageCounter.style.display = 'none';
+        return;
+    }
+    
+    if (imageCounter) imageCounter.style.display = 'block';
     
     imagenesActuales.forEach((imgUrl, index) => {
         const div = document.createElement('div');
         div.className = 'miniatura-item flex-shrink-0';
         div.setAttribute('onclick', `seleccionarImagen(${index})`);
-        
+        div.style.width = '70px';
+
         const img = document.createElement('img');
         img.src = imgUrl;
         img.className = `img-thumbnail miniatura ${index === 0 ? 'activa' : ''}`;
-        img.style.cssText = 'width: 70px; height: 70px; object-fit: cover; cursor: pointer; border: 2px solid transparent;';
+        img.style.cssText = 'width: 70px; height: 70px; object-fit: cover; cursor: pointer; border: 2px solid transparent; border-radius: 8px;';
         img.alt = `Miniatura ${index + 1}`;
         img.onerror = function() { this.src = 'https://via.placeholder.com/70x70?text=Error'; };
         if (index === 0) img.style.borderColor = '#007bff';
         div.appendChild(img);
         miniaturasContainer.appendChild(div);
     });
-    
-    // Actualizar contador
-    document.getElementById('total-imagenes').textContent = imagenesActuales.length;
-    document.getElementById('imagen-actual').textContent = 1;
+
+    if (totalImagenesSpan) {
+        totalImagenesSpan.textContent = imagenesActuales.length;
+    }
 }
 
 // Función para mostrar notificación
@@ -973,11 +998,17 @@ function confirmDelete(id) {
 
 // Inicializar al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar miniaturas
+    actualizarMiniaturas();
+    
     if (imagenesActuales.length > 0) {
         currentImageIndex = 0;
         actualizarImagenPrincipal();
     }
-    
+
+    console.log('Producto data:', productoData);
+    console.log('Variaciones data:', variacionesData);
+
     document.addEventListener('keydown', function(e) {
         if (e.key === 'ArrowLeft') cambiarImagen(-1);
         else if (e.key === 'ArrowRight') cambiarImagen(1);
@@ -986,22 +1017,24 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
-.variacion-card {
-    transition: all 0.3s ease;
-    cursor: pointer;
-    border: 2px solid transparent;
+.variacion-atributo-btn {
+    min-width: 60px;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    transition: all 0.2s ease;
 }
-.variacion-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+.variacion-atributo-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.variacion-atributo-btn.btn-primary {
+    background-color: #007bff;
     border-color: #007bff;
-}
-.variacion-card.border-primary {
-    border-color: #007bff !important;
-    background-color: #f8f9fa;
+    color: white;
 }
 .miniatura {
     transition: all 0.2s ease;
+    cursor: pointer;
 }
 .miniatura:hover {
     transform: scale(1.1);

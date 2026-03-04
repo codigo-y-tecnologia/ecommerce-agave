@@ -36,7 +36,11 @@ class Producto extends Model
         'dAncho_cm',
         'dAlto_cm',
         'vClase_envio',
-        // CAMPOS DE OFERTA (NUEVOS)
+        // CAMPOS DE IMÁGENES EN BD (NUEVOS)
+        'vImagen_principal',
+        'vGif',
+        'vImagenes_adicionales',
+        // CAMPOS DE OFERTA
         'bTiene_oferta',
         'dPrecio_oferta',
         'dFecha_inicio_oferta',
@@ -58,7 +62,9 @@ class Producto extends Model
         'dLargo_cm' => 'decimal:2',
         'dAncho_cm' => 'decimal:2',
         'dAlto_cm' => 'decimal:2',
-        // CAMPOS DE OFERTA (NUEVOS)
+        // CAMPOS DE IMÁGENES (NUEVOS)
+        'vImagenes_adicionales' => 'array',
+        // CAMPOS DE OFERTA
         'bTiene_oferta' => 'boolean',
         'dPrecio_oferta' => 'decimal:2',
         // CAMPOS DE FECHA
@@ -87,6 +93,11 @@ class Producto extends Model
         static::creating(function ($producto) {
             if (empty($producto->tFecha_registro)) {
                 $producto->tFecha_registro = now();
+            }
+            
+            // Inicializar imágenes adicionales como array vacío si es null
+            if (is_null($producto->vImagenes_adicionales)) {
+                $producto->vImagenes_adicionales = [];
             }
             
             // Calcular precio final antes de guardar
@@ -138,21 +149,29 @@ class Producto extends Model
         $this->saveQuietly(); // Guardar sin disparar eventos para evitar bucles
     }
 
-    // ============ ACCESORES PARA IMÁGENES ============
+    // ============ ACCESORES PARA IMÁGENES (USAN BD) ============
 
     /**
-     * Accesor para imagen principal - Devuelve la URL completa
+     * Accesor para imagen principal - Prioridad: BD > Archivo
      */
     public function getImagenPrincipalAttribute()
     {
-        $carpeta = 'products/' . $this->id_producto;
+        // Prioridad 1: Campo en BD
+        if ($this->vImagen_principal) {
+            if (Storage::disk('public')->exists($this->vImagen_principal)) {
+                return Storage::url($this->vImagen_principal);
+            }
+        }
         
+        // Prioridad 2: Buscar en la carpeta (legado)
+        $carpeta = 'products/' . $this->id_producto;
         if (Storage::disk('public')->exists($carpeta)) {
             $archivos = Storage::disk('public')->files($carpeta);
-            
-            // Buscar archivo que comience con 'principal_'
             foreach ($archivos as $archivo) {
                 if (strpos($archivo, 'principal_') !== false) {
+                    // Guardar en BD para futuras consultas
+                    $this->vImagen_principal = $archivo;
+                    $this->saveQuietly();
                     return Storage::url($archivo);
                 }
             }
@@ -162,37 +181,26 @@ class Producto extends Model
     }
 
     /**
-     * Accesor para URL de video
-     */
-    public function getVideoUrlAttribute()
-    {
-        $carpeta = 'products/' . $this->id_producto;
-        
-        if (Storage::disk('public')->exists($carpeta)) {
-            $archivos = Storage::disk('public')->files($carpeta);
-            
-            foreach ($archivos as $archivo) {
-                if (strpos($archivo, 'video_') !== false) {
-                    return Storage::url($archivo);
-                }
-            }
-        }
-        
-        return null;
-    }
-
-    /**
-     * Accesor para URL de GIF
+     * Accesor para URL de GIF - Prioridad: BD > Archivo
      */
     public function getGifUrlAttribute()
     {
-        $carpeta = 'products/' . $this->id_producto;
+        // Prioridad 1: Campo en BD
+        if ($this->vGif) {
+            if (Storage::disk('public')->exists($this->vGif)) {
+                return Storage::url($this->vGif);
+            }
+        }
         
+        // Prioridad 2: Buscar en la carpeta (legado)
+        $carpeta = 'products/' . $this->id_producto;
         if (Storage::disk('public')->exists($carpeta)) {
             $archivos = Storage::disk('public')->files($carpeta);
-            
             foreach ($archivos as $archivo) {
                 if (strpos($archivo, 'gif_') !== false) {
+                    // Guardar en BD para futuras consultas
+                    $this->vGif = $archivo;
+                    $this->saveQuietly();
                     return Storage::url($archivo);
                 }
             }
@@ -202,23 +210,42 @@ class Producto extends Model
     }
 
     /**
-     * Accesor para imágenes adicionales - Devuelve un array de URLs
+     * Accesor para imágenes adicionales - Prioridad: BD > Archivo
      */
     public function getImagenesAdicionalesAttribute()
     {
-        $carpetaAdicionales = 'products/' . $this->id_producto . '/adicionales';
         $imagenes = [];
         
+        // Prioridad 1: Campo en BD (JSON)
+        if ($this->vImagenes_adicionales && is_array($this->vImagenes_adicionales)) {
+            foreach ($this->vImagenes_adicionales as $ruta) {
+                if (Storage::disk('public')->exists($ruta)) {
+                    $imagenes[] = Storage::url($ruta);
+                }
+            }
+            if (!empty($imagenes)) {
+                return $imagenes;
+            }
+        }
+        
+        // Prioridad 2: Buscar en la carpeta (legado)
+        $carpetaAdicionales = 'products/' . $this->id_producto . '/adicionales';
         if (Storage::disk('public')->exists($carpetaAdicionales)) {
             $archivos = Storage::disk('public')->files($carpetaAdicionales);
-            
-            // Ordenar por nombre para mantener el orden
             sort($archivos);
             
+            $rutasGuardar = [];
             foreach ($archivos as $archivo) {
                 if (preg_match('/\.(jpg|jpeg|png|webp)$/i', $archivo)) {
+                    $rutasGuardar[] = $archivo;
                     $imagenes[] = Storage::url($archivo);
                 }
+            }
+            
+            // Guardar en BD para futuras consultas
+            if (!empty($rutasGuardar)) {
+                $this->vImagenes_adicionales = $rutasGuardar;
+                $this->saveQuietly();
             }
         }
         
@@ -226,8 +253,7 @@ class Producto extends Model
     }
 
     /**
-     * Método CORREGIDO para obtener TODAS las imágenes en un array simple de URLs
-     * Este es el accesor principal que se usa en las vistas
+     * Método PRINCIPAL para obtener TODAS las imágenes
      */
     public function getImagenesAttribute()
     {
@@ -245,49 +271,106 @@ class Producto extends Model
             $imagenes[] = $gifUrl;
         }
         
-        // 3. Video NO se incluye en imágenes porque no es una imagen
-        
-        // 4. Imágenes adicionales
+        // 3. Imágenes adicionales
         $adicionales = $this->imagenes_adicionales;
         foreach ($adicionales as $url) {
             $imagenes[] = $url;
         }
         
-        return $imagenes; // Retorna: ["/storage/products/1/principal.jpg", "/storage/products/1/adicionales/imagen_1.jpg"]
+        return $imagenes;
     }
 
-    // ============ MÉTODOS PARA GUARDAR Y ELIMINAR IMÁGENES ============
+    // ============ MÉTODOS PARA GUARDAR Y ELIMINAR IMÁGENES (ACTUALIZAN BD) ============
 
     /**
-     * Guardar imágenes
+     * Guardar imagen principal del producto (ACTUALIZA BD)
      */
-    public function guardarImagenes($imagenes)
+    public function guardarImagenPrincipal($imagen)
     {
         if (!$this->id_producto) {
-            throw new \Exception('No se puede guardar imágenes sin un ID de producto');
+            throw new \Exception('No se puede guardar imagen sin ID de producto');
         }
         
-        $carpetaImagenes = 'products/' . $this->id_producto;
+        $carpeta = 'products/' . $this->id_producto;
         
-        // Crear directorio si no existe
-        if (!Storage::disk('public')->exists($carpetaImagenes)) {
-            Storage::disk('public')->makeDirectory($carpetaImagenes);
+        if (!Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->makeDirectory($carpeta);
         }
         
-        // Obtener imágenes existentes para numeración
-        $imagenesExistentes = Storage::disk('public')->files($carpetaImagenes);
+        // Eliminar imagen principal anterior
+        $this->eliminarImagenPrincipal();
         
-        // Filtrar solo imágenes válidas
-        $imagenesExistentes = array_filter($imagenesExistentes, function($archivo) {
-            return preg_match('/\.(jpg|jpeg|png|gif|webp|jfif|svg)$/i', $archivo);
-        });
+        $extension = $imagen->getClientOriginalExtension();
+        $nombreArchivo = 'principal_' . time() . '_' . uniqid() . '.' . $extension;
+        $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
         
-        // Obtener el siguiente número disponible
+        // Guardar en BD
+        $this->vImagen_principal = $ruta;
+        $this->saveQuietly();
+        
+        \Log::info('Imagen principal guardada en BD: ' . $ruta);
+        
+        return Storage::url($ruta);
+    }
+
+    /**
+     * Guardar GIF del producto (ACTUALIZA BD)
+     */
+    public function guardarGif($gif)
+    {
+        if (!$this->id_producto) {
+            throw new \Exception('No se puede guardar GIF sin ID de producto');
+        }
+        
+        $carpeta = 'products/' . $this->id_producto;
+        
+        if (!Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->makeDirectory($carpeta);
+        }
+        
+        // Eliminar GIF anterior
+        $this->eliminarGif();
+        
+        $extension = $gif->getClientOriginalExtension();
+        $nombreArchivo = 'gif_' . time() . '_' . uniqid() . '.' . $extension;
+        $ruta = $gif->storeAs($carpeta, $nombreArchivo, 'public');
+        
+        // Guardar en BD
+        $this->vGif = $ruta;
+        $this->saveQuietly();
+        
+        \Log::info('GIF guardado en BD: ' . $ruta);
+        
+        return Storage::url($ruta);
+    }
+
+    /**
+     * Guardar imágenes adicionales del producto (ACTUALIZA BD)
+     */
+    public function guardarImagenesAdicionales($imagenes)
+    {
+        if (!$this->id_producto) {
+            throw new \Exception('No se puede guardar imágenes sin ID de producto');
+        }
+        
+        $carpeta = 'products/' . $this->id_producto . '/adicionales';
+        
+        if (!Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->makeDirectory($carpeta);
+        }
+        
+        // Obtener imágenes existentes de BD
+        $imagenesExistentes = $this->vImagenes_adicionales ?? [];
         $numeroInicio = count($imagenesExistentes);
         
-        $imagenesGuardadas = [];
+        $nuevasRutas = [];
         $contador = 0;
-        $maxImagenes = 8;
+        $maxImagenes = 7;
+        
+        // Asegurar que $imagenes sea un array
+        if (!is_array($imagenes)) {
+            $imagenes = [$imagenes];
+        }
         
         foreach ($imagenes as $imagen) {
             // Verificar límite máximo
@@ -295,39 +378,102 @@ class Producto extends Model
                 break;
             }
             
-            // Validar que sea una imagen válida
-            if (!$imagen->isValid()) {
-                continue;
-            }
-            
             $extension = $imagen->getClientOriginalExtension();
-            $nombreArchivo = 'imagen_' . ($numeroInicio + $contador + 1) . '.' . $extension;
-            $ruta = $imagen->storeAs($carpetaImagenes, $nombreArchivo, 'public');
-            $imagenesGuardadas[] = Storage::url($ruta);
+            $nombreArchivo = 'imagen_' . ($numeroInicio + $contador + 1) . '_' . time() . '_' . uniqid() . '.' . $extension;
+            $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
+            $nuevasRutas[] = $ruta;
             $contador++;
         }
         
-        return $imagenesGuardadas;
+        // Combinar con las existentes y guardar en BD
+        $this->vImagenes_adicionales = array_merge($imagenesExistentes, $nuevasRutas);
+        $this->saveQuietly();
+        
+        \Log::info('Imágenes adicionales guardadas en BD: ' . count($nuevasRutas));
+        
+        return array_map(function($ruta) {
+            return Storage::url($ruta);
+        }, $nuevasRutas);
     }
 
     /**
-     * Eliminar imágenes específicas
+     * Eliminar imagen principal (ACTUALIZA BD)
      */
-    public function eliminarImagenesEspecificas($nombresArchivos)
+    public function eliminarImagenPrincipal()
     {
-        $carpetaImagenes = 'products/' . $this->id_producto;
+        if ($this->vImagen_principal) {
+            if (Storage::disk('public')->exists($this->vImagen_principal)) {
+                Storage::disk('public')->delete($this->vImagen_principal);
+            }
+            $this->vImagen_principal = null;
+            $this->saveQuietly();
+        }
         
-        foreach ($nombresArchivos as $nombreArchivo) {
-            $rutaCompleta = $carpetaImagenes . '/' . $nombreArchivo;
-            if (Storage::disk('public')->exists($rutaCompleta)) {
-                Storage::disk('public')->delete($rutaCompleta);
+        // También eliminar archivos legacy
+        $carpeta = 'products/' . $this->id_producto;
+        if (Storage::disk('public')->exists($carpeta)) {
+            $archivos = Storage::disk('public')->files($carpeta);
+            foreach ($archivos as $archivo) {
+                if (strpos($archivo, 'principal_') !== false) {
+                    Storage::disk('public')->delete($archivo);
+                }
+            }
+        }
+    }
+
+    /**
+     * Eliminar GIF (ACTUALIZA BD)
+     */
+    public function eliminarGif()
+    {
+        if ($this->vGif) {
+            if (Storage::disk('public')->exists($this->vGif)) {
+                Storage::disk('public')->delete($this->vGif);
+            }
+            $this->vGif = null;
+            $this->saveQuietly();
+        }
+        
+        // También eliminar archivos legacy
+        $carpeta = 'products/' . $this->id_producto;
+        if (Storage::disk('public')->exists($carpeta)) {
+            $archivos = Storage::disk('public')->files($carpeta);
+            foreach ($archivos as $archivo) {
+                if (strpos($archivo, 'gif_') !== false) {
+                    Storage::disk('public')->delete($archivo);
+                }
+            }
+        }
+    }
+
+    /**
+     * Eliminar imágenes adicionales específicas (ACTUALIZA BD)
+     */
+    public function eliminarImagenesAdicionalesEspecificas($nombresArchivos)
+    {
+        $carpeta = 'products/' . $this->id_producto . '/adicionales';
+        $imagenesActuales = $this->vImagenes_adicionales ?? [];
+        
+        $nuevasImagenes = [];
+        foreach ($imagenesActuales as $ruta) {
+            $nombreArchivo = basename($ruta);
+            if (!in_array($nombreArchivo, $nombresArchivos)) {
+                $nuevasImagenes[] = $ruta;
+            } else {
+                // Eliminar archivo físico
+                if (Storage::disk('public')->exists($ruta)) {
+                    Storage::disk('public')->delete($ruta);
+                }
             }
         }
         
-        // También buscar en la carpeta de adicionales
-        $carpetaAdicionales = 'products/' . $this->id_producto . '/adicionales';
+        // Actualizar BD
+        $this->vImagenes_adicionales = $nuevasImagenes;
+        $this->saveQuietly();
+        
+        // También eliminar archivos legacy sueltos
         foreach ($nombresArchivos as $nombreArchivo) {
-            $rutaCompleta = $carpetaAdicionales . '/' . $nombreArchivo;
+            $rutaCompleta = $carpeta . '/' . $nombreArchivo;
             if (Storage::disk('public')->exists($rutaCompleta)) {
                 Storage::disk('public')->delete($rutaCompleta);
             }
@@ -335,57 +481,36 @@ class Producto extends Model
     }
 
     /**
-     * Eliminar todas las imágenes
+     * Eliminar todas las imágenes (ACTUALIZA BD)
      */
     public function eliminarTodasLasImagenes()
     {
-        $carpetaImagenes = 'products/' . $this->id_producto;
-        if (Storage::disk('public')->exists($carpetaImagenes)) {
-            Storage::disk('public')->deleteDirectory($carpetaImagenes);
+        // Eliminar archivos físicos
+        $carpeta = 'products/' . $this->id_producto;
+        if (Storage::disk('public')->exists($carpeta)) {
+            Storage::disk('public')->deleteDirectory($carpeta);
         }
+        
+        // Limpiar BD
+        $this->vImagen_principal = null;
+        $this->vGif = null;
+        $this->vImagenes_adicionales = [];
+        $this->saveQuietly();
     }
 
     /**
-     * Obtener nombres de archivos de imágenes
+     * Obtener nombres de archivos de imágenes adicionales
      */
-    public function getNombresArchivosImagenes()
+    public function getNombresArchivosImagenesAdicionales()
     {
-        $carpetaImagenes = 'products/' . $this->id_producto;
-        $imagenes = [];
+        $nombres = [];
+        $imagenes = $this->vImagenes_adicionales ?? [];
         
-        if (Storage::disk('public')->exists($carpetaImagenes)) {
-            $archivos = Storage::disk('public')->files($carpetaImagenes);
-            
-            // Filtrar solo imágenes
-            foreach ($archivos as $archivo) {
-                if (preg_match('/\.(jpg|jpeg|png|gif|webp|jfif|svg)$/i', $archivo)) {
-                    // Extraer solo el nombre del archivo
-                    $nombreArchivo = basename($archivo);
-                    $imagenes[] = [
-                        'nombre' => $nombreArchivo,
-                        'url' => Storage::url($archivo)
-                    ];
-                }
-            }
+        foreach ($imagenes as $ruta) {
+            $nombres[] = basename($ruta);
         }
         
-        // También buscar en la carpeta de adicionales
-        $carpetaAdicionales = 'products/' . $this->id_producto . '/adicionales';
-        if (Storage::disk('public')->exists($carpetaAdicionales)) {
-            $archivosAdicionales = Storage::disk('public')->files($carpetaAdicionales);
-            
-            foreach ($archivosAdicionales as $archivo) {
-                if (preg_match('/\.(jpg|jpeg|png|gif|webp|jfif|svg)$/i', $archivo)) {
-                    $nombreArchivo = basename($archivo);
-                    $imagenes[] = [
-                        'nombre' => $nombreArchivo,
-                        'url' => Storage::url($archivo)
-                    ];
-                }
-            }
-        }
-        
-        return $imagenes;
+        return $nombres;
     }
 
     /**
@@ -393,7 +518,11 @@ class Producto extends Model
      */
     public function getNumeroImagenes()
     {
-        return count($this->imagenes);
+        $total = 0;
+        if ($this->vImagen_principal) $total++;
+        if ($this->vGif) $total++;
+        $total += count($this->vImagenes_adicionales ?? []);
+        return $total;
     }
 
     /**

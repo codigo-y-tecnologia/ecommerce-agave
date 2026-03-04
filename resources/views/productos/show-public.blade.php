@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $producto->vNombre }} - Ecommerce Agave</title>
     <style>
+        /* ... (Estilos sin cambios, son los mismos que proporcionaste) ... */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: Arial, sans-serif;
@@ -14,8 +15,6 @@
             overflow-x: hidden;
             width: 100%;
         }
-
-        /* Header Styles */
         header {
             background-color: #f8f9fa;
             padding: 15px 0;
@@ -24,7 +23,6 @@
         }
         header h1 { font-size: clamp(1.5rem, 5vw, 2rem); padding: 0 15px; }
         header p { font-size: clamp(0.9rem, 3vw, 1rem); padding: 0 15px; color: #666; }
-
         .user-welcome {
             background: #e3f2fd;
             padding: 10px 0;
@@ -39,8 +37,6 @@
             padding: 0 15px;
             word-break: break-word;
         }
-
-        /* Navbar */
         .navbar {
             background-color: #e9ecef;
             padding: 10px 0;
@@ -68,8 +64,6 @@
         }
         .nav-links li a:hover { text-decoration: underline; }
         .nav-links li button { font-size: clamp(0.85rem, 2.5vw, 1rem); }
-
-        /* Barra de búsqueda */
         .barra-busqueda-principal {
             text-align: center;
             margin: 15px 0;
@@ -105,8 +99,6 @@
             background: #0056b3;
             border-color: #0056b3;
         }
-
-        /* Contenedor principal */
         .container {
             max-width: 1200px;
             margin: 20px auto;
@@ -133,16 +125,12 @@
             background: #f8f9fa;
             transform: translateY(-2px);
         }
-
-        /* Grid principal del producto */
         .producto-detalle {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 40px;
             margin-top: 20px;
         }
-
-        /* --- Sección de Imágenes --- */
         .imagenes-container { position: relative; }
         .imagen-principal-container {
             height: 400px;
@@ -223,8 +211,6 @@
             border-color: #007bff;
             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
         }
-
-        /* --- Información del Producto --- */
         .producto-info-detalle h1 {
             color: #333;
             margin-bottom: 15px;
@@ -265,8 +251,6 @@
         .stock-bueno { background: #e8f5e8; color: #2e7d32; border: 1px solid #c8e6c9; }
         .stock-bajo { background: #fff3e0; color: #ef6c00; border: 1px solid #ffcc80; }
         .sin-stock { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
-
-        /* Selector de variaciones */
         .variaciones-selector {
             margin: 20px 0;
             padding: 15px;
@@ -313,8 +297,6 @@
         .variacion-nombre { font-weight: bold; color: #333; margin-bottom: 5px; }
         .variacion-precio { color: #28a745; font-weight: bold; font-size: 16px; }
         .variacion-stock { font-size: 14px; color: #6c757d; }
-
-        /* Descripción de variación seleccionada */
         .variacion-descripcion {
             margin-top: 15px;
             padding: 15px;
@@ -322,8 +304,6 @@
             border-radius: 8px;
             border-left: 4px solid #007bff;
         }
-
-        /* Detalles adicionales */
         .detalles-adicionales { margin-top: 30px; }
         .detalle-item {
             margin-bottom: 15px;
@@ -333,7 +313,6 @@
         .detalle-item:last-child { border-bottom: none; }
         .detalle-item strong { color: #333; display: inline-block; margin-bottom: 5px; }
         .detalle-item h3 { margin: 0 0 10px 0; color: #333; font-size: 18px; }
-
         .sku-badge {
             background: #f8f9fa;
             padding: 4px 12px;
@@ -342,8 +321,6 @@
             font-size: 14px;
             border: 1px solid #dee2e6;
         }
-
-        /* NOTIFICACIÓN */
         .toast-notification {
             position: fixed;
             top: 30px;
@@ -365,7 +342,6 @@
             transform: translateX(120%);
         }
         .toast-notification.show { transform: translateX(0); }
-
         .action-buttons {
             display: flex;
             gap: 15px;
@@ -405,7 +381,6 @@
         .btn-favorito-detalle.activo:hover { background: #2968c8; border-color: #2968c8; }
         .btn-favorito-detalle .btn-icon { font-size: 22px; transition: transform 0.3s ease; }
         .btn-favorito-detalle:hover .btn-icon { transform: scale(1.2); }
-
         .btn-comprar {
             background: #28a745;
             color: white;
@@ -423,8 +398,6 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
         }
-
-        /* Media Queries */
         @media (max-width: 768px) {
             .producto-detalle { grid-template-columns: 1fr; gap: 20px; }
             .imagen-principal-container { height: 350px; }
@@ -465,20 +438,20 @@
     </style>
 </head>
 <body>
-    <!-- Header -->
+    <!-- Header (SIN CAMBIOS) -->
     <header>
         <h1>Ecommerce Agave</h1>
         <p>Detalles del producto</p>
     </header>
 
-    <!-- Bienvenida al usuario si está autenticado -->
+    <!-- Bienvenida al usuario si está autenticado (SIN CAMBIOS) -->
     @auth
     <div class="user-welcome">
         <p>¡Hola {{ Auth::user()->vNombre }}! 👋</p>
     </div>
     @endauth
 
-    <!-- Navbar -->
+    <!-- Navbar (SIN CAMBIOS) -->
     <nav class="navbar">
         <div class="nav-container">
             <ul class="nav-links">
@@ -521,8 +494,8 @@
         <a href="javascript:history.back()" class="back-btn">← Volver</a>
         
         @php
-            // --- DATOS DEL PRODUCTO PADRE ---
-            $imagenesProducto = $producto->imagenes ?? []; // Array simple de URLs
+            // --- DATOS DEL PRODUCTO PADRE (SIN CAMBIOS) ---
+            $imagenesProducto = $producto->imagenes ?? [];
             
             $productoData = [
                 'sku' => $producto->vCodigo_barras,
@@ -534,7 +507,7 @@
                 'descripcion_corta' => $producto->tDescripcion_corta ?? ''
             ];
 
-            // --- DATOS DE LAS VARIACIONES ---
+            // --- DATOS DE LAS VARIACIONES (SIN CAMBIOS) ---
             $variacionesData = [];
             foreach ($producto->variaciones as $var) {
                 $atributosTexto = [];
@@ -558,7 +531,7 @@
         @endphp
         
         <div class="producto-detalle">
-            <!-- SECCIÓN DE IMÁGENES DEL PRODUCTO/VARIACIÓN ACTIVA -->
+            <!-- SECCIÓN DE IMÁGENES DEL PRODUCTO/VARIACIÓN ACTIVA (HTML SIN CAMBIOS) -->
             <div class="imagenes-container">
                 <div class="imagen-principal-container">
                     <div class="imagen-wrapper">
@@ -567,20 +540,17 @@
                              alt="{{ $producto->vNombre }}" class="imagen-principal"
                              onerror="this.onerror=null; this.src='https://via.placeholder.com/400x400?text=Sin+Imagen';">
                         
-                        <!-- Controles de navegación -->
                         <div class="image-controls">
                             <button onclick="cambiarImagen(-1)" {{ count($imagenesProducto) <= 1 ? 'disabled' : '' }}>←</button>
                             <button onclick="cambiarImagen(1)" {{ count($imagenesProducto) <= 1 ? 'disabled' : '' }}>→</button>
                         </div>
                     </div>
                     
-                    <!-- Contador de imágenes -->
                     <div class="image-counter">
                         <span id="imagen-actual">1</span> / <span id="total-imagenes">{{ count($imagenesProducto) }}</span>
                     </div>
                 </div>
                 
-                <!-- Miniaturas -->
                 <div class="miniaturas" id="miniaturas-container">
                     @foreach($imagenesProducto as $index => $imgUrl)
                         <img src="{{ $imgUrl }}" 
@@ -592,11 +562,10 @@
                 </div>
             </div>
 
-            <!-- INFORMACIÓN DEL PRODUCTO -->
+            <!-- INFORMACIÓN DEL PRODUCTO (HTML SIN CAMBIOS, excepto el id del nombre) -->
             <div class="producto-info-detalle">
                 <h1 id="producto-nombre">{{ $producto->vNombre }}</h1>
                 
-                <!-- SECCIÓN DE PRECIO -->
                 <div class="producto-precio-detalle" id="precio-container">
                     @if($producto->tieneDescuentoActivo())
                         <span class="precio-original" id="precio-original">${{ number_format($producto->dPrecio_venta, 2) }}</span>
@@ -609,7 +578,6 @@
                     @endif
                 </div>
 
-                <!-- STOCK -->
                 <div class="stock-info-detalle" id="stock-container">
                     <span id="stock-texto">
                         @if($producto->iStock > 10)
@@ -622,18 +590,17 @@
                     </span>
                 </div>
 
-                <!-- SKU -->
                 <div style="margin: 15px 0;">
                     <strong>Código de barras:</strong> 
                     <span class="sku-badge" id="sku-texto">{{ $producto->vCodigo_barras }}</span>
                 </div>
 
-                <!-- DESCRIPCIÓN DE VARIACIÓN SELECCIONADA (dinámico) -->
+                <!-- DESCRIPCIÓN DE VARIACIÓN SELECCIONADA -->
                 <div id="variacion-descripcion-container" class="variacion-descripcion" style="display: none;">
                     <p id="variacion-descripcion-texto" style="margin: 0;"></p>
                 </div>
 
-                <!-- SELECTOR DE VARIACIONES CON TOGGLE -->
+                <!-- SELECTOR DE VARIACIONES CON TOGGLE (HTML SIN CAMBIOS) -->
                 @if($producto->tieneVariaciones() && $producto->variaciones->count() > 0)
                     <div class="variaciones-selector">
                         <h3><i class="fas fa-cubes"></i> Selecciona una variación:</h3>
@@ -696,7 +663,7 @@
                     </div>
                 @endif
 
-                <!-- Botón de favoritos -->
+                <!-- Botón de favoritos (SIN CAMBIOS) -->
                 <button class="btn-favorito-detalle {{ $producto->esFavorito() ? 'activo' : '' }}" 
                         onclick="toggleFavoritoDetalle(this, {{ $producto->id_producto }})"
                         id="btn-favorito-{{ $producto->id_producto }}">
@@ -706,14 +673,14 @@
                     </span>
                 </button>
 
-                <!-- Botón de compra -->
+                <!-- Botón de compra (SIN CAMBIOS) -->
                 <div class="action-buttons">
                     <button class="btn-comprar" onclick="agregarAlCarrito({{ $producto->id_producto }})">
                         🛒 Comprar Ahora
                     </button>
                 </div>
 
-                <!-- Detalles adicionales (categoría, marca, etiquetas) -->
+                <!-- Detalles adicionales (SIN CAMBIOS) -->
                 <div class="detalles-adicionales">
                     <div class="detalle-item">
                         <strong>Categoría:</strong> 
@@ -741,7 +708,6 @@
                         </div>
                     @endif
 
-                    <!-- DESCRIPCIÓN CORTA (estática del producto padre) -->
                     @if($producto->tDescripcion_corta)
                         <div class="detalle-item">
                             <h3>Descripción</h3>
@@ -749,7 +715,6 @@
                         </div>
                     @endif
 
-                    <!-- DESCRIPCIÓN LARGA (estática del producto padre) -->
                     @if($producto->tDescripcion_larga)
                         <div class="detalle-item">
                             <h3>Información detallada</h3>
@@ -762,14 +727,14 @@
     </div>
 
     <script>
-        // --- VARIABLES GLOBALES ---
+        // --- VARIABLES GLOBALES (CORREGIDAS) ---
         let currentImageIndex = 0;
-        let imagenesActuales = @json($imagenesProducto); // Solo imágenes del producto activo
+        let imagenesActuales = @json($imagenesProducto); // INICIA CON LAS DEL PADRE
         const variacionesData = @json($variacionesData);
         const productoOriginal = @json($productoData);
         let variacionSeleccionadaId = null;
 
-        // --- FUNCIONES DE IMÁGENES (galería principal) ---
+        // --- FUNCIONES DE IMÁGENES (SIN CAMBIOS) ---
         function cambiarImagen(direccion) {
             if (imagenesActuales.length <= 1) return;
             currentImageIndex += direccion;
@@ -790,7 +755,6 @@
                 mainImage.src = imagenesActuales[currentImageIndex];
                 document.getElementById('imagen-actual').textContent = currentImageIndex + 1;
                 
-                // Actualizar clase activa en miniaturas
                 document.querySelectorAll('.miniatura').forEach((thumb, index) => {
                     if (index === currentImageIndex) {
                         thumb.classList.add('activa');
@@ -799,7 +763,6 @@
                     }
                 });
                 
-                // Habilitar/deshabilitar controles
                 const botones = document.querySelectorAll('.image-controls button');
                 if (botones.length === 2) {
                     botones[0].disabled = imagenesActuales.length <= 1;
@@ -813,18 +776,18 @@
             if (e.key === 'ArrowRight') cambiarImagen(1);
         });
 
-        // --- FUNCIÓN DE TOGGLE PARA VARIACIONES ---
+        // --- FUNCIÓN DE TOGGLE PARA VARIACIONES (CORREGIDA) ---
         function toggleVariacion(variacionId) {
             const opcionSeleccionada = document.querySelector(`.variacion-opcion[data-variacion-id="${variacionId}"]`);
             
-            // Si ya está seleccionada, se deselecciona
             if (variacionSeleccionadaId === variacionId) {
+                // DESELECCIONAR
                 variacionSeleccionadaId = null;
                 document.querySelectorAll('.variacion-opcion').forEach(op => op.classList.remove('seleccionada'));
                 restaurarProductoOriginal();
                 showSingleToast('Mostrando producto original', 2000);
             } else {
-                // Seleccionar nueva variación
+                // SELECCIONAR NUEVA VARIACIÓN
                 document.querySelectorAll('.variacion-opcion').forEach(op => op.classList.remove('seleccionada'));
                 if (opcionSeleccionada) opcionSeleccionada.classList.add('seleccionada');
                 
@@ -837,9 +800,9 @@
             }
         }
 
-        // --- RESTAURAR DATOS DEL PRODUCTO ORIGINAL ---
+        // --- RESTAURAR DATOS DEL PRODUCTO ORIGINAL (CORREGIDA) ---
         function restaurarProductoOriginal() {
-            imagenesActuales = productoOriginal.imagenes;
+            imagenesActuales = productoOriginal.imagenes.slice();
             actualizarMiniaturas();
             currentImageIndex = 0;
             updateMainImage();
@@ -882,14 +845,13 @@
             stockContainer.className = `stock-info-detalle ${stockClase}`;
             stockTexto.textContent = stockMensaje;
             
-            // Descripción de variación oculta
             document.getElementById('variacion-descripcion-container').style.display = 'none';
             document.getElementById('producto-nombre').textContent = '{{ $producto->vNombre }}';
         }
 
-        // --- APLICAR DATOS DE UNA VARIACIÓN SELECCIONADA ---
+        // --- APLICAR DATOS DE UNA VARIACIÓN (CORREGIDA) ---
         function aplicarDatosVariacion(variacion) {
-            imagenesActuales = (variacion.imagenes && variacion.imagenes.length > 0) ? variacion.imagenes : productoOriginal.imagenes;
+            imagenesActuales = (variacion.imagenes && variacion.imagenes.length > 0) ? variacion.imagenes.slice() : productoOriginal.imagenes.slice();
             actualizarMiniaturas();
             currentImageIndex = 0;
             updateMainImage();
@@ -949,7 +911,7 @@
             }
         }
 
-        // --- ACTUALIZAR MINIATURAS ---
+        // --- ACTUALIZAR MINIATURAS (CORREGIDA) ---
         function actualizarMiniaturas() {
             const miniaturasContainer = document.getElementById('miniaturas-container');
             if (!miniaturasContainer) return;
@@ -969,7 +931,7 @@
             document.getElementById('imagen-actual').textContent = 1;
         }
 
-        // --- TOGGLE FAVORITOS ---
+        // --- TOGGLE FAVORITOS (SIN CAMBIOS) ---
         let currentToast = null;
         let toastTimeout = null;
 
@@ -1061,7 +1023,6 @@
             });
         }
 
-        // --- AGREGAR AL CARRITO (placeholder) ---
         function agregarAlCarrito(productoId) {
             showSingleToast('Producto agregado al carrito 🛒', 3000);
         }

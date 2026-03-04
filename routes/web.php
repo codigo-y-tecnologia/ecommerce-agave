@@ -161,6 +161,13 @@ Route::post('/impuestos/quick-create', [ImpuestoController::class, 'quickCreate'
 Route::get('/impuestos/json', [ImpuestoController::class, 'getJson'])->name('impuestos.json');
 
 // =====================================================================
+// RUTAS PARA IMÁGENES DE VARIACIONES (NUEVAS)
+// =====================================================================
+Route::get('/variaciones/{id}/imagenes', [VariacionController::class, 'getImagenes'])->name('variaciones.imagenes');
+Route::post('/variaciones/{id}/imagenes/upload', [VariacionController::class, 'uploadImagen'])->name('variaciones.imagenes.upload');
+Route::delete('/variaciones/imagenes/{imagenId}', [VariacionController::class, 'deleteImagen'])->name('variaciones.imagenes.delete');
+
+// =====================================================================
 // RUTA PARA DASHBOARD
 // =====================================================================
 Route::get('/dashboard', function () {
