@@ -401,15 +401,35 @@
                                     <strong>Clase actual:</strong> 
                                     @php
                                         $claseText = '';
+                                        $claseClass = '';
                                         switch($producto->vClase_envio) {
-                                            case 'estandar': $claseText = 'Estándar'; break;
-                                            case 'express': $claseText = 'Express'; break;
-                                            case 'fragil': $claseText = 'Frágil'; break;
-                                            case 'grandes_dimensiones': $claseText = 'Grandes dimensiones'; break;
-                                            default: $claseText = $producto->vClase_envio;
+                                            case 'estandar':
+                                                $claseText = 'Estándar';
+                                                $claseClass = 'bg-primary';
+                                                break;
+                                            case 'express':
+                                                $claseText = 'Express';
+                                                $claseClass = 'bg-success';
+                                                break;
+                                            case 'fragil':
+                                                $claseText = 'Frágil';
+                                                $claseClass = 'bg-warning text-dark';
+                                                break;
+                                            case 'grandes_dimensiones':
+                                                $claseText = 'Grandes dimensiones';
+                                                $claseClass = 'bg-danger';
+                                                break;
+                                            default:
+                                                $claseText = $producto->vClase_envio;
+                                                $claseClass = 'bg-secondary';
                                         }
                                     @endphp
-                                    <span class="badge bg-primary">{{ $claseText }}</span>
+                                    <span class="badge {{ $claseClass }}">{{ $claseText }}</span>
+                                    <small class="d-block text-muted mt-1">Valor guardado: "{{ $producto->vClase_envio }}"</small>
+                                </div>
+                            @else
+                                <div class="mt-2 p-2 bg-light rounded">
+                                    <span class="text-muted">No hay clase de envío seleccionada</span>
                                 </div>
                             @endif
                         </div>
