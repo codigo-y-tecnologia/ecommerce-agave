@@ -16,10 +16,11 @@ class ReservarCuponService
             return null;
         }
 
-        return DB::transaction(function () use ($carrito, $codigoCupon) {
+        // Limpiar reservas expiradas
+        app(\App\Services\Cupones\LiberarCuponService::class)
+            ->limpiarExpiradas();
 
-            // Limpiar reservas expiradas
-            CuponReserva::expiradas()->delete();
+        return DB::transaction(function () use ($carrito, $codigoCupon) {
 
             $cupon = Cupon::disponible()
                 ->whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])

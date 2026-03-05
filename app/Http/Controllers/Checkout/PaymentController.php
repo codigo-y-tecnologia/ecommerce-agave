@@ -884,6 +884,7 @@ class PaymentController extends Controller
 
         // Crear pedido
         $pedido = Pedido::create([
+            'id_checkout_snapshot' => $snapshot->id,
             'id_usuario' => $userId,
             'id_direccion' => null,
             'id_direccion_facturacion' => null,

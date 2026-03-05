@@ -4,6 +4,7 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 use App\Jobs\LimpiarReservasExpiradas;
+use App\Services\Cupones\LiberarCuponService;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -22,4 +23,15 @@ Schedule::command('carts:notify-active')
 Schedule::command('carts:cleanup-old')
     ->dailyAt('04:00');
 
+Schedule::command('snapshots:cleanup-orphaned')
+    ->dailyAt('04:30')
+    ->withoutOverlapping();
+
 Schedule::job(new LimpiarReservasExpiradas)->everyMinute()->withoutOverlapping();
+
+Schedule::call(function () {
+    app(LiberarCuponService::class)->limpiarExpiradas();
+})
+    ->name('cupones_liberar_expiradas')
+    ->everyMinute()
+    ->withoutOverlapping();

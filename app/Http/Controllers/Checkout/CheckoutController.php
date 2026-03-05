@@ -13,7 +13,7 @@ use Carbon\Carbon;
 use App\Helpers\CarritoHelper;
 use App\Services\Stock\LiberarReservaPorCarritoService;
 use Illuminate\Support\Facades\Log;
-use App\Services\Checkout\CalcularDescuentoService;
+use App\Services\Checkout\{CalcularDescuentoService, CalcularTotalesService};
 
 class CheckoutController extends Controller
 {
@@ -52,7 +52,12 @@ class CheckoutController extends Controller
             }
         }
 
-        [$subtotal, $totalImpuestos, $total] = $this->calcularTotales($carrito);
+        $totales = app(CalcularTotalesService::class)
+            ->ejecutar($carrito);
+
+        $subtotal = $totales['subtotal'];
+        $totalImpuestos = $totales['total_impuestos'];
+        $total = $totales['total'];
 
         $usuario = Auth::user();
 
@@ -132,7 +137,10 @@ class CheckoutController extends Controller
             }
 
             // 🧮 Totales
-            [$subtotal, $totalImpuestos, $total] = $this->calcularTotales($carrito);
+            $totales = app(CalcularTotalesService::class)
+                ->ejecutar($carrito);
+
+            $total = $totales['total'];
 
             // Definir reglas de envío
             $montoEnvioGratis = 1500; // Envío gratis si el total >= 1500
@@ -582,7 +590,10 @@ class CheckoutController extends Controller
                 ]);
             }
 
-            [$subtotal, $totalImpuestos, $total] = $this->calcularTotales($carrito);
+            $totales = app(CalcularTotalesService::class)
+                ->ejecutar($carrito);
+
+            $total = $totales['total'];
 
             $cupon = Cupon::disponible()
                 ->whereRaw('BINARY vCodigo_cupon = ?', [$codigo])

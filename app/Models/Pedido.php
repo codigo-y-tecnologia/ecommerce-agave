@@ -21,6 +21,7 @@ class Pedido extends Model
     public $timestamps = false;
 
     protected $fillable = [
+        'id_checkout_snapshot',
         'id_usuario',
         'id_direccion',
         'id_direccion_facturacion',
@@ -62,7 +63,7 @@ class Pedido extends Model
         'tFecha_pedido' => 'datetime',
     ];
 
-const ESTADO_PAGADO  = 'pagado';
+    const ESTADO_PAGADO  = 'pagado';
 
     // Relación con Usuario
     public function usuario()
@@ -100,19 +101,27 @@ const ESTADO_PAGADO  = 'pagado';
     }
 
     public function envio()
-{
-    return $this->hasOne(Envio::class, 'id_pedido', 'id_pedido');
-}
+    {
+        return $this->hasOne(Envio::class, 'id_pedido', 'id_pedido');
+    }
 
-public function solicitudesPostventa()
-{
-    return $this->hasMany(SolicitudPostventa::class, 'id_pedido', 'id_pedido');
-}
+    public function solicitudesPostventa()
+    {
+        return $this->hasMany(SolicitudPostventa::class, 'id_pedido', 'id_pedido');
+    }
 
-public function ultimaSolicitudPostventa()
-{
-    return $this->hasOne(SolicitudPostventa::class, 'id_pedido', 'id_pedido')
-        ->latestOfMany('id_solicitud');
-}
+    public function ultimaSolicitudPostventa()
+    {
+        return $this->hasOne(SolicitudPostventa::class, 'id_pedido', 'id_pedido')
+            ->latestOfMany('id_solicitud');
+    }
 
+    public function checkoutSnapshot()
+    {
+        return $this->belongsTo(
+            CheckoutSnapshot::class,
+            'id_checkout_snapshot',
+            'id'
+        );
+    }
 }

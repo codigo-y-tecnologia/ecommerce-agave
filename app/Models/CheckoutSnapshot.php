@@ -30,14 +30,6 @@ class CheckoutSnapshot extends Model
     ];
 
     /**
-     * Relación con carrito
-     */
-    public function carrito()
-    {
-        return $this->belongsTo(Carrito::class, 'id_carrito', 'id_carrito');
-    }
-
-    /**
      * Casts monetarios seguros (string decimal)
      * Evita problemas de precisión con float
      */
@@ -52,4 +44,22 @@ class CheckoutSnapshot extends Model
         'total_final'  => 'decimal:2',
         'impuestos_por_tipo' => 'array',
     ];
+
+    /**
+     * Relación con carrito
+     */
+    public function carrito()
+    {
+        return $this->belongsTo(Carrito::class, 'id_carrito', 'id_carrito');
+    }
+
+    // Relación con Pedido
+    public function pedido()
+    {
+        return $this->hasOne(
+            Pedido::class,
+            'id_checkout_snapshot',
+            'id'
+        );
+    }
 }
