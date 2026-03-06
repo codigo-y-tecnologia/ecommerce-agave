@@ -279,6 +279,7 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':superadmin'
     Route::get('/superadmin/admins/create', [SuperadminController::class, 'create'])->name('superadmin.admins.create');
     Route::post('/superadmin/admins', [SuperadminController::class, 'store'])->name('superadmin.admins.store');
 });
-Route::resource('cupones_usados', CuponesUsadosController::class);
+Route::resource('cupones_usados', CuponesUsadosController::class)
+    ->parameters(['cupones_usados' => 'id']);
 
       
