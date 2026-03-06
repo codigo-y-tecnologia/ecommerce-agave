@@ -35,6 +35,7 @@ use App\Http\Controllers\Checkout\CheckoutErrorController;
 use App\Http\Controllers\Checkout\PaypalSuccesController;
 use App\Http\Controllers\SoporteController;
 use App\Http\Controllers\DetalleVentaController;
+use App\Http\Controllers\CuponesUsadosController;
 
 Route::get('/', [DashboardController::class, 'index'])->name('home');
 
@@ -278,5 +279,6 @@ Route::middleware(['auth', \App\Http\Middleware\CheckRole::class . ':superadmin'
     Route::get('/superadmin/admins/create', [SuperadminController::class, 'create'])->name('superadmin.admins.create');
     Route::post('/superadmin/admins', [SuperadminController::class, 'store'])->name('superadmin.admins.store');
 });
+Route::resource('cupones_usados', CuponesUsadosController::class);
 
       
