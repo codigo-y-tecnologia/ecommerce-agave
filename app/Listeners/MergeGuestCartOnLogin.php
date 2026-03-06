@@ -36,9 +36,6 @@ class MergeGuestCartOnLogin
         app(DireccionMergeService::class)
             ->merge($guestToken, $event->user->id_usuario);
 
-        app(PedidoMergeService::class)
-            ->mergeByGuestToken($guestToken, $event->user->id_usuario);
-
         // Limpiar sesión
         session()->forget('guest_token');
     }

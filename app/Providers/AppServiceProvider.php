@@ -33,5 +33,10 @@ class AppServiceProvider extends ServiceProvider
             'allowOrderReturns',
             Setting::getValue('allow_order_returns', false)
         );
+
+        View::share(
+            'allowClaimeOrders',
+            Setting::getValue('auto_register_guest_after_purchase', false)
+        );
     }
 }

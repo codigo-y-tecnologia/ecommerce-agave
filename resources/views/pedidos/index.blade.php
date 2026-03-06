@@ -6,6 +6,73 @@
 
 <h2 class="fw-bold mb-4">Mis compras</h2>
 
+@if(!$allowClaimeOrders)
+{{-- ==============================
+     RECLAMAR PEDIDO GUEST
+================================ --}}
+<div class="card mb-4 shadow-sm border-primary">
+    <div class="card-header fw-bold text-primary">
+        ¿Compraste sin cuenta? Vincula tu pedido
+    </div>
+    <div class="card-body">
+
+        @if(session('reclamar_ok'))
+            <div class="alert alert-success mb-3">
+                {{ session('reclamar_ok') }}
+            </div>
+        @endif
+
+        @if($errors->has('reclamar'))
+            <div class="alert alert-danger mb-3">
+                {{ $errors->first('reclamar') }}
+            </div>
+        @endif
+
+        <p class="text-muted small mb-3">
+            Ingresa el número de pedido y el email con el que realizaste la compra.
+        </p>
+
+        <form method="POST" action="{{ route('pedidos.reclamar') }}" class="row g-2 align-items-end">
+            @csrf
+
+            <div class="col-sm-4">
+                <label class="form-label small fw-semibold"># Pedido</label>
+                <input type="number"
+                       name="numero_pedido"
+                       class="form-control form-control-sm @error('numero_pedido') is-invalid @enderror"
+                       placeholder="Ej: 1042"
+                       value="{{ old('numero_pedido') }}"
+                       required>
+                @error('numero_pedido')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+
+            <div class="col-sm-5">
+                <label class="form-label small fw-semibold">Email usado en la compra</label>
+                <input type="email"
+                       name="email"
+                       class="form-control form-control-sm @error('email') is-invalid @enderror"
+                       placeholder="correo@ejemplo.com"
+                       value="{{ old('email') }}"
+                       maxlength="95"
+                       required>
+                @error('email')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+
+            <div class="col-sm-3">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    Vincular pedido
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+@endif
+
 <form method="GET" class="d-flex align-items-center mb-4 gap-2">
     <span class="fw-semibold">Pedidos realizados en</span>
 

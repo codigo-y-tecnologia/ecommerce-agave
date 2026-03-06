@@ -342,6 +342,8 @@ class PaymentController extends Controller
                         Log::info('Pedido finalizado exitosamente');
                     });
                 } else {
+                    throw new Exception('La sesión no está pagada');
+
                     Log::warning('La sesión no está pagada', [
                         'session_id' => $session->id,
                         'payment_status' => $session->payment_status

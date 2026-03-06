@@ -101,4 +101,30 @@ class MisPedidosController extends Controller
             'envio'
         ));
     }
+
+    public function reclamar(Request $request)
+    {
+        $request->validate([
+            'numero_pedido' => 'required|integer',
+            'email'         => 'required|email',
+        ]);
+
+        $pedido = Pedido::where('id_pedido', $request->numero_pedido)
+            ->where('vEmail', $request->email)
+            ->whereNull('id_usuario')   // Solo pedidos sin dueño
+            ->first();
+
+        if (!$pedido) {
+            return back()
+                ->withInput()
+                ->withErrors(['reclamar' => 'No se encontró un pedido con ese número y email, o ya está vinculado a una cuenta.']);
+        }
+
+        $pedido->update([
+            'id_usuario'   => Auth::id(),
+            'vGuest_token' => null,
+        ]);
+
+        return back()->with('reclamar_ok', "El pedido #{$pedido->id_pedido} fue vinculado a tu cuenta.");
+    }
 }

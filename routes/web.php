@@ -275,6 +275,10 @@ Route::middleware(['auth', 'spatie.role:cliente'])->group(function () {
     Route::get('/mi-cuenta/pedidos/{id}', [MisPedidosController::class, 'show'])
         ->name('pedidos.show');
 
+    Route::post('/mi-cuenta/pedidos/reclamar', [MisPedidosController::class, 'reclamar'])
+        ->name('pedidos.reclamar')
+        ->middleware('throttle:consulta-pedido');
+
     Route::post(
         '/mi-cuenta/pedidos/{pedido}/cancelar',
         [PostventaController::class, 'cancelar']
