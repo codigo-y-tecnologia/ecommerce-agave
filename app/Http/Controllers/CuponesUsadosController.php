@@ -19,12 +19,15 @@ class CuponesUsadosController extends Controller
                 'cu.id_usuario',
                 'cu.guest_token',
                 'cu.tFecha_uso',
+                // ✅ FIX: Sin espacios en los alias — antes fallaban silenciosamente
                 'c.vCodigo_cupon as codigo_cupon',
-                'c.eTipo         as tipo_cupon',
-                'c.dDescuento    as descuento_cupon',
-                'u.vNombre   as usuario_nombre',
+                'c.eTipo as tipo_cupon',
+                'c.dDescuento as descuento_cupon',
+                // ✅ FIX: Se usa dDescuento como dDescuento_aplicado (no existe columna separada)
+                'c.dDescuento as dDescuento_aplicado',
+                'u.vNombre as usuario_nombre',
                 'u.vApaterno as usuario_apellido1',
-                'u.vEmail    as usuario_email'
+                'u.vEmail as usuario_email'
             )
             ->orderByDesc('cu.tFecha_uso')
             ->get();
@@ -63,7 +66,6 @@ class CuponesUsadosController extends Controller
                          ->with('success', 'Cupón registrado correctamente.');
     }
 
-    // ID compuesto: "idCupon-idVenta"
     public function show($id)
     {
         [$idCupon, $idVenta] = explode('-', $id);
@@ -74,13 +76,13 @@ class CuponesUsadosController extends Controller
             ->select(
                 'cu.id_cupon', 'cu.id_venta', 'cu.id_usuario',
                 'cu.guest_token', 'cu.tFecha_uso',
-                'c.vCodigo_cupon  as codigo_cupon',
-                'c.eTipo          as tipo_descuento',
-                'c.dDescuento     as valor_descuento',
-                'c.dValido_hasta  as fecha_expiracion',
-                'u.vNombre           as usuario_nombre',
-                'u.vApaterno         as usuario_apellido1',
-                'u.vEmail            as usuario_email'
+                'c.vCodigo_cupon as codigo_cupon',
+                'c.eTipo as tipo_descuento',
+                'c.dDescuento as valor_descuento',
+                'c.dValido_hasta as fecha_expiracion',
+                'u.vNombre as usuario_nombre',
+                'u.vApaterno as usuario_apellido1',
+                'u.vEmail as usuario_email'
             )
             ->where('cu.id_cupon', $idCupon)
             ->where('cu.id_venta',  $idVenta)

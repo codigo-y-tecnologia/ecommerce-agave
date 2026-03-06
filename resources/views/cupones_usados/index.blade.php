@@ -81,7 +81,7 @@
     @endphp
 
     <!-- Gráficas -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; align-items: start;">
         <!-- Cupones más usados -->
         <div class="chart-container" id="cuponesChartContainer">
             <div class="chart-title">
@@ -115,7 +115,7 @@
         </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; align-items: start;">
         <!-- Usos por mes -->
         <div class="chart-container" id="mesesChartContainer">
             <div class="chart-title">
@@ -149,15 +149,152 @@
         </div>
     </div>
 
+    <!-- Estilos tabla estilo referencia -->
+    <style>
+        #tabla-section { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; }
+        #tabla-section .tabla-header { padding: 18px 20px; background: #fff; border-bottom: 2px solid #e2e8f0; }
+        #tabla-section .tabla-header h3 { margin: 0; color: #2d3748; font-size: 1.2rem; font-weight: 700; }
+
+        /* Encabezado oscuro como la imagen de referencia */
+        #cuponesTable thead tr th {
+            background-color: #2d3748 !important;
+            color: #ffffff !important;
+            font-weight: 600;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 12px 10px;
+            border: none !important;
+            white-space: nowrap;
+        }
+
+        /* Filas alternas */
+        #cuponesTable tbody tr:nth-child(odd)  { background-color: #ffffff; }
+        #cuponesTable tbody tr:nth-child(even) { background-color: #f7f8fa; }
+        #cuponesTable tbody tr:hover           { background-color: #eef2ff !important; }
+
+        #cuponesTable tbody td {
+            vertical-align: middle;
+            font-size: 0.88rem;
+            padding: 10px 10px;
+            color: #374151;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        /* Badge ID cupón */
+        .badge-id {
+            background: #667eea;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        /* Badge código cupón */
+        .badge-codigo-cupon {
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        /* Badge tipo — verde como referencia */
+        .badge-tipo {
+            background: #d1fae5;
+            color: #065f46;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+        .badge-tipo.porcentaje {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .badge-tipo.envio_gratis, .badge-tipo.envio {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+
+        /* Monto descuento */
+        .monto-descuento {
+            font-weight: 700;
+            color: #059669;
+            font-size: 0.9rem;
+        }
+        .monto-base {
+            color: #6b7280;
+            font-size: 0.85rem;
+        }
+
+        /* ID Venta badge */
+        .badge-venta {
+            background: #f1f5f9;
+            color: #334155;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.82rem;
+        }
+
+        /* Fix colapso de gráficas */
+        .chart-content { display: block; }
+        .chart-container { transition: min-height 0.2s ease; overflow: hidden; height: auto !important; }
+
+        /* Botones exportar — colores como referencia */
+        .dt-buttons { margin-bottom: 10px; }
+        .dt-button {
+            border-radius: 6px !important;
+            font-size: 0.82rem !important;
+            font-weight: 600 !important;
+            padding: 6px 14px !important;
+            border: none !important;
+            color: #fff !important;
+            margin-right: 5px !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15) !important;
+            transition: opacity 0.2s !important;
+        }
+        .dt-button:hover { opacity: 0.85 !important; color: #fff !important; }
+
+        /* Copiar — azul */
+        .dt-buttons .buttons-copy  { background-color: #3b82f6 !important; }
+        /* Excel — verde */
+        .dt-buttons .buttons-excel { background-color: #22c55e !important; }
+        /* PDF — rojo */
+        .dt-buttons .buttons-pdf   { background-color: #ef4444 !important; }
+        /* Imprimir — gris oscuro */
+        .dt-buttons .buttons-print { background-color: #64748b !important; }
+
+        /* Filtros tfoot */
+        #cuponesTable tfoot th {
+            background: #f8fafc;
+            padding: 6px 8px;
+        }
+        #cuponesTable tfoot .column-filter {
+            width: 100%;
+            padding: 4px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 0.78rem;
+            color: #374151;
+        }
+        #cuponesTable tfoot .column-filter:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+    </style>
+
     <!-- Tabla principal -->
-    <div id="tabla-section" style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <div style="padding: 20px; border-bottom: 2px solid #e2e8f0;">
-            <h3 style="margin: 0; color: #2d3748; font-size: 1.3rem;">
-                <i class="fas fa-table"></i> Registro de Cupones Usados
-            </h3>
+    <div id="tabla-section">
+        <div class="tabla-header">
+            <h3><i class="fas fa-table" style="color:#667eea; margin-right:8px;"></i> Registro de Cupones Usados</h3>
         </div>
 
-        <table id="cuponesTable" class="table table-striped table-hover" style="width:100%">
+        <table id="cuponesTable" class="table table-hover" style="width:100%; margin:0;">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -167,7 +304,7 @@
                     <th>Usuario</th>
                     <th>Email</th>
                     <th>ID Venta</th>
-                    <th>Descuento</th>
+                    <th>Desc. Aplicado</th>
                     <th>Fecha de Uso</th>
                     <th>Acciones</th>
                 </tr>
@@ -188,19 +325,38 @@
             </tfoot>
             <tbody>
                 @foreach($cuponesUsados as $cupon)
+                @php
+                    $tipoClass = match(strtolower($cupon->tipo_cupon ?? '')) {
+                        'porcentaje'   => 'porcentaje',
+                        'envio_gratis' => 'envio_gratis',
+                        'envio'        => 'envio',
+                        default        => ''
+                    };
+                @endphp
                 <tr>
-                    <td><span class="badge-codigo">{{ $cupon->codigo_cupon ?? 'N/A' }}</span></td>
-                    <td>{{ ucfirst($cupon->tipo_cupon ?? 'N/A') }}</td>
-                    <td>${{ number_format($cupon->descuento_cupon ?? 0, 2) }}</td>
-                    <td><strong>{{ $cupon->usuario_nombre ?? 'Invitado' }} {{ $cupon->usuario_apellido1 ?? '' }}</strong></td>
-                    <td><small>{{ $cupon->usuario_email ?? 'N/A' }}</small></td>
-                    <td><strong>#{{ $cupon->id_venta }}</strong></td>
+                    {{-- Columna 1: ID --}}
+                    <td><span class="badge-id">{{ $cupon->id_cupon ?? 'N/A' }}</span></td>
+                    {{-- Columna 2: Código Cupón --}}
+                    <td><span class="badge-codigo-cupon">{{ $cupon->codigo_cupon ?? 'N/A' }}</span></td>
+                    {{-- Columna 3: Tipo --}}
+                    <td><span class="badge-tipo {{ $tipoClass }}">{{ ucfirst($cupon->tipo_cupon ?? 'N/A') }}</span></td>
+                    {{-- Columna 4: Descuento base --}}
+                    <td><span class="monto-base">${{ number_format($cupon->descuento_cupon ?? 0, 2) }}</span></td>
+                    {{-- Columna 5: Usuario --}}
+                    <td><strong style="color:#1e293b;">{{ $cupon->usuario_nombre ?? 'Invitado' }} {{ $cupon->usuario_apellido1 ?? '' }}</strong></td>
+                    {{-- Columna 6: Email --}}
+                    <td><small style="color:#6b7280;">{{ $cupon->usuario_email ?? 'N/A' }}</small></td>
+                    {{-- Columna 7: ID Venta --}}
+                    <td><span class="badge-venta">#{{ $cupon->id_venta }}</span></td>
+                    {{-- Columna 8: Descuento aplicado --}}
                     <td style="text-align: right;">
-                        <span class="text-success fw-bold">${{ number_format($cupon->descuento_cupon ?? 0, 2) }}</span>
+                        <span class="monto-descuento">${{ number_format($cupon->dDescuento_aplicado ?? 0, 2) }}</span>
                     </td>
+                    {{-- Columna 9: Fecha de uso --}}
                     <td data-order="{{ \Carbon\Carbon::parse($cupon->tFecha_uso)->format('Y-m-d H:i:s') }}">
                         <small style="color: #666;">{{ \Carbon\Carbon::parse($cupon->tFecha_uso)->format('d/m/Y H:i') }}</small>
                     </td>
+                    {{-- Columna 10: Acciones --}}
                     <td style="text-align: center;">
                         <div class="d-flex gap-1 justify-content-center">
                             <a href="{{ route('cupones_usados.show', ['id' => $cupon->id_cupon . '-' . $cupon->id_venta]) }}" 
@@ -453,102 +609,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <script>
-$(document).ready(function() {
-    var table = $('#cuponesTable').DataTable({
-        language: {
-            "emptyTable": "No hay datos disponibles en la tabla",
-            "info": "Mostrando _START_ a _END_ de _TOTAL_ registros",
-            "infoEmpty": "Mostrando 0 a 0 de 0 registros",
-            "infoFiltered": "(filtrado de _MAX_ registros totales)",
-            "thousands": ",",
-            "lengthMenu": "Mostrar _MENU_ registros",
-            "loadingRecords": "Cargando...",
-            "processing": "Procesando...",
-            "search": "Buscar:",
-            "zeroRecords": "No se encontraron registros coincidentes",
-            "paginate": {
-                "first": "Primero", "last": "Último",
-                "next": "Siguiente", "previous": "Anterior"
-            },
-            "buttons": { "copy": "Copiar", "excel": "Excel", "pdf": "PDF", "print": "Imprimir" }
-        },
-        pageLength: 25,
-        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
-        responsive: true,
-        order: [[0, 'desc']],
-        dom: 'Bfrtip',
-        buttons: [
-            { extend: 'copy',  text: '<i class="fas fa-copy"></i> Copiar',   className: 'dt-button', exportOptions: { columns: ':not(:last-child)' } },
-            { extend: 'excel', text: '<i class="fas fa-file-excel"></i> Excel', className: 'dt-button', exportOptions: { columns: ':not(:last-child)' } },
-            { extend: 'pdf',   text: '<i class="fas fa-file-pdf"></i> PDF',   className: 'dt-button', orientation: 'landscape', pageSize: 'A4', exportOptions: { columns: ':not(:last-child)' } },
-            { extend: 'print', text: '<i class="fas fa-print"></i> Imprimir', className: 'dt-button', exportOptions: { columns: ':not(:last-child)' } }
-        ],
-        columnDefs: [
-            { targets: [6], className: 'dt-right' },
-            { targets: [8], orderable: false }
-        ]
-    });
-
-    $('#cuponesTable tfoot th').each(function(i) {
-        var column = table.column(i);
-        var input = $(this).find('input, select');
-        input.on('keyup change', function() {
-            if (column.search() !== this.value) {
-                column.search(this.value).draw();
-            }
-        });
-    });
-
-    // Modal de eliminación
-    var formToDelete = null;
-    $(document).on('click', '.btn-eliminar', function() {
-        formToDelete = $(this).closest('form')[0];
-        document.getElementById('confirmationModal').classList.add('show');
-        document.body.style.overflow = 'hidden';
-    });
-
-    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
-        if (formToDelete) formToDelete.submit();
-    });
-
-    document.getElementById('cancelDeleteBtn').addEventListener('click', function() {
-        document.getElementById('confirmationModal').classList.remove('show');
-        document.body.style.overflow = 'auto';
-        formToDelete = null;
-    });
-});
-
-// Toggle gráficas
-function toggleChart(chartType) {
-    const container = document.getElementById(chartType + 'ChartContainer');
-    const button = container.querySelector('.collapse-btn i');
-    if (container.classList.contains('chart-collapsed')) {
-        container.classList.remove('chart-collapsed');
-        button.classList.replace('fa-chevron-up', 'fa-chevron-down');
-        setTimeout(() => { if (window.charts?.[chartType]) window.charts[chartType].resize(); }, 300);
-    } else {
-        container.classList.add('chart-collapsed');
-        button.classList.replace('fa-chevron-down', 'fa-chevron-up');
-    }
-}
-
-// Modales de detalle
-function openDetailModal(type) {
-    const modal = document.getElementById('modal-' + type);
-    if (modal) { modal.classList.add('show'); document.body.style.overflow = 'hidden'; }
-}
-function closeDetailModal(type) {
-    const modal = document.getElementById('modal-' + type);
-    if (modal) { modal.classList.remove('show'); document.body.style.overflow = 'auto'; }
-}
-document.querySelectorAll('.detail-modal').forEach(modal => {
-    modal.addEventListener('click', function(e) {
-        if (e.target === this) { this.classList.remove('show'); document.body.style.overflow = 'auto'; }
-    });
-});
-
-// Colores
-const colorsOriginales = [
+// ✅ FIX: Variable de colores unificada con nombre consistente en español
+const coloresOriginales = [
     'rgba(102, 126, 234, 0.8)', 'rgba(118, 75, 162, 0.8)',
     'rgba(237, 100, 166, 0.8)', 'rgba(255, 154, 158, 0.8)',
     'rgba(250, 208, 196, 0.8)', 'rgba(52, 211, 153, 0.8)',
@@ -568,7 +630,8 @@ window.charts.cupones = new Chart(
     data: {
         labels: cuponesData.map(c => c.codigo),
         datasets: [{ label: 'Usos', data: cuponesData.map(c => c.usos),
-            backgroundColor: coloresOriginales, borderColor: coloresOriginales.map(c => c.replace('0.8','1')),
+            backgroundColor: coloresOriginales,
+            borderColor: coloresOriginales.map(c => c.replace('0.8','1')),
             borderWidth: 2, borderRadius: 8 }]
     },
     options: {
@@ -648,8 +711,111 @@ window.charts.usuarios = new Chart(
     }
 });
 
-// Fix nombre variable (coloresOriginales → colorsOriginales)
-var coloresOriginales = colorsOriginales;
+$(document).ready(function() {
+    var table = $('#cuponesTable').DataTable({
+        language: {
+            "emptyTable": "No hay datos disponibles en la tabla",
+            "info": "Mostrando _START_ a _END_ de _TOTAL_ registros",
+            "infoEmpty": "Mostrando 0 a 0 de 0 registros",
+            "infoFiltered": "(filtrado de _MAX_ registros totales)",
+            "thousands": ",",
+            "lengthMenu": "Mostrar _MENU_ registros",
+            "loadingRecords": "Cargando...",
+            "processing": "Procesando...",
+            "search": "Buscar:",
+            "zeroRecords": "No se encontraron registros coincidentes",
+            "paginate": {
+                "first": "Primero", "last": "Último",
+                "next": "Siguiente", "previous": "Anterior"
+            },
+            "buttons": { "copy": "Copiar", "excel": "Excel", "pdf": "PDF", "print": "Imprimir" }
+        },
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+        responsive: true,
+        order: [[0, 'desc']],
+        dom: 'Bfrtip',
+        buttons: [
+            { extend: 'copy',  text: '<i class="fas fa-copy"></i> Copiar',   className: 'dt-button', exportOptions: { columns: ':not(:last-child)' } },
+            { extend: 'excel', text: '<i class="fas fa-file-excel"></i> Excel', className: 'dt-button', exportOptions: { columns: ':not(:last-child)' } },
+            { extend: 'pdf',   text: '<i class="fas fa-file-pdf"></i> PDF',   className: 'dt-button', orientation: 'landscape', pageSize: 'A4', exportOptions: { columns: ':not(:last-child)' } },
+            { extend: 'print', text: '<i class="fas fa-print"></i> Imprimir', className: 'dt-button', exportOptions: { columns: ':not(:last-child)' } }
+        ],
+        columnDefs: [
+            { targets: [7], className: 'dt-right' },
+            { targets: [9], orderable: false }
+        ]
+    });
+
+    $('#cuponesTable tfoot th').each(function(i) {
+        var column = table.column(i);
+        var input = $(this).find('input, select');
+        input.on('keyup change', function() {
+            if (column.search() !== this.value) {
+                column.search(this.value).draw();
+            }
+        });
+    });
+
+    // Modal de eliminación
+    var formToDelete = null;
+    $(document).on('click', '.btn-eliminar', function() {
+        formToDelete = $(this).closest('form')[0];
+        document.getElementById('confirmationModal').classList.add('show');
+        document.body.style.overflow = 'hidden';
+    });
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        if (formToDelete) formToDelete.submit();
+    });
+
+    document.getElementById('cancelDeleteBtn').addEventListener('click', function() {
+        document.getElementById('confirmationModal').classList.remove('show');
+        document.body.style.overflow = 'auto';
+        formToDelete = null;
+    });
+});
+
+// Toggle gráficas
+function toggleChart(chartType) {
+    const container = document.getElementById(chartType + 'ChartContainer');
+    const content   = document.getElementById(chartType + 'ChartContent');
+    const button    = container.querySelector('.collapse-btn i');
+    const isHidden  = content.style.display === 'none';
+
+    if (isHidden) {
+        // Abrir — mostrar contenido y expandir contenedor
+        content.style.display = 'block';
+        container.style.minHeight = '';
+        container.style.paddingBottom = '';
+        button.className = 'fas fa-chevron-down';
+        setTimeout(() => {
+            const chart = window.charts?.[chartType];
+            if (chart) { chart.resize(); chart.update(); }
+        }, 50);
+    } else {
+        // Cerrar — ocultar contenido y encoger contenedor al mínimo (solo título)
+        content.style.display = 'none';
+        container.style.minHeight = '0';
+        container.style.paddingBottom = '0';
+        button.className = 'fas fa-chevron-up';
+    }
+}
+
+// Modales de detalle
+function openDetailModal(type) {
+    const modal = document.getElementById('modal-' + type);
+    if (modal) { modal.classList.add('show'); document.body.style.overflow = 'hidden'; }
+}
+function closeDetailModal(type) {
+    const modal = document.getElementById('modal-' + type);
+    if (modal) { modal.classList.remove('show'); document.body.style.overflow = 'auto'; }
+}
+document.querySelectorAll('.detail-modal').forEach(modal => {
+    modal.addEventListener('click', function(e) {
+        if (e.target === this) { this.classList.remove('show'); document.body.style.overflow = 'auto'; }
+    });
+});
 </script>
 
 @endsection
