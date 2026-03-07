@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Checkout;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\{Pedido, CheckoutSnapshot};
+use App\Models\{Pedido, CheckoutSnapshot, CuponUso};
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
@@ -51,10 +51,15 @@ class OrderReceivedController extends Controller
         }
 
         if ($pedido->id_usuario && $pedido->vGuest_token) {
-            Pedido::where('vGuest_token', $guestToken)
+
+            Pedido::where('id_usuario', $pedido->id_usuario)
                 ->update([
                     'vGuest_token' => null
                 ]);
+
+            CuponUso::where('id_venta', $pedido->venta->id_venta)->update([
+                'guest_token' => null
+            ]);
         }
 
         return view('checkout.order-received', [

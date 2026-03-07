@@ -457,40 +457,10 @@ class PaymentController extends Controller
             ]
         ]);
 
-        // Recalcular totales (misma lógica)
-        [$subtotal, $totalImpuestos, $total] = (new \App\Http\Controllers\Checkout\CheckoutController)->calcularTotales($carrito);
+        $result = app(CrearPagoDesdeCarritoService::class)
+            ->ejecutar($carrito, session('codigo_cupon'));
 
-        // Cupón
-        $codigoCupon = session('codigo_cupon');
-        $descuento = 0;
-        $cupon = null;
-
-        if ($codigoCupon) {
-            $cupon = Cupon::whereRaw('BINARY vCodigo_cupon = ?', [$codigoCupon])->where('bActivo', 1)
-                ->whereDate('dValido_desde', '<=', now())
-                ->whereDate('dValido_hasta', '>=', now())
-                ->first();
-
-            if ($cupon && $cupon->vCodigo_cupon !== 'ENVIOGRATIS') {
-                $descuento = ($cupon->eTipo === 'porcentaje') ? $total * ($cupon->dDescuento / 100) : $cupon->dDescuento;
-            }
-        }
-
-        // Envío
-        $montoEnvioGratis = 1500;
-        $costoEnvioFijo = 150;
-
-        $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
-
-        if ($cupon && $cupon->vCodigo_cupon === 'ENVIOGRATIS') {
-            $envio = 0;
-        }
-
-        if ($cupon && $cupon->vCodigo_cupon === 'enviogratis') {
-            $envio = 0;
-        }
-
-        $totalFinal = max(0, $total - $descuento + $envio);
+        $totalFinal = $result['totalFinal'];
 
         // Crear orden en PayPal
         $client = new Client();
@@ -537,12 +507,21 @@ class PaymentController extends Controller
 
             DB::transaction(function () use ($carrito, $orderId) {
 
-                // Reservar stock (lock + validación)
-                app(ReservarStockService::class)->ejecutar($carrito);
-
                 // Asociar session_id a TODAS las reservas del carrito
                 StockReserva::where('id_carrito', $carrito->id_carrito)
                     ->whereNull('session_id')
+                    ->update([
+                        'session_id' => $orderId
+                    ]);
+
+                // Asociar session_id a snapshot para validación futura
+                CheckoutSnapshot::where('id_carrito', $carrito->id_carrito)
+                    ->update([
+                        'payment_session' => $orderId
+                    ]);
+
+                // Asociar session_id a TODAS las reservas de cupón del carrito
+                CuponReserva::where('id_carrito', $carrito->id_carrito)
                     ->update([
                         'session_id' => $orderId
                     ]);
@@ -693,10 +672,21 @@ class PaymentController extends Controller
                     'order_id' => $orderId,
                 ]);
 
+                // Obtener snapshot con lock
+                $snapshot = CheckoutSnapshot::where('payment_session', $orderId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$snapshot) {
+                    throw new Exception('Snapshot no encontrado.');
+                }
+
                 // buscamos carrito 
                 if ($carritoId) {
 
-                    $carrito = Carrito::where('id_carrito', $carritoId)->first();
+                    $carrito = Carrito::where('id_carrito', $carritoId)
+                        ->lockForUpdate()
+                        ->first();
 
                     if (!$carrito) {
                         throw new Exception("Carrito no encontrado para finalizar pedido (PayPal capturePaypalOrder).");
@@ -704,12 +694,8 @@ class PaymentController extends Controller
                 } else {
                     Log::warning('No se encontró carrito_id en sesión para captura PayPal.');
 
-                    throw new \Exception('Carrito no encontrado');
+                    throw new Exception('Carrito no encontrado');
                 }
-
-                // Consumir reserva (validación + stock real)
-                app(ConsumirReservaService::class)
-                    ->ejecutar($orderId);
 
                 $this->finalizeOrderFromCart(
                     $userId,
@@ -722,7 +708,8 @@ class PaymentController extends Controller
                     $idDireccion,
                     $idDireccionFact,
                     $notaPedido,
-                    null
+                    $orderId,
+                    $snapshot
                 );
             });
 
@@ -978,8 +965,8 @@ class PaymentController extends Controller
         app(ConsumirCuponService::class)->ejecutar(
             $sessionId,
             $venta->id_venta,
-            $carrito->id_usuario ?? null,
-            $carrito->vGuest_token ?? null
+            $userId,
+            $guestToken
         );
 
         // Limpiar carrito
