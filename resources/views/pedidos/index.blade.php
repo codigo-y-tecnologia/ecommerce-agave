@@ -6,7 +6,7 @@
 
 <h2 class="fw-bold mb-4">Mis compras</h2>
 
-@if(!$allowClaimeOrders)
+{{-- @if(!$allowClaimeOrders) --}}
 {{-- ==============================
      RECLAMAR PEDIDO GUEST
 ================================ --}}
@@ -71,7 +71,7 @@
         </form>
     </div>
 </div>
-@endif
+{{-- @endif --}}
 
 <form method="GET" class="d-flex align-items-center mb-4 gap-2">
     <span class="fw-semibold">Pedidos realizados en</span>

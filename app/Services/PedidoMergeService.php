@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Pedido;
+use App\Models\{Pedido, CuponUso};
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -23,12 +23,21 @@ class PedidoMergeService
                 return;
             }
 
+            $pedidoIds = $pedidos->pluck('id_pedido')->toArray();
+
             foreach ($pedidos as $pedido) {
                 $pedido->update([
                     'id_usuario'   => $userId,
                     'vGuest_token' => null,
                 ]);
             }
+
+            CuponUso::whereIn('id_venta', $pedidoIds)
+                ->whereNull('id_usuario')
+                ->update([
+                    'id_usuario' => $userId,
+                    'guest_token' => null,
+                ]);
 
             Log::info('Pedidos migrados por guest_token', [
                 'user_id' => $userId,
@@ -53,6 +62,8 @@ class PedidoMergeService
                 return;
             }
 
+            $pedidoIds = $pedidos->pluck('id_pedido')->toArray();
+
             foreach ($pedidos as $pedido) {
                 $pedido->update([
                     'id_usuario'   => $userId,
@@ -60,10 +71,17 @@ class PedidoMergeService
                 ]);
             }
 
+            CuponUso::whereIn('id_venta', $pedidoIds)
+                ->whereNull('id_usuario')
+                ->update([
+                    'id_usuario' => $userId,
+                    'guest_token' => null,
+                ]);
+
             Log::info('Pedidos históricos migrados por email', [
                 'user_id' => $userId,
                 'email' => $email,
-                'cantidad' => $pedidos->count(),
+                'cantidad_pedidos' => count($pedidoIds),
             ]);
         });
     }

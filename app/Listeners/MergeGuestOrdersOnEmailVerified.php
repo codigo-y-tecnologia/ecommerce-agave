@@ -23,6 +23,10 @@ class MergeGuestOrdersOnEmailVerified
      */
     public function handle(Verified $event): void
     {
+        Log::info('Evento Verified disparado', [
+            'user_id' => $event->user->id_usuario
+        ]);
+
         $user = $event->user;
 
         // 🔒 Doble validación defensiva

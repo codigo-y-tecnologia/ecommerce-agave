@@ -12,6 +12,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Notifications\VerifyEmailNotification;
 use App\Mail\CuentaCreadaAutomaticamente;
+use Illuminate\Auth\Events\Verified;
 
 class AuthController extends Controller
 {
@@ -184,6 +185,8 @@ class AuthController extends Controller
         }
 
         $user->markEmailAsVerified();
+
+        event(new Verified($user));
 
         return redirect('/login')->with([
             'success' => '¡Cuenta activada!',
