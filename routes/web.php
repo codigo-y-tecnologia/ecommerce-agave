@@ -106,6 +106,9 @@ Route::prefix('variaciones')->name('variaciones.')->group(function () {
     // Ver variaciones de un producto específico
     Route::get('/producto/{id}', [VariacionController::class, 'show'])->name('show');
     
+    // ** NUEVA RUTA: Ver detalle de una variación específica **
+    Route::get('/producto/{producto_id}/variacion/{variacion_id}', [VariacionController::class, 'showVariacion'])->name('show.variacion');
+    
     // Crear nueva variación para un producto
     Route::get('/producto/{producto_id}/crear', [VariacionController::class, 'create'])->name('create');
     Route::post('/producto/{producto_id}', [VariacionController::class, 'store'])->name('store');

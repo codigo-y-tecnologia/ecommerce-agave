@@ -729,24 +729,38 @@ class Producto extends Model
 
     // ============ MÉTODOS DE OFERTA/DESCUENTO ============
 
+    // *** NUEVO: Método mejorado para verificar oferta vigente con fechas ***
     /**
-     * Verificar si la oferta está vigente
+     * Verificar si la oferta está vigente basándose en la fecha ACTUAL
+     * @return bool
      */
-    public function ofertaVigente()
+    public function ofertaVigente(): bool
     {
-        if (!$this->bTiene_oferta || !$this->dPrecio_oferta) {
+        // Si no tiene oferta activada o no tiene precio de oferta, no es vigente
+        if (!$this->bTiene_oferta || $this->dPrecio_oferta === null) {
             return false;
         }
-        
+
         $fechaActual = now()->toDateString();
-        
+
+        // Caso 1: Tiene ambas fechas definidas
         if ($this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
             return $fechaActual >= $this->dFecha_inicio_oferta && 
                    $fechaActual <= $this->dFecha_fin_oferta;
         }
-        
-        // Si no hay fechas definidas, solo verifica si tiene oferta
-        return $this->bTiene_oferta;
+
+        // Caso 2: Solo tiene fecha de inicio (vigente desde esa fecha en adelante)
+        if ($this->dFecha_inicio_oferta && !$this->dFecha_fin_oferta) {
+            return $fechaActual >= $this->dFecha_inicio_oferta;
+        }
+
+        // Caso 3: Solo tiene fecha de fin (vigente hasta esa fecha)
+        if (!$this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
+            return $fechaActual <= $this->dFecha_fin_oferta;
+        }
+
+        // Caso 4: Tiene oferta activada pero sin fechas (se considera siempre vigente)
+        return true;
     }
 
     /**
@@ -762,10 +776,7 @@ class Producto extends Model
      */
     public function getPrecioOfertaVigenteAttribute()
     {
-        if ($this->ofertaVigente()) {
-            return $this->dPrecio_oferta;
-        }
-        return $this->dPrecio_venta;
+        return $this->ofertaVigente() ? $this->dPrecio_oferta : $this->dPrecio_venta;
     }
 
     /**
@@ -867,9 +878,17 @@ class Producto extends Model
     }
 
     /**
-     * Sobrescribe el accesor de stock para considerar variaciones
+     * *** CORREGIDO: Ahora devuelve el stock real del producto padre, no la suma de variaciones ***
      */
     public function getIStockAttribute()
+    {
+        return $this->attributes['iStock'];
+    }
+
+    /**
+     *** NUEVO: Método para obtener el stock total incluyendo variaciones (cuando sea necesario) ***
+     */
+    public function getStockTotalAttribute()
     {
         if ($this->tieneVariaciones()) {
             return $this->variacionesActivas()->sum('iStock');

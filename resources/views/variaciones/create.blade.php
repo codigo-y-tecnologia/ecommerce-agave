@@ -19,14 +19,15 @@
         </div>
     </div>
 
-    <form action="{{ route('variaciones.store', $producto->id_producto) }}" method="POST" enctype="multipart/form-data" id="variacionForm" autocomplete="off">
+    <form action="{{ route('variaciones.store', $producto->id_producto) }}" method="POST" enctype="multipart/form-data" id="variacionForm">
         @csrf
         
         <div class="row">
             <div class="col-md-8">
+                <!-- INFORMACIÓN BÁSICA DE LA VARIACIÓN -->
                 <div class="card mb-4">
                     <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="fas fa-cubes me-2"></i>Información de la Variación</h5>
+                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información Básica de la Variación</h5>
                     </div>
                     <div class="card-body">
                         <div class="row">
@@ -37,167 +38,55 @@
                                     </label>
                                     <input type="text" name="vSKU" id="vSKU" 
                                            class="form-control @error('vSKU') is-invalid @enderror"
-                                           value="{{ old('vSKU') }}" required
-                                           maxlength="50"
+                                           value="{{ old('vSKU') }}" 
+                                           maxlength="15" 
+                                           required
                                            oninput="validarSKU(this)"
-                                           placeholder="Ej: MEZ-750ML-REP-01"
-                                           autocomplete="new-sku">
+                                           pattern="[A-Za-z0-9]+"
+                                           title="Solo letras y números (máximo 15 caracteres)"
+                                           autocomplete="off">
                                     @error('vSKU')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
-                                    <small class="form-text text-muted">Máximo 50 caracteres</small>
+                                    <small class="form-text text-muted">Ej: AGAVE001, MEZCAL2024 (15 caracteres máximo, solo letras y números)</small>
                                 </div>
                             </div>
                             
-                            <div class="col-md-6">
+                            <!-- ELIMINADO: Campo Nombre de la variación -->
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
                                 <div class="form-group mb-3">
                                     <label for="dPrecio" class="form-label fw-bold">
-                                        Precio <span class="text-danger">*</span>
+                                        Precio de venta <span class="text-danger">*</span>
                                     </label>
                                     <div class="input-group">
                                         <span class="input-group-text">$</span>
-                                        <input type="text" name="dPrecio" id="dPrecio" 
+                                        <input type="text" 
+                                               name="dPrecio" 
+                                               id="dPrecio" 
                                                class="form-control @error('dPrecio') is-invalid @enderror"
                                                value="{{ old('dPrecio') }}" 
                                                required 
-                                               oninput="validarPrecio(this)"
+                                               oninput="validarPrecio(this); actualizarPrecioFinal();"
                                                placeholder="0.00"
-                                               title="Máximo: 9,999,999.99"
+                                               title="Máximo: 9,999,999.99 (7 dígitos enteros, 2 decimales)"
                                                autocomplete="off">
+                                        @error('dPrecio')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
                                     </div>
-                                    @error('dPrecio')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
                                     <small class="form-text text-muted">
                                         Máximo: 9,999,999.99 (7 dígitos enteros)
                                     </small>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- SECCIÓN: OFERTA ESPECIAL -->
-                        <div class="card mb-4 border">
-                            <div class="card-header bg-danger text-white">
-                                <h5 class="mb-0"><i class="fas fa-percentage me-2"></i>Oferta Especial (Opcional)</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    Configura una oferta temporal con precio especial y fechas específicas.
-                                </div>
-                                
-                                <div class="form-group mb-3">
-                                    <div class="form-check form-switch">
-                                        <input type="checkbox" name="bTiene_oferta" id="bTiene_oferta" 
-                                               class="form-check-input"
-                                               onchange="toggleOfertaForm()"
-                                               value="1"
-                                               {{ old('bTiene_oferta') == '1' ? 'checked' : '' }}
-                                               autocomplete="off">
-                                        <label for="bTiene_oferta" class="form-check-label fw-bold">
-                                            Activar oferta especial
-                                        </label>
-                                    </div>
-                                </div>
-                                
-                                <div id="oferta-form" style="display: {{ old('bTiene_oferta') == '1' ? 'block' : 'none' }};">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group mb-3">
-                                                <label for="dPrecio_oferta" class="form-label fw-bold">
-                                                    Precio de oferta <span class="text-danger">*</span>
-                                                </label>
-                                                <div class="input-group">
-                                                    <span class="input-group-text">$</span>
-                                                    <input type="text" 
-                                                           name="dPrecio_oferta" 
-                                                           id="dPrecio_oferta" 
-                                                           class="form-control @error('dPrecio_oferta') is-invalid @enderror"
-                                                           value="{{ old('dPrecio_oferta') }}" 
-                                                           oninput="validarPrecioOferta(this)"
-                                                           placeholder="0.00"
-                                                           title="Precio de oferta especial (debe ser menor que el precio de venta)"
-                                                           autocomplete="off">
-                                                    @error('dPrecio_oferta')
-                                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                                    @enderror
-                                                </div>
-                                                <small class="form-text text-muted">
-                                                    Precio especial durante el periodo de oferta (debe ser menor que el precio de venta)
-                                                </small>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="col-md-6">
-                                            <div class="form-group mb-3">
-                                                <label for="vMotivo_oferta" class="form-label fw-bold">
-                                                    Motivo de la oferta
-                                                </label>
-                                                <input type="text" 
-                                                       name="vMotivo_oferta" 
-                                                       id="vMotivo_oferta" 
-                                                       class="form-control @error('vMotivo_oferta') is-invalid @enderror"
-                                                       value="{{ old('vMotivo_oferta') }}" 
-                                                       maxlength="255"
-                                                       placeholder="Ej: Temporada navideña, Liquidación, etc."
-                                                       autocomplete="off">
-                                                @error('vMotivo_oferta')
-                                                    <div class="invalid-feedback">{{ $message }}</div>
-                                                @enderror
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group mb-3">
-                                                <label for="dFecha_inicio_oferta" class="form-label fw-bold">
-                                                    Fecha de inicio <span class="text-danger">*</span>
-                                                </label>
-                                                <input type="date" 
-                                                       name="dFecha_inicio_oferta" 
-                                                       id="dFecha_inicio_oferta" 
-                                                       class="form-control @error('dFecha_inicio_oferta') is-invalid @enderror"
-                                                       value="{{ old('dFecha_inicio_oferta') }}"
-                                                       autocomplete="off">
-                                                @error('dFecha_inicio_oferta')
-                                                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                                                @enderror
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="col-md-6">
-                                            <div class="form-group mb-3">
-                                                <label for="dFecha_fin_oferta" class="form-label fw-bold">
-                                                    Fecha de fin <span class="text-danger">*</span>
-                                                </label>
-                                                <input type="date" 
-                                                       name="dFecha_fin_oferta" 
-                                                       id="dFecha_fin_oferta" 
-                                                       class="form-control @error('dFecha_fin_oferta') is-invalid @enderror"
-                                                       value="{{ old('dFecha_fin_oferta') }}"
-                                                       autocomplete="off">
-                                                @error('dFecha_fin_oferta')
-                                                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                                                @enderror
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="alert alert-warning">
-                                        <i class="fas fa-exclamation-triangle me-2"></i>
-                                        La oferta solo estará activa durante el periodo especificado.
-                                        Después de la fecha de fin, el producto volverá a su precio normal.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
+                            
+                            <div class="col-md-4">
                                 <div class="form-group mb-3">
                                     <label for="iStock" class="form-label fw-bold">
-                                        Stock <span class="text-danger">*</span>
+                                        Stock disponible <span class="text-danger">*</span>
                                     </label>
                                     <input type="text" name="iStock" id="iStock" 
                                            class="form-control @error('iStock') is-invalid @enderror"
@@ -213,23 +102,263 @@
                                     @error('iStock')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
-                                    <small class="form-text text-muted">Máximo 6 dígitos (0-999999)</small>
+                                    <small class="form-text text-muted">Máximo 999,999 unidades</small>
                                 </div>
                             </div>
                             
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <div class="form-check mt-4">
+                                        <input type="checkbox" name="bActivo" id="bActivo" 
+                                               class="form-check-input" value="1"
+                                               {{ old('bActivo', true) ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="bActivo">
+                                            Variación activa
+                                        </label>
+                                    </div>
+                                    <small class="form-text text-muted">
+                                        Si está desactivada, no estará disponible para venta
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CAMPOS DE OFERTA -->
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="fas fa-percentage me-1"></i>Oferta Especial
+                                    </label>
+                                    <div class="form-check form-switch">
+                                        <input type="checkbox" name="bTiene_oferta" id="bTiene_oferta" 
+                                               class="form-check-input" value="1"
+                                               {{ old('bTiene_oferta') ? 'checked' : '' }}
+                                               onchange="toggleOfertaFields()">
+                                        <label class="form-check-label" for="bTiene_oferta">
+                                            Activar Oferta para esta variación
+                                        </label>
+                                    </div>
+                                    <small class="form-text text-muted">
+                                        Permite establecer un precio de oferta por tiempo limitado
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CAMPOS DE OFERTA (OCULTOS INICIALMENTE) -->
+                        <div id="ofertaFields" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group mb-3">
+                                        <label for="dPrecio_oferta" class="form-label fw-bold">
+                                            Precio de Oferta <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">$</span>
+                                            <input type="text" 
+                                                   name="dPrecio_oferta" 
+                                                   id="dPrecio_oferta" 
+                                                   class="form-control @error('dPrecio_oferta') is-invalid @enderror"
+                                                   value="{{ old('dPrecio_oferta') }}" 
+                                                   oninput="validarPrecio(this); validarPrecioOfertaInstantaneo(this); actualizarPrecioFinal();"
+                                                   onblur="validarPrecioOferta()"
+                                                   placeholder="0.00"
+                                                   autocomplete="off">
+                                        </div>
+                                        <div id="error-precio-oferta" class="invalid-feedback" style="display: none;"></div>
+                                        @error('dPrecio_oferta')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                        <small class="form-text text-muted">Debe ser menor al precio de venta</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-group mb-3">
+                                        <label for="dFecha_inicio_oferta" class="form-label fw-bold">
+                                            Fecha inicio <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="date" 
+                                               name="dFecha_inicio_oferta" 
+                                               id="dFecha_inicio_oferta" 
+                                               class="form-control @error('dFecha_inicio_oferta') is-invalid @enderror"
+                                               value="{{ old('dFecha_inicio_oferta') }}"
+                                               onchange="validarFechasOferta()"
+                                               autocomplete="off">
+                                        @error('dFecha_inicio_oferta')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-group mb-3">
+                                        <label for="dFecha_fin_oferta" class="form-label fw-bold">
+                                            Fecha fin <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="date" 
+                                               name="dFecha_fin_oferta" 
+                                               id="dFecha_fin_oferta" 
+                                               class="form-control @error('dFecha_fin_oferta') is-invalid @enderror"
+                                               value="{{ old('dFecha_fin_oferta') }}"
+                                               onchange="validarFechasOferta()"
+                                               autocomplete="off">
+                                        <div id="error-fechas-oferta" class="invalid-feedback" style="display: none;"></div>
+                                        @error('dFecha_fin_oferta')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group mb-3">
+                                        <label for="vMotivo_oferta" class="form-label fw-bold">
+                                            Motivo de la oferta
+                                        </label>
+                                        <input type="text" 
+                                               name="vMotivo_oferta" 
+                                               id="vMotivo_oferta" 
+                                               class="form-control @error('vMotivo_oferta') is-invalid @enderror"
+                                               value="{{ old('vMotivo_oferta') }}"
+                                               maxlength="255"
+                                               placeholder="Ej: Liquidación de temporada, Black Friday, etc."
+                                               autocomplete="off">
+                                        @error('vMotivo_oferta')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CAMPOS PARA DIMENSIONES Y PESO -->
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group mb-3">
+                                    <label for="dPeso" class="form-label fw-bold">
+                                        <i class="fas fa-weight-hanging me-1"></i>Peso (kg)
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="text" 
+                                               name="dPeso" 
+                                               id="dPeso" 
+                                               class="form-control @error('dPeso') is-invalid @enderror"
+                                               value="{{ old('dPeso') }}"
+                                               oninput="validarPeso(this)"
+                                               onblur="formatearPeso(this)"
+                                               onkeydown="permitirBorrado(event)"
+                                               placeholder="0.000"
+                                               title="Máximo: 999.999 kg (máximo 3 dígitos enteros, 3 decimales)"
+                                               autocomplete="off">
+                                        <span class="input-group-text">kg</span>
+                                    </div>
+                                    @error('dPeso')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <small class="form-text text-muted">Máximo: 999.999 kg (3 dígitos enteros, 3 decimales)</small>
+                                    <div id="error-dPeso" class="invalid-feedback d-block" style="display: none;"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <div class="form-group mb-3">
+                                    <label for="dLargo_cm" class="form-label fw-bold">
+                                        <i class="fas fa-ruler-vertical me-1"></i>Largo (cm)
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="text" 
+                                               name="dLargo_cm" 
+                                               id="dLargo_cm" 
+                                               class="form-control @error('dLargo_cm') is-invalid @enderror"
+                                               value="{{ old('dLargo_cm') }}"
+                                               oninput="validarDimensionCm(this)"
+                                               onblur="formatearDimensionCm(this)"
+                                               onkeydown="permitirBorrado(event)"
+                                               placeholder="0.00"
+                                               title="Máximo: 999.99 cm (máximo 3 dígitos enteros, 2 decimales)"
+                                               autocomplete="off">
+                                        <span class="input-group-text">cm</span>
+                                    </div>
+                                    @error('dLargo_cm')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <small class="form-text text-muted">Máximo: 999.99 cm (3 dígitos enteros, 2 decimales)</small>
+                                    <div id="error-dLargo_cm" class="invalid-feedback d-block" style="display: none;"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <div class="form-group mb-3">
+                                    <label for="dAncho_cm" class="form-label fw-bold">
+                                        <i class="fas fa-ruler-horizontal me-1"></i>Ancho (cm)
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="text" 
+                                               name="dAncho_cm" 
+                                               id="dAncho_cm" 
+                                               class="form-control @error('dAncho_cm') is-invalid @enderror"
+                                               value="{{ old('dAncho_cm') }}"
+                                               oninput="validarDimensionCm(this)"
+                                               onblur="formatearDimensionCm(this)"
+                                               onkeydown="permitirBorrado(event)"
+                                               placeholder="0.00"
+                                               title="Máximo: 999.99 cm (máximo 3 dígitos enteros, 2 decimales)"
+                                               autocomplete="off">
+                                        <span class="input-group-text">cm</span>
+                                    </div>
+                                    @error('dAncho_cm')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <small class="form-text text-muted">Máximo: 999.99 cm (3 dígitos enteros, 2 decimales)</small>
+                                    <div id="error-dAncho_cm" class="invalid-feedback d-block" style="display: none;"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <div class="form-group mb-3">
+                                    <label for="dAlto_cm" class="form-label fw-bold">
+                                        <i class="fas fa-arrows-alt-v me-1"></i>Alto (cm)
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="text" 
+                                               name="dAlto_cm" 
+                                               id="dAlto_cm" 
+                                               class="form-control @error('dAlto_cm') is-invalid @enderror"
+                                               value="{{ old('dAlto_cm') }}"
+                                               oninput="validarDimensionCm(this)"
+                                               onblur="formatearDimensionCm(this)"
+                                               onkeydown="permitirBorrado(event)"
+                                               placeholder="0.00"
+                                               title="Máximo: 999.99 cm (máximo 3 dígitos enteros, 2 decimales)"
+                                               autocomplete="off">
+                                        <span class="input-group-text">cm</span>
+                                    </div>
+                                    @error('dAlto_cm')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <small class="form-text text-muted">Máximo: 999.99 cm (3 dígitos enteros, 2 decimales)</small>
+                                    <div id="error-dAlto_cm" class="invalid-feedback d-block" style="display: none;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CLASE DE ENVÍO -->
+                        <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label for="vClase_envio" class="form-label fw-bold">
-                                        Clase de Envío
+                                        <i class="fas fa-shipping-fast me-1"></i>Clase de envío
                                     </label>
                                     <select name="vClase_envio" id="vClase_envio" 
-                                            class="form-control @error('vClase_envio') is-invalid @enderror"
-                                            autocomplete="off">
-                                        <option value="">Igual que el producto padre</option>
-                                        <option value="Estandar" {{ old('vClase_envio') == 'Estandar' ? 'selected' : '' }}>Estándar</option>
-                                        <option value="Fragil" {{ old('vClase_envio') == 'Fragil' ? 'selected' : '' }}>Frágil</option>
-                                        <option value="Pesado" {{ old('vClase_envio') == 'Pesado' ? 'selected' : '' }}>Pesado</option>
-                                        <option value="Otro" {{ old('vClase_envio') == 'Otro' ? 'selected' : '' }}>Otro</option>
+                                            class="form-select @error('vClase_envio') is-invalid @enderror">
+                                        <option value="">Seleccionar clase de envío</option>
+                                        <option value="estandar" {{ old('vClase_envio') == 'estandar' ? 'selected' : '' }}>Estándar</option>
+                                        <option value="express" {{ old('vClase_envio') == 'express' ? 'selected' : '' }}>Express</option>
+                                        <option value="fragil" {{ old('vClase_envio') == 'fragil' ? 'selected' : '' }}>Frágil</option>
+                                        <option value="grandes_dimensiones" {{ old('vClase_envio') == 'grandes_dimensiones' ? 'selected' : '' }}>Grandes dimensiones</option>
                                     </select>
                                     @error('vClase_envio')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -245,181 +374,16 @@
                             </div>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label for="dPeso" class="form-label fw-bold">
-                                        Peso (kg)
-                                    </label>
-                                    <div class="input-group">
-                                        <input type="text" 
-                                               name="dPeso" 
-                                               id="dPeso" 
-                                               class="form-control @error('dPeso') is-invalid @enderror"
-                                               value="{{ old('dPeso') }}" 
-                                               oninput="validarPeso(this)"
-                                               placeholder="0.000"
-                                               autocomplete="off">
-                                        <span class="input-group-text">kg</span>
-                                    </div>
-                                    @error('dPeso')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
-                                    <small class="form-text text-muted">Ej: 1.250 (máximo 1000 kg)</small>
-                                    <div id="error-dPeso" class="invalid-feedback d-block"></div>
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <div class="form-check form-switch mt-4">
-                                        <input type="checkbox" name="bActivo" id="bActivo" 
-                                               class="form-check-input" value="1" 
-                                               {{ old('bActivo', true) ? 'checked' : '' }}
-                                               autocomplete="off">
-                                        <label for="bActivo" class="form-check-label fw-bold">
-                                            Variación activa
-                                        </label>
-                                    </div>
-                                    <small class="form-text text-muted">
-                                        Si está desactivada, no estará disponible para venta
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- SECCIÓN: DIMENSIONES -->
+                        <!-- DESCRIPCIÓN -->
                         <div class="row">
                             <div class="col-md-12">
-                                <div class="border rounded p-3 mb-4">
-                                    <h6 class="fw-bold mb-3"><i class="fas fa-ruler-combined me-2"></i>Dimensiones del Producto</h6>
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <div class="form-group mb-3">
-                                                <label for="dLargo_cm" class="form-label fw-bold">
-                                                    Largo (cm)
-                                                </label>
-                                                <div class="input-group">
-                                                    <input type="text" 
-                                                           name="dLargo_cm" 
-                                                           id="dLargo_cm" 
-                                                           class="form-control @error('dLargo_cm') is-invalid @enderror"
-                                                           value="{{ old('dLargo_cm') }}" 
-                                                           oninput="validarDimension(this)"
-                                                           placeholder="0.00"
-                                                           autocomplete="off">
-                                                    <span class="input-group-text">cm</span>
-                                                </div>
-                                                @error('dLargo_cm')
-                                                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                                                @enderror
-                                                <small class="form-text text-muted">Ej: 30.50 cm (máximo 500 cm)</small>
-                                                <div id="error-dLargo_cm" class="invalid-feedback d-block"></div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="col-md-4">
-                                            <div class="form-group mb-3">
-                                                <label for="dAncho_cm" class="form-label fw-bold">
-                                                    Ancho (cm)
-                                                </label>
-                                                <div class="input-group">
-                                                    <input type="text" 
-                                                           name="dAncho_cm" 
-                                                           id="dAncho_cm" 
-                                                           class="form-control @error('dAncho_cm') is-invalid @enderror"
-                                                           value="{{ old('dAncho_cm') }}" 
-                                                           oninput="validarDimension(this)"
-                                                           placeholder="0.00"
-                                                           autocomplete="off">
-                                                    <span class="input-group-text">cm</span>
-                                                </div>
-                                                @error('dAncho_cm')
-                                                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                                                @enderror
-                                                <small class="form-text text-muted">Ej: 15.20 cm (máximo 500 cm)</small>
-                                                <div id="error-dAncho_cm" class="invalid-feedback d-block"></div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="col-md-4">
-                                            <div class="form-group mb-3">
-                                                <label for="dAlto_cm" class="form-label fw-bold">
-                                                    Alto (cm)
-                                                </label>
-                                                <div class="input-group">
-                                                    <input type="text" 
-                                                           name="dAlto_cm" 
-                                                           id="dAlto_cm" 
-                                                           class="form-control @error('dAlto_cm') is-invalid @enderror"
-                                                           value="{{ old('dAlto_cm') }}" 
-                                                           oninput="validarDimension(this)"
-                                                           placeholder="0.00"
-                                                           autocomplete="off">
-                                                    <span class="input-group-text">cm</span>
-                                                </div>
-                                                @error('dAlto_cm')
-                                                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                                                @enderror
-                                                <small class="form-text text-muted">Ej: 45.00 cm (máximo 500 cm)</small>
-                                                <div id="error-dAlto_cm" class="invalid-feedback d-block"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="alert alert-info small mt-2">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        <strong>Nota:</strong> Las dimensiones se utilizan para calcular el costo de envío.
-                                        <div id="volumen-info" class="mt-1"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- SECCIÓN DE IMAGEN -->
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label class="form-label fw-bold">
-                                        Imagen de la Variación
-                                    </label>
-                                    
-                                    <!-- Input de archivo oculto -->
-                                    <input type="file" name="imagen" id="imagen" 
-                                        class="form-control @error('imagen') is-invalid @enderror d-none"
-                                        accept=".jpg,.jpeg,.png,.gif,.webp,.bmp,.svg"
-                                        onchange="handleImageSelection(event)"
-                                        autocomplete="off">
-                                    
-                                    <!-- Botón personalizado para seleccionar imagen -->
-                                    <button type="button" class="btn btn-outline-primary mb-2" onclick="abrirSelectorImagen()">
-                                        <i class="fas fa-folder-open me-1"></i> Seleccionar Imagen
-                                    </button>
-                                    
-                                    @error('imagen')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
-                                    <small class="form-text text-muted">
-                                        Imagen específica para esta variación (opcional, máximo 5MB)
-                                    </small>
-                                    
-                                    <!-- Contenedor para mostrar la imagen seleccionada -->
-                                    <div id="selected-image-container" class="mt-3">
-                                        <div class="text-muted small">
-                                            <i class="fas fa-image me-1"></i> No hay imagen seleccionada
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label for="tDescripcion" class="form-label fw-bold">
-                                        Descripción (Opcional)
+                                        Descripción de la variación
                                     </label>
                                     <textarea name="tDescripcion" id="tDescripcion" 
-                                              class="form-control @error('tDescripcion') is-invalid @enderror"
-                                              rows="3" placeholder="Descripción específica de esta variación"
-                                              autocomplete="off">{{ old('tDescripcion') }}</textarea>
+                                              class="form-control @error('tDescripcion') is-invalid @enderror" 
+                                              rows="3" placeholder="Descripción específica de esta variación (opcional)">{{ old('tDescripcion') }}</textarea>
                                     @error('tDescripcion')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -428,9 +392,94 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- SECCIÓN DE IMPUESTO -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-file-invoice-dollar me-2"></i>Impuesto para la Variación</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="form-group mb-3">
+                                    <label for="id_impuesto" class="form-label fw-bold">
+                                        Impuesto Aplicable
+                                    </label>
+                                    <select name="id_impuesto" id="id_impuesto" 
+                                            class="form-select @error('id_impuesto') is-invalid @enderror"
+                                            onchange="actualizarPrecioFinal()">
+                                        <option value="">-- Sin impuesto (heredar del producto) --</option>
+                                        @if(isset($impuestos) && $impuestos->count() > 0)
+                                            @foreach($impuestos as $impuesto)
+                                                <option value="{{ $impuesto->id_impuesto }}" 
+                                                        data-porcentaje="{{ $impuesto->dPorcentaje }}"
+                                                        data-tipo="{{ $impuesto->eTipo }}"
+                                                        {{ old('id_impuesto') == $impuesto->id_impuesto ? 'selected' : '' }}>
+                                                    {{ $impuesto->vNombre }} ({{ $impuesto->eTipo }} - {{ number_format($impuesto->dPorcentaje, 2) }}%)
+                                                </option>
+                                            @endforeach
+                                        @endif
+                                    </select>
+                                    @error('id_impuesto')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <small class="form-text text-muted mt-2">
+                                        Selecciona un impuesto específico para esta variación. Si no seleccionas, se usará el impuesto del producto.
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="bg-light p-3 rounded text-center">
+                                    <small class="text-muted d-block">Precio con impuesto</small>
+                                    <h5 class="fw-bold mb-0" id="precio-final-display">$0.00</h5>
+                                    <small class="text-muted" id="detalle-impuesto-display"></small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN DE PRECIO FINAL CON IMPUESTO -->
+                <div class="card mb-4 bg-info text-white">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Precio Final con Impuesto</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card bg-white text-dark">
+                                    <div class="card-body text-center">
+                                        <h6 class="text-muted">Precio base (con oferta aplicada)</h6>
+                                        <h3 class="fw-bold" id="precio-base-display">$0.00</h3>
+                                        <small class="text-muted" id="precio-original-display" style="display: none;"></small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-white text-dark">
+                                    <div class="card-body text-center">
+                                        <h6 class="text-muted">Impuesto</h6>
+                                        <h3 class="fw-bold" id="total-impuestos-display">$0.00</h3>
+                                        <small id="porcentaje-impuestos-display">0%</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-success text-white">
+                                    <div class="card-body text-center">
+                                        <h6>Precio final (con impuesto)</h6>
+                                        <h2 class="fw-bold" id="precio-final-total-display">$0.00</h2>
+                                        <small>Este es el precio que verá el cliente</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="col-md-4">
+                <!-- ATRIBUTOS -->
                 <div class="card mb-4">
                     <div class="card-header bg-success text-white">
                         <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Seleccionar Atributos</h5>
@@ -483,14 +532,120 @@
                         @endif
                     </div>
                 </div>
+
+                <!-- MULTIMEDIA DE LA VARIACIÓN -->
+                <div class="card mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="fas fa-images me-2"></i>Multimedia de la Variación</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- IMAGEN PRINCIPAL DE LA VARIACIÓN -->
+                        <div class="form-group mb-3">
+                            <label for="imagen_principal" class="form-label fw-bold">
+                                <i class="fas fa-star text-warning me-1"></i>Imagen Principal
+                            </label>
+                            <input type="file" name="imagen_principal" id="imagen_principal" 
+                                   class="form-control @error('imagen_principal') is-invalid @enderror" 
+                                   accept="image/jpeg,image/jpg,image/png"
+                                   onchange="previewImagenPrincipal(this)">
+                            @error('imagen_principal')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Imagen específica para esta variación. Formatos: JPG, JPEG, PNG. Máximo 5MB.
+                            </small>
+                            
+                            <!-- Preview de imagen principal -->
+                            <div id="preview_principal_container" class="mt-2" style="display: none;">
+                                <div class="border rounded p-2 text-center bg-light">
+                                    <img id="preview_principal_img" src="#" 
+                                         class="img-thumbnail" 
+                                         style="max-width: 150px; max-height: 150px; object-fit: contain;"
+                                         alt="Preview imagen principal">
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarImagenPrincipal()">
+                                            <i class="fas fa-times me-1"></i>Quitar imagen
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- GIF DE LA VARIACIÓN -->
+                        <div class="form-group mb-3">
+                            <label for="gif" class="form-label fw-bold">
+                                <i class="fas fa-file-image text-success me-1"></i>GIF Animado (Opcional)
+                            </label>
+                            <input type="file" name="gif" id="gif" 
+                                   class="form-control @error('gif') is-invalid @enderror" 
+                                   accept="image/gif"
+                                   onchange="previewGif(this)">
+                            @error('gif')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Formatos: GIF. Máximo 10MB. Animación de la variación.
+                            </small>
+                            
+                            <!-- Preview de GIF -->
+                            <div id="preview_gif_container" class="mt-2" style="display: none;">
+                                <div class="border rounded p-2 text-center bg-light">
+                                    <img id="preview_gif" src="#" 
+                                         class="img-thumbnail" 
+                                         style="max-width: 150px; max-height: 150px; object-fit: contain;"
+                                         alt="Preview GIF">
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarGif()">
+                                            <i class="fas fa-times me-1"></i>Quitar GIF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- IMÁGENES ADICIONALES DE LA VARIACIÓN -->
+                        <div class="form-group mb-3">
+                            <label for="imagenes_adicionales" class="form-label fw-bold">
+                                <i class="fas fa-images me-1"></i>Imágenes Adicionales (Máximo 7)
+                            </label>
+                            <input type="file" name="imagenes_adicionales[]" id="imagenes_adicionales" 
+                                   class="form-control @error('imagenes_adicionales') is-invalid @enderror" 
+                                   multiple accept="image/jpeg,image/jpg,image/png,image/webp"
+                                   onchange="handleImageSelection(event)">
+                            @error('imagenes_adicionales')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">
+                                Formatos: JPG, JPEG, PNG, WEBP. Máximo 5MB por imagen.
+                                Puedes seleccionar hasta 7 imágenes adicionales.
+                            </small>
+                            <div class="mt-2">
+                                <span class="badge bg-info" id="selected-images-count">0 archivos</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Galería de imágenes adicionales seleccionadas -->
+                        <div class="mt-3">
+                            <h6 class="fw-bold mb-2"><i class="fas fa-images me-2"></i>Imágenes adicionales seleccionadas:</h6>
+                            <div id="selected-images-container" class="row g-2"></div>
+                            <div class="alert alert-warning py-2" id="no-imagenes-msg">
+                                <i class="fas fa-info-circle me-1"></i>
+                                <small>No hay imágenes adicionales seleccionadas</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="d-flex gap-2 mb-5">
-            <button type="submit" class="btn btn-success btn-lg">
-                <i class="fas fa-save me-2"></i> Crear Variación
+        <!-- BOTONES DE ACCIÓN -->
+        <div class="d-flex gap-2 mb-4">
+            <button type="submit" class="btn btn-success btn-lg px-4" id="btnSubmit">
+                <i class="fas fa-save me-2"></i> Guardar Variación
             </button>
-            <a href="{{ route('variaciones.show', $producto->id_producto) }}" class="btn btn-secondary btn-lg">
+            <a href="{{ route('variaciones.show', $producto->id_producto) }}" class="btn btn-secondary btn-lg px-4">
                 <i class="fas fa-times me-2"></i> Cancelar
             </a>
         </div>
@@ -498,29 +653,147 @@
 </div>
 
 @push('styles')
-<!-- SweetAlert2 CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<style>
+.form-check-input:checked + .form-check-label {
+    font-weight: bold;
+    color: #198754;
+}
+
+.card {
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+#selected-images-container .card:hover,
+#preview_principal_container .card:hover,
+#preview_gif_container .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+#selected-images-container .btn-danger,
+#preview_principal_container .btn-danger,
+#preview_gif_container .btn-danger {
+    transition: all 0.3s ease;
+}
+
+#selected-images-container .btn-danger:hover,
+#preview_principal_container .btn-danger:hover,
+#preview_gif_container .btn-danger:hover {
+    transform: scale(1.1);
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
+.form-control:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.form-control::placeholder {
+    color: #6c757d;
+    opacity: 0.7;
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+    color: #0c5460;
+}
+
+.border-danger {
+    border-color: #dc3545 !important;
+    background-color: rgba(220, 53, 69, 0.05);
+}
+
+.atributo-container {
+    transition: all 0.3s ease;
+}
+
+.atributo-container:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Estilos para validación mejorada */
+.form-control.is-invalid {
+    border-color: #dc3545;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.form-control.is-invalid:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+}
+
+.invalid-feedback {
+    display: block;
+    font-size: 0.875em;
+    margin-top: 0.25rem;
+}
+
+/* Estilos para inputs de moneda y dimensiones */
+.input-group-text {
+    background-color: #f8f9fa;
+    border: 1px solid #ced4da;
+}
+
+/* Estilos para sección de impuestos */
+.bg-info .card {
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.bg-info .card .card-body {
+    padding: 1rem;
+}
+
+/* Estilos para sección de oferta */
+#ofertaFields {
+    transition: all 0.3s ease;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    #selected-images-container .card-img-top {
+        height: 100px !important;
+    }
+    
+    #preview_principal_img,
+    #preview_gif {
+        max-width: 120px !important;
+        max-height: 120px !important;
+    }
+}
+</style>
 @endpush
 
 @push('scripts')
-<!-- SweetAlert2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-// Variables globales para manejar la imagen
-let imagenSeleccionada = null;
-let imagenPreviewUrl = null;
+// Variables globales para imágenes
+let imagenPrincipalFile = null;
+let gifFile = null;
+let selectedImages = [];
+let imageCounter = 0;
 
 // ==================== VALIDACIONES ====================
 
-// Validar SKU (letras, números, guiones)
 function validarSKU(input) {
     // Permitir letras, números y guiones
     input.value = input.value.replace(/[^A-Za-z0-9\-]/g, '');
     
-    // Limitar a 50 caracteres
-    if (input.value.length > 50) {
-        input.value = input.value.substring(0, 50);
+    // Limitar a 15 caracteres
+    if (input.value.length > 15) {
+        input.value = input.value.substring(0, 15);
     }
     
     // Convertir a mayúsculas automáticamente
@@ -529,7 +802,6 @@ function validarSKU(input) {
     input.classList.remove('is-invalid');
 }
 
-// Validar precio - SIN COMAS, solo números y punto decimal, limitado a 7 dígitos enteros
 function validarPrecio(input) {
     let value = input.value;
     const cursorPos = input.selectionStart;
@@ -598,19 +870,12 @@ function validarPrecio(input) {
         }
     }
     
-    // Si es precio normal, validar precio de oferta
-    if (input.id === 'dPrecio') {
-        validarPrecioContraPrecioVenta();
+    // Validaciones específicas
+    if (input.id === 'dPrecio_oferta') {
+        validarPrecioOfertaInstantaneo(input);
     }
-}
-
-// Validar precio de oferta
-function validarPrecioOferta(input) {
-    // Primero aplicar validación de precio normal
-    validarPrecio(input);
     
-    // Luego validar contra precio de venta
-    validarPrecioContraPrecioVenta();
+    actualizarPrecioFinal();
 }
 
 // Función para mostrar error de precio
@@ -639,75 +904,72 @@ function limpiarErrorPrecio(input) {
     input.classList.remove('is-invalid');
 }
 
-// Función para validar que el precio de oferta sea menor que el precio normal
-function validarPrecioContraPrecioVenta() {
-    const precioVentaInput = document.getElementById('dPrecio');
-    const precioOfertaInput = document.getElementById('dPrecio_oferta');
-    const tieneOfertaCheckbox = document.getElementById('bTiene_oferta');
+function validarPrecioOfertaInstantaneo(input) {
+    const tieneOferta = document.getElementById('bTiene_oferta');
+    if (!tieneOferta || !tieneOferta.checked) return true;
     
-    if (!precioVentaInput || !precioOfertaInput || !tieneOfertaCheckbox) {
-        return;
-    }
+    const precioVenta = parseFloat(document.getElementById('dPrecio').value) || 0;
+    const precioOferta = parseFloat(input.value) || 0;
+    const errorDiv = document.getElementById('error-precio-oferta');
     
-    // Solo validar si la oferta está activada
-    if (!tieneOfertaCheckbox.checked) {
-        limpiarErrorOferta();
-        return;
-    }
-    
-    const precioVenta = parseFloat(precioVentaInput.value) || 0;
-    const precioOferta = parseFloat(precioOfertaInput.value) || 0;
-    
-    // Limpiar error anterior
-    limpiarErrorOferta();
-    
-    // Si está vacío pero la oferta está activada
-    if (precioOfertaInput.value.trim() === '') {
-        mostrarErrorOferta('El precio de oferta es obligatorio cuando se activa la oferta');
-        return;
-    }
-    
-    // Validar que sea menor que el precio de venta
-    if (precioOferta > 0 && precioOferta >= precioVenta) {
-        mostrarErrorOferta('El precio de oferta debe ser menor que el precio de venta');
+    if (precioOferta >= precioVenta && precioOferta > 0 && input.value !== '') {
+        input.classList.add('is-invalid');
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = 'El precio de oferta debe ser menor que el precio de venta';
+        return false;
+    } else {
+        input.classList.remove('is-invalid');
+        errorDiv.style.display = 'none';
+        return true;
     }
 }
 
-function mostrarErrorOferta(mensaje) {
-    const inputOferta = document.getElementById('dPrecio_oferta');
-    const errorId = 'error-precio-oferta';
+function validarPrecioOferta() {
+    const tieneOferta = document.getElementById('bTiene_oferta');
+    if (!tieneOferta || !tieneOferta.checked) return true;
     
-    // Remover error anterior si existe
-    const errorElement = document.getElementById(errorId);
-    if (errorElement) {
-        errorElement.remove();
+    const precioVenta = parseFloat(document.getElementById('dPrecio').value) || 0;
+    const precioOferta = parseFloat(document.getElementById('dPrecio_oferta').value) || 0;
+    const input = document.getElementById('dPrecio_oferta');
+    const errorDiv = document.getElementById('error-precio-oferta');
+    
+    if (precioOferta >= precioVenta && precioOferta > 0) {
+        input.classList.add('is-invalid');
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = 'El precio de oferta debe ser menor que el precio de venta';
+        return false;
+    } else {
+        input.classList.remove('is-invalid');
+        errorDiv.style.display = 'none';
+        return true;
     }
-    
-    // Crear elemento de error
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'invalid-feedback d-block text-danger mt-1';
-    errorDiv.id = errorId;
-    errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i> ${mensaje}`;
-    
-    // Insertar después del input
-    const inputGroup = inputOferta.closest('.input-group') || inputOferta.parentNode;
-    inputGroup.appendChild(errorDiv);
-    inputOferta.classList.add('is-invalid');
 }
 
-function limpiarErrorOferta() {
-    const inputOferta = document.getElementById('dPrecio_oferta');
-    const errorId = 'error-precio-oferta';
+function validarFechasOferta() {
+    const fechaInicio = document.getElementById('dFecha_inicio_oferta');
+    const fechaFin = document.getElementById('dFecha_fin_oferta');
+    const errorDiv = document.getElementById('error-fechas-oferta');
     
-    const errorElement = document.getElementById(errorId);
-    if (errorElement) {
-        errorElement.remove();
+    if (!fechaInicio || !fechaFin) return true;
+    
+    if (fechaInicio.value && fechaFin.value) {
+        const inicio = new Date(fechaInicio.value);
+        const fin = new Date(fechaFin.value);
+        
+        if (fin < inicio) {
+            fechaFin.classList.add('is-invalid');
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio';
+            return false;
+        } else {
+            fechaFin.classList.remove('is-invalid');
+            errorDiv.style.display = 'none';
+            return true;
+        }
     }
-    
-    inputOferta.classList.remove('is-invalid');
+    return true;
 }
 
-// Validar stock (máximo 6 dígitos)
 function validarStock(input) {
     // Remover cualquier caracter que no sea número
     input.value = input.value.replace(/[^0-9]/g, '');
@@ -735,14 +997,14 @@ function validarStock(input) {
     input.classList.remove('is-invalid');
 }
 
-// Validar peso (kg con 3 decimales)
+// ==================== VALIDACIONES DE DIMENSIONES ====================
+
 function validarPeso(input) {
     let value = input.value;
     const cursorPos = input.selectionStart;
     
     if (value === '') {
         limpiarErrorDimension(input);
-        calcularVolumen();
         return;
     }
     
@@ -773,9 +1035,17 @@ function validarPeso(input) {
         }
     }
     
-    // Limitar longitud total a 10 caracteres
-    if (value.length > 10) {
-        value = value.substring(0, 10);
+    // Limitar parte entera a máximo 3 dígitos
+    if (value.includes('.')) {
+        const partes = value.split('.');
+        if (partes[0].length > 3) {
+            partes[0] = partes[0].substring(0, 3);
+            value = partes[0] + '.' + partes[1];
+        }
+    } else {
+        if (value.length > 3) {
+            value = value.substring(0, 3);
+        }
     }
     
     if (input.value !== value) {
@@ -792,26 +1062,22 @@ function validarPeso(input) {
     // Limpiar error primero
     limpiarErrorDimension(input);
     
-    // Validar que no exceda 1000 kg
+    // Validar que no exceda 999.999 kg
     if (value) {
         const numero = parseFloat(value);
-        if (!isNaN(numero) && numero > 1000) {
+        if (!isNaN(numero) && numero > 999.999) {
             input.classList.add('is-invalid');
-            mostrarErrorDimension(input, 'El peso máximo es 1000 kg');
+            mostrarErrorDimension(input, 'El peso máximo es 999.999 kg');
         }
     }
-    
-    calcularVolumen();
 }
 
-// Validar dimensiones (cm con 2 decimales)
-function validarDimension(input) {
+function validarDimensionCm(input) {
     let value = input.value;
     const cursorPos = input.selectionStart;
     
     if (value === '') {
         limpiarErrorDimension(input);
-        calcularVolumen();
         return;
     }
     
@@ -842,9 +1108,17 @@ function validarDimension(input) {
         }
     }
     
-    // Limitar longitud total a 10 caracteres
-    if (value.length > 10) {
-        value = value.substring(0, 10);
+    // Limitar parte entera a máximo 3 dígitos
+    if (value.includes('.')) {
+        const partes = value.split('.');
+        if (partes[0].length > 3) {
+            partes[0] = partes[0].substring(0, 3);
+            value = partes[0] + '.' + partes[1];
+        }
+    } else {
+        if (value.length > 3) {
+            value = value.substring(0, 3);
+        }
     }
     
     if (input.value !== value) {
@@ -861,251 +1135,497 @@ function validarDimension(input) {
     // Limpiar error primero
     limpiarErrorDimension(input);
     
-    // Validar que no exceda 500 cm
+    // Validar que no exceda 999.99 cm
     if (value) {
         const numero = parseFloat(value);
-        if (!isNaN(numero) && numero > 500) {
+        if (!isNaN(numero) && numero > 999.99) {
             input.classList.add('is-invalid');
-            mostrarErrorDimension(input, 'La dimensión máxima es 500 cm');
+            mostrarErrorDimension(input, 'La dimensión máxima es 999.99 cm');
         }
     }
-    
-    calcularVolumen();
 }
 
 // Función para mostrar error de dimensiones
 function mostrarErrorDimension(input, mensaje) {
-    const errorElement = document.getElementById(`error-${input.id}`);
-    if (errorElement) {
-        errorElement.textContent = mensaje;
-    } else {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'invalid-feedback d-block';
-        errorDiv.id = `error-${input.id}`;
-        errorDiv.textContent = mensaje;
-        input.parentNode.appendChild(errorDiv);
+    const errorId = `error-${input.id}`;
+    let errorElement = document.getElementById(errorId);
+    
+    if (!errorElement) {
+        errorElement = document.createElement('div');
+        errorElement.className = 'invalid-feedback d-block';
+        errorElement.id = errorId;
+        input.parentNode.appendChild(errorElement);
     }
+    
+    errorElement.textContent = mensaje;
+    input.classList.add('is-invalid');
 }
 
 // Función para limpiar error de dimensiones
 function limpiarErrorDimension(input) {
-    const errorElement = document.getElementById(`error-${input.id}`);
+    const errorId = `error-${input.id}`;
+    const errorElement = document.getElementById(errorId);
     if (errorElement) {
         errorElement.textContent = '';
     }
     input.classList.remove('is-invalid');
 }
 
-// ==================== FUNCIONES PARA OFERTA ====================
-
-// Mostrar/ocultar formulario de oferta
-function toggleOfertaForm() {
-    const ofertaCheckbox = document.getElementById('bTiene_oferta');
-    const ofertaForm = document.getElementById('oferta-form');
+function formatearPeso(input) {
+    let value = input.value;
     
-    if (ofertaCheckbox.checked) {
-        ofertaForm.style.display = 'block';
-        // Validar precio de oferta al activar
-        setTimeout(() => {
-            validarPrecioContraPrecioVenta();
-        }, 100);
-    } else {
-        ofertaForm.style.display = 'none';
-        // Limpiar errores al desactivar
-        limpiarErrorOferta();
+    if (!value || value === '.' || value.endsWith('.')) {
+        return;
+    }
+    
+    let num = parseFloat(value);
+    if (isNaN(num)) {
+        input.value = '';
+        return;
+    }
+    
+    if (num > 999.999) {
+        num = 999.999;
+    }
+    
+    input.value = num.toString();
+    
+    // Asegurar que tenga el formato correcto (máx 3 decimales)
+    if (input.value.includes('.')) {
+        const partes = input.value.split('.');
+        if (partes[1].length > 3) {
+            input.value = partes[0] + '.' + partes[1].substring(0, 3);
+        }
     }
 }
 
-// Validación de fechas de oferta
-function validarFechasOferta() {
+function formatearDimensionCm(input) {
+    let value = input.value;
+    
+    if (!value || value === '.' || value.endsWith('.')) {
+        return;
+    }
+    
+    let num = parseFloat(value);
+    if (isNaN(num)) {
+        input.value = '';
+        return;
+    }
+    
+    if (num > 999.99) {
+        num = 999.99;
+    }
+    
+    input.value = num.toString();
+    
+    // Asegurar que tenga el formato correcto (máx 2 decimales)
+    if (input.value.includes('.')) {
+        const partes = input.value.split('.');
+        if (partes[1].length > 2) {
+            input.value = partes[0] + '.' + partes[1].substring(0, 2);
+        }
+    }
+}
+
+function permitirBorrado(e) {
+    const teclasPermitidas = [
+        'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+        'Home', 'End', 'Tab', 'Enter'
+    ];
+    
+    if (e.ctrlKey || e.metaKey) {
+        return true;
+    }
+    
+    if (teclasPermitidas.includes(e.key)) {
+        return true;
+    }
+    
+    if (e.key >= '0' && e.key <= '9') {
+        return true;
+    }
+    
+    if (e.key === '.') {
+        if (e.target.value.includes('.')) {
+            e.preventDefault();
+            return false;
+        }
+        return true;
+    }
+    
+    e.preventDefault();
+    return false;
+}
+
+// ==================== FUNCIONES PARA OFERTA ====================
+
+function toggleOfertaFields() {
+    const ofertaFields = document.getElementById('ofertaFields');
+    const tieneOferta = document.getElementById('bTiene_oferta').checked;
+    const precioOferta = document.getElementById('dPrecio_oferta');
     const fechaInicio = document.getElementById('dFecha_inicio_oferta');
     const fechaFin = document.getElementById('dFecha_fin_oferta');
     
-    if (fechaInicio.value && fechaFin.value) {
-        const inicio = new Date(fechaInicio.value);
-        const fin = new Date(fechaFin.value);
+    if (tieneOferta) {
+        ofertaFields.style.display = 'block';
+        precioOferta.required = true;
+        fechaInicio.required = true;
+        fechaFin.required = true;
         
-        if (fin < inicio) {
-            fechaFin.setCustomValidity('La fecha de fin debe ser posterior a la fecha de inicio');
-            return false;
+        setTimeout(() => {
+            validarPrecioOferta();
+            actualizarPrecioFinal();
+        }, 100);
+    } else {
+        ofertaFields.style.display = 'none';
+        precioOferta.required = false;
+        fechaInicio.required = false;
+        fechaFin.required = false;
+        
+        precioOferta.classList.remove('is-invalid');
+        document.getElementById('error-precio-oferta').style.display = 'none';
+        fechaFin.classList.remove('is-invalid');
+        document.getElementById('error-fechas-oferta').style.display = 'none';
+        
+        actualizarPrecioFinal();
+    }
+}
+
+// ==================== FUNCIÓN DE CÁLCULO DE IMPUESTO Y PRECIO FINAL ====================
+
+function actualizarPrecioFinal() {
+    const precioInput = document.getElementById('dPrecio');
+    const tieneOferta = document.getElementById('bTiene_oferta')?.checked;
+    const precioOfertaInput = document.getElementById('dPrecio_oferta');
+    const impuestoSelect = document.getElementById('id_impuesto');
+    
+    if (!precioInput) return;
+    
+    // Determinar qué precio usar (original o con oferta)
+    let precioBase = parseFloat(precioInput.value) || 0;
+    let precioOriginal = precioBase;
+    
+    if (tieneOferta && precioOfertaInput && precioOfertaInput.value) {
+        const precioOferta = parseFloat(precioOfertaInput.value) || 0;
+        if (precioOferta > 0 && precioOferta < precioBase) {
+            precioBase = precioOferta;
         }
     }
     
-    fechaFin.setCustomValidity('');
-    return true;
-}
-
-// ==================== FUNCIONES PARA IMAGEN ====================
-
-// Abrir selector de imagen
-function abrirSelectorImagen() {
-    document.getElementById('imagen').click();
-}
-
-// Manejar selección de imagen
-function handleImageSelection(event) {
-    const file = event.target.files[0];
-    const container = document.getElementById('selected-image-container');
+    // Mostrar precio base
+    document.getElementById('precio-base-display').textContent = '$' + precioBase.toFixed(2);
     
-    if (file) {
-        // Validar tamaño máximo (5MB)
-        const maxSize = 5 * 1024 * 1024; // 5MB en bytes
-        if (file.size > maxSize) {
+    // Mostrar precio original si hay oferta
+    const precioOriginalDisplay = document.getElementById('precio-original-display');
+    if (tieneOferta && precioBase < precioOriginal) {
+        precioOriginalDisplay.style.display = 'block';
+        precioOriginalDisplay.textContent = 'Precio original: $' + precioOriginal.toFixed(2);
+    } else {
+        precioOriginalDisplay.style.display = 'none';
+    }
+    
+    // Obtener impuesto seleccionado
+    let totalImpuestos = 0;
+    let porcentaje = 0;
+    let nombreImpuesto = '';
+    
+    if (impuestoSelect && impuestoSelect.value) {
+        const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
+        porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
+        nombreImpuesto = selectedOption.text.split('(')[0].trim();
+        
+        totalImpuestos = precioBase * (porcentaje / 100);
+    }
+    
+    const precioFinal = precioBase + totalImpuestos;
+    
+    // Mostrar resultados
+    document.getElementById('total-impuestos-display').textContent = '$' + totalImpuestos.toFixed(2);
+    document.getElementById('precio-final-total-display').textContent = '$' + precioFinal.toFixed(2);
+    document.getElementById('precio-final-display').textContent = '$' + precioFinal.toFixed(2);
+    
+    if (porcentaje > 0) {
+        document.getElementById('porcentaje-impuestos-display').textContent = porcentaje.toFixed(2) + '%';
+        document.getElementById('detalle-impuesto-display').textContent = `${nombreImpuesto}: ${porcentaje.toFixed(2)}% ($${totalImpuestos.toFixed(2)})`;
+    } else {
+        document.getElementById('porcentaje-impuestos-display').textContent = '0%';
+        document.getElementById('detalle-impuesto-display').textContent = 'Sin impuesto';
+    }
+}
+
+// ==================== FUNCIONES PARA IMÁGENES ====================
+
+function previewImagenPrincipal(input) {
+    const previewContainer = document.getElementById('preview_principal_container');
+    const previewImg = document.getElementById('preview_principal_img');
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        
+        if (!validTypes.includes(file.type)) {
             Swal.fire({
                 icon: 'error',
-                title: 'Archivo demasiado grande',
-                text: 'La imagen no debe pesar más de 5MB',
-                position: "center"
+                title: 'Formato no válido',
+                text: 'La imagen principal solo acepta formatos JPG, JPEG y PNG'
             });
-            event.target.value = '';
+            input.value = '';
             return;
         }
         
-        // Guardar la imagen seleccionada
-        imagenSeleccionada = file;
-        
-        // Crear URL para vista previa
-        if (imagenPreviewUrl) {
-            URL.revokeObjectURL(imagenPreviewUrl);
+        if (file.size > 5 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Archivo demasiado grande',
+                text: 'La imagen principal no puede exceder los 5MB'
+            });
+            input.value = '';
+            return;
         }
-        imagenPreviewUrl = URL.createObjectURL(file);
         
-        // Mostrar vista previa
-        container.innerHTML = `
-            <div class="card border position-relative" style="max-width: 200px;">
-                <button type="button" 
-                        class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1"
-                        onclick="removeSelectedImage()"
-                        style="width: 28px; height: 28px; padding: 0; border-radius: 50%; z-index: 10;">
-                    <i class="fas fa-times"></i>
-                </button>
-                <img src="${imagenPreviewUrl}" 
-                     class="card-img-top" 
-                     style="height: 120px; object-fit: contain; background: #f8f9fa; padding: 8px;"
-                     alt="Imagen seleccionada">
-                <div class="card-body p-2 text-center">
-                    <small class="text-muted d-block" style="font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                        ${file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name}
-                    </small>
-                    <small class="text-muted d-block">
-                        ${(file.size / 1024).toFixed(2)} KB
-                    </small>
-                </div>
-            </div>
-        `;
+        imagenPrincipalFile = file;
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewContainer.style.display = 'block';
+        }
+        
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        previewContainer.style.display = 'none';
+        imagenPrincipalFile = null;
     }
 }
 
-// Eliminar imagen seleccionada
-function removeSelectedImage() {
-    const imagenInput = document.getElementById('imagen');
-    const container = document.getElementById('selected-image-container');
+function cancelarImagenPrincipal() {
+    const input = document.getElementById('imagen_principal');
+    const previewContainer = document.getElementById('preview_principal_container');
     
-    // Limpiar el input de archivo
-    imagenInput.value = '';
-    
-    // Liberar la URL de la vista previa
-    if (imagenPreviewUrl) {
-        URL.revokeObjectURL(imagenPreviewUrl);
-        imagenPreviewUrl = null;
-    }
-    
-    // Limpiar la imagen seleccionada
-    imagenSeleccionada = null;
-    
-    // Restaurar mensaje original
-    container.innerHTML = `
-        <div class="text-muted small">
-            <i class="fas fa-image me-1"></i> No hay imagen seleccionada
-        </div>
-    `;
+    input.value = '';
+    previewContainer.style.display = 'none';
+    imagenPrincipalFile = null;
 }
 
-// Calcular volumen y peso volumétrico
-function calcularVolumen() {
-    const largo = parseFloat(document.getElementById('dLargo_cm').value) || 0;
-    const ancho = parseFloat(document.getElementById('dAncho_cm').value) || 0;
-    const alto = parseFloat(document.getElementById('dAlto_cm').value) || 0;
-    const peso = parseFloat(document.getElementById('dPeso').value) || 0;
+function previewGif(input) {
+    const previewContainer = document.getElementById('preview_gif_container');
+    const previewImg = document.getElementById('preview_gif');
     
-    // Volumen en cm³
-    const volumen = largo * ancho * alto;
-    const volumenElement = document.getElementById('volumen-info');
-    
-    if (volumenElement) {
-        const pesoVolumetrico = volumen / 5000;
-        const pesoFacturable = Math.max(peso, pesoVolumetrico);
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
         
-        if (largo > 0 && ancho > 0 && alto > 0) {
-            volumenElement.innerHTML = `
-                <strong>Dimensiones:</strong> ${largo.toFixed(2)} × ${ancho.toFixed(2)} × ${alto.toFixed(2)} cm<br>
-                <strong>Volumen:</strong> ${volumen.toFixed(2)} cm³<br>
-                <strong>Peso volumétrico (estimado):</strong> ${pesoVolumetrico.toFixed(3)} kg<br>
-                <strong>Peso facturable (estimado):</strong> ${pesoFacturable.toFixed(3)} kg
-            `;
+        if (file.type !== 'image/gif') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Formato no válido',
+                text: 'El campo GIF solo acepta archivos con formato GIF'
+            });
+            input.value = '';
+            return;
+        }
+        
+        if (file.size > 10 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Archivo demasiado grande',
+                text: 'El GIF no puede exceder los 10MB'
+            });
+            input.value = '';
+            return;
+        }
+        
+        gifFile = file;
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewContainer.style.display = 'block';
+        }
+        
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        previewContainer.style.display = 'none';
+        gifFile = null;
+    }
+}
+
+function cancelarGif() {
+    const input = document.getElementById('gif');
+    const previewContainer = document.getElementById('preview_gif_container');
+    
+    input.value = '';
+    previewContainer.style.display = 'none';
+    gifFile = null;
+}
+
+function handleImageSelection(event) {
+    const files = event.target.files;
+    const maxFiles = 7;
+    const currentCount = selectedImages.length;
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    
+    if (currentCount + files.length > maxFiles) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de imágenes',
+            text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales. Ya tienes ${currentCount} seleccionadas.`
+        });
+        event.target.value = '';
+        return;
+    }
+    
+    let archivosAgregados = 0;
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        if (!validTypes.includes(file.type)) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Formato no válido',
+                text: `El archivo "${file.name}" no es un formato válido. Formatos aceptados: JPG, JPEG, PNG, WEBP.`
+            });
+            continue;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Archivo demasiado grande',
+                text: `La imagen "${file.name}" excede el límite de 5MB.`
+            });
+            continue;
+        }
+        
+        if (!isImageDuplicate(file)) {
+            const imageId = 'img_' + Date.now() + '_' + imageCounter++;
+            const preview = URL.createObjectURL(file);
+            
+            selectedImages.push({
+                id: imageId,
+                file: file,
+                preview: preview,
+                name: file.name,
+                size: file.size
+            });
+            archivosAgregados++;
+        }
+    }
+    
+    if (archivosAgregados > 0) {
+        document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
+        renderSelectedImages();
+    }
+    
+    event.target.value = '';
+}
+
+function isImageDuplicate(newFile) {
+    return selectedImages.some(img => 
+        img.file.name === newFile.name && 
+        img.file.size === newFile.size && 
+        img.file.lastModified === newFile.lastModified
+    );
+}
+
+function removeSelectedImage(imageId) {
+    const image = selectedImages.find(img => img.id === imageId);
+    if (image && image.preview) {
+        URL.revokeObjectURL(image.preview);
+    }
+    selectedImages = selectedImages.filter(img => img.id !== imageId);
+    
+    document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
+    renderSelectedImages();
+}
+
+function renderSelectedImages() {
+    const container = document.getElementById('selected-images-container');
+    const noMsg = document.getElementById('no-imagenes-msg');
+    
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (selectedImages.length === 0) {
+        if (noMsg) noMsg.style.display = 'block';
+        return;
+    }
+    
+    if (noMsg) noMsg.style.display = 'none';
+    
+    selectedImages.forEach((image, index) => {
+        const col = document.createElement('div');
+        col.className = 'col-6 col-md-4 mb-2';
+        
+        const card = document.createElement('div');
+        card.className = 'card border image-preview-card position-relative';
+        
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1 remove-btn';
+        btn.style.cssText = 'width: 24px; height: 24px; padding: 0; border-radius: 50%; z-index: 10;';
+        btn.onclick = function(e) { 
+            e.preventDefault();
+            removeSelectedImage(image.id); 
+        };
+        
+        const btnIcon = document.createElement('i');
+        btnIcon.className = 'fas fa-times';
+        btn.appendChild(btnIcon);
+        
+        const img = document.createElement('img');
+        img.src = image.preview;
+        img.className = 'card-img-top';
+        img.style.cssText = 'height: 80px; object-fit: contain; background: #f8f9fa; padding: 4px;';
+        img.alt = 'Imagen ' + (index + 1);
+        
+        const cardBody = document.createElement('div');
+        cardBody.className = 'card-body p-1 text-center';
+        
+        const small1 = document.createElement('small');
+        small1.className = 'text-muted d-block';
+        small1.style.cssText = 'font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+        small1.textContent = image.file.name.length > 15 ? image.file.name.substring(0, 15) + '...' : image.file.name;
+        
+        const small2 = document.createElement('small');
+        small2.className = 'text-muted d-block';
+        small2.style.fontSize = '9px';
+        let sizeText = '';
+        if (image.file.size < 1024) {
+            sizeText = image.file.size + ' B';
+        } else if (image.file.size < 1024 * 1024) {
+            sizeText = (image.file.size / 1024).toFixed(2) + ' KB';
         } else {
-            volumenElement.innerHTML = 'Ingresa las tres dimensiones para calcular el volumen.';
+            sizeText = (image.file.size / (1024 * 1024)).toFixed(2) + ' MB';
         }
-    }
+        small2.textContent = sizeText;
+        
+        cardBody.appendChild(small1);
+        cardBody.appendChild(small2);
+        
+        card.appendChild(btn);
+        card.appendChild(img);
+        card.appendChild(cardBody);
+        
+        col.appendChild(card);
+        container.appendChild(col);
+    });
 }
 
 // ==================== VALIDACIÓN DEL FORMULARIO ====================
 
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('variacionForm');
-    const imagenInput = document.getElementById('imagen');
-    
-    // Inicializar cálculo de volumen
-    calcularVolumen();
-    
-    // Event listeners para calcular automáticamente
-    ['dPeso', 'dLargo_cm', 'dAncho_cm', 'dAlto_cm'].forEach(id => {
-        const input = document.getElementById(id);
-        if (input) {
-            input.addEventListener('input', calcularVolumen);
-        }
-    });
-    
-    // Event listeners para validar precio de oferta en tiempo real
-    const precioVentaInput = document.getElementById('dPrecio');
-    const precioOfertaInput = document.getElementById('dPrecio_oferta');
-    const tieneOfertaCheckbox = document.getElementById('bTiene_oferta');
-    
-    if (precioVentaInput && precioOfertaInput && tieneOfertaCheckbox) {
-        // Validar cuando cambia el precio de venta
-        precioVentaInput.addEventListener('input', function() {
-            setTimeout(() => {
-                validarPrecioContraPrecioVenta();
-            }, 100);
-        });
-        
-        // Validar cuando cambia el checkbox de oferta
-        tieneOfertaCheckbox.addEventListener('change', function() {
-            setTimeout(() => {
-                validarPrecioContraPrecioVenta();
-            }, 100);
-        });
-    }
-    
-    // Event listeners para validar fechas de oferta
-    const fechaInicio = document.getElementById('dFecha_inicio_oferta');
-    const fechaFin = document.getElementById('dFecha_fin_oferta');
-    
-    if (fechaInicio) {
-        fechaInicio.addEventListener('change', function() {
-            if (fechaFin.value && new Date(fechaFin.value) < new Date(this.value)) {
-                fechaFin.value = this.value;
-            }
-            validarFechasOferta();
-        });
-    }
-    
-    if (fechaFin) {
-        fechaFin.addEventListener('change', validarFechasOferta);
-    }
-    
     // Inicializar toggle de oferta
-    toggleOfertaForm();
+    if (document.getElementById('bTiene_oferta') && document.getElementById('bTiene_oferta').checked) {
+        toggleOfertaFields();
+    }
+    
+    // Inicializar cálculo de precio final
+    actualizarPrecioFinal();
+    
+    // Event listeners para calcular precio final cuando cambian los valores
+    document.getElementById('dPrecio').addEventListener('input', actualizarPrecioFinal);
+    document.getElementById('id_impuesto').addEventListener('change', actualizarPrecioFinal);
     
     // Validación en tiempo real de atributos
     document.querySelectorAll('.atributo-radio').forEach(radio => {
@@ -1126,31 +1646,8 @@ document.addEventListener('DOMContentLoaded', function() {
         element.setAttribute('autocomplete', 'off');
     });
     
-    // Manejar el evento de "cancelar" en el input de archivo
-    if (imagenInput) {
-        // Guardar el estado anterior cuando se abre el selector
-        imagenInput.addEventListener('click', function() {
-            this.dataset.previousValue = this.value;
-        });
-        
-        // Cuando se cancela la selección, restaurar el estado anterior
-        imagenInput.addEventListener('change', function() {
-            if (!this.files || this.files.length === 0) {
-                // Si se canceló la selección y ya había una imagen seleccionada
-                if (imagenSeleccionada) {
-                    // Restaurar la imagen en el input usando DataTransfer
-                    const dataTransfer = new DataTransfer();
-                    dataTransfer.items.add(imagenSeleccionada);
-                    this.files = dataTransfer.files;
-                    
-                    // Mostrar mensaje informativo
-                    console.log('Imagen restaurada después de cancelar selección');
-                }
-            }
-        });
-    }
-    
     // Validación del formulario al enviar
+    const form = document.getElementById('variacionForm');
     if (form) {
         form.addEventListener('submit', function(e) {
             let erroresCriticos = false;
@@ -1167,222 +1664,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!elemento.value.trim()) {
                     elemento.classList.add('is-invalid');
                     erroresCriticos = true;
-                    
-                    if (!elemento.nextElementSibling || !elemento.nextElementSibling.classList.contains('invalid-feedback')) {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'invalid-feedback';
-                        errorDiv.textContent = `El campo "${campo.nombre}" es obligatorio`;
-                        elemento.parentNode.appendChild(errorDiv);
-                    }
                 }
             });
             
-            // 2. Validar que el stock sea un número válido
-            const stockInput = document.getElementById('iStock');
-            const stockValue = stockInput.value.trim();
-            if (stockValue) {
-                const stockNum = parseInt(stockValue);
-                if (isNaN(stockNum) || stockNum < 0) {
-                    stockInput.classList.add('is-invalid');
-                    erroresCriticos = true;
-                    
-                    if (!stockInput.nextElementSibling || !stockInput.nextElementSibling.classList.contains('invalid-feedback')) {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'invalid-feedback';
-                        errorDiv.textContent = 'El stock debe ser un número mayor o igual a 0';
-                        stockInput.parentNode.appendChild(errorDiv);
-                    }
-                }
-            }
-            
-            // 3. Validar formato de precios
-            const precioInput = document.getElementById('dPrecio');
-            const precioOfertaInput = document.getElementById('dPrecio_oferta');
-            
-            // Validar precio normal
-            if (precioInput.value.trim()) {
-                const regexPrecio = /^[0-9]*\.?[0-9]*$/;
-                if (!regexPrecio.test(precioInput.value.trim())) {
-                    precioInput.classList.add('is-invalid');
-                    erroresCriticos = true;
-                    
-                    if (!precioInput.nextElementSibling || !precioInput.nextElementSibling.classList.contains('invalid-feedback')) {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'invalid-feedback';
-                        errorDiv.textContent = 'Solo números y punto decimal permitidos';
-                        precioInput.parentNode.appendChild(errorDiv);
-                    }
-                } else {
-                    // Validar que no sea demasiado grande
-                    const numero = parseFloat(precioInput.value.trim());
-                    if (!isNaN(numero) && numero > 9999999.99) {
-                        precioInput.classList.add('is-invalid');
-                        erroresCriticos = true;
-                        
-                        if (!precioInput.nextElementSibling || !precioInput.nextElementSibling.classList.contains('invalid-feedback')) {
-                            const errorDiv = document.createElement('div');
-                            errorDiv.className = 'invalid-feedback';
-                            errorDiv.textContent = 'El precio máximo es 9,999,999.99';
-                            precioInput.parentNode.appendChild(errorDiv);
-                        }
-                    }
-                }
-            }
-            
-            // Validar precio de oferta si tiene valor
-            if (precioOfertaInput.value.trim()) {
-                const regexPrecio = /^[0-9]*\.?[0-9]*$/;
-                if (!regexPrecio.test(precioOfertaInput.value.trim())) {
-                    precioOfertaInput.classList.add('is-invalid');
-                    erroresCriticos = true;
-                    
-                    if (!precioOfertaInput.nextElementSibling || !precioOfertaInput.nextElementSibling.classList.contains('invalid-feedback')) {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'invalid-feedback';
-                        errorDiv.textContent = 'Solo números y punto decimal permitidos';
-                        precioOfertaInput.parentNode.appendChild(errorDiv);
-                    }
-                } else {
-                    // Validar que no sea demasiado grande
-                    const numero = parseFloat(precioOfertaInput.value.trim());
-                    if (!isNaN(numero) && numero > 9999999.99) {
-                        precioOfertaInput.classList.add('is-invalid');
-                        erroresCriticos = true;
-                        
-                        if (!precioOfertaInput.nextElementSibling || !precioOfertaInput.nextElementSibling.classList.contains('invalid-feedback')) {
-                            const errorDiv = document.createElement('div');
-                            errorDiv.className = 'invalid-feedback';
-                            errorDiv.textContent = 'El precio máximo es 9,999,999.99';
-                            precioOfertaInput.parentNode.appendChild(errorDiv);
-                        }
-                    }
-                }
-            }
-            
-            // 4. Validar precio de oferta si está activa
-            const tieneOfertaCheckbox = document.getElementById('bTiene_oferta');
-            
-            if (tieneOfertaCheckbox && tieneOfertaCheckbox.checked) {
-                // Validar que precio de oferta tenga valor
-                if (!precioOfertaInput.value.trim()) {
-                    precioOfertaInput.classList.add('is-invalid');
-                    erroresCriticos = true;
-                    
-                    if (!precioOfertaInput.nextElementSibling || !precioOfertaInput.nextElementSibling.classList.contains('invalid-feedback')) {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'invalid-feedback d-block';
-                        errorDiv.textContent = 'El precio de oferta es obligatorio cuando se activa la oferta';
-                        precioOfertaInput.parentNode.appendChild(errorDiv);
-                    }
-                }
-                
-                // Validar que precio de oferta sea menor que precio de venta
-                if (precioOfertaInput.value.trim() && precioInput.value.trim()) {
-                    const precioOferta = parseFloat(precioOfertaInput.value.trim());
-                    const precioVenta = parseFloat(precioInput.value.trim());
-                    
-                    if (precioOferta >= precioVenta) {
-                        precioOfertaInput.classList.add('is-invalid');
-                        erroresCriticos = true;
-                        
-                        if (!document.getElementById('error-precio-oferta')) {
-                            const errorDiv = document.createElement('div');
-                            errorDiv.className = 'invalid-feedback d-block text-danger mt-1';
-                            errorDiv.id = 'error-precio-oferta';
-                            errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i> El precio de oferta debe ser menor que el precio de venta`;
-                            precioOfertaInput.parentNode.appendChild(errorDiv);
-                        }
-                    }
-                }
-                
-                // Validar fechas de oferta
-                const fechaInicioInput = document.getElementById('dFecha_inicio_oferta');
-                const fechaFinInput = document.getElementById('dFecha_fin_oferta');
-                
-                if (!fechaInicioInput.value) {
-                    fechaInicioInput.classList.add('is-invalid');
-                    erroresCriticos = true;
-                    
-                    if (!fechaInicioInput.nextElementSibling || !fechaInicioInput.nextElementSibling.classList.contains('invalid-feedback')) {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'invalid-feedback';
-                        errorDiv.textContent = 'La fecha de inicio es obligatoria cuando se activa la oferta';
-                        fechaInicioInput.parentNode.appendChild(errorDiv);
-                    }
-                }
-                
-                if (!fechaFinInput.value) {
-                    fechaFinInput.classList.add('is-invalid');
-                    erroresCriticos = true;
-                    
-                    if (!fechaFinInput.nextElementSibling || !fechaFinInput.nextElementSibling.classList.contains('invalid-feedback')) {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'invalid-feedback';
-                        errorDiv.textContent = 'La fecha de fin es obligatoria cuando se activa la oferta';
-                        fechaFinInput.parentNode.appendChild(errorDiv);
-                    }
-                }
-                
-                if (fechaInicioInput.value && fechaFinInput.value) {
-                    const inicio = new Date(fechaInicioInput.value);
-                    const fin = new Date(fechaFinInput.value);
-                    
-                    if (fin < inicio) {
-                        fechaFinInput.classList.add('is-invalid');
-                        erroresCriticos = true;
-                        
-                        if (!fechaFinInput.nextElementSibling || !fechaFinInput.nextElementSibling.classList.contains('invalid-feedback')) {
-                            const errorDiv = document.createElement('div');
-                            errorDiv.className = 'invalid-feedback';
-                            errorDiv.textContent = 'La fecha de fin debe ser posterior a la fecha de inicio';
-                            fechaFinInput.parentNode.appendChild(errorDiv);
-                        }
-                    }
-                }
-            }
-            
-            // 5. Validar dimensiones
-            const camposDimensiones = [
-                {id: 'dPeso', max: 1000, unidad: 'kg'},
-                {id: 'dLargo_cm', max: 500, unidad: 'cm'},
-                {id: 'dAncho_cm', max: 500, unidad: 'cm'},
-                {id: 'dAlto_cm', max: 500, unidad: 'cm'}
-            ];
-            
-            camposDimensiones.forEach(campo => {
-                const input = document.getElementById(campo.id);
-                if (input && input.value.trim()) {
-                    const regexDimension = /^[0-9]*\.?[0-9]*$/;
-                    if (!regexDimension.test(input.value.trim())) {
-                        input.classList.add('is-invalid');
-                        erroresCriticos = true;
-                        
-                        if (!document.getElementById(`error-${campo.id}`)) {
-                            const errorDiv = document.createElement('div');
-                            errorDiv.className = 'invalid-feedback d-block';
-                            errorDiv.id = `error-${campo.id}`;
-                            errorDiv.textContent = `Solo números y punto decimal permitidos`;
-                            input.parentNode.appendChild(errorDiv);
-                        }
-                    } else {
-                        const numero = parseFloat(input.value.trim());
-                        if (!isNaN(numero) && numero > campo.max) {
-                            input.classList.add('is-invalid');
-                            erroresCriticos = true;
-                            
-                            if (!document.getElementById(`error-${campo.id}`)) {
-                                const errorDiv = document.createElement('div');
-                                errorDiv.className = 'invalid-feedback d-block';
-                                errorDiv.id = `error-${campo.id}`;
-                                errorDiv.textContent = `El valor máximo es ${campo.max} ${campo.unidad}`;
-                                input.parentNode.appendChild(errorDiv);
-                            }
-                        }
-                    }
-                }
-            });
-            
-            // 6. Validar atributos
+            // 2. Validar atributos
             let atributosValidos = true;
             const atributosContainers = document.querySelectorAll('.atributo-container');
             
@@ -1401,19 +1686,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     container.classList.add('border-danger');
                     
                     const errorExistente = container.querySelector('.error-atributo');
-                    if (errorExistente) {
-                        errorExistente.remove();
-                    }
-                    
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'error-atributo text-danger small mt-1';
-                    errorDiv.innerHTML = `<i class="fas fa-exclamation-circle me-1"></i> Selecciona un valor`;
-                    container.appendChild(errorDiv);
-                } else {
-                    container.classList.remove('border-danger');
-                    const errorExistente = container.querySelector('.error-atributo');
-                    if (errorExistente) {
-                        errorExistente.remove();
+                    if (!errorExistente) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'error-atributo text-danger small mt-1';
+                        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle me-1"></i> Selecciona un valor`;
+                        container.appendChild(errorDiv);
                     }
                 }
             });
@@ -1422,32 +1699,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 erroresCriticos = true;
             }
             
-            // 7. Asegurar que la imagen seleccionada se envíe
-            if (imagenSeleccionada && (!imagenInput.files || imagenInput.files.length === 0)) {
-                // Si hay una imagen en memoria pero no en el input, agregarla
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(imagenSeleccionada);
-                imagenInput.files = dataTransfer.files;
+            // 3. Validar precio de oferta si está activo
+            if (document.getElementById('bTiene_oferta') && document.getElementById('bTiene_oferta').checked) {
+                if (!validarPrecioOferta()) {
+                    erroresCriticos = true;
+                }
+                if (!validarFechasOferta()) {
+                    erroresCriticos = true;
+                }
             }
             
             // Si hay errores críticos, prevenir envío
             if (erroresCriticos) {
                 e.preventDefault();
                 
-                // Enfocar el primer campo con error
-                const primerError = document.querySelector('.is-invalid');
-                if (primerError) {
-                    primerError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    primerError.focus();
-                }
-                
                 Swal.fire({
                     icon: "error",
                     title: "Oops...",
                     text: "Por favor corrige los errores en el formulario.",
-                    footer: '<a href="#form-errors">Ver errores en el formulario</a>',
-                    position: "center",
-                    draggable: true
+                    position: "center"
                 });
                 return false;
             }
@@ -1482,7 +1752,6 @@ Swal.fire({
     icon: "error",
     title: "Oops...",
     text: "{{ $errorMessage }}",
-    footer: '<a href="#form-errors">Ver errores en el formulario</a>',
     position: "center",
     draggable: true
 });
@@ -1490,124 +1759,4 @@ Swal.fire({
 </script>
 @endpush
 
-<style>
-.form-check-input:checked + .form-check-label {
-    font-weight: bold;
-    color: #198754;
-}
-
-.card {
-    transition: all 0.3s ease;
-}
-
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-
-#selected-image-container .card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
-}
-
-#selected-image-container .btn-danger {
-    transition: all 0.3s ease;
-}
-
-#selected-image-container .btn-danger:hover {
-    transform: scale(1.1);
-    background-color: #c82333;
-    border-color: #bd2130;
-}
-
-.form-control:focus {
-    border-color: #86b7fe;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-}
-
-.form-control::placeholder {
-    color: #6c757d;
-    opacity: 0.7;
-}
-
-.alert-info {
-    background-color: #d1ecf1;
-    border-color: #bee5eb;
-    color: #0c5460;
-}
-
-.border-danger {
-    border-color: #dc3545 !important;
-    background-color: rgba(220, 53, 69, 0.05);
-}
-
-.atributo-container {
-    transition: all 0.3s ease;
-}
-
-.atributo-container:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-/* Estilos para validación mejorada */
-.form-control.is-invalid {
-    border-color: #dc3545;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right calc(0.375em + 0.1875rem) center;
-    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
-}
-
-.form-control.is-invalid:focus {
-    border-color: #dc3545;
-    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
-}
-
-.invalid-feedback {
-    display: block;
-    font-size: 0.875em;
-    margin-top: 0.25rem;
-}
-
-/* Estilos para inputs de moneda y dimensiones */
-.input-group-text {
-    background-color: #f8f9fa;
-    border: 1px solid #ced4da;
-}
-
-/* Estilos para el cálculo de volumen */
-#volumen-info {
-    background: rgba(0,0,0,0.03);
-    padding: 8px;
-    border-radius: 5px;
-    border-left: 4px solid #17a2b8;
-    font-size: 0.9em;
-}
-
-#volumen-info strong {
-    color: #17a2b8;
-}
-
-/* Estilos para sección de oferta */
-#oferta-form {
-    transition: all 0.3s ease;
-}
-
-.card-header.bg-danger {
-    background: linear-gradient(135deg, #dc3545, #c82333);
-}
-
-/* Estilos para campos obligatorios en oferta */
-#oferta-form .form-label span.text-danger {
-    font-size: 1.1em;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    #selected-image-container .card-img-top {
-        height: 100px !important;
-    }
-}
-</style>
 @endsection

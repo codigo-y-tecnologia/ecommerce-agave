@@ -132,20 +132,37 @@ class ProductoVariacion extends Model
 
     // ============ MÉTODOS DE OFERTA/DESCUENTO ============
 
-    public function ofertaVigente()
+    /**
+     * Verificar si la oferta está vigente basándose en la fecha ACTUAL
+     * @return bool
+     */
+    public function ofertaVigente(): bool
     {
-        if (!$this->bTiene_oferta || !$this->dPrecio_oferta) {
+        // Si no tiene oferta activada o no tiene precio de oferta, no es vigente
+        if (!$this->bTiene_oferta || $this->dPrecio_oferta === null) {
             return false;
         }
-        
+
         $fechaActual = now()->toDateString();
-        
+
+        // Caso 1: Tiene ambas fechas definidas
         if ($this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
             return $fechaActual >= $this->dFecha_inicio_oferta && 
                    $fechaActual <= $this->dFecha_fin_oferta;
         }
-        
-        return $this->bTiene_oferta;
+
+        // Caso 2: Solo tiene fecha de inicio
+        if ($this->dFecha_inicio_oferta && !$this->dFecha_fin_oferta) {
+            return $fechaActual >= $this->dFecha_inicio_oferta;
+        }
+
+        // Caso 3: Solo tiene fecha de fin
+        if (!$this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
+            return $fechaActual <= $this->dFecha_fin_oferta;
+        }
+
+        // Caso 4: Tiene oferta activada pero sin fechas
+        return true;
     }
 
     public function getPrecioActualAttribute()
@@ -202,7 +219,7 @@ class ProductoVariacion extends Model
         return $this->impuesto ? $this->impuesto->vNombre : 'Sin impuesto';
     }
 
-    // ============ ACCESORES PARA IMÁGENES (USAN LA NUEVA TABLA) ============
+    // ============ ACCESORES PARA IMÁGENES ============
 
     /**
      * Obtener la URL de la imagen principal
@@ -369,7 +386,7 @@ class ProductoVariacion extends Model
         }
     }
 
-    // ============ MÉTODOS PARA GUARDAR Y ELIMINAR IMÁGENES (USAN LA NUEVA TABLA) ============
+    // ============ MÉTODOS PARA GUARDAR Y ELIMINAR IMÁGENES ============
 
     /**
      * Guardar imagen principal

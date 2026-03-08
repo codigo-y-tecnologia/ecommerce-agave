@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class Categoria extends Model
@@ -50,21 +49,6 @@ class Categoria extends Model
         return null;
     }
 
-    // Accesor para obtener la ruta completa del archivo
-    public function getImagenPathAttribute()
-    {
-        if (!$this->vImagen) {
-            return null;
-        }
-        
-        $path = public_path('storage/categorias/' . $this->vImagen);
-        if (file_exists($path)) {
-            return $path;
-        }
-        
-        return null;
-    }
-
     // Accesor para verificar si la imagen existe
     public function getTieneImagenAttribute()
     {
@@ -85,11 +69,28 @@ class Categoria extends Model
             if (empty($categoria->vSlug)) {
                 $categoria->vSlug = Str::slug($categoria->vNombre);
             }
+            
+            // Establecer orden si no se especifica
+            if (empty($categoria->iOrden)) {
+                $ultimoOrden = self::where('id_categoria_padre', $categoria->id_categoria_padre)
+                                  ->max('iOrden');
+                $categoria->iOrden = $ultimoOrden ? $ultimoOrden + 1 : 0;
+            }
         });
 
         static::updating(function ($categoria) {
             if ($categoria->isDirty('vNombre') && empty($categoria->vSlug)) {
                 $categoria->vSlug = Str::slug($categoria->vNombre);
+            }
+        });
+
+        static::deleting(function ($categoria) {
+            // Eliminar imagen al eliminar la categoría
+            if ($categoria->vImagen) {
+                $rutaImagen = public_path('storage/categorias/' . $categoria->vImagen);
+                if (file_exists($rutaImagen)) {
+                    unlink($rutaImagen);
+                }
             }
         });
     }
@@ -109,7 +110,9 @@ class Categoria extends Model
     // Relación con categorías hijas
     public function hijos()
     {
-        return $this->hasMany(Categoria::class, 'id_categoria_padre')->orderBy('iOrden')->orderBy('vNombre');
+        return $this->hasMany(Categoria::class, 'id_categoria_padre')
+                    ->orderBy('iOrden')
+                    ->orderBy('vNombre');
     }
 
     // Relación con categorías hijas activas
@@ -209,7 +212,7 @@ class Categoria extends Model
     }
 
     // Obtener categorías para select dropdown
-    public static function paraSelect($excluirId = null, $prefijo = '')
+    public static function paraSelect($excluirId = null)
     {
         $categorias = self::where('bActivo', true)
                           ->orderBy('iOrden')

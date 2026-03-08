@@ -438,7 +438,7 @@
             </div>
         </div>
 
-        <!-- CATEGORÍA, MARCA E IMPUESTO -->
+        <!-- CATEGORÍA, MARCA E IMPUESTO (CON BOTONES DE CREACIÓN RÁPIDA) -->
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
                 <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Categoría, Marca e Impuesto</h5>
@@ -450,45 +450,50 @@
                             <label for="id_categoria" class="form-label fw-bold">
                                 Categoría <span class="text-danger">*</span>
                             </label>
-                            <select name="id_categoria" id="id_categoria" 
-                                    class="form-select @error('id_categoria') is-invalid @enderror" 
-                                    required>
-                                <option value="">Seleccionar categoría</option>
-                                @php
-                                    function mostrarCategoriasJerarquicamenteEdit($categorias, $nivel = 0, $oldValue = null, $selectedValue = null)
-                                    {
-                                        foreach($categorias as $categoria) {
-                                            $prefijo = str_repeat('&nbsp;&nbsp;&nbsp;', $nivel);
-                                            $icono = '';
-                                            
-                                            if ($nivel == 0) {
-                                                $icono = '🏠 ';
-                                            } elseif ($nivel == 1) {
-                                                $icono = '↳ ';
-                                            } elseif ($nivel >= 2) {
-                                                $icono = str_repeat('↳&nbsp;', $nivel);
-                                            }
-                                            
-                                            $selected = ($oldValue == $categoria->id_categoria || $selectedValue == $categoria->id_categoria) ? 'selected' : '';
-                                            
-                                            echo '<option value="' . $categoria->id_categoria . '" ' . $selected . '>' .
-                                                 $prefijo . $icono . htmlspecialchars($categoria->vNombre) . 
-                                                 '</option>';
-                                            
-                                            if ($categoria->hijos && $categoria->hijos->count() > 0) {
-                                                mostrarCategoriasJerarquicamenteEdit($categoria->hijos, $nivel + 1, $oldValue, $selectedValue);
+                            <div class="input-group">
+                                <select name="id_categoria" id="id_categoria" 
+                                        class="form-select @error('id_categoria') is-invalid @enderror" 
+                                        required>
+                                    <option value="">Seleccionar categoría</option>
+                                    @php
+                                        function mostrarCategoriasJerarquicamenteEdit($categorias, $nivel = 0, $oldValue = null, $selectedValue = null)
+                                        {
+                                            foreach($categorias as $categoria) {
+                                                $prefijo = str_repeat('&nbsp;&nbsp;&nbsp;', $nivel);
+                                                $icono = '';
+                                                
+                                                if ($nivel == 0) {
+                                                    $icono = '🏠 ';
+                                                } elseif ($nivel == 1) {
+                                                    $icono = '↳ ';
+                                                } elseif ($nivel >= 2) {
+                                                    $icono = str_repeat('↳&nbsp;', $nivel);
+                                                }
+                                                
+                                                $selected = ($oldValue == $categoria->id_categoria || $selectedValue == $categoria->id_categoria) ? 'selected' : '';
+                                                
+                                                echo '<option value="' . $categoria->id_categoria . '" ' . $selected . '>' .
+                                                     $prefijo . $icono . htmlspecialchars($categoria->vNombre) . 
+                                                     '</option>';
+                                                
+                                                if ($categoria->hijos && $categoria->hijos->count() > 0) {
+                                                    mostrarCategoriasJerarquicamenteEdit($categoria->hijos, $nivel + 1, $oldValue, $selectedValue);
+                                                }
                                             }
                                         }
-                                    }
+                                        
+                                        $oldCategoria = old('id_categoria');
+                                        $categoriasRaiz = $categorias->where('id_categoria_padre', null)->where('bActivo', true);
+                                    @endphp
                                     
-                                    $oldCategoria = old('id_categoria');
-                                    $categoriasRaiz = $categorias->where('id_categoria_padre', null)->where('bActivo', true);
-                                @endphp
-                                
-                                @php
-                                    mostrarCategoriasJerarquicamenteEdit($categoriasRaiz, 0, $oldCategoria, $producto->id_categoria);
-                                @endphp
-                            </select>
+                                    @php
+                                        mostrarCategoriasJerarquicamenteEdit($categoriasRaiz, 0, $oldCategoria, $producto->id_categoria);
+                                    @endphp
+                                </select>
+                                <button type="button" class="btn btn-outline-primary" onclick="abrirModalCategoria()">
+                                    <i class="fas fa-plus-circle"></i>
+                                </button>
+                            </div>
                             @error('id_categoria')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -503,58 +508,68 @@
                             <label for="id_marca" class="form-label fw-bold">
                                 Marca <span class="text-danger">*</span>
                             </label>
-                            <select name="id_marca" id="id_marca" 
-                                    class="form-select @error('id_marca') is-invalid @enderror" 
-                                    required>
-                                <option value="">Seleccionar marca</option>
-                                @foreach ($marcas as $marca)
-                                    <option value="{{ $marca->id_marca }}" 
-                                        {{ old('id_marca', $producto->id_marca) == $marca->id_marca ? 'selected' : '' }}>
-                                        {{ $marca->vNombre }}
-                                    </option>
-                                @endforeach
-                            </select>
+                            <div class="input-group">
+                                <select name="id_marca" id="id_marca" 
+                                        class="form-select @error('id_marca') is-invalid @enderror" 
+                                        required>
+                                    <option value="">Seleccionar marca</option>
+                                    @foreach ($marcas as $marca)
+                                        <option value="{{ $marca->id_marca }}" 
+                                            {{ old('id_marca', $producto->id_marca) == $marca->id_marca ? 'selected' : '' }}>
+                                            {{ $marca->vNombre }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <button type="button" class="btn btn-outline-primary" onclick="abrirModalMarca()">
+                                    <i class="fas fa-plus-circle"></i>
+                                </button>
+                            </div>
                             @error('id_marca')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
                     </div>
 
-                    <!-- SECCIÓN DE IMPUESTO (SELECTOR ÚNICO) -->
+                    <!-- SECCIÓN DE IMPUESTO (SELECTOR ÚNICO) CON BOTÓN DE CREACIÓN RÁPIDA -->
                     <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="id_impuesto" class="form-label fw-bold">
                                 <i class="fas fa-file-invoice-dollar me-1"></i>Impuesto Aplicable
                             </label>
-                            @if(isset($impuestos) && $impuestos->count() > 0)
-                                <select name="id_impuesto" id="id_impuesto" 
-                                        class="form-select @error('id_impuesto') is-invalid @enderror"
-                                        onchange="actualizarPrecioFinal()">
-                                    <option value="">-- Sin impuesto --</option>
-                                    @foreach($impuestos as $impuesto)
-                                        <option value="{{ $impuesto->id_impuesto }}" 
-                                            data-porcentaje="{{ $impuesto->dPorcentaje }}"
-                                            data-tipo="{{ $impuesto->eTipo }}"
-                                            {{ old('id_impuesto', $producto->impuestos->first()->id_impuesto ?? '') == $impuesto->id_impuesto ? 'selected' : '' }}>
-                                            {{ $impuesto->vNombre }} ({{ $impuesto->eTipo }} - {{ number_format($impuesto->dPorcentaje, 2) }}%)
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('id_impuesto')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                                <small class="form-text text-muted mt-2">
-                                    Selecciona el impuesto que aplica a este producto (opcional)
-                                </small>
-                            @else
-                                <div class="alert alert-warning mb-0">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    No hay impuestos disponibles. 
-                                    <button type="button" class="btn btn-link p-0 ms-1" onclick="activarTabImpuestos()">
-                                        Crear impuestos
+                            <div class="input-group">
+                                @if(isset($impuestos) && $impuestos->count() > 0)
+                                    <select name="id_impuesto" id="id_impuesto" 
+                                            class="form-select @error('id_impuesto') is-invalid @enderror"
+                                            onchange="actualizarPrecioFinal()">
+                                        <option value="">-- Sin impuesto --</option>
+                                        @foreach($impuestos as $impuesto)
+                                            <option value="{{ $impuesto->id_impuesto }}" 
+                                                data-porcentaje="{{ $impuesto->dPorcentaje }}"
+                                                data-tipo="{{ $impuesto->eTipo }}"
+                                                {{ old('id_impuesto', $producto->impuestos->first()->id_impuesto ?? '') == $impuesto->id_impuesto ? 'selected' : '' }}>
+                                                {{ $impuesto->vNombre }} ({{ $impuesto->eTipo }} - {{ number_format($impuesto->dPorcentaje, 2) }}%)
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" class="btn btn-outline-primary" onclick="abrirModalImpuesto()">
+                                        <i class="fas fa-plus-circle"></i>
                                     </button>
-                                </div>
-                            @endif
+                                @else
+                                    <select name="id_impuesto" id="id_impuesto" 
+                                            class="form-select @error('id_impuesto') is-invalid @enderror">
+                                        <option value="">-- Sin impuesto --</option>
+                                    </select>
+                                    <button type="button" class="btn btn-outline-primary" onclick="abrirModalImpuesto()">
+                                        <i class="fas fa-plus-circle"></i>
+                                    </button>
+                                @endif
+                            </div>
+                            @error('id_impuesto')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted mt-2">
+                                Selecciona el impuesto que aplica a este producto (opcional)
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -797,7 +812,7 @@
             </div>
         </div>
 
-        <!-- DESCRIPCIÓN Y ETIQUETAS -->
+        <!-- DESCRIPCIÓN Y ETIQUETAS (CON BOTÓN DE CREACIÓN RÁPIDA) -->
         <div class="card mb-4">
             <div class="card-header bg-info text-white">
                 <h5 class="mb-0"><i class="fas fa-align-left me-2"></i>Descripción y Etiquetas</h5>
@@ -845,13 +860,15 @@
                                     <div class="col-12" id="no-etiquetas-msg">
                                         <div class="alert alert-info py-2">
                                             <i class="fas fa-info-circle me-1"></i>
-                                            No hay etiquetas disponibles. 
-                                            <button type="button" class="btn btn-link p-0 ms-1" onclick="activarTabEtiquetas()">
-                                                Crear etiquetas
-                                            </button>
+                                            No hay etiquetas disponibles.
                                         </div>
                                     </div>
                                 @endif
+                            </div>
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="abrirModalEtiqueta()">
+                                    <i class="fas fa-plus-circle me-1"></i> Crear Nueva Etiqueta
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -922,10 +939,15 @@
             </div>
         </div>
 
-        <!-- ATRIBUTOS DEL PRODUCTO (SELECCIÓN Y CREACIÓN DE VALORES) -->
+        <!-- ATRIBUTOS DEL PRODUCTO (SELECCIÓN Y CREACIÓN DE VALORES) CON BOTÓN PARA CREAR ATRIBUTO -->
         <div class="card mb-4">
             <div class="card-header" style="background-color: #45c973ff; color: white;">
-                <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Seleccionar Atributos para Variaciones</h5>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Seleccionar Atributos para Variaciones</h5>
+                    <button type="button" class="btn btn-light btn-sm" onclick="abrirModalAtributo()">
+                        <i class="fas fa-plus-circle me-1"></i> Crear Nuevo Atributo
+                    </button>
+                </div>
             </div>
             <div class="card-body" style="background-color: #f8f9fa;">
                 <div class="alert alert-info mb-4" style="color: #0c5460; background-color: #d1ecf1; border-color: #bee5eb;">
@@ -1027,7 +1049,7 @@
                     
                     <!-- Resumen de atributos seleccionados -->
                     <div class="mt-4 p-3 bg-light border rounded" id="resumen-atributos" style="{{ count($atributosConValores) > 0 ? 'display: block;' : 'display: none;' }}">
-                        <h6 class="fw-bold mb-3" style="color: #495037;"><i class="fas fa-check-circle text-success me-2"></i>Atributos activados para variaciones:</h6>
+                        <h6 class="fw-bold mb-3" style="color: #495057;"><i class="fas fa-check-circle text-success me-2"></i>Atributos activados para variaciones:</h6>
                         <div id="atributos-activos-lista" class="d-flex flex-wrap gap-3"></div>
                     </div>
                     
@@ -1035,8 +1057,8 @@
                     <div class="text-center py-5" id="no-atributos-msg">
                         <i class="fas fa-tags fa-4x text-muted mb-3"></i>
                         <h4 class="text-muted">No hay atributos disponibles</h4>
-                        <p class="text-muted">Crea atributos en la pestaña "Atributos" del panel de herramientas</p>
-                        <button type="button" class="btn btn-primary mt-3" onclick="activarTabAtributos()">
+                        <p class="text-muted">Crea atributos en el panel de herramientas</p>
+                        <button type="button" class="btn btn-primary mt-3" onclick="abrirModalAtributo()">
                             <i class="fas fa-plus-circle me-2"></i> Crear Atributo
                         </button>
                     </div>
@@ -1301,7 +1323,7 @@
                     </div>
                 </div>
                 
-                <!-- TAB: ETIQUETAS -->
+                <!-- TAB: ETIQUETAS (SIN COLOR) -->
                 <div class="tab-pane fade" id="etiquetas-content" role="tabpanel">
                     <div class="quick-form" id="quick-etiqueta-form">
                         <h5><i class="fas fa-tag me-2"></i>Crear Nueva Etiqueta</h5>
@@ -1433,6 +1455,319 @@
                         </form>
                     </div>
                 </div>  
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALES PARA CREACIÓN RÁPIDA -->
+    
+    <!-- MODAL PARA CREAR CATEGORÍA (CON IMAGEN) -->
+    <div class="modal fade" id="modalCategoria" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-tags me-2"></i>Crear Nueva Categoría
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="categoriaModalForm" enctype="multipart/form-data">
+                        @csrf
+                        
+                        <div class="mb-3">
+                            <label for="vNombre_categoria_modal" class="form-label fw-bold">Nombre de la Categoría *</label>
+                            <input type="text" class="form-control" 
+                                   id="vNombre_categoria_modal" name="vNombre" 
+                                   required
+                                   placeholder="Ej: Tequila, Mezcal, Añejos..."
+                                   oninput="generarSlugCategoria(this.value)">
+                            <small class="form-text text-muted">Nombre descriptivo para la categoría</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="vSlug_categoria_modal" class="form-label fw-bold">Slug (URL amigable) *</label>
+                            <input type="text" class="form-control" 
+                                   id="vSlug_categoria_modal" name="vSlug" 
+                                   required
+                                   placeholder="tequila-reposado">
+                            <small class="form-text text-muted">
+                                URL para la categoría. Se genera automáticamente.
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_categoria_padre_modal" class="form-label fw-bold">Categoría Padre</label>
+                            <select class="form-control" id="id_categoria_padre_modal" name="id_categoria_padre">
+                                <option value="">-- Seleccionar Categoría Padre (Opcional) --</option>
+                                @php
+                                    function mostrarCategoriasModal($categorias, $nivel = 0) {
+                                        foreach($categorias as $categoria) {
+                                            $prefijo = str_repeat('&nbsp;&nbsp;&nbsp;', $nivel);
+                                            $icono = $nivel == 0 ? '🏠 ' : '↳ ';
+                                            echo '<option value="' . $categoria->id_categoria . '">' .
+                                                 $prefijo . $icono . htmlspecialchars($categoria->vNombre) . 
+                                                 '</option>';
+                                            
+                                            if ($categoria->hijos && $categoria->hijos->count() > 0) {
+                                                mostrarCategoriasModal($categoria->hijos, $nivel + 1);
+                                            }
+                                        }
+                                    }
+                                    
+                                    $categoriasRaiz = $categorias->where('id_categoria_padre', null)->where('bActivo', true);
+                                @endphp
+                                
+                                @php mostrarCategoriasModal($categoriasRaiz, 0); @endphp
+                            </select>
+                            <small class="form-text text-muted">Selecciona si esta categoría pertenece a otra</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="tDescripcion_categoria_modal" class="form-label fw-bold">Descripción</label>
+                            <textarea class="form-control" 
+                                      id="tDescripcion_categoria_modal" name="tDescripcion" rows="3"
+                                      placeholder="Describe la categoría..."></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Imagen de la Categoría</label>
+                            
+                            <!-- Preview de imagen -->
+                            <div class="mb-3" id="categoriaModalImagePreview" style="display: none;">
+                                <div class="border rounded p-3 text-center">
+                                    <img id="categoriaModalPreviewImg" src="#" 
+                                         class="img-thumbnail" 
+                                         style="max-width: 150px; max-height: 150px; object-fit: cover;"
+                                         alt="Preview">
+                                    <div class="mt-2">
+                                        <small class="text-muted d-block">Vista previa</small>
+                                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarImagenCategoriaModal()">
+                                            <i class="fas fa-times me-1"></i>Cancelar imagen
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <input type="file" class="form-control" 
+                                   id="vImagen_categoria_modal" name="vImagen"
+                                   accept="image/jpeg,image/jpg,image/png,image/webp"
+                                   onchange="previewImagenCategoriaModal(this)">
+                            <small class="form-text text-muted">
+                                Formatos: JPG, JPEG, PNG, WebP. Tamaño máximo: 2MB. La imagen es opcional.
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" 
+                                       id="bActivo_categoria_modal" name="bActivo" value="1" checked>
+                                <label class="form-check-label" for="bActivo_categoria_modal">
+                                    Categoría activa
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="guardarCategoria()">
+                        <i class="fas fa-save me-1"></i> Crear Categoría
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PARA CREAR MARCA -->
+    <div class="modal fade" id="modalMarca" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-industry me-2"></i>Crear Nueva Marca
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="marcaModalForm">
+                        @csrf
+                        
+                        <div class="mb-3">
+                            <label for="vNombre_marca_modal" class="form-label fw-bold">Nombre de la Marca *</label>
+                            <input type="text" class="form-control" id="vNombre_marca_modal" name="vNombre" 
+                                   placeholder="Ej: José Cuervo, Patrón, Don Julio" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="tDescripcion_marca_modal" class="form-label fw-bold">Descripción (Opcional)</label>
+                            <textarea class="form-control" id="tDescripcion_marca_modal" name="tDescripcion" rows="3" 
+                                      placeholder="Describe la marca..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="guardarMarca()">
+                        <i class="fas fa-save me-1"></i> Crear Marca
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PARA CREAR ETIQUETA (SIN COLOR) -->
+    <div class="modal fade" id="modalEtiqueta" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-tag me-2"></i>Crear Nueva Etiqueta
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="etiquetaModalForm">
+                        @csrf
+                        
+                        <div class="mb-3">
+                            <label for="vNombre_eti_modal" class="form-label fw-bold">Nombre de la Etiqueta *</label>
+                            <input type="text" class="form-control" id="vNombre_eti_modal" name="vNombre" 
+                                   placeholder="Ej: Artesanal, Orgánico, Premium" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="tDescripcion_eti_modal" class="form-label fw-bold">Descripción (Opcional)</label>
+                            <textarea class="form-control" id="tDescripcion_eti_modal" name="tDescripcion" rows="2" 
+                                      placeholder="Descripción de la etiqueta..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="guardarEtiqueta()">
+                        <i class="fas fa-save me-1"></i> Crear Etiqueta
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PARA CREAR ATRIBUTO -->
+    <div class="modal fade" id="modalAtributo" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-list-alt me-2"></i>Crear Nuevo Atributo
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="atributoModalForm">
+                        @csrf
+                        
+                        <div class="mb-3">
+                            <label for="vNombre_attr_modal" class="form-label fw-bold">Nombre del Atributo *</label>
+                            <input type="text" class="form-control" id="vNombre_attr_modal" name="vNombre" 
+                                   placeholder="Ej: Tamaño, Color, Sabor, Edad"
+                                   oninput="generarSlugAtributo(this.value)" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="vSlug_attr_modal" class="form-label fw-bold">Slug (URL amigable)</label>
+                            <input type="text" class="form-control" id="vSlug_attr_modal" name="vSlug" 
+                                   placeholder="tamano, color, material">
+                            <small class="form-text text-muted">Se genera automáticamente desde el nombre</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="tDescripcion_attr_modal" class="form-label fw-bold">Descripción (Opcional)</label>
+                            <textarea class="form-control" id="tDescripcion_attr_modal" name="tDescripcion" rows="2" 
+                                      placeholder="Describe el atributo..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="guardarAtributo()">
+                        <i class="fas fa-save me-1"></i> Crear Atributo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PARA CREAR IMPUESTO -->
+    <div class="modal fade" id="modalImpuesto" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-file-invoice-dollar me-2"></i>Crear Nuevo Impuesto
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="impuestoModalForm">
+                        @csrf
+                        
+                        <div class="mb-3">
+                            <label for="vNombre_impuesto_modal" class="form-label fw-bold">Nombre del Impuesto *</label>
+                            <input type="text" class="form-control" id="vNombre_impuesto_modal" name="vNombre" 
+                                   placeholder="Ej: IVA, ISR, IEPS" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="eTipo_impuesto_modal" class="form-label fw-bold">Tipo de Impuesto *</label>
+                            <select class="form-control" id="eTipo_impuesto_modal" name="eTipo" required>
+                                <option value="">Seleccionar tipo</option>
+                                <option value="IVA">IVA</option>
+                                <option value="IEPS">IEPS</option>
+                                <option value="OTRO">OTRO</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="dPorcentaje_impuesto_modal" class="form-label fw-bold">Porcentaje *</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" min="0" max="100" class="form-control" 
+                                       id="dPorcentaje_impuesto_modal" name="dPorcentaje" 
+                                       placeholder="16.00" required>
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="tDescripcion_impuesto_modal" class="form-label fw-bold">Descripción (Opcional)</label>
+                            <textarea class="form-control" id="tDescripcion_impuesto_modal" name="tDescripcion" rows="2"></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" 
+                                       id="bActivo_impuesto_modal" name="bActivo" value="1" checked>
+                                <label class="form-check-label" for="bActivo_impuesto_modal">Activo</label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="guardarImpuesto()">
+                        <i class="fas fa-save me-1"></i> Crear Impuesto
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1692,8 +2027,9 @@ let valorModal = null;
 let maxTotalSize = 50 * 1024 * 1024; // 50MB en bytes
 let limiteExcedido = false;
 
-// Variable para almacenar la imagen de categoría seleccionada
+// Variable para la imagen de categoría
 let categoriaImagenFile = null;
+let categoriaModalImagenFile = null;
 
 // Almacenar imágenes de variaciones por pestaña
 let imagenesVariacion = {};
@@ -1709,19 +2045,573 @@ let valoresSeleccionadosIniciales = @json($valoresSeleccionados);
 // Array para almacenar imágenes adicionales existentes a eliminar
 let imagenesAEliminar = [];
 
+// Variables para modales
+let modalCategoria = null;
+let modalMarca = null;
+let modalEtiqueta = null;
+let modalAtributo = null;
+let modalImpuesto = null;
+
 // Inicializar modal cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
     valorModal = new bootstrap.Modal(document.getElementById('crearValorModal'));
+    
+    // Inicializar modales
+    modalCategoria = new bootstrap.Modal(document.getElementById('modalCategoria'));
+    modalMarca = new bootstrap.Modal(document.getElementById('modalMarca'));
+    modalEtiqueta = new bootstrap.Modal(document.getElementById('modalEtiqueta'));
+    modalAtributo = new bootstrap.Modal(document.getElementById('modalAtributo'));
+    modalImpuesto = new bootstrap.Modal(document.getElementById('modalImpuesto'));
     
     // Inicializar los formularios rápidos
     initQuickForms();
     
     // Inicializar atributos activos basados en valores seleccionados
     inicializarAtributosActivos();
-    
-    // Mostrar la clase de envío seleccionada actualmente
-    console.log('Clase de envío actual:', '{{ $producto->vClase_envio }}');
 });
+
+// ============ FUNCIONES PARA ABRIR MODALES ============
+
+function abrirModalCategoria() {
+    document.getElementById('vNombre_categoria_modal').value = '';
+    document.getElementById('vSlug_categoria_modal').value = '';
+    document.getElementById('id_categoria_padre_modal').value = '';
+    document.getElementById('tDescripcion_categoria_modal').value = '';
+    document.getElementById('vImagen_categoria_modal').value = '';
+    document.getElementById('categoriaModalImagePreview').style.display = 'none';
+    document.getElementById('bActivo_categoria_modal').checked = true;
+    categoriaModalImagenFile = null;
+    modalCategoria.show();
+}
+
+function abrirModalMarca() {
+    document.getElementById('vNombre_marca_modal').value = '';
+    document.getElementById('tDescripcion_marca_modal').value = '';
+    modalMarca.show();
+}
+
+function abrirModalEtiqueta() {
+    document.getElementById('vNombre_eti_modal').value = '';
+    document.getElementById('tDescripcion_eti_modal').value = '';
+    modalEtiqueta.show();
+}
+
+function abrirModalAtributo() {
+    document.getElementById('vNombre_attr_modal').value = '';
+    document.getElementById('vSlug_attr_modal').value = '';
+    document.getElementById('tDescripcion_attr_modal').value = '';
+    modalAtributo.show();
+}
+
+function abrirModalImpuesto() {
+    document.getElementById('vNombre_impuesto_modal').value = '';
+    document.getElementById('eTipo_impuesto_modal').value = '';
+    document.getElementById('dPorcentaje_impuesto_modal').value = '';
+    document.getElementById('tDescripcion_impuesto_modal').value = '';
+    document.getElementById('bActivo_impuesto_modal').checked = true;
+    modalImpuesto.show();
+}
+
+// ============ FUNCIONES PARA GUARDAR DESDE MODALES ============
+
+function generarSlugCategoria(nombre) {
+    if (!nombre) {
+        document.getElementById('vSlug_categoria_modal').value = '';
+        return;
+    }
+    
+    let slug = nombre.toLowerCase();
+    slug = slug.replace(/á/gi, 'a');
+    slug = slug.replace(/é/gi, 'e');
+    slug = slug.replace(/í/gi, 'i');
+    slug = slug.replace(/ó/gi, 'o');
+    slug = slug.replace(/ú/gi, 'u');
+    slug = slug.replace(/ñ/gi, 'n');
+    slug = slug.replace(/[^a-z0-9\s]/g, '');
+    slug = slug.replace(/\s+/g, '-');
+    slug = slug.replace(/-+/g, '-');
+    slug = slug.replace(/^-+/, '').replace(/-+$/, '');
+    
+    document.getElementById('vSlug_categoria_modal').value = slug;
+}
+
+function generarSlugAtributo(nombre) {
+    if (!nombre) {
+        document.getElementById('vSlug_attr_modal').value = '';
+        return;
+    }
+    
+    let slug = nombre.toLowerCase();
+    slug = slug.replace(/á/gi, 'a');
+    slug = slug.replace(/é/gi, 'e');
+    slug = slug.replace(/í/gi, 'i');
+    slug = slug.replace(/ó/gi, 'o');
+    slug = slug.replace(/ú/gi, 'u');
+    slug = slug.replace(/ñ/gi, 'n');
+    slug = slug.replace(/[^a-z0-9\s]/g, '');
+    slug = slug.replace(/\s+/g, '-');
+    slug = slug.replace(/-+/g, '-');
+    slug = slug.replace(/^-+/, '').replace(/-+$/, '');
+    
+    document.getElementById('vSlug_attr_modal').value = slug;
+}
+
+function previewImagenCategoriaModal(input) {
+    const preview = document.getElementById('categoriaModalImagePreview');
+    const previewImg = document.getElementById('categoriaModalPreviewImg');
+    
+    if (input.files && input.files.length > 0) {
+        const file = input.files[0];
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        
+        if (!validTypes.includes(file.type)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Formato no válido',
+                text: 'Solo se permiten imágenes JPG, JPEG, PNG o WebP'
+            });
+            input.value = '';
+            return;
+        }
+        
+        if (file.size > 2 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Archivo demasiado grande',
+                text: 'La imagen no puede exceder los 2MB'
+            });
+            input.value = '';
+            return;
+        }
+        
+        categoriaModalImagenFile = file;
+        
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            preview.style.display = 'block';
+        }
+        
+        reader.readAsDataURL(file);
+    }
+}
+
+function cancelarImagenCategoriaModal() {
+    const preview = document.getElementById('categoriaModalImagePreview');
+    const fileInput = document.getElementById('vImagen_categoria_modal');
+    
+    preview.style.display = 'none';
+    fileInput.value = '';
+    categoriaModalImagenFile = null;
+}
+
+function guardarCategoria() {
+    const vNombre = document.getElementById('vNombre_categoria_modal').value.trim();
+    const vSlug = document.getElementById('vSlug_categoria_modal').value.trim();
+    const idCategoriaPadre = document.getElementById('id_categoria_padre_modal').value;
+    const tDescripcion = document.getElementById('tDescripcion_categoria_modal').value;
+    const bActivo = document.getElementById('bActivo_categoria_modal').checked ? 1 : 0;
+    
+    if (!vNombre) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'El nombre de la categoría es obligatorio'
+        });
+        return;
+    }
+    
+    if (!vSlug) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'El slug es obligatorio'
+        });
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Creando categoría...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+    
+    const formData = new FormData();
+    formData.append('vNombre', vNombre);
+    formData.append('vSlug', vSlug);
+    formData.append('tDescripcion', tDescripcion);
+    formData.append('bActivo', bActivo);
+    if (idCategoriaPadre) {
+        formData.append('id_categoria_padre', idCategoriaPadre);
+    }
+    if (categoriaModalImagenFile) {
+        formData.append('vImagen', categoriaModalImagenFile);
+    }
+    
+    fetch('{{ route("categorias.store") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        Swal.close();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message || 'Categoría creada exitosamente',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            agregarCategoriaAlSelect(data.categoria);
+            modalCategoria.hide();
+        } else {
+            let errorMessage = data.message || 'Error al crear la categoría';
+            if (data.errors) {
+                errorMessage = Object.values(data.errors).flat().join('<br>');
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                html: errorMessage
+            });
+        }
+    })
+    .catch(error => {
+        Swal.close();
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error de conexión al servidor'
+        });
+    });
+}
+
+function guardarMarca() {
+    const vNombre = document.getElementById('vNombre_marca_modal').value.trim();
+    const tDescripcion = document.getElementById('tDescripcion_marca_modal').value;
+    
+    if (!vNombre) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'El nombre de la marca es obligatorio'
+        });
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Creando marca...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+    
+    fetch('{{ route("marcas.quick-create") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            vNombre: vNombre,
+            tDescripcion: tDescripcion
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        Swal.close();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            const select = document.getElementById('id_marca');
+            const option = document.createElement('option');
+            option.value = data.marca.id_marca;
+            option.textContent = data.marca.vNombre;
+            select.appendChild(option);
+            select.value = data.marca.id_marca;
+            
+            modalMarca.hide();
+        } else {
+            let errorMessage = data.message || 'Error al crear la marca';
+            if (data.errors) {
+                errorMessage = Object.values(data.errors).flat().join('<br>');
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                html: errorMessage
+            });
+        }
+    })
+    .catch(error => {
+        Swal.close();
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error de conexión al servidor'
+        });
+    });
+}
+
+function guardarEtiqueta() {
+    const vNombre = document.getElementById('vNombre_eti_modal').value.trim();
+    const tDescripcion = document.getElementById('tDescripcion_eti_modal').value;
+    
+    if (!vNombre) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'El nombre de la etiqueta es obligatorio'
+        });
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Creando etiqueta...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+    
+    fetch('{{ route("etiquetas.quick-create") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            vNombre: vNombre,
+            tDescripcion: tDescripcion
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        Swal.close();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            agregarEtiquetaAlListado(data.etiqueta);
+            modalEtiqueta.hide();
+        } else {
+            let errorMessage = data.message || 'Error al crear la etiqueta';
+            if (data.errors) {
+                errorMessage = Object.values(data.errors).flat().join('<br>');
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                html: errorMessage
+            });
+        }
+    })
+    .catch(error => {
+        Swal.close();
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error de conexión al servidor'
+        });
+    });
+}
+
+function guardarAtributo() {
+    const vNombre = document.getElementById('vNombre_attr_modal').value.trim();
+    const vSlug = document.getElementById('vSlug_attr_modal').value.trim();
+    const tDescripcion = document.getElementById('tDescripcion_attr_modal').value;
+    
+    if (!vNombre) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'El nombre del atributo es obligatorio'
+        });
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Creando atributo...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+    
+    fetch('{{ route("atributos.quick-create") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            vNombre: vNombre,
+            vSlug: vSlug || undefined,
+            tDescripcion: tDescripcion
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        Swal.close();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            agregarAtributoAlListado(data.atributo);
+            modalAtributo.hide();
+        } else {
+            let errorMessage = data.message || 'Error al crear el atributo';
+            if (data.errors) {
+                errorMessage = Object.values(data.errors).flat().join('<br>');
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                html: errorMessage
+            });
+        }
+    })
+    .catch(error => {
+        Swal.close();
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error de conexión al servidor'
+        });
+    });
+}
+
+function guardarImpuesto() {
+    const vNombre = document.getElementById('vNombre_impuesto_modal').value.trim();
+    const eTipo = document.getElementById('eTipo_impuesto_modal').value;
+    const dPorcentaje = document.getElementById('dPorcentaje_impuesto_modal').value;
+    const tDescripcion = document.getElementById('tDescripcion_impuesto_modal').value;
+    const bActivo = document.getElementById('bActivo_impuesto_modal').checked ? 1 : 0;
+    
+    if (!vNombre) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'El nombre del impuesto es obligatorio'
+        });
+        return;
+    }
+    
+    if (!eTipo) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'El tipo de impuesto es obligatorio'
+        });
+        return;
+    }
+    
+    if (!dPorcentaje || dPorcentaje <= 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'El porcentaje debe ser mayor a 0'
+        });
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Creando impuesto...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+    
+    fetch('{{ route("impuestos.quick-create") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            vNombre: vNombre,
+            eTipo: eTipo,
+            dPorcentaje: dPorcentaje,
+            tDescripcion: tDescripcion,
+            bActivo: bActivo
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        Swal.close();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            const select = document.getElementById('id_impuesto');
+            const option = document.createElement('option');
+            option.value = data.impuesto.id_impuesto;
+            option.setAttribute('data-porcentaje', data.impuesto.dPorcentaje);
+            option.setAttribute('data-tipo', data.impuesto.eTipo);
+            option.textContent = data.impuesto.vNombre + ' (' + data.impuesto.eTipo + ' - ' + parseFloat(data.impuesto.dPorcentaje).toFixed(2) + '%)';
+            select.appendChild(option);
+            
+            select.value = data.impuesto.id_impuesto;
+            actualizarPrecioFinal();
+            
+            modalImpuesto.hide();
+        } else {
+            let errorMessage = data.message || 'Error al crear el impuesto';
+            if (data.errors) {
+                errorMessage = Object.values(data.errors).flat().join('<br>');
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                html: errorMessage
+            });
+        }
+    })
+    .catch(error => {
+        Swal.close();
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error de conexión al servidor'
+        });
+    });
+}
 
 // ============ FUNCIONES PARA ELIMINAR IMÁGENES EXISTENTES ============
 
@@ -1832,7 +2722,7 @@ function inicializarAtributosActivos() {
     actualizarPestanasValores();
 }
 
-// ============ VALIDACIÓN DE TAMAÑO ANTES DE ENVIAR ============
+// ============ FUNCIONES DE VALIDACIÓN DE TAMAÑO ============
 function validarTamañoTotalAntesDeEnviar() {
     const totalSize = calcularTamañoTotal();
     const maxSize = 50 * 1024 * 1024; // 50MB
@@ -3334,7 +4224,7 @@ function actualizarPestanasValores() {
         }];
         const skuSugerido = generarSkuSugerido(productoSku, combinacion);
         
-        // Valores pre-cargados si la variación existe - CORREGIDO PARA MOSTRAR FECHAS
+        // Valores pre-cargados si la variación existe
         const precioValue = variacionExistente ? variacionExistente.dPrecio : '';
         const stockValue = variacionExistente ? variacionExistente.iStock : '0';
         const claseEnvioValue = variacionExistente ? variacionExistente.vClase_envio : '';
@@ -3350,10 +4240,8 @@ function actualizarPestanasValores() {
         // CORRECCIÓN: Extraer fechas correctamente del formato YYYY-MM-DD HH:MM:SS
         let fechaInicioValue = '';
         if (variacionExistente && variacionExistente.dFecha_inicio_oferta) {
-            // Si es una cadena completa con fecha y hora, extraer solo la parte de la fecha
             const fechaStr = variacionExistente.dFecha_inicio_oferta;
             if (typeof fechaStr === 'string') {
-                // Tomar los primeros 10 caracteres (YYYY-MM-DD)
                 fechaInicioValue = fechaStr.substring(0, 10);
             }
         }
@@ -4341,12 +5229,9 @@ function agregarCategoriaAlSelect(categoria) {
     const option = document.createElement('option');
     option.value = categoria.id_categoria;
     
-    let prefijo = '';
-    for (let i = 0; i < (categoria.nivel || 0); i++) {
-        prefijo += '&nbsp;&nbsp;&nbsp;';
-    }
+    let icono = categoria.id_categoria_padre ? '↳ ' : '🏠 ';
     
-    option.innerHTML = prefijo + (categoria.icono || '↳ ') + categoria.vNombre;
+    option.innerHTML = icono + categoria.vNombre;
     
     select.appendChild(option);
     select.value = categoria.id_categoria;
@@ -5231,16 +6116,11 @@ document.getElementById('productoForm').addEventListener('submit', function(e) {
         return false;
     }
     
-    // Aquí agregamos la función para incluir todas las imágenes de variaciones en el FormData
-    // Esta función se ejecutará antes de que el formulario se envíe
-    
-    // Crear un nuevo FormData para asegurar que todas las imágenes se incluyan
-    const form = this;
-    
     // Prevenir el envío original
     e.preventDefault();
     
     // Crear un nuevo FormData basado en el formulario actual
+    const form = this;
     const formData = new FormData(form);
     
     // Eliminar las entradas de variaciones que ya existen para reemplazarlas

@@ -20,7 +20,8 @@
                             <label for="vNombre" class="form-label">Nombre de la Categoría *</label>
                             <input type="text" class="form-control @error('vNombre') is-invalid @enderror" 
                                    id="vNombre" name="vNombre" 
-                                   value="{{ old('vNombre', $categoria->vNombre) }}" required>
+                                   value="{{ old('vNombre', $categoria->vNombre) }}" required
+                                   oninput="actualizarSlug(this.value)">
                             @error('vNombre')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -36,7 +37,7 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                             <small class="form-text text-muted">
-                                URL para la categoría (ej: tequila-reposado)
+                                URL para la categoría (ej: tequila-reposado). Se actualiza automáticamente al cambiar el nombre.
                             </small>
                         </div>
 
@@ -166,6 +167,24 @@
 </div>
 
 <script>
+    // Función para actualizar el slug automáticamente
+    function actualizarSlug(nombre) {
+        if (!nombre) return;
+        
+        let slug = nombre.toLowerCase();
+        slug = slug.replace(/á/gi, 'a');
+        slug = slug.replace(/é/gi, 'e');
+        slug = slug.replace(/í/gi, 'i');
+        slug = slug.replace(/ó/gi, 'o');
+        slug = slug.replace(/ú/gi, 'u');
+        slug = slug.replace(/ñ/gi, 'n');
+        slug = slug.replace(/[^a-z0-9]+/g, '-');
+        slug = slug.replace(/^-+/, '').replace(/-+$/, '');
+        
+        document.getElementById('vSlug').value = slug;
+        formChanged = true;
+    }
+    
     // Variables de estado
     let currentSelectedFile = null;
     let hasNewImage = false;

@@ -166,7 +166,7 @@
             margin-bottom: 15px;
         }
 
-        /* Estilos de tarjetas de producto - IGUAL QUE EN resultados.blade.php */
+        /* Estilos de tarjetas de producto - ESTILO MERCADO LIBRE */
         .producto-card {
             background: #fff;
             border-radius: 12px;
@@ -247,18 +247,68 @@
             word-break: break-word;
         }
 
-        .producto-precio {
-            font-weight: bold;
-            color: #2e7d32;
+        /* PRECIOS ESTILO MERCADO LIBRE */
+        .precio-container {
             margin-bottom: 8px;
-            font-size: clamp(1.2rem, 4vw, 1.4rem);
         }
 
-        .producto-precio .precio-original {
+        .precio-original {
             text-decoration: line-through;
             color: #999;
+            font-size: 12px;
+            display: block;
+        }
+
+        .precio-actual {
+            font-weight: 600;
+            color: #333;
+            font-size: 24px;
+            line-height: 1.2;
+        }
+
+        .precio-actual small {
             font-size: 14px;
-            font-weight: normal;
+            font-weight: 400;
+            color: #666;
+            margin-left: 4px;
+        }
+
+        .descuento-badge {
+            background: #00a650;
+            color: white;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+            display: inline-block;
+        }
+
+        /* ENVÍO - CORREGIDO */
+        .envio-info {
+            font-size: 14px;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .envio-gratis {
+            color: #00a650;
+            font-weight: 600;
+        }
+
+        .envio-gratis i {
+            font-size: 16px;
+        }
+
+        .envio-pago {
+            color: #ff6b00;
+            font-weight: 600;
+        }
+
+        .envio-pago i {
+            font-size: 16px;
         }
 
         .stock-info {
@@ -284,40 +334,43 @@
             font-weight: bold;
         }
 
-        .badge {
-            display: inline-block;
-            padding: 4px 8px;
-            font-size: 11px;
-            background-color: #6c757d;
-            color: white;
-            border-radius: 4px;
-            margin-right: 3px;
-            font-weight: bold;
-        }
-
         .badge-oferta {
             position: absolute;
             top: 15px;
             left: 15px;
-            background: #dc3545;
+            background: #00a650;
             color: white;
             padding: 5px 10px;
             border-radius: 4px;
             font-size: 12px;
             font-weight: bold;
             z-index: 99;
-            box-shadow: 0 2px 5px rgba(220, 53, 69, 0.3);
+            box-shadow: 0 2px 5px rgba(0,166,80,0.3);
         }
 
         .badge-stock-bajo {
             position: absolute;
             top: 15px;
             left: 15px;
-            background: #ffc107;
-            color: #000;
+            background: #ff6b00;
+            color: white;
             padding: 5px 10px;
             border-radius: 4px;
             font-size: 12px;
+            font-weight: bold;
+            z-index: 99;
+        }
+
+        /* BADGE DE VARIACIÓN */
+        .badge-variacion {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
             font-weight: bold;
             z-index: 99;
         }
@@ -330,6 +383,21 @@
             font-weight: bold;
             margin: 2px;
             color: white;
+        }
+
+        /* BADGE DE MÁS VENDIDO - SOLO SE MUESTRA CUANDO HAY VENTAS REALES */
+        .badge-mas-vendido {
+            position: absolute;
+            top: 15px;
+            right: 60px;
+            background: #ffd700;
+            color: #333;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            z-index: 99;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
         .ver-detalle {
@@ -377,11 +445,11 @@
         }
 
         .btn-danger {
-            background: #dc3545;
+            background: #00a650;
         }
 
         .btn-danger:hover {
-            background: #c82333;
+            background: #008f45;
         }
 
         /* Corazón de favoritos */
@@ -454,9 +522,9 @@
             opacity: 1;
         }
 
-        /* Banner de bienvenida */
+        /* Banner de bienvenida estilo ML */
         .banner-inicio {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3483fa 0%, #1e4d8c 100%);
             color: white;
             text-align: center;
             padding: 40px 20px;
@@ -478,7 +546,7 @@
 
         .btn-banner {
             background: white;
-            color: #667eea;
+            color: #3483fa;
             padding: 12px 30px;
             border-radius: 25px;
             text-decoration: none;
@@ -501,12 +569,12 @@
         }
 
         .btn-banner.descuento {
-            background: #dc3545;
+            background: #00a650;
             color: white;
         }
 
         .btn-banner.descuento:hover {
-            background: #c82333;
+            background: #008f45;
         }
 
         /* Sección de productos */
@@ -522,10 +590,24 @@
             color: #333;
             font-size: clamp(1.3rem, 5vw, 2rem);
             padding: 0 15px;
+            position: relative;
+        }
+
+        .titulo-seccion::after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 3px;
+            background: #3483fa;
+            margin: 10px auto 0;
         }
 
         .titulo-seccion.descuento {
-            color: #dc3545;
+            color: #00a650;
+        }
+
+        .titulo-seccion.descuento::after {
+            background: #00a650;
         }
 
         .alert {
@@ -600,7 +682,7 @@
         }
 
         .pagination li.active span {
-            background: #007bff;
+            background: #3483fa;
             color: white;
             font-weight: 600;
         }
@@ -626,16 +708,6 @@
             flex-wrap: wrap;
             gap: 5px;
             margin-top: 8px;
-        }
-
-        .envio-info {
-            font-size: 12px;
-            color: #28a745;
-            margin-top: 5px;
-            padding: 4px 8px;
-            background: #e8f5e8;
-            border-radius: 4px;
-            display: inline-block;
         }
 
         /* Media Queries */
@@ -683,8 +755,8 @@
                 height: 34px;
             }
 
-            .producto-precio {
-                font-size: 16px;
+            .precio-actual {
+                font-size: 20px;
             }
 
             .corazon-favorito {
@@ -763,12 +835,12 @@
             <ul class="nav-links">
                 <li><a href="{{ route('inicio') }}">Inicio</a></li>
                 <li><a href="{{ route('busqueda.resultados') }}">Todos los Productos</a></li>
-                <li><a href="{{ route('busqueda.resultados', ['en_descuento' => '1']) }}" style="color: #dc3545; font-weight: bold;">🔥 En Descuento</a></li>
+                <li><a href="{{ route('busqueda.resultados', ['en_oferta' => '1']) }}" style="color: #00a650; font-weight: bold;">🔥 En Oferta</a></li>
                 <li>
                     @auth
-                        <a href="{{ route('favoritos.index') }}" style="color: #dc3545; font-weight: bold;">❤️ Mis Favoritos</a>
+                        <a href="{{ route('favoritos.index') }}" style="color: #3483fa; font-weight: bold;">❤️ Mis Favoritos</a>
                     @else
-                        <a href="{{ route('login') }}" style="color: #dc3545; font-weight: bold;">❤️ Mis Favoritos</a>
+                        <a href="{{ route('login') }}" style="color: #3483fa; font-weight: bold;">❤️ Mis Favoritos</a>
                     @endauth
                 </li>
                 @auth
@@ -809,48 +881,144 @@
         </div>
     @endif
 
-    <!-- Banner de bienvenida -->
+    <!-- Banner de bienvenida estilo ML -->
     <div class="banner-inicio">
-        <h2>Bienvenido a Ecommerce Agave</h2>
+        <h2>¡Bienvenido a Ecommerce Agave!</h2>
         <p>Descubre nuestra exclusiva selección de productos de agave y mezcal</p>
         <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
             <a href="{{ route('busqueda.resultados') }}" class="btn-banner">Explorar Productos</a>
-            <a href="{{ route('busqueda.resultados', ['en_descuento' => '1']) }}" class="btn-banner descuento">🔥 Ver Descuentos</a>
+            <a href="{{ route('busqueda.resultados', ['en_oferta' => '1']) }}" class="btn-banner descuento">🔥 Ver Ofertas</a>
         </div>
     </div>
 
-    <!-- Sección de productos en descuento -->
-    @if(isset($productosDescuento) && $productosDescuento->count() > 0)
+    @php
+        // Función para obtener la colección completa de items (productos padre + variaciones)
+        function obtenerItemsCatalogo($productos) {
+            $items = collect();
+            
+            foreach ($productos as $producto) {
+                // Agregar el producto padre
+                $items->push([
+                    'tipo' => 'producto',
+                    'id' => $producto->id_producto,
+                    'nombre' => $producto->vNombre,
+                    'sku' => $producto->vCodigo_barras,
+                    'precio_original' => $producto->dPrecio_venta,
+                    'precio_oferta' => $producto->dPrecio_oferta,
+                    'tiene_oferta' => $producto->ofertaVigente(),
+                    'stock' => $producto->iStock,
+                    'imagenes' => $producto->imagenes,
+                    'marca' => $producto->marca->vNombre ?? 'Marca genérica',
+                    'etiquetas' => $producto->etiquetas,
+                    'categoria' => $producto->categoria->vNombre ?? '',
+                    'es_favorito' => $producto->esFavorito(),
+                    'url' => route('productos.show.public', $producto->id_producto),
+                    'variacion_texto' => null,
+                    'ventas' => $producto->ventas ?? 0
+                ]);
+                
+                // Agregar todas las variaciones activas
+                foreach ($producto->variacionesActivas as $variacion) {
+                    // Construir texto de atributos para la variación
+                    $atributosTexto = [];
+                    foreach($variacion->atributos as $atributoRel) {
+                        if($atributoRel->atributo && $atributoRel->valor) {
+                            $atributosTexto[] = $atributoRel->atributo->vNombre . ': ' . $atributoRel->valor->vValor;
+                        }
+                    }
+                    
+                    $items->push([
+                        'tipo' => 'variacion',
+                        'id' => $variacion->id_variacion,
+                        'producto_padre_id' => $producto->id_producto,
+                        'nombre' => $producto->vNombre . ' - ' . implode(' | ', $atributosTexto),
+                        'sku' => $variacion->vSKU,
+                        'precio_original' => $variacion->dPrecio,
+                        'precio_oferta' => $variacion->dPrecio_oferta,
+                        'tiene_oferta' => $variacion->ofertaVigente(),
+                        'stock' => $variacion->iStock,
+                        'imagenes' => $variacion->imagenes,
+                        'marca' => $producto->marca->vNombre ?? 'Marca genérica',
+                        'etiquetas' => $producto->etiquetas,
+                        'categoria' => $producto->categoria->vNombre ?? '',
+                        'es_favorito' => $producto->esFavorito(),
+                        'url' => route('productos.show.public', [$producto->id_producto, 'variacion' => $variacion->id_variacion]),
+                        'variacion_texto' => implode(' | ', $atributosTexto),
+                        'ventas' => $variacion->ventas ?? 0
+                    ]);
+                }
+            }
+            
+            return $items;
+        }
+        
+        // Obtener items para la sección de destacados
+        $itemsDestacados = obtenerItemsCatalogo($productos);
+        
+        // Obtener items para la sección de ofertas
+        $itemsOferta = collect();
+        if(isset($productosOferta)) {
+            $itemsOferta = obtenerItemsCatalogo($productosOferta);
+            // Filtrar solo los que tienen oferta vigente
+            $itemsOferta = $itemsOferta->filter(function($item) {
+                return $item['tiene_oferta'];
+            });
+        }
+        
+        // Obtener items para más vendidos - SOLO SI TIENEN VENTAS REALES
+        $itemsMasVendidos = collect();
+        if(isset($productosMasVendidos)) {
+            $itemsMasVendidos = obtenerItemsCatalogo($productosMasVendidos);
+            // Filtrar solo los que tienen ventas > 0
+            $itemsMasVendidos = $itemsMasVendidos->filter(function($item) {
+                return ($item['ventas'] ?? 0) > 0;
+            });
+        }
+    @endphp
+
+    <!-- Sección de productos en oferta -->
+    @if($itemsOferta->count() > 0)
     <div class="seccion-destacados" style="margin-top: 30px;">
         <h2 class="titulo-seccion descuento">
-            🔥 Productos en Descuento
+            🔥 Productos en Oferta
         </h2>
         
         <div class="productos-grid">
-            @foreach($productosDescuento as $producto)
+            @foreach($itemsOferta as $item)
                 @php
-                    $estaBajoStock = $producto->iStock > 0 && $producto->iStock <= 10;
-                    $esFavorito = $producto->esFavorito();
-                    $tieneDescuento = true;
-                    $porcentajeDescuento = round((($producto->dPrecio_venta - $producto->dPrecio_descuento) / $producto->dPrecio_venta) * 100);
+                    $precioActual = $item['tiene_oferta'] ? $item['precio_oferta'] : $item['precio_original'];
+                    $porcentajeDescuento = $item['tiene_oferta'] ? round((($item['precio_original'] - $item['precio_oferta']) / $item['precio_original']) * 100) : 0;
+                    
+                    // LÓGICA DE ENVÍO CORREGIDA
+                    $envioGratis = $item['precio_actual'] >= 150;
+                    $costoEnvio = 50;
+                    
+                    $estaBajoStock = $item['stock'] > 0 && $item['stock'] <= 10;
                 @endphp
                 
-                <div class="producto-card" onclick="window.location.href='{{ route('productos.show.public', $producto->id_producto) }}'">
+                <div class="producto-card" onclick="window.location.href='{{ $item['url'] }}'">
                     <div class="producto-imagen-container">
-                        <button class="corazon-favorito {{ $esFavorito ? 'activo' : 'inactivo' }}" 
-                                data-producto="{{ $producto->id_producto }}"
-                                onclick="event.stopPropagation(); toggleFavorito(this, {{ $producto->id_producto }})"
-                                title="{{ $esFavorito ? 'Quitar de favoritos' : 'Agregar a favoritos' }}">
-                            {{ $esFavorito ? '❤️' : '🤍' }}
+                        <button class="corazon-favorito {{ $item['es_favorito'] ? 'activo' : 'inactivo' }}" 
+                                data-producto="{{ $item['tipo'] == 'producto' ? $item['id'] : $item['producto_padre_id'] }}"
+                                onclick="event.stopPropagation(); toggleFavorito(this, {{ $item['tipo'] == 'producto' ? $item['id'] : $item['producto_padre_id'] }})"
+                                title="{{ $item['es_favorito'] ? 'Quitar de favoritos' : 'Agregar a favoritos' }}">
+                            {{ $item['es_favorito'] ? '❤️' : '🤍' }}
                         </button>
 
-                        <!-- BADGE DE DESCUENTO DESTACADO -->
-                        <div class="badge-oferta" style="background: #dc3545; font-size: 14px; padding: 6px 12px;">
-                            -{{ $porcentajeDescuento }}% DESCUENTO
+                        <!-- BADGE DE OFERTA DESTACADO -->
+                        <div class="badge-oferta" style="background: #00a650; font-size: 14px; padding: 6px 12px;">
+                            -{{ $porcentajeDescuento }}% OFF
                         </div>
 
-                        @if(count($producto->imagenes) > 0)
-                            <img src="{{ $producto->imagenes[0] }}" alt="{{ $producto->vNombre }}" class="producto-imagen">
+                        <!-- BADGE DE VARIACIÓN (si es una variación) -->
+                        @if($item['tipo'] == 'variacion')
+                            <div class="badge-variacion">
+                                {{ $item['variacion_texto'] }}
+                            </div>
+                        @endif
+
+                        @if(count($item['imagenes']) > 0)
+                            <img src="{{ $item['imagenes'][0] }}" alt="{{ $item['nombre'] }}" class="producto-imagen">
                         @else
                             <div class="no-imagen">
                                 <span>🛒 Sin imagen</span>
@@ -859,47 +1027,51 @@
                     </div>
                     
                     <div class="producto-info">
-                        <h3>{{ $producto->vNombre }}</h3>
+                        <h3>{{ $item['nombre'] }}</h3>
 
-                        <!-- Precio con descuento -->
-                        <div class="producto-precio">
-                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                <span class="precio-original">
-                                    ${{ number_format($producto->dPrecio_venta, 2) }}
-                                </span>
-                                <span style="color: #2e7d32; font-size: 1.4rem;">
-                                    ${{ number_format($producto->dPrecio_descuento, 2) }}
-                                </span>
+                        <!-- PRECIOS ESTILO MERCADO LIBRE -->
+                        <div class="precio-container">
+                            <span class="precio-original">${{ number_format($item['precio_original'], 2) }}</span>
+                            <div style="display: flex; align-items: center; flex-wrap: wrap;">
+                                <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
+                                <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                             </div>
                         </div>
 
-                        <!-- SKU -->
-                        <div style="font-size: 11px; color: #999; margin-bottom: 5px;">
-                            SKU: {{ $producto->vCodigo_barras }}
+                        <!-- ENVÍO CORREGIDO -->
+                        <div class="envio-info">
+                            @if($envioGratis)
+                                <span class="envio-gratis">
+                                    <span>🚚</span> Envío gratis
+                                </span>
+                            @else
+                                <span class="envio-pago">
+                                    <span>📦</span> + ${{ number_format($costoEnvio, 2) }} envío
+                                </span>
+                            @endif
                         </div>
 
                         <!-- Stock -->
-                        <div class="stock-info {{ $producto->iStock > 10 ? 'stock-bueno' : ($producto->iStock > 0 ? 'stock-bajo' : 'sin-stock') }}">
-                            @if($producto->iStock > 10)
-                                ✅ En stock ({{ $producto->iStock }} disponibles)
-                            @elseif($producto->iStock > 0)
-                                ⚠️ Solo {{ $producto->iStock }} unidades
+                        <div class="stock-info {{ $item['stock'] > 10 ? 'stock-bueno' : ($item['stock'] > 0 ? 'stock-bajo' : 'sin-stock') }}">
+                            @if($item['stock'] > 10)
+                                ✅ En stock ({{ $item['stock'] }} disponibles)
+                            @elseif($item['stock'] > 0)
+                                ⚠️ Solo {{ $item['stock'] }} unidades
                             @else
                                 ❌ Sin stock
                             @endif
                         </div>
 
-                        <!-- Categoría y Marca -->
+                        <!-- Marca -->
                         <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
-                            <strong>Categoría:</strong> {{ $producto->categoria->vNombre ?? 'N/A' }}<br>
-                            <strong>Marca:</strong> {{ $producto->marca->vNombre ?? 'N/A' }}
+                            {{ $item['marca'] }}
                         </p>
 
                         <!-- Etiquetas -->
-                        @if($producto->etiquetas->count() > 0)
+                        @if($item['etiquetas']->count() > 0)
                             <div class="etiquetas-container">
-                                @foreach($producto->etiquetas->take(3) as $etiqueta)
-                                    <span class="badge-etiqueta" style="background-color: {{ $etiqueta->color ?? '#007bff' }};">
+                                @foreach($item['etiquetas']->take(3) as $etiqueta)
+                                    <span class="badge-etiqueta" style="background-color: {{ $etiqueta->color ?? '#3483fa' }};">
                                         {{ $etiqueta->vNombre }}
                                     </span>
                                 @endforeach
@@ -907,7 +1079,7 @@
                         @endif
 
                         <div class="ver-detalle">
-                            <a href="{{ route('productos.show.public', $producto->id_producto) }}" onclick="event.stopPropagation();">Ver detalle →</a>
+                            <a href="{{ $item['url'] }}" onclick="event.stopPropagation();">Ver más</a>
                         </div>
                     </div>
                 </div>
@@ -915,7 +1087,7 @@
         </div>
 
         <div style="text-align: center; margin-top: 20px; margin-bottom: 30px;">
-            <a href="{{ route('busqueda.resultados', ['en_descuento' => '1']) }}" class="btn btn-danger">Ver Todos los Descuentos</a>
+            <a href="{{ route('busqueda.resultados', ['en_oferta' => '1']) }}" class="btn btn-danger">Ver Todas las Ofertas</a>
         </div>
     </div>
     @endif
@@ -924,26 +1096,30 @@
     <div class="seccion-destacados">
         <h2 class="titulo-seccion">Productos Destacados</h2>
         
-        @if($productos->count() > 0)
+        @if($itemsDestacados->count() > 0)
             <div class="productos-grid">
-                @foreach($productos as $producto)
+                @foreach($itemsDestacados as $item)
                     @php
-                        $estaBajoStock = $producto->iStock > 0 && $producto->iStock <= 10;
-                        $esFavorito = $producto->esFavorito();
-                        $tieneDescuento = $producto->tieneDescuentoActivo();
-                        $porcentajeDescuento = $tieneDescuento ? round((($producto->dPrecio_venta - $producto->dPrecio_descuento) / $producto->dPrecio_venta) * 100) : 0;
+                        $precioActual = $item['tiene_oferta'] ? $item['precio_oferta'] : $item['precio_original'];
+                        $porcentajeDescuento = $item['tiene_oferta'] ? round((($item['precio_original'] - $item['precio_oferta']) / $item['precio_original']) * 100) : 0;
+                        
+                        // LÓGICA DE ENVÍO CORREGIDA
+                        $envioGratis = $precioActual >= 150;
+                        $costoEnvio = 50;
+                        
+                        $estaBajoStock = $item['stock'] > 0 && $item['stock'] <= 10;
                     @endphp
                     
-                    <div class="producto-card" onclick="window.location.href='{{ route('productos.show.public', $producto->id_producto) }}'">
+                    <div class="producto-card" onclick="window.location.href='{{ $item['url'] }}'">
                         <div class="producto-imagen-container">
-                            <button class="corazon-favorito {{ $esFavorito ? 'activo' : 'inactivo' }}" 
-                                    data-producto="{{ $producto->id_producto }}"
-                                    onclick="event.stopPropagation(); toggleFavorito(this, {{ $producto->id_producto }})"
-                                    title="{{ $esFavorito ? 'Quitar de favoritos' : 'Agregar a favoritos' }}">
-                                {{ $esFavorito ? '❤️' : '🤍' }}
+                            <button class="corazon-favorito {{ $item['es_favorito'] ? 'activo' : 'inactivo' }}" 
+                                    data-producto="{{ $item['tipo'] == 'producto' ? $item['id'] : $item['producto_padre_id'] }}"
+                                    onclick="event.stopPropagation(); toggleFavorito(this, {{ $item['tipo'] == 'producto' ? $item['id'] : $item['producto_padre_id'] }})"
+                                    title="{{ $item['es_favorito'] ? 'Quitar de favoritos' : 'Agregar a favoritos' }}">
+                                {{ $item['es_favorito'] ? '❤️' : '🤍' }}
                             </button>
 
-                            @if($tieneDescuento)
+                            @if($item['tiene_oferta'])
                                 <div class="badge-oferta">
                                     -{{ $porcentajeDescuento }}%
                                 </div>
@@ -953,8 +1129,15 @@
                                 </div>
                             @endif
 
-                            @if(count($producto->imagenes) > 0)
-                                <img src="{{ $producto->imagenes[0] }}" alt="{{ $producto->vNombre }}" class="producto-imagen">
+                            <!-- BADGE DE VARIACIÓN (si es una variación) -->
+                            @if($item['tipo'] == 'variacion')
+                                <div class="badge-variacion">
+                                    {{ $item['variacion_texto'] }}
+                                </div>
+                            @endif
+
+                            @if(count($item['imagenes']) > 0)
+                                <img src="{{ $item['imagenes'][0] }}" alt="{{ $item['nombre'] }}" class="producto-imagen">
                             @else
                                 <div class="no-imagen">
                                     <span>🛒 Sin imagen</span>
@@ -963,49 +1146,52 @@
                         </div>
                         
                         <div class="producto-info">
-                            <h3>{{ $producto->vNombre }}</h3>
+                            <h3>{{ $item['nombre'] }}</h3>
 
-                            <div class="producto-precio">
-                                @if($tieneDescuento)
-                                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                        <span class="precio-original">
-                                            ${{ number_format($producto->dPrecio_venta, 2) }}
-                                        </span>
-                                        <span style="color: #2e7d32;">
-                                            ${{ number_format($producto->dPrecio_descuento, 2) }}
-                                        </span>
-                                        <span style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px;">
-                                            -{{ $porcentajeDescuento }}%
-                                        </span>
+                            <!-- PRECIOS ESTILO MERCADO LIBRE -->
+                            <div class="precio-container">
+                                @if($item['tiene_oferta'])
+                                    <span class="precio-original">${{ number_format($item['precio_original'], 2) }}</span>
+                                    <div style="display: flex; align-items: center; flex-wrap: wrap;">
+                                        <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
+                                        <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                     </div>
                                 @else
-                                    ${{ number_format($producto->dPrecio_venta, 2) }}
+                                    <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
                                 @endif
                             </div>
 
-                            <div style="font-size: 11px; color: #999; margin-bottom: 5px;">
-                                SKU: {{ $producto->vCodigo_barras }}
+                            <!-- ENVÍO CORREGIDO -->
+                            <div class="envio-info">
+                                @if($envioGratis)
+                                    <span class="envio-gratis">
+                                        <span>🚚</span> Envío gratis
+                                    </span>
+                                @else
+                                    <span class="envio-pago">
+                                        <span>📦</span> + ${{ number_format($costoEnvio, 2) }} envío
+                                    </span>
+                                @endif
                             </div>
 
-                            <div class="stock-info {{ $producto->iStock > 10 ? 'stock-bueno' : ($producto->iStock > 0 ? 'stock-bajo' : 'sin-stock') }}">
-                                @if($producto->iStock > 10)
-                                    ✅ En stock
-                                @elseif($producto->iStock > 0)
-                                    ⚠️ Solo {{ $producto->iStock }} unidades
+                            <div class="stock-info {{ $item['stock'] > 10 ? 'stock-bueno' : ($item['stock'] > 0 ? 'stock-bajo' : 'sin-stock') }}">
+                                @if($item['stock'] > 10)
+                                    ✅ En stock ({{ $item['stock'] }} disponibles)
+                                @elseif($item['stock'] > 0)
+                                    ⚠️ Solo {{ $item['stock'] }} unidades
                                 @else
                                     ❌ Sin stock
                                 @endif
                             </div>
 
                             <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
-                                <strong>Categoría:</strong> {{ $producto->categoria->vNombre ?? 'N/A' }}<br>
-                                <strong>Marca:</strong> {{ $producto->marca->vNombre ?? 'N/A' }}
+                                {{ $item['marca'] }}
                             </p>
 
-                            @if($producto->etiquetas->count() > 0)
+                            @if($item['etiquetas']->count() > 0)
                                 <div class="etiquetas-container">
-                                    @foreach($producto->etiquetas->take(3) as $etiqueta)
-                                        <span class="badge-etiqueta" style="background-color: {{ $etiqueta->color ?? '#007bff' }};">
+                                    @foreach($item['etiquetas']->take(3) as $etiqueta)
+                                        <span class="badge-etiqueta" style="background-color: {{ $etiqueta->color ?? '#3483fa' }};">
                                             {{ $etiqueta->vNombre }}
                                         </span>
                                     @endforeach
@@ -1013,43 +1199,57 @@
                             @endif
 
                             <div class="ver-detalle">
-                                <a href="{{ route('productos.show.public', $producto->id_producto) }}" onclick="event.stopPropagation();">Ver detalle →</a>
+                                <a href="{{ $item['url'] }}" onclick="event.stopPropagation();">Ver más</a>
                             </div>
                         </div>
                     </div>
                 @endforeach
             </div>
 
-            <!-- Sección de productos más vendidos -->
-            @if(isset($productosMasVendidos) && $productosMasVendidos->count() > 0)
-            <h2 class="titulo-seccion" style="margin-top: 40px;">⭐ Productos Más Vendidos</h2>
+            <!-- Sección de productos más vendidos - SOLO SI HAY VENTAS REALES -->
+            @if($itemsMasVendidos->count() > 0)
+            <h2 class="titulo-seccion" style="margin-top: 40px;">⭐ Más Vendidos</h2>
             
             <div class="productos-grid">
-                @foreach($productosMasVendidos as $producto)
+                @foreach($itemsMasVendidos as $item)
                     @php
-                        $estaBajoStock = $producto->iStock > 0 && $producto->iStock <= 10;
-                        $esFavorito = $producto->esFavorito();
-                        $tieneDescuento = $producto->tieneDescuentoActivo();
-                        $porcentajeDescuento = $tieneDescuento ? round((($producto->dPrecio_venta - $producto->dPrecio_descuento) / $producto->dPrecio_venta) * 100) : 0;
+                        $precioActual = $item['tiene_oferta'] ? $item['precio_oferta'] : $item['precio_original'];
+                        $porcentajeDescuento = $item['tiene_oferta'] ? round((($item['precio_original'] - $item['precio_oferta']) / $item['precio_original']) * 100) : 0;
+                        
+                        // LÓGICA DE ENVÍO CORREGIDA
+                        $envioGratis = $precioActual >= 150;
+                        $costoEnvio = 50;
                     @endphp
                     
-                    <div class="producto-card" onclick="window.location.href='{{ route('productos.show.public', $producto->id_producto) }}'">
+                    <div class="producto-card" onclick="window.location.href='{{ $item['url'] }}'">
                         <div class="producto-imagen-container">
-                            <button class="corazon-favorito {{ $esFavorito ? 'activo' : 'inactivo' }}" 
-                                    data-producto="{{ $producto->id_producto }}"
-                                    onclick="event.stopPropagation(); toggleFavorito(this, {{ $producto->id_producto }})"
-                                    title="{{ $esFavorito ? 'Quitar de favoritos' : 'Agregar a favoritos' }}">
-                                {{ $esFavorito ? '❤️' : '🤍' }}
+                            <!-- Badge de más vendido -->
+                            <div class="badge-mas-vendido">
+                                ⭐ Más vendido
+                            </div>
+
+                            <button class="corazon-favorito {{ $item['es_favorito'] ? 'activo' : 'inactivo' }}" 
+                                    data-producto="{{ $item['tipo'] == 'producto' ? $item['id'] : $item['producto_padre_id'] }}"
+                                    onclick="event.stopPropagation(); toggleFavorito(this, {{ $item['tipo'] == 'producto' ? $item['id'] : $item['producto_padre_id'] }})"
+                                    title="{{ $item['es_favorito'] ? 'Quitar de favoritos' : 'Agregar a favoritos' }}">
+                                {{ $item['es_favorito'] ? '❤️' : '🤍' }}
                             </button>
 
-                            @if($tieneDescuento)
+                            @if($item['tiene_oferta'])
                                 <div class="badge-oferta">
                                     -{{ $porcentajeDescuento }}%
                                 </div>
                             @endif
 
-                            @if(count($producto->imagenes) > 0)
-                                <img src="{{ $producto->imagenes[0] }}" alt="{{ $producto->vNombre }}" class="producto-imagen">
+                            <!-- BADGE DE VARIACIÓN (si es una variación) -->
+                            @if($item['tipo'] == 'variacion')
+                                <div class="badge-variacion">
+                                    {{ $item['variacion_texto'] }}
+                                </div>
+                            @endif
+
+                            @if(count($item['imagenes']) > 0)
+                                <img src="{{ $item['imagenes'][0] }}" alt="{{ $item['nombre'] }}" class="producto-imagen">
                             @else
                                 <div class="no-imagen">
                                     <span>🛒 Sin imagen</span>
@@ -1058,33 +1258,43 @@
                         </div>
                         
                         <div class="producto-info">
-                            <h3>{{ $producto->vNombre }}</h3>
+                            <h3>{{ $item['nombre'] }}</h3>
 
-                            <div class="producto-precio">
-                                @if($tieneDescuento)
-                                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                        <span class="precio-original">
-                                            ${{ number_format($producto->dPrecio_venta, 2) }}
-                                        </span>
-                                        <span style="color: #2e7d32;">
-                                            ${{ number_format($producto->dPrecio_descuento, 2) }}
-                                        </span>
+                            <div class="precio-container">
+                                @if($item['tiene_oferta'])
+                                    <span class="precio-original">${{ number_format($item['precio_original'], 2) }}</span>
+                                    <div style="display: flex; align-items: center; flex-wrap: wrap;">
+                                        <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
+                                        <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                     </div>
                                 @else
-                                    ${{ number_format($producto->dPrecio_venta, 2) }}
+                                    <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
                                 @endif
                             </div>
 
-                            <div class="stock-info {{ $producto->iStock > 10 ? 'stock-bueno' : ($producto->iStock > 0 ? 'stock-bajo' : 'sin-stock') }}">
-                                @if($producto->iStock > 0)
-                                    ✅ Disponible
+                            <!-- ENVÍO CORREGIDO -->
+                            <div class="envio-info">
+                                @if($envioGratis)
+                                    <span class="envio-gratis">
+                                        <span>🚚</span> Envío gratis
+                                    </span>
+                                @else
+                                    <span class="envio-pago">
+                                        <span>📦</span> + ${{ number_format($costoEnvio, 2) }} envío
+                                    </span>
+                                @endif
+                            </div>
+
+                            <div class="stock-info {{ $item['stock'] > 10 ? 'stock-bueno' : ($item['stock'] > 0 ? 'stock-bajo' : 'sin-stock') }}">
+                                @if($item['stock'] > 0)
+                                    ✅ Disponible ({{ $item['stock'] }} unidades)
                                 @else
                                     ❌ Sin stock
                                 @endif
                             </div>
 
                             <div class="ver-detalle">
-                                <a href="{{ route('productos.show.public', $producto->id_producto) }}" onclick="event.stopPropagation();">Ver detalle →</a>
+                                <a href="{{ $item['url'] }}" onclick="event.stopPropagation();">Ver más</a>
                             </div>
                         </div>
                     </div>
@@ -1218,7 +1428,7 @@
             toast.className = 'toast-single';
             
             // Determinar emoji basado en el mensaje
-            const emoji = message.includes('✅') ? '✅' : '❌';
+            const emoji = message.includes('✅') ? '✅' : message.includes('❌') ? '❌' : 'ℹ️';
             const cleanMessage = message.replace('✅', '').replace('❌', '').trim();
             
             toast.innerHTML = `

@@ -368,18 +368,47 @@
             -webkit-box-orient: vertical;
         }
 
+        /* ESTILOS DE PRECIOS */
         .producto-precio {
-            font-weight: bold;
-            color: #28a745;
             margin-bottom: 5px;
-            font-size: 18px;
         }
 
-        .producto-precio .precio-original {
+        .precio-original {
             text-decoration: line-through;
             color: #6c757d;
             font-size: 14px;
             font-weight: normal;
+            margin-right: 8px;
+        }
+
+        .precio-actual {
+            font-weight: bold;
+            color: #28a745;
+            font-size: 18px;
+        }
+
+        .badge-descuento {
+            display: inline-block;
+            padding: 4px 8px;
+            font-size: 11px;
+            background-color: #dc3545;
+            color: white;
+            border-radius: 4px;
+            margin-left: 8px;
+            font-weight: bold;
+        }
+
+        .envio-info {
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .envio-gratis {
+            color: #00a650;
+        }
+
+        .envio-pago {
+            color: #ff6b00;
         }
 
         .stock-info {
@@ -424,6 +453,20 @@
             z-index: 99;
         }
 
+        /* Badge para variaciones */
+        .badge-variacion {
+            position: absolute;
+            top: 15px;
+            right: 60px;
+            background: #6c757d;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            z-index: 99;
+        }
+
         .ver-detalle {
             margin-top: 10px;
             text-align: center;
@@ -463,14 +506,6 @@
 
         .btn-secondary:hover {
             background: #545b62;
-        }
-
-        .btn-danger {
-            background: #dc3545;
-        }
-
-        .btn-danger:hover {
-            background: #c82333;
         }
 
         /* Corazón de favoritos */
@@ -847,20 +882,63 @@
                 <div class="productos-grid">
                     @foreach($productos as $producto)
                         @php
-                            $estaBajoStock = $producto->iStock > 0 && $producto->iStock <= 10;
-                            $esFavorito = $producto->esFavorito();
-                            $tieneDescuento = $producto->tieneDescuentoActivo();
-                            $porcentajeDescuento = $tieneDescuento ? round((($producto->dPrecio_venta - $producto->dPrecio_descuento) / $producto->dPrecio_venta) * 100) : 0;
+                            // Verificar si es un producto padre o una variación
+                            $esVariacion = isset($producto->id_variacion);
+                            
+                            // Determinar si tiene descuento activo (cada uno con su propia lógica)
+                            if ($esVariacion) {
+                                $tieneDescuento = $producto->ofertaVigente(); // Método en modelo Variacion
+                                $precioOriginal = $producto->dPrecio;
+                                $precioOferta = $producto->dPrecio_oferta;
+                                $stock = $producto->iStock;
+                                $nombreProducto = $producto->productoPadre->vNombre . ' - ' . $producto->getAtributosTexto();
+                                $imagenes = $producto->imagenes ?? $producto->productoPadre->imagenes;
+                                $categoria = $producto->productoPadre->categoria->vNombre ?? 'N/A';
+                                $marca = $producto->productoPadre->marca->vNombre ?? 'N/A';
+                                $etiquetas = $producto->productoPadre->etiquetas;
+                                $url = route('productos.show.public', [$producto->productoPadre->id_producto, 'variacion' => $producto->id_variacion]);
+                                $sku = $producto->vSKU;
+                                $esFavorito = $producto->productoPadre->esFavorito(); // O podrías tener favoritos por variación
+                            } else {
+                                $tieneDescuento = $producto->tieneDescuentoActivo(); // Método en modelo Producto
+                                $precioOriginal = $producto->dPrecio_venta;
+                                $precioOferta = $producto->dPrecio_oferta;
+                                $stock = $producto->iStock;
+                                $nombreProducto = $producto->vNombre;
+                                $imagenes = $producto->imagenes;
+                                $categoria = $producto->categoria->vNombre ?? 'N/A';
+                                $marca = $producto->marca->vNombre ?? 'N/A';
+                                $etiquetas = $producto->etiquetas;
+                                $url = route('productos.show.public', $producto->id_producto);
+                                $sku = $producto->vCodigo_barras;
+                                $esFavorito = $producto->esFavorito();
+                            }
+                            
+                            $precioActual = $tieneDescuento ? $precioOferta : $precioOriginal;
+                            $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioOferta) / $precioOriginal) * 100) : 0;
+                            
+                            $estaBajoStock = $stock > 0 && $stock <= 10;
+                            
+                            // Lógica de envío (puedes ajustar estos valores según tu negocio)
+                            $envioGratis = $precioActual >= 150;
+                            $costoEnvio = 50;
                         @endphp
                         
-                        <div class="producto-card" onclick="window.location.href='{{ route('productos.show.public', $producto->id_producto) }}'">
+                        <div class="producto-card" onclick="window.location.href='{{ $url }}'">
                             <div class="producto-imagen-container">
                                 <!-- BOTÓN DEL CORAZÓN -->
                                 <button class="corazon-favorito {{ $esFavorito ? 'activo' : 'inactivo' }}" 
-                                        data-producto="{{ $producto->id_producto }}"
-                                        onclick="event.stopPropagation(); toggleFavorito(this, {{ $producto->id_producto }})"
+                                        data-producto="{{ $esVariacion ? $producto->productoPadre->id_producto : $producto->id_producto }}"
+                                        onclick="event.stopPropagation(); toggleFavorito(this, {{ $esVariacion ? $producto->productoPadre->id_producto : $producto->id_producto }})"
                                         title="{{ $esFavorito ? 'Quitar de favoritos' : 'Agregar a favoritos' }}">
                                 </button>
+
+                                <!-- Badge de variación -->
+                                @if($esVariacion)
+                                    <div class="badge-variacion">
+                                        🔄 Variación
+                                    </div>
+                                @endif
 
                                 <!-- Badge de descuento -->
                                 @if($tieneDescuento)
@@ -873,8 +951,8 @@
                                     </div>
                                 @endif
 
-                                @if(count($producto->imagenes) > 0)
-                                    <img src="{{ $producto->imagenes[0] }}" alt="{{ $producto->vNombre }}" class="producto-imagen">
+                                @if(count($imagenes) > 0)
+                                    <img src="{{ $imagenes[0] }}" alt="{{ $nombreProducto }}" class="producto-imagen">
                                 @else
                                     <div class="no-imagen">
                                         <span>🛒 Sin imagen</span>
@@ -883,48 +961,66 @@
                             </div>
                             
                             <div class="producto-info">
-                                <h3>{{ $producto->vNombre }}</h3>
+                                <h3>{{ $nombreProducto }}</h3>
                                 
                                 <!-- Precio con descuento -->
                                 <div class="producto-precio">
                                     @if($tieneDescuento)
                                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap;">
                                             <span class="precio-original">
-                                                ${{ number_format($producto->dPrecio_venta, 2) }}
+                                                ${{ number_format($precioOriginal, 2) }}
                                             </span>
-                                            <span style="color: #28a745; font-size: 18px;">
-                                                ${{ number_format($producto->dPrecio_descuento, 2) }}
+                                            <span class="precio-actual">
+                                                ${{ number_format($precioOferta, 2) }}
+                                            </span>
+                                            <span class="badge-descuento">
+                                                -{{ $porcentajeDescuento }}%
                                             </span>
                                         </div>
                                     @else
-                                        ${{ number_format($producto->dPrecio_venta, 2) }}
+                                        <span class="precio-actual">
+                                            ${{ number_format($precioOriginal, 2) }}
+                                        </span>
+                                    @endif
+                                </div>
+
+                                <!-- ENVÍO -->
+                                <div class="envio-info">
+                                    @if($envioGratis)
+                                        <span class="envio-gratis">
+                                            🚚 Envío gratis
+                                        </span>
+                                    @else
+                                        <span class="envio-pago">
+                                            📦 + ${{ number_format($costoEnvio, 2) }} envío
+                                        </span>
                                     @endif
                                 </div>
                                 
                                 <!-- SKU -->
                                 <div style="font-size: 11px; color: #999; margin-bottom: 5px;">
-                                    SKU: {{ $producto->vCodigo_barras }}
+                                    SKU: {{ $sku }}
                                 </div>
                                 
                                 <!-- Stock -->
-                                <div class="stock-info" style="color: {{ $producto->iStock > 10 ? '#00a650' : ($producto->iStock > 0 ? '#ff6b00' : '#dc3545') }};">
-                                    @if($producto->iStock > 10)
-                                        ✅ En stock ({{ $producto->iStock }} disponibles)
-                                    @elseif($producto->iStock > 0)
-                                        ⚠️ Solo {{ $producto->iStock }} unidades
+                                <div class="stock-info" style="color: {{ $stock > 10 ? '#00a650' : ($stock > 0 ? '#ff6b00' : '#dc3545') }};">
+                                    @if($stock > 10)
+                                        ✅ En stock ({{ $stock }} disponibles)
+                                    @elseif($stock > 0)
+                                        ⚠️ Solo {{ $stock }} unidades
                                     @else
                                         ❌ Sin stock
                                     @endif
                                 </div>
                                 
                                 <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
-                                    <strong>Categoría:</strong> {{ $producto->categoria->vNombre ?? 'N/A' }}<br>
-                                    <strong>Marca:</strong> {{ $producto->marca->vNombre ?? 'N/A' }}
+                                    <strong>Categoría:</strong> {{ $categoria }}<br>
+                                    <strong>Marca:</strong> {{ $marca }}
                                 </p>
                                 
-                                @if ($producto->etiquetas->count() > 0)
+                                @if ($etiquetas->count() > 0)
                                     <div class="etiquetas-container">
-                                        @foreach ($producto->etiquetas as $etiqueta)
+                                        @foreach ($etiquetas as $etiqueta)
                                             <span class="badge-etiqueta" style="background-color: {{ $etiqueta->color ?? '#007bff' }};">
                                                 {{ $etiqueta->vNombre }}
                                             </span>
@@ -933,7 +1029,7 @@
                                 @endif
                                 
                                 <div class="ver-detalle">
-                                    <a href="{{ route('productos.show.public', $producto->id_producto) }}" onclick="event.stopPropagation();">Ver detalle del producto</a>
+                                    <a href="{{ $url }}" onclick="event.stopPropagation();">Ver detalle</a>
                                 </div>
                             </div>
                         </div>

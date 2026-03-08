@@ -42,7 +42,6 @@
                         <tr>
                             <th>ID</th>
                             <th>Nombre</th>
-                            <th>Color</th>
                             <th>Descripción</th>
                             <th>Productos</th>
                             <th>Acciones</th>
@@ -54,11 +53,6 @@
                             <td>#{{ $etiqueta->id_etiqueta }}</td>
                             <td>
                                 <strong>{{ $etiqueta->vNombre }}</strong>
-                            </td>
-                            <td>
-                                <span class="badge" style="background-color: {{ $etiqueta->color ?: '#007bff' }}; color: white;">
-                                    {{ $etiqueta->color ?: '#007bff' }}
-                                </span>
                             </td>
                             <td>
                                 @if($etiqueta->tDescripcion)

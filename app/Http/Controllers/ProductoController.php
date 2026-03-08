@@ -633,7 +633,8 @@ class ProductoController extends Controller
             },
             'variaciones.atributos.valor', 
             'variaciones.atributos.atributo',
-            'variaciones.impuesto'
+            'variaciones.impuesto',
+            'valoresAtributos.atributo' // *** NUEVO: Para atributos generales ***
         ]);
         
         return view('productos.show', compact('producto'));

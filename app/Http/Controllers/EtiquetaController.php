@@ -42,8 +42,7 @@ class EtiquetaController extends Controller
     {
         $request->validate([
             'vNombre' => 'required|max:100|unique:tbl_etiquetas,vNombre',
-            'tDescripcion' => 'nullable|max:500',
-            'color' => 'nullable|max:7'
+            'tDescripcion' => 'nullable|max:500'
         ], [
             'vNombre.required' => 'El nombre de la etiqueta es obligatorio.',
             'vNombre.max' => 'El nombre no puede tener más de 100 caracteres.',
@@ -87,8 +86,7 @@ class EtiquetaController extends Controller
     {
         $request->validate([
             'vNombre' => 'required|max:100|unique:tbl_etiquetas,vNombre,' . $etiqueta->id_etiqueta . ',id_etiqueta',
-            'tDescripcion' => 'nullable|max:500',
-            'color' => 'nullable|max:7'
+            'tDescripcion' => 'nullable|max:500'
         ], [
             'vNombre.required' => 'El nombre de la etiqueta es obligatorio',
             'vNombre.unique' => 'Ya existe una etiqueta con este nombre',
@@ -99,8 +97,7 @@ class EtiquetaController extends Controller
         try {
             $etiqueta->update([
                 'vNombre' => $request->vNombre,
-                'tDescripcion' => $request->tDescripcion,
-                'color' => $request->color
+                'tDescripcion' => $request->tDescripcion
             ]);
             
             return redirect()->route('etiquetas.index')
@@ -149,8 +146,7 @@ class EtiquetaController extends Controller
     public function quickCreate(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'vNombre' => 'required|max:100|unique:tbl_etiquetas,vNombre',
-            'color' => 'nullable|max:7'
+            'vNombre' => 'required|max:100|unique:tbl_etiquetas,vNombre'
         ]);
 
         if ($validator->fails()) {
@@ -164,7 +160,6 @@ class EtiquetaController extends Controller
         try {
             $etiqueta = Etiqueta::create([
                 'vNombre' => $request->vNombre,
-                'color' => $request->color ?? '#007bff',
                 'tDescripcion' => $request->tDescripcion ?? null
             ]);
 
@@ -188,7 +183,7 @@ class EtiquetaController extends Controller
     public function getJson()
     {
         $etiquetas = Etiqueta::orderBy('vNombre')
-            ->get(['id_etiqueta', 'vNombre', 'color', 'tDescripcion']);
+            ->get(['id_etiqueta', 'vNombre', 'tDescripcion']);
         
         return response()->json([
             'success' => true,
