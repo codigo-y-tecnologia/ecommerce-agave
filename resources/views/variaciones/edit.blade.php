@@ -38,23 +38,26 @@
                                     <label for="vSKU" class="form-label fw-bold">
                                         SKU <span class="text-danger">*</span>
                                     </label>
-                                    <input type="text" name="vSKU" id="vSKU" 
+                                    <input type="text" 
+                                           name="vSKU" 
+                                           id="vSKU" 
                                            class="form-control @error('vSKU') is-invalid @enderror"
                                            value="{{ old('vSKU', $variacion->vSKU) }}" 
-                                           maxlength="15" 
+                                           maxlength="25" 
                                            required
-                                           oninput="validarSKU(this)"
-                                           pattern="[A-Za-z0-9]+"
-                                           title="Solo letras y números (máximo 15 caracteres)"
-                                           autocomplete="off">
+                                           oninput="validarSKU(this, '{{ $variacion->vSKU }}')"
+                                           pattern="[A-Za-z0-9\-]+"
+                                           title="Solo letras, números y guiones (máximo 25 caracteres)"
+                                           autocomplete="off"
+                                           data-original-sku="{{ $variacion->vSKU }}">
                                     @error('vSKU')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
-                                    <small class="form-text text-muted">Ej: AGAVE001, MEZCAL2024 (15 caracteres máximo, solo letras y números)</small>
+                                    <small class="form-text text-muted">
+                                        Ej: AGAVE001-ROJO, MEZCAL2024-VERDE (máximo 25 caracteres, solo letras, números y guiones)
+                                    </small>
                                 </div>
                             </div>
-                            
-                            <!-- ELIMINADO: Campo Nombre de la variación -->
                         </div>
 
                         <div class="row">
@@ -90,7 +93,9 @@
                                     <label for="iStock" class="form-label fw-bold">
                                         Stock disponible <span class="text-danger">*</span>
                                     </label>
-                                    <input type="text" name="iStock" id="iStock" 
+                                    <input type="text" 
+                                           name="iStock" 
+                                           id="iStock" 
                                            class="form-control @error('iStock') is-invalid @enderror"
                                            value="{{ old('iStock', $variacion->iStock) }}" 
                                            required 
@@ -148,7 +153,7 @@
                             </div>
                         </div>
 
-                        <!-- CAMPOS DE OFERTA (OCULTOS INICIALMENTE) -->
+                        <!-- CAMPOS DE OFERTA -->
                         <div id="ofertaFields" style="display: {{ old('bTiene_oferta', $variacion->bTiene_oferta) ? 'block' : 'none' }};">
                             <div class="row">
                                 <div class="col-md-4">
@@ -683,12 +688,15 @@
                                     <label class="form-label small text-muted">Imágenes actuales:</label>
                                     <div class="row g-2">
                                         @foreach($imagenesAdicionales as $index => $imgUrl)
-                                            <div class="col-6 col-md-4 mb-2 existing-image-item" data-index="{{ $index }}">
+                                            @php
+                                                $nombreArchivo = basename($imgUrl);
+                                            @endphp
+                                            <div class="col-6 col-md-4 mb-2 existing-image-item" data-index="{{ $index }}" data-filename="{{ $nombreArchivo }}">
                                                 <div class="card border position-relative">
                                                     <button type="button" 
                                                             class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1"
                                                             style="width: 24px; height: 24px; padding: 0; border-radius: 50%; z-index: 10;"
-                                                            onclick="marcarImagenParaEliminar(this, '{{ $imgUrl }}', {{ $index }})">
+                                                            onclick="marcarImagenParaEliminar(this, '{{ $nombreArchivo }}')">
                                                         <i class="fas fa-times"></i>
                                                     </button>
                                                     <img src="{{ $imgUrl }}" 
@@ -914,19 +922,69 @@ let imagenesAEliminar = [];
 
 // ==================== VALIDACIONES ====================
 
-function validarSKU(input) {
-    // Permitir letras, números y guiones
-    input.value = input.value.replace(/[^A-Za-z0-9\-]/g, '');
+/**
+ * Función mejorada para validar SKU en edición
+ * @param {HTMLInputElement} input - El campo de entrada
+ * @param {string} originalSku - El SKU original de la variación
+ */
+function validarSKU(input, originalSku) {
+    // Guardar posición del cursor
+    const cursorPos = input.selectionStart;
     
-    // Limitar a 15 caracteres
-    if (input.value.length > 15) {
-        input.value = input.value.substring(0, 15);
+    // Permitir letras, números y guiones
+    let valor = input.value.replace(/[^A-Za-z0-9\-]/g, '');
+    
+    // Limitar a 50 caracteres (igual que la BD)
+    if (valor.length > 50) {
+        valor = valor.substring(0, 50);
     }
     
     // Convertir a mayúsculas automáticamente
-    input.value = input.value.toUpperCase();
+    valor = valor.toUpperCase();
     
+    // Actualizar el valor si cambió
+    if (input.value !== valor) {
+        input.value = valor;
+        // Restaurar posición del cursor
+        setTimeout(() => {
+            input.setSelectionRange(cursorPos, cursorPos);
+        }, 0);
+    }
+    
+    // Si el SKU no ha cambiado, quitar cualquier error
+    if (input.value === originalSku) {
+        input.classList.remove('is-invalid');
+        
+        // Eliminar mensaje de error si existe
+        const errorDiv = document.getElementById('error-sku-duplicado');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+        return;
+    }
+    
+    // Si cambió, verificar que no esté vacío
+    if (input.value.trim() === '') {
+        input.classList.add('is-invalid');
+        
+        // Crear o actualizar mensaje de error
+        let errorDiv = document.getElementById('error-sku-duplicado');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback d-block';
+            errorDiv.id = 'error-sku-duplicado';
+            input.parentNode.appendChild(errorDiv);
+        }
+        errorDiv.textContent = 'El SKU no puede estar vacío';
+        return;
+    }
+    
+    // Si todo está bien, quitar error
     input.classList.remove('is-invalid');
+    const errorDiv = document.getElementById('error-sku-duplicado');
+    if (errorDiv) {
+        errorDiv.remove();
+    }
 }
 
 function validarPrecio(input) {
@@ -1637,20 +1695,22 @@ function eliminarGif() {
     });
 }
 
-function marcarImagenParaEliminar(btn, imgUrl, index) {
+function marcarImagenParaEliminar(btn, nombreArchivo) {
     const container = btn.closest('.existing-image-item');
     
     if (container.classList.contains('marcado-eliminar')) {
         // Desmarcar
         container.classList.remove('marcado-eliminar');
-        const idx = imagenesAEliminar.indexOf(imgUrl);
+        const idx = imagenesAEliminar.indexOf(nombreArchivo);
         if (idx > -1) {
             imagenesAEliminar.splice(idx, 1);
         }
     } else {
         // Marcar
         container.classList.add('marcado-eliminar');
-        imagenesAEliminar.push(imgUrl);
+        if (!imagenesAEliminar.includes(nombreArchivo)) {
+            imagenesAEliminar.push(nombreArchivo);
+        }
     }
     
     document.getElementById('imagenes_a_eliminar').value = JSON.stringify(imagenesAEliminar);
@@ -1813,6 +1873,10 @@ function renderSelectedImages() {
 // ==================== VALIDACIÓN DEL FORMULARIO ====================
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Obtener el SKU original
+    const skuInput = document.getElementById('vSKU');
+    const originalSku = skuInput ? skuInput.dataset.originalSku : '';
+    
     // Inicializar toggle de oferta
     if (document.getElementById('bTiene_oferta') && document.getElementById('bTiene_oferta').checked) {
         toggleOfertaFields();

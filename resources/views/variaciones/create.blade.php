@@ -39,16 +39,18 @@
                                     <input type="text" name="vSKU" id="vSKU" 
                                            class="form-control @error('vSKU') is-invalid @enderror"
                                            value="{{ old('vSKU') }}" 
-                                           maxlength="15" 
+                                           maxlength="25" 
                                            required
                                            oninput="validarSKU(this)"
-                                           pattern="[A-Za-z0-9]+"
-                                           title="Solo letras y números (máximo 15 caracteres)"
+                                           pattern="[A-Za-z0-9\-]+"
+                                           title="Solo letras, números y guiones (máximo 25 caracteres)"
                                            autocomplete="off">
                                     @error('vSKU')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
-                                    <small class="form-text text-muted">Ej: AGAVE001, MEZCAL2024 (15 caracteres máximo, solo letras y números)</small>
+                                    <small class="form-text text-muted">
+                                        Ej: AGAVE001-ROJO, MEZCAL2024-VERDE (máximo 35 caracteres, solo letras, números y guiones)
+                                    </small>
                                 </div>
                             </div>
                             
@@ -788,18 +790,49 @@ let imageCounter = 0;
 // ==================== VALIDACIONES ====================
 
 function validarSKU(input) {
-    // Permitir letras, números y guiones
-    input.value = input.value.replace(/[^A-Za-z0-9\-]/g, '');
+    // Guardar posición del cursor
+    const cursorPos = input.selectionStart;
     
-    // Limitar a 15 caracteres
-    if (input.value.length > 15) {
-        input.value = input.value.substring(0, 15);
+    // Permitir letras, números y guiones
+    let valor = input.value.replace(/[^A-Za-z0-9\-]/g, '');
+    
+    // Limitar a 50 caracteres (igual que la BD)
+    if (valor.length > 50) {
+        valor = valor.substring(0, 50);
     }
     
     // Convertir a mayúsculas automáticamente
-    input.value = input.value.toUpperCase();
+    valor = valor.toUpperCase();
     
-    input.classList.remove('is-invalid');
+    // Actualizar el valor si cambió
+    if (input.value !== valor) {
+        input.value = valor;
+        // Restaurar posición del cursor
+        setTimeout(() => {
+            input.setSelectionRange(cursorPos, cursorPos);
+        }, 0);
+    }
+    
+    // Validar que no esté vacío
+    if (input.value.trim() === '') {
+        input.classList.add('is-invalid');
+        
+        // Crear o actualizar mensaje de error
+        let errorDiv = document.getElementById('error-sku-vacio');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback d-block';
+            errorDiv.id = 'error-sku-vacio';
+            input.parentNode.appendChild(errorDiv);
+        }
+        errorDiv.textContent = 'El SKU no puede estar vacío';
+    } else {
+        input.classList.remove('is-invalid');
+        const errorDiv = document.getElementById('error-sku-vacio');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+    }
 }
 
 function validarPrecio(input) {
