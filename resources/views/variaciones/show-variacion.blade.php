@@ -62,14 +62,6 @@
         </div>
     </div>
 
-    <!-- Alertas -->
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
-            <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
     @php
         // --- DATOS DE LA VARIACIÓN ---
         $imagenesVariacion = $variacion->imagenes ?? [];
@@ -481,6 +473,7 @@
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
 // Variables globales
 let currentImageIndex = 0;
@@ -752,6 +745,26 @@ document.addEventListener('DOMContentLoaded', function() {
         iniciarZoom();
     });
 });
+
+// Mostrar mensaje SweetAlert2 después de operaciones exitosas
+@if(session('success'))
+    Swal.fire({
+        title: '¡Éxito!',
+        text: "{{ session('success') }}",
+        icon: 'success',
+        timer: 3000,
+        showConfirmButton: false
+    });
+@endif
+
+// Mostrar mensaje SweetAlert2 si hay error
+@if(session('error'))
+    Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: "{{ session('error') }}"
+    });
+@endif
 </script>
 
 <style>

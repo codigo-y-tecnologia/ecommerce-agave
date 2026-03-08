@@ -681,8 +681,7 @@ class VariacionController extends Controller
             DB::commit();
 
             return redirect()->route('variaciones.show.variacion', ['producto_id' => $producto_id, 'variacion_id' => $variacion->id_variacion])
-                ->with('success', 'Variación actualizada exitosamente')
-                ->with('swal_save', true);
+                ->with('success', 'Variación actualizada exitosamente');
 
         } catch (\Exception $e) {
             DB::rollBack();
