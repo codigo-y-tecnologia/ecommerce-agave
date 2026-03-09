@@ -1,0 +1,649 @@
+/* ============================================
+   ESTILOS DEL DASHBOARD DE VENTAS
+   Archivo: detalle-ventas.css
+   ============================================ */
+
+/* ----- CONTENEDOR PRINCIPAL ----- */
+.container-fluid {
+    padding: 20px;
+}
+
+/* ----- TARJETAS DE ESTADÍSTICAS ----- */
+.stat-card {
+    background: #2d3748;
+    color: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    border: none;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    transform: translate(30%, -30%);
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+    background: #374151;
+}
+
+.stat-card:hover::before {
+    transform: translate(30%, -30%) scale(1.1);
+}
+
+/* TODAS LAS TARJETAS DEL MISMO COLOR GRIS OSCURO */
+.stat-card:nth-child(1),
+.stat-card:nth-child(2),
+.stat-card:nth-child(3),
+.stat-card:nth-child(4) {
+    background: #2d3748;
+}
+
+.stat-card:nth-child(1):hover,
+.stat-card:nth-child(2):hover,
+.stat-card:nth-child(3):hover,
+.stat-card:nth-child(4):hover {
+    background: #374151;
+}
+
+/* Icono en la esquina superior derecha */
+.stat-card .fa-external-link-alt {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 1.2rem;
+    opacity: 0.3;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover .fa-external-link-alt {
+    opacity: 1 !important;
+    transform: translateX(3px) translateY(-3px);
+}
+
+/* Texto dentro de las tarjetas */
+.stat-card .stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-top: 10px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.stat-card .stat-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* ----- CONTENEDOR DE GRÁFICAS ----- */
+.chart-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.chart-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 2px solid #e2e8f0;
+    background: linear-gradient(to right, #f7fafc, #ffffff);
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 1.1rem;
+}
+
+.chart-content {
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+.collapse-btn {
+    background: none;
+    border: none;
+    color: #667eea;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+.collapse-btn:hover {
+    background: rgba(102, 126, 234, 0.1);
+    transform: scale(1.1);
+}
+
+.chart-collapsed .chart-content {
+    max-height: 0;
+    padding: 0 20px;
+    overflow: hidden;
+}
+
+/* ----- TABLA PERSONALIZADA ----- */
+.table-custom {
+    background: white;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.table-custom thead {
+    background: #2d3748;
+    color: white;
+}
+
+.table-custom thead th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    border: none;
+}
+
+.table-custom tbody tr {
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.table-custom tbody tr:nth-child(even) {
+    background-color: #f7fafc;
+}
+
+.table-custom tbody tr:nth-child(odd) {
+    background-color: white;
+}
+
+.table-custom tbody td {
+    padding: 15px;
+    color: #2d3748;
+}
+
+/* ----- DATATABLES ----- */
+#ventasTable thead th {
+    background: #2d3748;
+    color: white;
+    font-weight: 600;
+    text-align: center;
+    padding: 15px 10px;
+    border: none;
+}
+
+#ventasTable tbody td {
+    padding: 12px 10px;
+    vertical-align: middle;
+}
+
+#ventasTable tbody tr {
+    transition: all 0.2s ease;
+}
+
+#ventasTable tbody tr:hover {
+    background-color: #f7fafc;
+    transform: scale(1.01);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* ----- FILTROS EN EL FOOTER ----- */
+.column-filter {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.column-filter:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* ----- ESTADOS DE PAGO ----- */
+.estado-pago {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.estado-completada {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.estado-pendiente {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.estado-cancelada {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.estado-proceso {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+/* ----- BOTONES ----- */
+.btn-borrar {
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background-color 0.3s;
+}
+
+.btn-borrar:hover {
+    background-color: #dc2626;
+}
+
+.btn-borrar:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+}
+
+.btn-confirm {
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn-confirm:hover {
+    background-color: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+}
+
+.btn-cancel {
+    background-color: #6b7280;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn-cancel:hover {
+    background-color: #4b5563;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(107, 114, 128, 0.3);
+}
+
+/* ----- FOOTER DE TOTALES ----- */
+.total-footer {
+    text-align: right;
+    padding: 20px;
+    font-size: 1.1rem;
+    color: #718096;
+}
+
+.total-footer strong {
+    color: #2d3748;
+}
+
+/* ----- FORMULARIOS OCULTOS ----- */
+.delete-form {
+    display: none;
+}
+
+/* ----- MODALES ----- */
+.confirmation-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    max-width: 450px;
+    width: 90%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* ----- MODALES DE DETALLES ----- */
+.detail-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.detail-modal.show {
+    display: flex;
+}
+
+.detail-modal-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 900px;
+    max-height: 85vh;
+    width: 90%;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.detail-modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 25px 30px;
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.detail-modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.close-modal {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 1.8rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.close-modal:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+.detail-modal-body {
+    padding: 30px;
+}
+
+/* ----- TABLAS DE DETALLES ----- */
+.detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.detail-table thead {
+    background-color: #f7fafc;
+}
+
+.detail-table thead th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #2d3748;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.detail-table tbody tr {
+    border-bottom: 1px solid #e2e8f0;
+    transition: background-color 0.2s;
+}
+
+.detail-table tbody tr:hover {
+    background-color: #f7fafc;
+}
+
+.detail-table tbody td {
+    padding: 12px;
+    color: #4a5568;
+}
+
+/* ----- RESUMEN DE ESTADÍSTICAS ----- */
+.stat-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.stat-summary-item {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.stat-summary-item .label {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    margin-bottom: 8px;
+}
+
+.stat-summary-item .value {
+    font-size: 1.8rem;
+    font-weight: bold;
+}
+
+/* ----- SIN DATOS ----- */
+.no-data {
+    text-align: center;
+    padding: 40px;
+    color: #9ca3af;
+    font-style: italic;
+}
+
+.no-data i {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+/* ----- ESTILOS DATATABLES ----- */
+.dataTables_wrapper .dataTables_length select {
+    padding: 5px 10px;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    padding: 5px 10px;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    margin-left: 5px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 5px 10px;
+    margin: 0 2px;
+    border-radius: 4px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: #667eea !important;
+    color: white !important;
+    border: 1px solid #667eea !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: #5a67d8 !important;
+    color: white !important;
+    border: 1px solid #5a67d8 !important;
+}
+
+#ventasTable_wrapper {
+    padding: 20px;
+}
+
+/* ----- BOTONES DE EXPORTACIÓN ----- */
+.dt-buttons {
+    margin-bottom: 15px;
+}
+
+.dt-button {
+    background: #667eea !important;
+    color: white !important;
+    border: none !important;
+    padding: 8px 15px !important;
+    border-radius: 4px !important;
+    margin-right: 5px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s !important;
+}
+
+.dt-button:hover {
+    background: #5a67d8 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3) !important;
+}
+
+/* Botón Copiar - Azul */
+.buttons-copy {
+    background: #667eea !important;
+}
+
+.buttons-copy:hover {
+    background: #5a67d8 !important;
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3) !important;
+}
+
+/* Botón Excel - Verde */
+.buttons-excel {
+    background: #10b981 !important;
+}
+
+.buttons-excel:hover {
+    background: #059669 !important;
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3) !important;
+}
+
+/* Botón PDF - Rojo */
+.buttons-pdf {
+    background: #ef4444 !important;
+}
+
+.buttons-pdf:hover {
+    background: #dc2626 !important;
+    box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3) !important;
+}
+
+/* Botón Imprimir - Gris oscuro */
+.buttons-print {
+    background: #6b7280 !important;
+}
+
+.buttons-print:hover {
+    background: #4b5563 !important;
+    box-shadow: 0 4px 8px rgba(107, 114, 128, 0.3) !important;
+}
+
+/* ----- FILTROS POR COLUMNA ----- */
+tfoot input, 
+tfoot select {
+    width: 100%;
+    padding: 5px 8px;
+    box-sizing: border-box;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+tfoot input:focus,
+tfoot select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* ----- RESPONSIVE ----- */
+@media (max-width: 768px) {
+    .stat-card {
+        padding: 15px;
+    }
+    
+    .chart-title {
+        font-size: 1rem;
+        padding: 15px;
+    }
+    
+    .detail-modal-content {
+        width: 95%;
+        max-height: 90vh;
+    }
+    
+    .detail-modal-body {
+        padding: 20px;
+    }
+}

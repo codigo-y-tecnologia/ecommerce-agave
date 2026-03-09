@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Ecommerce Agave')</title>
-    @vite(['resources/css/styles.css'])
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/styles.css') }}">
     @stack('styles')
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
@@ -46,8 +47,7 @@
 
             <!-- Logo -->
             <a href="{{ route('home') }}" class="d-flex align-items-center text-dark fw-bold fs-4 text-decoration-none">
-                <img src="ruta/a/tu/imagen.jpg"
-                     style="width:38px;" class="me-2">
+                 <i class="bi bi-shop fs-3 me-2" aria-hidden="true" style="line-height:1"></i>
                 AgaveShop
             </a>
 

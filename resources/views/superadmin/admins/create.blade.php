@@ -3,7 +3,7 @@
 @section('title', 'Crear Administrador')
 
 @push('scripts')
-    @vite(['resources/js/superadmin/crear-admin.js'])
+    <script src="{{ asset('js/superadmin/crear-admin.js') }}" defer></script>
 @endpush
 
 @section('content')

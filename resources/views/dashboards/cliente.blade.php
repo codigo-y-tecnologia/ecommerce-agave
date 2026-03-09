@@ -5,7 +5,7 @@ use Illuminate\Support\Str;
 @extends('layouts.app')
 
 @push('styles')
-    @vite(['resources/css/dashboard-cliente.css'])
+    <link rel="stylesheet" href="{{ asset('css/dashboard-cliente.css') }}">
 @endpush
 
 @section('title', 'Panel del Cliente')

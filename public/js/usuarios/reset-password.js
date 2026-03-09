@@ -1,3 +1,5 @@
+import Swal from "sweetalert2";
+
 document.addEventListener("DOMContentLoaded", () => {
     console.log("reset-password.js cargado correctamente");
 

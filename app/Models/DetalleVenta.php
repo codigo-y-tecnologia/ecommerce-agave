@@ -21,6 +21,12 @@ class DetalleVenta extends Model
         'dSubtotal',
     ];
 
+    protected $casts = [
+        'iCantidad' => 'integer',
+        'dPrecio_unitario' => 'decimal:2',
+        'dSubtotal' => 'decimal:2',
+    ];
+
     /**
      * Relación con la venta
      */
