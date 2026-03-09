@@ -112,6 +112,11 @@ class ProductoVariacion extends Model
         return $this->belongsTo(Producto::class, 'id_producto');
     }
 
+    public function productoPadre()
+    {
+        return $this->belongsTo(Producto::class, 'id_producto');
+    }
+
     public function atributos()
     {
         return $this->hasMany(VariacionAtributo::class, 'id_variacion');
@@ -123,22 +128,21 @@ class ProductoVariacion extends Model
     }
 
     /**
-     * Relación con imágenes de variación (NUEVA TABLA)
+     * Relación con imágenes de variación
      */
     public function imagenesRegistradas()
     {
         return $this->hasMany(VariacionImagen::class, 'id_variacion')->orderBy('iOrden');
     }
 
-    // ============ MÉTODOS DE OFERTA/DESCUENTO ============
+    // ============ MÉTODOS DE DESCUENTO (USANDO TU NOMENCLATURA) ============
 
     /**
-     * Verificar si la oferta está vigente basándose en la fecha ACTUAL
-     * @return bool
+     * Verificar si tiene descuento activo (usando tu nomenclatura)
      */
-    public function ofertaVigente(): bool
+    public function tieneDescuentoActivo()
     {
-        // Si no tiene oferta activada o no tiene precio de oferta, no es vigente
+        // Si no tiene descuento activado o no tiene precio de descuento
         if (!$this->bTiene_oferta || $this->dPrecio_oferta === null) {
             return false;
         }
@@ -161,13 +165,13 @@ class ProductoVariacion extends Model
             return $fechaActual <= $this->dFecha_fin_oferta;
         }
 
-        // Caso 4: Tiene oferta activada pero sin fechas
+        // Caso 4: Tiene descuento activado pero sin fechas
         return true;
     }
 
     public function getPrecioActualAttribute()
     {
-        if ($this->ofertaVigente()) {
+        if ($this->tieneDescuentoActivo()) {
             return $this->dPrecio_oferta;
         }
         return $this->dPrecio;
@@ -175,16 +179,27 @@ class ProductoVariacion extends Model
 
     public function getPorcentajeDescuentoAttribute()
     {
-        if ($this->ofertaVigente() && $this->dPrecio_oferta < $this->dPrecio) {
+        if ($this->tieneDescuentoActivo() && $this->dPrecio_oferta < $this->dPrecio) {
             $descuento = (($this->dPrecio - $this->dPrecio_oferta) / $this->dPrecio) * 100;
             return round($descuento);
         }
         return 0;
     }
 
-    public function tieneDescuentoActivo()
+    // ============ MÉTODO PARA OBTENER TEXTO DE ATRIBUTOS ============
+
+    /**
+     * Obtener texto de atributos para mostrar
+     */
+    public function getAtributosTexto()
     {
-        return $this->ofertaVigente();
+        $atributos = [];
+        foreach ($this->atributos as $atributoRel) {
+            if ($atributoRel->atributo && $atributoRel->valor) {
+                $atributos[] = $atributoRel->valor->vValor;
+            }
+        }
+        return implode(' - ', $atributos);
     }
 
     // ============ MÉTODOS DE IMPUESTOS ============

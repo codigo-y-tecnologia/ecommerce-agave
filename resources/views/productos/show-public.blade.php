@@ -825,7 +825,7 @@
             $tieneVariaciones = $producto->tieneVariaciones();
             
             // Calcular si el producto padre tiene oferta vigente
-            $productoTieneOferta = $producto->ofertaVigente();
+            $productoTieneOferta = $producto->tieneDescuentoActivo(); // CORREGIDO
             $precioBaseProducto = $productoTieneOferta ? $producto->dPrecio_oferta : $producto->dPrecio_venta;
             
             // Calcular impuestos del producto padre
@@ -966,7 +966,7 @@
                 }
                 
                 // Calcular si la variación tiene oferta vigente
-                $variacionTieneOferta = $var->ofertaVigente();
+                $variacionTieneOferta = $var->tieneDescuentoActivo(); // CORREGIDO
                 $precioBaseVariacion = $variacionTieneOferta ? $var->dPrecio_oferta : $var->dPrecio;
                 
                 $impuestoVariacion = $var->impuesto ?? $producto->impuestos->first();

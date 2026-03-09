@@ -453,20 +453,6 @@
             z-index: 99;
         }
 
-        /* Badge para variaciones */
-        .badge-variacion {
-            position: absolute;
-            top: 15px;
-            right: 60px;
-            background: #6c757d;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: bold;
-            z-index: 99;
-        }
-
         .ver-detalle {
             margin-top: 10px;
             text-align: center;
@@ -698,7 +684,7 @@
         <ul>
             <li><a href="{{ route('inicio') }}">Inicio</a></li>
             <li><a href="{{ route('busqueda.resultados') }}">Todos los Productos</a></li>
-            <li><a href="{{ route('busqueda.resultados', ['en_descuento' => '1']) }}" style="color: #dc3545; font-weight: bold;">🔥 En Descuento</a></li>
+            <li><a href="{{ route('busqueda.resultados', ['en_descuento' => '1']) }}" style="color: #dc3545; font-weight: bold;" id="link-descuento">🔥 En Descuento</a></li>
             <li>
                 @auth
                     <a href="{{ route('favoritos.index') }}" style="color: #dc3545; font-weight: bold;">❤️ Mis Favoritos</a>
@@ -722,7 +708,7 @@
 
         <!-- SOLO UNA BARRA DE BÚSQUEDA -->
         <div class="barra-busqueda-principal">
-            <form action="{{ route('busqueda.resultados') }}" method="GET">
+            <form action="{{ route('busqueda.resultados') }}" method="GET" id="form-busqueda">
                 <input type="text" name="q" placeholder="Buscar productos" 
                        value="{{ request('q') }}" autocomplete="off">
                 <button type="submit">Buscar</button>
@@ -887,7 +873,7 @@
                             
                             // Determinar si tiene descuento activo (cada uno con su propia lógica)
                             if ($esVariacion) {
-                                $tieneDescuento = $producto->ofertaVigente(); // Método en modelo Variacion
+                                $tieneDescuento = $producto->tieneDescuentoActivo();
                                 $precioOriginal = $producto->dPrecio;
                                 $precioOferta = $producto->dPrecio_oferta;
                                 $stock = $producto->iStock;
@@ -898,9 +884,9 @@
                                 $etiquetas = $producto->productoPadre->etiquetas;
                                 $url = route('productos.show.public', [$producto->productoPadre->id_producto, 'variacion' => $producto->id_variacion]);
                                 $sku = $producto->vSKU;
-                                $esFavorito = $producto->productoPadre->esFavorito(); // O podrías tener favoritos por variación
+                                $esFavorito = $producto->productoPadre->esFavorito();
                             } else {
-                                $tieneDescuento = $producto->tieneDescuentoActivo(); // Método en modelo Producto
+                                $tieneDescuento = $producto->tieneDescuentoActivo();
                                 $precioOriginal = $producto->dPrecio_venta;
                                 $precioOferta = $producto->dPrecio_oferta;
                                 $stock = $producto->iStock;
@@ -919,7 +905,7 @@
                             
                             $estaBajoStock = $stock > 0 && $stock <= 10;
                             
-                            // Lógica de envío (puedes ajustar estos valores según tu negocio)
+                            // Lógica de envío
                             $envioGratis = $precioActual >= 150;
                             $costoEnvio = 50;
                         @endphp
@@ -933,19 +919,12 @@
                                         title="{{ $esFavorito ? 'Quitar de favoritos' : 'Agregar a favoritos' }}">
                                 </button>
 
-                                <!-- Badge de variación -->
-                                @if($esVariacion)
-                                    <div class="badge-variacion">
-                                        🔄 Variación
-                                    </div>
-                                @endif
-
                                 <!-- Badge de descuento -->
                                 @if($tieneDescuento)
                                     <div class="badge-oferta">
                                         -{{ $porcentajeDescuento }}%
                                     </div>
-                                @elseif($estaBajoStock)
+                                @elseif($estaBajoStock && !$tieneDescuento)
                                     <div class="badge-stock-bajo">
                                         ¡Últimas!
                                     </div>
@@ -1279,6 +1258,13 @@
                 url.searchParams.delete('favorito_agregado');
                 window.history.replaceState({}, '', url);
             }
+            
+            // Agregar event listener al link de descuento para evitar el problema de doble clic
+            document.getElementById('link-descuento').addEventListener('click', function(e) {
+                e.preventDefault();
+                const url = new URL(this.href);
+                window.location.href = url.toString();
+            });
         });
     </script>
 </body>

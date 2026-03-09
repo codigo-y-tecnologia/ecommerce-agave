@@ -835,12 +835,12 @@
             <ul class="nav-links">
                 <li><a href="{{ route('inicio') }}">Inicio</a></li>
                 <li><a href="{{ route('busqueda.resultados') }}">Todos los Productos</a></li>
-                <li><a href="{{ route('busqueda.resultados', ['en_oferta' => '1']) }}" style="color: #00a650; font-weight: bold;">🔥 En Oferta</a></li>
+                <li><a href="{{ route('busqueda.resultados', ['en_descuento' => '1']) }}" style="color: #495057; font-weight: bold;">🔥 En Descuento</a></li>
                 <li>
                     @auth
-                        <a href="{{ route('favoritos.index') }}" style="color: #3483fa; font-weight: bold;">❤️ Mis Favoritos</a>
+                        <a href="{{ route('favoritos.index') }}" style="color: #495057; font-weight: bold;">❤️ Mis Favoritos</a>
                     @else
-                        <a href="{{ route('login') }}" style="color: #3483fa; font-weight: bold;">❤️ Mis Favoritos</a>
+                        <a href="{{ route('login') }}" style="color: #495057; font-weight: bold;">❤️ Mis Favoritos</a>
                     @endauth
                 </li>
                 @auth
@@ -887,7 +887,7 @@
         <p>Descubre nuestra exclusiva selección de productos de agave y mezcal</p>
         <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
             <a href="{{ route('busqueda.resultados') }}" class="btn-banner">Explorar Productos</a>
-            <a href="{{ route('busqueda.resultados', ['en_oferta' => '1']) }}" class="btn-banner descuento">🔥 Ver Ofertas</a>
+            <a href="{{ route('busqueda.resultados', ['en_descuento' => '1']) }}" class="btn-banner descuento">🔥 Ver Ofertas</a>
         </div>
     </div>
 
@@ -905,7 +905,7 @@
                     'sku' => $producto->vCodigo_barras,
                     'precio_original' => $producto->dPrecio_venta,
                     'precio_oferta' => $producto->dPrecio_oferta,
-                    'tiene_oferta' => $producto->ofertaVigente(),
+                    'tiene_oferta' => $producto->tieneDescuentoActivo(),
                     'stock' => $producto->iStock,
                     'imagenes' => $producto->imagenes,
                     'marca' => $producto->marca->vNombre ?? 'Marca genérica',
@@ -935,7 +935,7 @@
                         'sku' => $variacion->vSKU,
                         'precio_original' => $variacion->dPrecio,
                         'precio_oferta' => $variacion->dPrecio_oferta,
-                        'tiene_oferta' => $variacion->ofertaVigente(),
+                        'tiene_oferta' => $variacion->tieneDescuentoActivo(),
                         'stock' => $variacion->iStock,
                         'imagenes' => $variacion->imagenes,
                         'marca' => $producto->marca->vNombre ?? 'Marca genérica',
@@ -957,8 +957,8 @@
         
         // Obtener items para la sección de ofertas
         $itemsOferta = collect();
-        if(isset($productosOferta)) {
-            $itemsOferta = obtenerItemsCatalogo($productosOferta);
+        if(isset($productosDescuento)) {
+            $itemsOferta = obtenerItemsCatalogo($productosDescuento);
             // Filtrar solo los que tienen oferta vigente
             $itemsOferta = $itemsOferta->filter(function($item) {
                 return $item['tiene_oferta'];
@@ -990,7 +990,7 @@
                     $porcentajeDescuento = $item['tiene_oferta'] ? round((($item['precio_original'] - $item['precio_oferta']) / $item['precio_original']) * 100) : 0;
                     
                     // LÓGICA DE ENVÍO CORREGIDA
-                    $envioGratis = $item['precio_actual'] >= 150;
+                    $envioGratis = $precioActual >= 150;
                     $costoEnvio = 50;
                     
                     $estaBajoStock = $item['stock'] > 0 && $item['stock'] <= 10;
@@ -1087,7 +1087,7 @@
         </div>
 
         <div style="text-align: center; margin-top: 20px; margin-bottom: 30px;">
-            <a href="{{ route('busqueda.resultados', ['en_oferta' => '1']) }}" class="btn btn-danger">Ver Todas las Ofertas</a>
+            <a href="{{ route('busqueda.resultados', ['en_descuento' => '1']) }}" class="btn btn-danger">Ver Todas las Ofertas</a>
         </div>
     </div>
     @endif
