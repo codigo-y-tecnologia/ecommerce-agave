@@ -16,40 +16,38 @@ class UsuarioController extends Controller
     use InputSanitizer;
 
     /**
-    * Mostrar lista de usuarios
-    */
+     * Mostrar lista de usuarios
+     */
     public function index(Request $request)
-{
-    // Filtrar solo clientes
-    $query = trim($request->get('q'));
+    {
+        // Filtrar solo clientes
+        $query = trim($request->get('q'));
 
-    $usuarios = Usuario::where('eRol', 'cliente')
-        ->when($query, function ($q) use ($query) {
-            $q->where(function ($sub) use ($query) {
-                $sub->where('vNombre', 'like', "%{$query}%")
-                    ->orWhere('vApaterno', 'like', "%{$query}%")
-                    ->orWhere('vAmaterno', 'like', "%{$query}%")
-                    ->orWhere('vEmail', 'like', "%{$query}%");
-            });
-        })
-        ->orderBy('id_usuario', 'desc')
-        ->paginate(8);
+        $usuarios = Usuario::role('cliente')
+            ->when($query, function ($q) use ($query) {
+                $q->where(function ($sub) use ($query) {
+                    $sub->where('vNombre', 'like', "%{$query}%")
+                        ->orWhere('vApaterno', 'like', "%{$query}%")
+                        ->orWhere('vAmaterno', 'like', "%{$query}%")
+                        ->orWhere('vEmail', 'like', "%{$query}%");
+                });
+            })
+            ->orderBy('id_usuario', 'desc')
+            ->paginate(8);
 
-    // Si es una petición AJAX, devolver solo el HTML parcial
-    if ($request->ajax()) {
-        $html = View::make('admin.usuarios.partials.table', compact('usuarios'))->render();
-        return response()->json(['html' => $html]);
+        if ($request->ajax()) {
+            $html = View::make('admin.usuarios.partials.table', compact('usuarios'))->render();
+            return response()->json(['html' => $html]);
+        }
+
+        return view('admin.usuarios.index', compact('usuarios'));
     }
-
-    // Si es carga normal, devuelve la vista completa
-    return view('admin.usuarios.index', compact('usuarios'));
-}
 
     //Editar usuario (mostrar formulario)
     public function edit($id)
     {
-        $usuario = Usuario::where('id_usuario', $id)
-            ->where('eRol', 'cliente')
+        $usuario = Usuario::role('cliente')
+            ->where('id_usuario', $id)
             ->firstOrFail();
 
         return view('admin.usuarios.edit', compact('usuario'));
@@ -58,8 +56,8 @@ class UsuarioController extends Controller
     // Actualizar usuario (guardar cambios)
     public function update(Request $request, $id)
     {
-        $usuario = Usuario::where('id_usuario', $id)
-            ->where('eRol', 'cliente')
+        $usuario = Usuario::role('cliente')
+            ->where('id_usuario', $id)
             ->firstOrFail();
 
         // Validación
@@ -74,15 +72,11 @@ class UsuarioController extends Controller
             'vEmail.email' => 'El correo electrónico debe tener un formato válido.',
         ]);
 
-        // Funciones de limpieza y detección
-        $this->verificarYLimpiar($data, config('security.sql_keywords'));
-
         $usuario->update([
             'vNombre' => $data['vNombre'],
             'vApaterno' => $data['vApaterno'],
             'vAmaterno' => $data['vAmaterno'],
             'vEmail' => $data['vEmail'],
-            'eRol' => 'cliente', 
         ]);
 
         return redirect()->route('admin.usuarios')->with('success', 'Cliente actualizado correctamente.');
@@ -91,8 +85,8 @@ class UsuarioController extends Controller
     //Eliminar usuario
     public function destroy($id)
     {
-        $usuario = Usuario::where('id_usuario', $id)
-            ->where('eRol', 'cliente')
+        $usuario = Usuario::role('cliente')
+            ->where('id_usuario', $id)
             ->firstOrFail();
 
         $usuario->delete();

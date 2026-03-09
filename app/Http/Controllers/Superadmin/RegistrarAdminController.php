@@ -34,8 +34,6 @@ class RegistrarAdminController extends Controller
             'vPassword.min' => 'La contraseña debe tener al menos 8 caracteres.',
         ]);
 
-        $this->verificarYLimpiar($data, config('security.sql_keywords'));
-
         // Lógica para crear el usuario admin
         // ...
 

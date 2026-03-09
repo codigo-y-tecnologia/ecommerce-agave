@@ -12,12 +12,22 @@ class CuponUso extends Model
     protected $table = 'tbl_cupon_usos';
     protected $primaryKey = null;
     public $incrementing = false;
+    protected $keyType = 'int';
     public $timestamps = false;
 
     protected $fillable = [
         'id_cupon',
         'id_venta',
+        'id_usuario',
+        'guest_token',
         'tFecha_uso',
+    ];
+
+    protected $casts = [
+        'id_cupon'   => 'integer',
+        'id_venta'   => 'integer',
+        'id_usuario' => 'integer',
+        'tFecha_uso' => 'datetime',
     ];
 
     public function cupon()
@@ -25,4 +35,3 @@ class CuponUso extends Model
         return $this->belongsTo(Cupon::class, 'id_cupon', 'id_cupon');
     }
 }
-

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\reembolsos;
+use App\Models\Reembolsos;
 use Illuminate\Http\Request;
 
 class ReembolsosController extends Controller
@@ -13,7 +13,7 @@ class ReembolsosController extends Controller
     public function index(Request $request)
     {
         // Crear consulta
-        $query = reembolsos::query();
+        $query = Reembolsos::query();
 
         // Búsqueda
         if ($request->has('search') && $request->search != '') {
@@ -69,7 +69,7 @@ class ReembolsosController extends Controller
             'eEstado' => 'required|in:pendiente,procesado,fallido'
         ]);
 
-        reembolsos::create($request->all());
+        Reembolsos::create($request->all());
 
         return redirect()->route('reembolsos.index')
             ->with('success', 'Reembolso creado correctamente');
@@ -80,7 +80,7 @@ class ReembolsosController extends Controller
      */
     public function show($id)
     {
-        $reembolso = reembolsos::findOrFail($id);
+        $reembolso = Reembolsos::findOrFail($id);
         return view('reembolsos.show', compact('reembolso'));
     }
 
@@ -89,7 +89,7 @@ class ReembolsosController extends Controller
      */
     public function edit($id)
     {
-        $reembolso = reembolsos::findOrFail($id);
+        $reembolso = Reembolsos::findOrFail($id);
         return view('reembolsos.edit', compact('reembolso'));
     }
 
@@ -98,7 +98,7 @@ class ReembolsosController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $reembolso = reembolsos::findOrFail($id);
+        $reembolso = Reembolsos::findOrFail($id);
 
         $request->validate([
             'id_venta' => 'required|integer',
@@ -120,7 +120,7 @@ class ReembolsosController extends Controller
      */
     public function destroy($id)
     {
-        $reembolso = reembolsos::findOrFail($id);
+        $reembolso = Reembolsos::findOrFail($id);
         $reembolso->delete();
 
         return redirect()->route('reembolsos.index')

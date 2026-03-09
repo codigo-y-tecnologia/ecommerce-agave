@@ -15,7 +15,7 @@ class Reembolsos extends Model
     public $timestamps = false;           
 
     protected $fillable = [
-        'Id_venta',
+        'id_venta',
         'tFecha_reembolso',
         'dMonto',
         'vMotivo',
@@ -26,5 +26,6 @@ class Reembolsos extends Model
     protected $casts = [
         'dMonto' => 'decimal:2',
         'tFecha_reembolso' => 'datetime:Y-m-d H:i:s',
+        'eEstado' => 'string',
     ];
 }

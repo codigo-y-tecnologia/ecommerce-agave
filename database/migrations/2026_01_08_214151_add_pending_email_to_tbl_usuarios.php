@@ -1,0 +1,29 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('tbl_usuarios', function (Blueprint $table) {
+            $table->string('email_pending', 100)->nullable()->after('vEmail');
+            $table->string('email_verification_token', 100)->nullable()->after('email_pending');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('tbl_usuarios', function (Blueprint $table) {
+            $table->dropColumn(['email_pending', 'email_verification_token']);
+        });
+    }
+};

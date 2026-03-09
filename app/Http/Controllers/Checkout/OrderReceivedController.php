@@ -4,127 +4,122 @@ namespace App\Http\Controllers\Checkout;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Pedido;
-use App\Models\Direccion;
+use App\Models\{Pedido, CheckoutSnapshot, CuponUso};
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class OrderReceivedController extends Controller
 {
     public function show($id)
-{
-    Log::info('📦 Mostrando order-received', ['id_pedido' => $id]);
+    {
+        Log::info('📦 Mostrando order-received', ['id_pedido' => $id]);
 
-    $pedido = Pedido::with(['detalles.producto.impuestos', 'usuario', 'venta'])
-        ->where('id_usuario', Auth::user()->id_usuario)
-        ->findOrFail($id);
+        $query = Pedido::with(['detalles.producto.impuestos', 'venta'])
+            ->where('id_pedido', $id);
 
-    $direccion = Direccion::find($pedido->id_direccion);
-
-    // Método de pago
-    $payment_method = $pedido->venta->eMetodo_pago ?? 'No disponible';
-
-    // -------------------------
-    // CÁLCULOS DE IMPUESTOS
-    // -------------------------
-
-    $subtotalSinImpuestos = 0;  
-    $totalImpuestos = 0;
-    $impuestosPorTipo = [];
-
-    foreach ($pedido->detalles as $det) {
-
-        $producto = $det->producto;
-        $cantidad = $det->iCantidad;
-
-        $precio_base = $producto->dPrecio_venta;
-
-        // mismos métodos usados en checkout
-        $ieps = $producto->calcularIEPS();
-        $iva  = $producto->calcularIVA($ieps);
-
-        $precio_unitario_con_imp = $precio_base + $ieps + $iva;
-
-        // Acumular subtotal SIN impuestos
-        $subtotalSinImpuestos += ($precio_base * $cantidad);
-
-        // Impuestos por tipo
-        if ($ieps > 0) {
-            $impuestosPorTipo['IEPS'] = ($impuestosPorTipo['IEPS'] ?? 0) + ($ieps * $cantidad);
+        // 🔐 Usuario logueado
+        if (Auth::check()) {
+            $query->where('id_usuario', Auth::user()->id_usuario);
         }
-        if ($iva > 0) {
-            $impuestosPorTipo['IVA'] = ($impuestosPorTipo['IVA'] ?? 0) + ($iva * $cantidad);
-        }
+        // 🔐 Invitado
+        else {
+            $guestToken = Session::get('guest_token');
 
-        // Acumular total impuestos
-        $totalImpuestos += ($ieps + $iva) * $cantidad;
-    }
-
-    // Subtotal CON impuestos (como en checkout)
-    $subtotalConImpuestos = $subtotalSinImpuestos + $totalImpuestos;
-
-    // -------------------------
-    // DESCUENTO
-    // -------------------------
-
-    $descuento = 0;
-    $cupon = null;
-
-    try {
-        $cuponUso = \App\Models\CuponUso::where('id_venta', $pedido->venta->id_venta ?? 0)->first();
-        if ($cuponUso) {
-            $cupon = $cuponUso->cupon ?? \App\Models\Cupon::find($cuponUso->id_cupon);
-        }
-    } catch (\Throwable $e) {
-        Log::info('No se encontró CuponUso: ' . $e->getMessage());
-    }
-
-    if ($cupon) {
-        if ($cupon->vCodigo_cupon !== 'ENVIOGRATIS') {
-            if ($cupon->eTipo === 'porcentaje') {
-                $descuento = $subtotalConImpuestos * ($cupon->dDescuento / 100);
-            } else {
-                $descuento = $cupon->dDescuento;
+            if (!$guestToken) {
+                abort(403);
             }
+
+            $query->where('vGuest_token', $guestToken);
         }
+
+        $pedido = $query->firstOrFail();
+        Log::info('📦 Mostrando pedido', ['pedido' => $pedido]);
+
+        // Método de pago
+        $payment_method = $pedido->venta->eMetodo_pago ?? 'No disponible';
+
+        $sessionID = $pedido->pago->vSessionID ?? null;
+
+        $snapshot = CheckoutSnapshot::where('payment_session', $sessionID)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$snapshot) {
+            abort(500, 'Snapshot no encontrado.');
+        }
+
+        if ($pedido->id_usuario && $pedido->vGuest_token) {
+
+            Pedido::where('id_usuario', $pedido->id_usuario)
+                ->update([
+                    'vGuest_token' => null
+                ]);
+
+            CuponUso::where('id_venta', $pedido->venta->id_venta)->update([
+                'guest_token' => null
+            ]);
+        }
+
+        return view('checkout.order-received', [
+            'pedido' => $pedido,
+            //'direccion' => $direccion,
+            'payment_method' => $payment_method,
+            'nota_pedido' => $pedido->nota ?? null,
+
+            // Para mostrar igual que en checkout:
+            'subtotal' => $snapshot->subtotal,
+            'totalImpuestos' => $snapshot->impuestos,
+            'impuestosPorTipo' => $snapshot->impuestos_por_tipo ?? [],
+            'subtotalConImpuestos' => $snapshot->subtotal_con_impuestos,
+
+            'envio' => $snapshot->envio,
+            'descuento' => $snapshot->descuento,
+            'totalFinal' => $snapshot->total_final,
+            'cuponCodigo' => $snapshot->cupon_codigo,
+        ]);
     }
 
-    // -------------------------
-    // ENVÍO
-    // -------------------------
+    public function pdf($id)
+    {
+        $pedido = Pedido::with(['detalles.producto.impuestos', 'venta'])
+            ->findOrFail($id);
 
-    $montoEnvioGratis = 1500;
-    $costoEnvioFijo = 150;
+        // 🔐 Seguridad básica:
+        // - Si está logueado, validar que el pedido sea suyo
+        if (Auth::check() && $pedido->id_usuario !== Auth::id()) {
+            abort(403);
+        }
 
-    $envio = ($subtotalConImpuestos >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
+        // Si es invitado, el acceso debe venir desde order-received
+        // (opcional: validar vGuest_token por query string)
 
-    if ($cupon && $cupon->vCodigo_cupon === 'ENVIOGRATIS') {
-        $envio = 0;
+        $payment_method = $pedido->venta->eMetodo_pago ?? 'No disponible';
+
+        $sessionID = $pedido->pago->vSessionID ?? null;
+
+        $snapshot = CheckoutSnapshot::where('payment_session', $sessionID)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$snapshot) {
+            abort(500, 'Snapshot no encontrado.');
+        }
+
+        $pdf = Pdf::loadView('pdf.recibo', [
+            'pedido' => $pedido,
+            'payment_method' => $payment_method,
+            'subtotal' => $snapshot->subtotal,
+            'totalImpuestos' => $snapshot->impuestos,
+            'impuestosPorTipo' => $snapshot->impuestos_por_tipo ?? [],
+            'subtotalConImpuestos' => $snapshot->subtotal_con_impuestos,
+            'envio' => $snapshot->envio,
+            'descuento' => $snapshot->descuento,
+            'totalFinal' => $snapshot->total_final,
+            'cuponCodigo' => $snapshot->cupon_codigo,
+        ])->setPaper('letter');
+
+        return $pdf->download('recibo-pedido-' . $pedido->id_pedido . '.pdf');
     }
-
-    // -------------------------
-    // TOTAL FINAL
-    // -------------------------
-
-    $totalFinal = max(0, $subtotalConImpuestos - $descuento + $envio);
-
-    return view('checkout.order-received', [
-        'pedido' => $pedido,
-        'direccion' => $direccion,
-        'payment_method' => $payment_method,
-        'nota_pedido' => $pedido->nota ?? null,
-
-        // Para mostrar igual que en checkout:
-        'subtotal' => $subtotalSinImpuestos,
-        'totalImpuestos' => $totalImpuestos,
-        'impuestosPorTipo' => $impuestosPorTipo,
-        'subtotalConImpuestos' => $subtotalConImpuestos,
-
-        'envio' => $envio,
-        'descuento' => $descuento,
-        'totalFinal' => $totalFinal,
-        'cupon' => $cupon,
-    ]);
-}
-
 }

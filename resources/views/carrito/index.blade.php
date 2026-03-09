@@ -13,10 +13,34 @@
         </div>
     @endif
 
+    @if(session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+@endif
+
     @if(session('warning'))
     <div class="alert alert-warning">
         {{ session('warning') }}
     </div>
+@endif
+
+@if(!empty($warning))
+    <div class="alert alert-warning">
+        <ul class="mb-0">
+            @foreach($warning as $mensaje)
+                <li>{{ $mensaje }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
+@if(!empty($carrito_vacio))
+    <div class="alert alert-info">
+        {{ $carrito_vacio }}
+    </div>
+@endif
+
+@if(session('info'))
+    <div class="alert alert-info">{{ session('info') }}</div>
 @endif
 
     <!-- Tabla de productos en el carrito -->

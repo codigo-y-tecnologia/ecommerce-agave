@@ -499,7 +499,8 @@
             <ul class="nav-links">
                 <li><a href="{{ route('home') }}">Inicio</a></li>
                 <li><a href="{{ route('busqueda.resultados') }}">Todos los Productos</a></li>
-                <li>
+                    <li><a href="{{ route('carrito.index') }}">Mi Carrito</a></li>
+                    <li>
                     @auth
                         <a href="{{ route('favoritos.index') }}" style="color: #dc3545; font-weight: bold;">❤️ Mis Favoritos</a>
                     @else
@@ -507,8 +508,6 @@
                     @endauth
                 </li>
                 @auth
-                    <li><a href="{{ route('carrito.index') }}">Mi Carrito</a></li>
-                    <li>
                         <form method="POST" action="{{ route('logout') }}" style="display:inline;">
                             @csrf
                             <button type="submit" style="background: none; border: none; color: #495057; cursor: pointer; font-weight: bold; font-size: 16px;">Cerrar Sesión</button>
@@ -616,6 +615,7 @@
                 <div class="action-buttons">
                     <form action="{{ route('carrito.store', $producto->id_producto) }}" method="POST">
                     @csrf
+                    <input type="hidden" name="cantidad" value="1">
                     <button type="submit" class="btn-comprar">🛒 Comprar Ahora</button>
                 </form>
                 </div>

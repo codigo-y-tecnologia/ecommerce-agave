@@ -4,6 +4,10 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\View;
+use App\Models\Setting;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,6 +24,22 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Gate::define('asignar_roles', function ($user) {
+            return $user->hasRole('superadmin');
+        });
+
+        Paginator::useBootstrap();
+
+        View::share(
+            'allowOrderReturns',
+            Setting::getValue('allow_order_returns', false)
+        );
+
+        View::share(
+            'allowClaimeOrders',
+            Setting::getValue('auto_register_guest_after_purchase', false)
+        );
+
         Schema::defaultStringLength(191);
     }
 }

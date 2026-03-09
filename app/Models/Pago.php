@@ -23,6 +23,11 @@ class Pago extends Model
         'tFecha_pago',
     ];
 
+    protected $casts = [
+    'tFecha_pago' => 'datetime',
+    'eEstado' => 'string',
+];
+
     public function pedido()
     {
         return $this->belongsTo(Pedido::class, 'id_pedido', 'id_pedido');

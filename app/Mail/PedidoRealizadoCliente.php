@@ -15,44 +15,16 @@ class PedidoRealizadoCliente extends Mailable
     use Queueable, SerializesModels;
 
     public $pedido;
-    public $subtotal;
-    public $envio;
-    public $descuento;
-    public $totalFinal;
-    public $cupon;
+    public $snapshot;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(Pedido $pedido, $subtotal, $envio, $descuento, $totalFinal, $cupon = null)
+    public function __construct(Pedido $pedido, $snapshot)
     {
         $this->pedido = $pedido;
-        $this->subtotal = $subtotal;
-        $this->envio = $envio;
-        $this->descuento = $descuento;
-        $this->totalFinal = $totalFinal;
-        $this->cupon = $cupon;
+        $this->snapshot = $snapshot;
     }
-
-    /**
-     * Get the message envelope.
-     */
-    // public function envelope(): Envelope
-    // {
-    //     return new Envelope(
-    //         subject: 'Pedido Realizado Cliente',
-    //     );
-    // }
-
-    /**
-     * Get the message content definition.
-     */
-    // public function content(): Content
-    // {
-    //     return new Content(
-    //         view: 'emails.pedido_cliente',
-    //     );
-    // }
 
     /**
      * Get the attachments for the message.

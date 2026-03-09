@@ -20,9 +20,15 @@ class Venta extends Model
         'id_usuario',
         'tFecha_venta',
         'dTotal',
+        'dDescuento',
+        'dCosto_envio',
         'eMetodo_pago',
         'eEstado'
     ];
+
+    protected $casts = [
+    'tFecha_venta' => 'datetime',
+];
     
     public function detalles()
     {
@@ -32,5 +38,14 @@ class Venta extends Model
     public function usuario()
     {
         return $this->belongsTo(Usuario::class, 'id_usuario', 'id_usuario');
+    }
+
+    public function pedido()
+    {
+        return $this->belongsTo(
+            Pedido::class,
+            'id_pedido',
+            'id_pedido'
+        );
     }
 }

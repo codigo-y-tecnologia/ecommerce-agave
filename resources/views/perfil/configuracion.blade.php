@@ -6,6 +6,22 @@
 <div class="container mt-5 mb-5">
     <h2 class="fw-bold text-center mb-4">⚙️ Configuración de Cuenta</h2>
 
+<!-- Mensajes de estado -->
+@if(session('warning'))
+    <div class="alert alert-warning">{{ session('warning') }}</div>
+@endif
+
+@if(session('info'))
+    <div class="alert alert-info">{{ session('info') }}</div>
+@endif
+
+@if(auth()->user()->email_pending)
+    <div class="alert alert-warning">
+        Tienes un cambio de correo pendiente:
+        <strong>{{ auth()->user()->email_pending }}</strong>
+    </div>
+@endif
+
     <div class="row justify-content-center">
         <div class="col-md-8">
             <!-- Información Personal -->
@@ -20,17 +36,17 @@
 
                         <div class="mb-3">
                             <label class="form-label">Nombre</label>
-                            <input type="text" name="vNombre" value="{{ old('vNombre', $usuario->vNombre) }}" class="form-control rounded-pill" required>
+                            <input type="text" name="vNombre" value="{{ old('vNombre', $usuario->vNombre) }}" class="form-control rounded-pill" maxlength="60" required>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Apellido Paterno</label>
-                            <input type="text" name="vApaterno" value="{{ old('vApaterno', $usuario->vApaterno) }}" class="form-control rounded-pill" required>
+                            <input type="text" name="vApaterno" value="{{ old('vApaterno', $usuario->vApaterno) }}" class="form-control rounded-pill" maxlength="50" required>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Apellido Materno</label>
-                            <input type="text" name="vAmaterno" value="{{ old('vAmaterno', $usuario->vAmaterno) }}" class="form-control rounded-pill">
+                            <input type="text" name="vAmaterno" value="{{ old('vAmaterno', $usuario->vAmaterno) }}" class="form-control rounded-pill" maxlength="50" required>
                         </div>
 
                         <div class="mb-3">
@@ -57,17 +73,17 @@
 
                         <div class="mb-3">
                             <label class="form-label">Contraseña actual</label>
-                            <input type="password" name="password_actual" class="form-control rounded-pill" required>
+                            <input type="password" name="password_actual" class="form-control rounded-pill" maxlength="150" required>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Nueva contraseña</label>
-                            <input type="password" name="password_nueva" class="form-control rounded-pill" required>
+                            <input type="password" name="password_nueva" class="form-control rounded-pill" maxlength="150" required>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Confirmar nueva contraseña</label>
-                            <input type="password" name="password_nueva_confirmation" class="form-control rounded-pill" required>
+                            <input type="password" name="password_nueva_confirmation" class="form-control rounded-pill" maxlength="150" required>
                         </div>
 
                         <div class="text-end">
@@ -84,9 +100,19 @@
                 </div>
                 <div class="card-body">
                     <p class="text-muted">⚠️ Esta acción no se puede deshacer. Se eliminarán todos tus datos y direcciones guardadas.</p>
+
                     <form id="formEliminarCuenta" method="POST" action="{{ route('perfil.eliminar') }}">
+
                         @csrf
                         @method('DELETE')
+
+                        <input type="password"
+                            name="password"
+                            id="passwordEliminar"
+                            class="form-control rounded-pill mb-3"
+                            placeholder="Confirma tu contraseña"
+                            maxlength="150" required>
+
                         <button type="button" id="btnEliminarCuenta" class="btn btn-outline-danger rounded-pill w-100">
                             🗑️ Eliminar mi cuenta
                         </button>
@@ -132,9 +158,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // 🗑️ Confirmación de eliminación
     const btnEliminar = document.getElementById('btnEliminarCuenta');
     const formEliminar = document.getElementById('formEliminarCuenta');
+    const passwordInput = document.getElementById('passwordEliminar');
 
     if (btnEliminar) {
         btnEliminar.addEventListener('click', (e) => {
+            e.preventDefault();
+
+            if (!passwordInput.value.trim()) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Contraseña requerida',
+            text: 'Debes confirmar tu contraseña para eliminar tu cuenta.',
+            confirmButtonColor: '#d33',
+        });
+        return;
+    }
+
             Swal.fire({
                 title: '¿Eliminar tu cuenta?',
                 text: 'Esta acción no se puede deshacer. Se eliminarán todos tus datos.',

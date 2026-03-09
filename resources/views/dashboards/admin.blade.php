@@ -10,11 +10,25 @@
 
 <div class="row g-4">
     <div class="col-md-4">
+        <div class="card border-danger shadow-sm">
+            <div class="card-body text-center">
+                <h5>🧑‍💼 Mi perfil</h5>
+                <p>Consulta, edita o elimina usuarios.</p>
+                @can('mi_perfil_admin')
+                    <a href="{{ route('admin.perfil.index') }}" class="btn btn-danger w-100">Ver perfil</a>
+                @endcan
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
         <div class="card border-warning shadow-sm">
             <div class="card-body text-center">
-                <h5>👥 Usuarios Registrados</h5>
+                <h5>👥 Clientes Registrados</h5>
                 <p>Consulta, edita o elimina usuarios.</p>
-                <a href="{{ route('admin.usuarios') }}" class="btn btn-warning w-100">Ver usuarios</a>
+                @can('ver_clientes')
+                    <a href="{{ route('admin.usuarios') }}" class="btn btn-warning w-100">Ver clientes</a>
+                @endcan
             </div>
         </div>
     </div>
@@ -51,16 +65,32 @@
             <div class="card-body text-center">
                 <h5>📦 Pedidos</h5>
                 <p>Consulta y actualiza el estado de los pedidos.</p>
-                <a href="#" class="btn btn-primary w-100">Ver pedidos</a>
+                <a href="{{ route('admin.pedidos.index') }}" class="btn btn-primary w-100">Ver pedidos</a>
             </div>
         </div>
     </div>
+
+    <div class="col-md-4">
+    <div class="card border-secondary shadow-sm">
+        <div class="card-body text-center">
+            <h5>🔄 Postventa</h5>
+            <p>Cancelaciones, devoluciones y reembolsos.</p>
+            <a href="{{ route('admin.postventa.index') }}"
+               class="btn btn-secondary w-100">
+                Administrar postventa
+            </a>
+        </div>
+    </div>
+</div>
+
     <div class="col-md-4">
         <div class="card border-danger shadow-sm">
             <div class="card-body text-center">
                 <h5>📊 Reportes</h5>
                 <p>Genera reportes de ventas, usuarios y más.</p>
-                <a href="{{ route('reportes.index') }}" class="btn btn-danger w-100">Ver reportes</a>
+                @can('ver_reportes')
+                    <a href="{{ route('reportes.index') }}" class="btn btn-danger w-100">Ver reportes</a>
+                @endcan
             </div>
         </div>
     </div>
@@ -75,5 +105,18 @@
         </div>
     </div>
 </div>
+
+<div class="col-md-4">
+    <div class="card border-dark shadow-sm">
+        <div class="card-body text-center">
+            <h5>⚙️ Configuración</h5>
+            <p>Controla el comportamiento general del ecommerce.</p>
+            <a href="{{ route('admin.settings.index') }}" class="btn btn-dark w-100">
+                Ajustes de la tienda
+            </a>
+        </div>
+    </div>
+</div>
+
 </div>
 @endsection

@@ -26,7 +26,7 @@ class ProductoController extends Controller
         $categorias = Categoria::orderBy('vNombre', 'asc')->get();
         $marcas = Marca::all();
         $etiquetas = Etiqueta::all();
-        
+
         return view('productos.create', compact('categorias', 'marcas', 'etiquetas'));
     }
 
@@ -103,10 +103,9 @@ class ProductoController extends Controller
 
             return redirect()->route('productos.index')
                 ->with('success', 'Producto creado exitosamente');
-
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return redirect()->back()
                 ->withInput()
                 ->withErrors(['error' => 'Error al crear el producto: ' . $e->getMessage()]);
@@ -116,19 +115,19 @@ class ProductoController extends Controller
     public function showPublic($id)
     {
         $producto = Producto::with(['marca', 'categoria', 'etiquetas'])
-                            ->where('bActivo', true)
-                            ->findOrFail($id);
-        
+            ->where('bActivo', true)
+            ->findOrFail($id);
+
         return view('productos.show-public', compact('producto'));
     }
 
     public function catalogo()
     {
         $productos = Producto::with(['marca', 'categoria', 'etiquetas'])
-                            ->where('bActivo', true)
-                            ->orderBy('vNombre')
-                            ->get();
-        
+            ->where('bActivo', true)
+            ->orderBy('vNombre')
+            ->get();
+
         return view('productos.catalogo', compact('productos'));
     }
 
@@ -145,7 +144,7 @@ class ProductoController extends Controller
         $marcas = Marca::all();
         $etiquetas = Etiqueta::all();
         $producto->load('etiquetas');
-        
+
         return view('productos.edit', compact('producto', 'categorias', 'marcas', 'etiquetas'));
     }
 
@@ -204,7 +203,7 @@ class ProductoController extends Controller
             // Validar que no se excedan 6 imágenes en total
             $imagenesActuales = $producto->getNumeroImagenes();
             $nuevasImagenes = $request->hasFile('imagenes') ? count($request->file('imagenes')) : 0;
-            
+
             if (($imagenesActuales + $nuevasImagenes) > 6) {
                 return redirect()->back()
                     ->withInput()
@@ -215,7 +214,7 @@ class ProductoController extends Controller
             $productoData['bActivo'] = $request->has('bActivo') ? true : false;
 
             $producto->update($productoData);
-            
+
             // Guardar nuevas imágenes si se enviaron
             if ($request->hasFile('imagenes')) {
                 $producto->guardarImagenes($request->file('imagenes'));
@@ -227,10 +226,9 @@ class ProductoController extends Controller
 
             return redirect()->route('productos.index')
                 ->with('success', 'Producto actualizado exitosamente');
-
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return redirect()->back()
                 ->withInput()
                 ->withErrors(['error' => 'Error al actualizar el producto: ' . $e->getMessage()]);
@@ -244,18 +242,17 @@ class ProductoController extends Controller
 
             // Eliminar imágenes del producto
             $producto->eliminarImagenes();
-            
+
             $producto->etiquetas()->detach();
             $producto->delete();
-            
+
             DB::commit();
 
             return redirect()->route('productos.index')
                 ->with('success', 'Producto eliminado exitosamente');
-
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return redirect()->route('productos.index')
                 ->with('error', 'Error al eliminar el producto: ' . $e->getMessage());
         }
@@ -267,13 +264,13 @@ class ProductoController extends Controller
     public function atributos(Producto $producto)
     {
         $atributosDisponibles = Atributo::where('bActivo', true)
-                                   ->whereNotIn('id_atributo', function($query) use ($producto) {
-                                       $query->select('id_atributo')
-                                             ->from('tbl_producto_atributos')
-                                             ->where('id_producto', $producto->id_producto);
-                                   })
-                                   ->orderBy('iOrden')
-                                   ->get();
+            ->whereNotIn('id_atributo', function ($query) use ($producto) {
+                $query->select('id_atributo')
+                    ->from('tbl_producto_atributos')
+                    ->where('id_producto', $producto->id_producto);
+            })
+            ->orderBy('iOrden')
+            ->get();
 
         $producto->load('productoAtributos.atributo', 'productoAtributos.opcion');
 
