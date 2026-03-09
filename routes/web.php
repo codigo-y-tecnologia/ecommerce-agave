@@ -137,6 +137,13 @@ Route::get('/pago-error', function () {
 Route::post('/payment/paypal/validate', [PaymentController::class, 'validatePaypal'])
     ->name('payment.paypal.validate');
 
+// Rutas de Soporte
+Route::get('/soporte', [SoporteController::class, 'form'])
+    ->name('soporte.form');
+
+Route::post('/soporte/enviar', [SoporteController::class, 'send'])
+    ->name('soporte.send');
+
 Route::get('/activar-cuenta/{token}', [AuthController::class, 'activarCuenta'])
     ->name('activar.cuenta');
 
@@ -302,13 +309,6 @@ Route::middleware(['auth', 'spatie.role:cliente'])->group(function () {
         '/mi-cuenta/pedidos/{pedido}/factura',
         [FacturaController::class, 'download']
     )->name('pedidos.factura');
-
-    // Rutas de Soporte
-    Route::get('/soporte', [SoporteController::class, 'form'])
-        ->name('soporte.form');
-
-    Route::post('/soporte/enviar', [SoporteController::class, 'send'])
-        ->name('soporte.send');
 
     // RUTAS PÚBLICAS PARA FAVORITOS - Redirigen a login si no está autenticado
     Route::post('/favoritos/toggle/{producto}', [FavoritoController::class, 'toggle'])
