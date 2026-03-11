@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web([
             \App\Http\Middleware\VerifyCsrfToken::class,
+            \App\Http\Middleware\CheckMaintenanceMode::class,
         ]);
 
         // Excluir explícitamente el webhook de Stripe

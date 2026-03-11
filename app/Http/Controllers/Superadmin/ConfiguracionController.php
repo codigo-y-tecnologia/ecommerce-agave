@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Superadmin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Configuracion;
+use Illuminate\Support\Facades\Cache;
 
 class ConfiguracionController extends Controller
 {
@@ -40,6 +41,8 @@ class ConfiguracionController extends Controller
                 ['valor' => $valor]
             );
         }
+
+        Cache::forget('configuraciones_sistema');
 
         return back()->with('success', 'Configuración actualizada correctamente');
     }

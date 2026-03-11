@@ -105,25 +105,6 @@ value="{{ $configs['envio_gratis'] ?? '' }}">
 </div>
 </div>
 
-{{-- CONFIG IMPUESTOS --}}
-<div class="col-md-6">
-<div class="card shadow-sm">
-<div class="card-header bg-warning">
-Impuestos
-</div>
-
-<div class="card-body">
-
-<div class="mb-3">
-<label>IVA (%)</label>
-<input type="number" name="iva" class="form-control"
-value="{{ $configs['iva'] ?? 16 }}">
-</div>
-
-</div>
-</div>
-</div>
-
 {{-- CONFIG SISTEMA --}}
 <div class="col-md-6">
 <div class="card shadow-sm">
