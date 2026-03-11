@@ -17,7 +17,6 @@ class AtributoController extends Controller
     public function index()
     {
         $atributos = Atributo::with(['valoresActivos'])
-            ->orderBy('iOrden')
             ->orderBy('vNombre')
             ->get();
         
@@ -41,7 +40,6 @@ class AtributoController extends Controller
             'vNombre' => 'required|max:100|unique:tbl_atributos,vNombre',
             'vSlug' => 'nullable|max:100|unique:tbl_atributos,vSlug',
             'tDescripcion' => 'nullable|max:500',
-            'iOrden' => 'nullable|integer|min:0'
         ]);
 
         try {
@@ -49,7 +47,6 @@ class AtributoController extends Controller
                 'vNombre' => $request->vNombre,
                 'vSlug' => $request->vSlug ?? Str::slug($request->vNombre),
                 'tDescripcion' => $request->tDescripcion,
-                'iOrden' => $request->iOrden ?? 0,
                 'bActivo' => $request->has('bActivo') ? 1 : 0
             ]);
 
@@ -89,7 +86,6 @@ class AtributoController extends Controller
             'vNombre' => 'required|max:100|unique:tbl_atributos,vNombre,' . $atributo->id_atributo . ',id_atributo',
             'vSlug' => 'nullable|max:100|unique:tbl_atributos,vSlug,' . $atributo->id_atributo . ',id_atributo',
             'tDescripcion' => 'nullable|max:500',
-            'iOrden' => 'nullable|integer|min:0'
         ]);
 
         try {
@@ -97,7 +93,6 @@ class AtributoController extends Controller
                 'vNombre' => $request->vNombre,
                 'vSlug' => $request->vSlug ?? Str::slug($request->vNombre),
                 'tDescripcion' => $request->tDescripcion,
-                'iOrden' => $request->iOrden ?? 0,
                 'bActivo' => $request->has('bActivo') ? 1 : 0
             ]);
 
@@ -140,7 +135,8 @@ class AtributoController extends Controller
     
     public function valores(Atributo $atributo)
     {
-        $valores = $atributo->valores()->orderBy('iOrden')->get();
+        // Eliminado orderBy('iOrden') ya que no existe la columna
+        $valores = $atributo->valores()->get();
         return view('atributos.valores.index', compact('atributo', 'valores'));
     }
 
@@ -154,9 +150,7 @@ class AtributoController extends Controller
         $request->validate([
             'vValor' => 'required|max:100',
             'vSlug' => 'nullable|max:100',
-            'dPrecio_extra' => 'nullable|numeric|min:0',
-            'iStock' => 'nullable|integer|min:0',
-            'iOrden' => 'nullable|integer|min:0'
+            'bActivo' => 'nullable|boolean'
         ]);
 
         try {
@@ -177,9 +171,6 @@ class AtributoController extends Controller
                 'id_atributo' => $atributo->id_atributo,
                 'vValor' => $request->vValor,
                 'vSlug' => $slug,
-                'dPrecio_extra' => $request->dPrecio_extra ?? 0,
-                'iStock' => $request->iStock ?? 0,
-                'iOrden' => $request->iOrden ?? 0,
                 'bActivo' => $request->has('bActivo') ? 1 : 0
             ]);
 
@@ -203,9 +194,7 @@ class AtributoController extends Controller
         $request->validate([
             'vValor' => 'required|max:100',
             'vSlug' => 'nullable|max:100',
-            'dPrecio_extra' => 'nullable|numeric|min:0',
-            'iStock' => 'nullable|integer|min:0',
-            'iOrden' => 'nullable|integer|min:0'
+            'bActivo' => 'nullable|boolean'
         ]);
 
         try {
@@ -226,9 +215,6 @@ class AtributoController extends Controller
             $valor->update([
                 'vValor' => $request->vValor,
                 'vSlug' => $slug,
-                'dPrecio_extra' => $request->dPrecio_extra ?? 0,
-                'iStock' => $request->iStock ?? 0,
-                'iOrden' => $request->iOrden ?? 0,
                 'bActivo' => $request->has('bActivo') ? 1 : 0
             ]);
 
@@ -292,7 +278,6 @@ class AtributoController extends Controller
                 'vNombre' => $request->vNombre,
                 'vSlug' => $request->vSlug ?? Str::slug($request->vNombre),
                 'tDescripcion' => $request->tDescripcion ?? null,
-                'iOrden' => 0,
                 'bActivo' => true
             ]);
 
@@ -312,7 +297,6 @@ class AtributoController extends Controller
 
     /**
      * Creación rápida de valor de atributo desde AJAX
-     * CORREGIDO: Validación por atributo
      */
     public function quickCreateValor(Request $request, Atributo $atributo)
     {
@@ -331,7 +315,7 @@ class AtributoController extends Controller
         }
 
         try {
-            // CORREGIDO: Convertir a string si es numérico
+            // Convertir a string si es numérico
             $valorOriginal = (string)$request->vValor;
             
             // Generar slug si no se proporciona
@@ -359,17 +343,10 @@ class AtributoController extends Controller
                 $contadorValor++;
             }
             
-            // Obtener el último orden para este atributo
-            $ultimoOrden = AtributoValor::where('id_atributo', $atributo->id_atributo)
-                                        ->max('iOrden');
-            
             $valor = AtributoValor::create([
                 'id_atributo' => $atributo->id_atributo,
                 'vValor' => $valorFinal,
                 'vSlug' => $slug,
-                'dPrecio_extra' => 0,
-                'iStock' => 0,
-                'iOrden' => $ultimoOrden ? $ultimoOrden + 1 : 0,
                 'bActivo' => $request->has('bActivo') ? 1 : 1
             ]);
 
@@ -393,10 +370,9 @@ class AtributoController extends Controller
     public function getJson()
     {
         $atributos = Atributo::with(['valoresActivos' => function($query) {
-            $query->where('bActivo', true)->orderBy('iOrden');
+            $query->where('bActivo', true);
         }])
         ->where('bActivo', true)
-        ->orderBy('iOrden')
         ->orderBy('vNombre')
         ->get();
         

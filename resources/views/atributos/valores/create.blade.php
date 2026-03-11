@@ -1,300 +1,496 @@
-@extends('layouts.app')
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Atributo - Ecommerce Agave</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container {
+            max-width: 800px;
+            margin-top: 30px;
+        }
+        .card-header {
+            font-weight: 600;
+        }
+        .form-control:focus {
+            border-color: #2E8B57;
+            box-shadow: 0 0 0 0.25rem rgba(46, 139, 87, 0.25);
+        }
+        .btn-success {
+            background-color: #2E8B57;
+            border-color: #2E8B57;
+        }
+        .btn-success:hover {
+            background-color: #26734A;
+            border-color: #26734A;
+        }
+        .btn-info {
+            background-color: #17a2b8;
+            border-color: #17a2b8;
+            color: white;
+        }
+        .btn-info:hover {
+            background-color: #138496;
+            border-color: #117a8b;
+            color: white;
+        }
+        .text-muted {
+            font-size: 0.85rem;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+        .slug-info {
+            background-color: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin-top: 5px;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #2E8B57;">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-wine-bottle me-2"></i>Ecommerce Agave
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('atributos.index') }}">
+                            <i class="fas fa-arrow-left me-1"></i> Volver a Atributos
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
-@section('content')
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Agregar Valor para: {{ $atributo->vNombre }}</h1>
-        <a href="{{ route('atributos.valores', $atributo) }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-1"></i> Volver
-        </a>
+    <!-- Main Content -->
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-edit me-2"></i>Editar Atributo</h1>
+        </div>
+
+        <!-- Alert Messages con SweetAlert2 -->
+        @if(session('success'))
+            <script>
+                Swal.fire({
+                    title: "¡Actualizado!",
+                    text: "{{ session('success') }}",
+                    icon: "success",
+                    draggable: true,
+                    confirmButtonText: "Aceptar"
+                }).then(() => {
+                    window.location.href = "{{ route('atributos.index') }}";
+                });
+            </script>
+        @endif
+
+        @if($errors->any())
+            <script>
+                let errorMessages = '';
+                @foreach($errors->all() as $error)
+                    errorMessages += '• {{ addslashes($error) }}\\n';
+                @endforeach
+                
+                Swal.fire({
+                    icon: "error",
+                    title: "Oops...",
+                    text: "¡Algo salió mal!",
+                    html: '<div class="text-start">' +
+                          '<p>Se encontraron los siguientes errores:</p>' +
+                          '<pre style="white-space: pre-wrap; text-align: left;">' + errorMessages + '</pre>' +
+                          '</div>',
+                    confirmButtonText: "Entendido"
+                });
+            </script>
+        @endif
+
+        <form action="{{ route('atributos.update', $atributo) }}" method="POST" id="formAtributo">
+            @csrf
+            @method('PUT')
+
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header text-white" style="background-color: #2E8B57;">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información del Atributo</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="vNombre" class="form-label fw-bold">
+                                    Nombre del Atributo <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" 
+                                       name="vNombre" 
+                                       id="vNombre" 
+                                       class="form-control @error('vNombre') is-invalid @enderror"
+                                       value="{{ old('vNombre', $atributo->vNombre) }}" 
+                                       required 
+                                       placeholder="Ej: Tamaño, Tipo, Edad, Sabor"
+                                       maxlength="100"
+                                       autocomplete="off">
+                                @error('vNombre')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-lightbulb me-1"></i>
+                                    Ejemplos para mezcal: Tamaño (750ml, 1L), Tipo (Joven, Reposado), Edad (6 meses, 1 año)
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="vSlug" class="form-label fw-bold">
+                                    Slug (URL amigable)
+                                </label>
+                                <input type="text" 
+                                       name="vSlug" 
+                                       id="vSlug" 
+                                       class="form-control @error('vSlug') is-invalid @enderror"
+                                       value="{{ old('vSlug', $atributo->vSlug) }}"
+                                       placeholder="Se genera automáticamente"
+                                       maxlength="100"
+                                       autocomplete="off">
+                                @error('vSlug')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <div class="slug-info" id="slugPreview">
+                                    <i class="fas fa-link me-1"></i>
+                                    <span id="slugText">URL actual: /atributos/{{ $atributo->vSlug }}</span>
+                                </div>
+                                <div class="form-text text-muted mt-1">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    El slug se actualiza automáticamente según el nombre. Puedes editarlo manualmente.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="tDescripcion" class="form-label fw-bold">
+                            Descripción (Opcional)
+                        </label>
+                        <textarea name="tDescripcion" 
+                                  id="tDescripcion" 
+                                  class="form-control @error('tDescripcion') is-invalid @enderror"
+                                  rows="3" 
+                                  placeholder="Describe el atributo">{{ old('tDescripcion', $atributo->tDescripcion) }}</textarea>
+                        @error('tDescripcion')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <div class="form-text text-muted mt-1">
+                            <i class="fas fa-lightbulb me-1"></i>
+                            Ej: "Tamaño de la botella en mililitros o litros"
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" 
+                                   name="bActivo" 
+                                   id="bActivo" 
+                                   class="form-check-input" 
+                                   value="1" 
+                                   {{ old('bActivo', $atributo->bActivo) ? 'checked' : '' }}>
+                            <label for="bActivo" class="form-check-label fw-bold">
+                                Atributo activo
+                            </label>
+                        </div>
+                        <div class="form-text text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Si está desactivado, el atributo no estará disponible para asignar a productos
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-success btn-lg px-4" id="btnSubmit">
+                    <i class="fas fa-save me-2"></i> Actualizar Atributo
+                </button>
+                <a href="{{ route('atributos.index') }}" class="btn btn-secondary btn-lg px-4">
+                    <i class="fas fa-times me-2"></i> Cancelar
+                </a>
+                <a href="{{ route('atributos.valores', $atributo) }}" class="btn btn-info btn-lg px-4">
+                    <i class="fas fa-list me-2"></i> Ver Valores
+                </a>
+            </div>
+        </form>
     </div>
 
-    <form action="{{ route('atributos.valores.store', $atributo) }}" method="POST">
-        @csrf
-
-        <div class="card mb-4">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0">Información del Valor</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label for="vValor">Valor *</label>
-                            <input type="text" name="vValor" id="vValor" 
-                                   class="form-control @error('vValor') is-invalid @enderror"
-                                   value="{{ old('vValor') }}" required 
-                                   placeholder="Ej: 750ml, Joven, 6 meses"
-                                   autocomplete="off">
-                            @error('vValor')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <small class="form-text text-muted">
-                                El valor que aparecerá en las opciones del producto
-                            </small>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label for="vSlug">Slug (URL amigable)</label>
-                            <input type="text" name="vSlug" id="vSlug" 
-                                   class="form-control @error('vSlug') is-invalid @enderror"
-                                   value="{{ old('vSlug') }}"
-                                   placeholder="Se genera automáticamente"
-                                   autocomplete="off">
-                            @error('vSlug')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <small class="form-text text-muted">
-                                Versión para URL del valor. Se sincroniza automáticamente.
-                            </small>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label for="dPrecio_extra">Precio extra ($)</label>
-                            <input type="text" name="dPrecio_extra" id="dPrecio_extra" 
-                                   class="form-control @error('dPrecio_extra') is-invalid @enderror"
-                                   value="{{ old('dPrecio_extra', '0.00') }}"
-                                   oninput="validarPrecio(this)"
-                                   placeholder="0.00"
-                                   autocomplete="off">
-                            @error('dPrecio_extra')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label for="iStock">Stock específico</label>
-                            <input type="text" name="iStock" id="iStock" 
-                                   class="form-control @error('iStock') is-invalid @enderror"
-                                   value="{{ old('iStock', '0') }}"
-                                   oninput="validarStock(this)"
-                                   placeholder="0"
-                                   autocomplete="off">
-                            @error('iStock')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label for="iOrden">Orden</label>
-                            <input type="text" name="iOrden" id="iOrden" 
-                                   class="form-control @error('iOrden') is-invalid @enderror"
-                                   value="{{ old('iOrden', '0') }}"
-                                   oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                                   placeholder="0"
-                                   autocomplete="off">
-                            @error('iOrden')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group mb-3">
-                    <div class="form-check">
-                        <input type="checkbox" name="bActivo" id="bActivo" 
-                               class="form-check-input" value="1" 
-                               {{ old('bActivo', true) ? 'checked' : '' }}>
-                        <label for="bActivo" class="form-check-label">Activo</label>
-                    </div>
-                    <small class="form-text text-muted">
-                        Si está desactivado, el valor no estará disponible para asignar a productos
-                    </small>
-                </div>
-            </div>
-        </div>
-
-        <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-success">
-                <i class="fas fa-save me-1"></i> Guardar Valor
-            </button>
-            <a href="{{ route('atributos.valores', $atributo) }}" class="btn btn-secondary">
-                <i class="fas fa-times me-1"></i> Cancelar
-            </a>
-        </div>
-    </form>
-</div>
-
-<script>
-// Función para validar precio
-function validarPrecio(input) {
-    let value = input.value;
-    const cursorPos = input.selectionStart;
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
-    if (value === '') {
-        input.value = '0.00';
-        return;
+    <script>
+    // Variables para controlar si el usuario ha editado manualmente el slug
+    let slugEditedManually = false;
+    let lastGeneratedSlug = '';
+    let originalSlug = "{{ $atributo->vSlug }}";
+    let originalNombre = "{{ $atributo->vNombre }}";
+    
+    // Función para generar slug a partir de texto
+    function generateSlug(text) {
+        return text
+            .toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // quitar acentos
+            .replace(/[^a-z0-9\s]/g, '') // quitar caracteres especiales
+            .replace(/\s+/g, '-') // espacios por guiones
+            .replace(/-+/g, '-') // guiones múltiples por uno solo
+            .replace(/^-|-$/g, '') // quitar guiones al inicio y final
+            .trim();
     }
     
-    // Permitir solo números y punto
-    value = value.replace(/[^0-9.]/g, '');
-    
-    // Evitar múltiples puntos
-    const puntos = value.split('.').length - 1;
-    if (puntos > 1) {
-        const partes = value.split('.');
-        value = partes[0] + '.' + partes.slice(1).join('');
-    }
-    
-    // Si empieza con punto, agregar 0
-    if (value.startsWith('.')) {
-        value = '0' + value;
-    }
-    
-    // Limitar parte entera a 7 dígitos
-    const partesNumero = value.split('.');
-    const parteEntera = partesNumero[0];
-    if (parteEntera.length > 7) {
-        partesNumero[0] = parteEntera.substring(0, 7);
-        value = partesNumero.join('.');
-    }
-    
-    // Limitar parte decimal a 2 dígitos
-    if (partesNumero[1] && partesNumero[1].length > 2) {
-        partesNumero[1] = partesNumero[1].substring(0, 2);
-        value = partesNumero[0] + '.' + partesNumero[1];
-    }
-    
-    input.value = value;
-    
-    // Restaurar posición del cursor
-    const newLength = input.value.length;
-    const newCursorPos = Math.min(cursorPos, newLength);
-    setTimeout(() => {
-        input.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
-}
-
-// Función para validar stock
-function validarStock(input) {
-    input.value = input.value.replace(/[^0-9]/g, '');
-    if (input.value.length > 6) {
-        input.value = input.value.substring(0, 6);
-    }
-    if (input.value && parseInt(input.value) < 0) {
-        input.value = '0';
-    }
-    if (input.value === '') {
-        input.value = '0';
-    }
-}
-
-// Función para generar slug
-function generarSlug(texto) {
-    return texto
-        .toLowerCase()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9\s]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
-        .trim();
-}
-
-// Variables para controlar estado
-let slugEditadoManualmente = false;
-let ultimoSlugGenerado = '';
-
-// Cuando se escribe en el campo de valor
-document.getElementById('vValor').addEventListener('input', function() {
-    const valor = this.value.trim();
-    const slugInput = document.getElementById('vSlug');
-    
-    if (!slugEditadoManualmente) {
-        if (valor) {
-            const nuevoSlug = generarSlug(valor);
-            slugInput.value = nuevoSlug;
-            ultimoSlugGenerado = nuevoSlug;
-        } else {
-            slugInput.value = '';
-            ultimoSlugGenerado = '';
-        }
-    }
-});
-
-// Cuando se hace focus en el slug
-document.getElementById('vSlug').addEventListener('focus', function() {
-    const valorInput = document.getElementById('vValor');
-    const valorSlug = generarSlug(valorInput.value.trim());
-    
-    if (this.value === valorSlug) {
-        slugEditadoManualmente = false;
-    } else {
-        slugEditadoManualmente = true;
-    }
-});
-
-// Cuando se escribe en el slug
-document.getElementById('vSlug').addEventListener('input', function() {
-    slugEditadoManualmente = true;
-    
-    this.value = this.value
-        .toLowerCase()
-        .replace(/[^a-z0-9-]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
-});
-
-// Cuando se pierde el focus del slug
-document.getElementById('vSlug').addEventListener('blur', function() {
-    if (this.value.trim() === '' && !slugEditadoManualmente) {
-        const valorInput = document.getElementById('vValor');
-        const valor = valorInput.value.trim();
+    // Función para actualizar el preview del slug
+    function updateSlugPreview(slug) {
+        const slugPreview = document.getElementById('slugText');
+        const fullUrl = window.location.origin + '/atributos/' + slug;
         
-        if (valor) {
-            const nuevoSlug = generarSlug(valor);
-            this.value = nuevoSlug;
-            ultimoSlugGenerado = nuevoSlug;
+        if (slug.trim() === '') {
+            slugPreview.textContent = 'URL generada aparecerá aquí';
+            slugPreview.parentElement.style.backgroundColor = '#e8f5e9';
+        } else {
+            slugPreview.textContent = 'URL actual: ' + fullUrl;
+            slugPreview.parentElement.style.backgroundColor = '#e3f2fd';
         }
     }
-});
-
-// Botón para regenerar slug
-document.addEventListener('DOMContentLoaded', function() {
-    const slugGroup = document.querySelector('.form-group:has(#vSlug)');
-    const regenerarBtn = document.createElement('button');
-    regenerarBtn.type = 'button';
-    regenerarBtn.className = 'btn btn-sm btn-outline-secondary mt-2';
-    regenerarBtn.innerHTML = '<i class="fas fa-redo me-1"></i> Regenerar desde valor';
-    regenerarBtn.id = 'regenerarSlugBtn';
     
-    slugGroup.appendChild(regenerarBtn);
-    
-    document.getElementById('regenerarSlugBtn').addEventListener('click', function() {
-        const valorInput = document.getElementById('vValor');
+    // Función para verificar si el slug ha sido editado manualmente
+    function checkIfSlugWasEdited() {
+        const nombreInput = document.getElementById('vNombre');
         const slugInput = document.getElementById('vSlug');
-        const valor = valorInput.value.trim();
+        const currentNombre = nombreInput.value.trim();
+        const currentSlug = slugInput.value.trim();
         
-        if (valor) {
-            const nuevoSlug = generarSlug(valor);
-            slugInput.value = nuevoSlug;
-            ultimoSlugGenerado = nuevoSlug;
-            slugEditadoManualmente = false;
-            
-            const originalText = this.innerHTML;
-            this.innerHTML = '<i class="fas fa-check me-1"></i> ¡Regenerado!';
-            this.classList.remove('btn-outline-secondary');
-            this.classList.add('btn-outline-success');
-            
-            setTimeout(() => {
-                this.innerHTML = originalText;
-                this.classList.remove('btn-outline-success');
-                this.classList.add('btn-outline-secondary');
-            }, 1500);
-        } else {
-            alert('Primero escribe un valor');
+        // Calcular qué slug debería generarse automáticamente
+        const shouldBeSlug = generateSlug(currentNombre);
+        
+        // Si el slug actual es diferente al que debería generarse automáticamente
+        // Y no es igual al slug original (puede que el usuario lo haya cambiado antes)
+        if (currentSlug !== shouldBeSlug && currentSlug !== originalSlug) {
+            return true;
+        }
+        
+        return false;
+    }
+    
+    // Evento para el campo de nombre
+    document.getElementById('vNombre').addEventListener('input', function() {
+        const nombre = this.value.trim();
+        const slugInput = document.getElementById('vSlug');
+        
+        // Verificar si el slug ha sido editado manualmente
+        slugEditedManually = checkIfSlugWasEdited();
+        
+        // Solo actualizar automáticamente si no ha sido editado manualmente
+        if (!slugEditedManually) {
+            if (nombre) {
+                const generatedSlug = generateSlug(nombre);
+                slugInput.value = generatedSlug;
+                lastGeneratedSlug = generatedSlug;
+                updateSlugPreview(generatedSlug);
+            } else {
+                slugInput.value = '';
+                updateSlugPreview('');
+            }
         }
     });
-});
-</script>
-@endsection
+    
+    // Evento para el campo de slug - detectar edición manual
+    document.getElementById('vSlug').addEventListener('input', function() {
+        const nombreInput = document.getElementById('vNombre');
+        const currentSlug = this.value.trim();
+        const nombreSlug = generateSlug(nombreInput.value.trim());
+        
+        // Si el usuario empieza a editar manualmente, marcar como editado
+        if (currentSlug !== nombreSlug && currentSlug !== '') {
+            slugEditedManually = true;
+        }
+        
+        // Si el usuario borra todo el slug, resetear la bandera
+        if (currentSlug === '') {
+            slugEditedManually = false;
+        }
+        
+        // Limpiar slug: solo letras, números y guiones
+        this.value = currentSlug
+            .toLowerCase()
+            .replace(/[^a-z0-9-]/g, '-') // caracteres no permitidos por guiones
+            .replace(/-+/g, '-') // guiones múltiples por uno solo
+            .replace(/^-|-$/g, ''); // quitar guiones al inicio y final
+        
+        updateSlugPreview(this.value);
+    });
+    
+    // Evento para el campo de slug - detectar cuando el usuario hace focus
+    document.getElementById('vSlug').addEventListener('focus', function() {
+        // Verificar si el slug ha sido editado
+        slugEditedManually = checkIfSlugWasEdited();
+    });
+    
+    // Evento para el campo de slug - detectar cuando el usuario pierde focus
+    document.getElementById('vSlug').addEventListener('blur', function() {
+        // Si después de perder focus el campo está vacío y no ha sido editado manualmente, regenerar
+        if (this.value.trim() === '' && !slugEditedManually) {
+            const nombreInput = document.getElementById('vNombre');
+            const nombre = nombreInput.value.trim();
+            
+            if (nombre) {
+                const generatedSlug = generateSlug(nombre);
+                this.value = generatedSlug;
+                lastGeneratedSlug = generatedSlug;
+                updateSlugPreview(generatedSlug);
+            }
+        }
+    });
+    
+    // Botón para regenerar slug desde el nombre
+    document.addEventListener('DOMContentLoaded', function() {
+        // Crear botón para regenerar slug
+        const slugContainer = document.querySelector('.form-group:has(#vSlug)');
+        const regenerateButton = document.createElement('button');
+        regenerateButton.type = 'button';
+        regenerateButton.className = 'btn btn-sm btn-outline-secondary mt-2';
+        regenerateButton.innerHTML = '<i class="fas fa-redo me-1"></i> Regenerar desde nombre';
+        regenerateButton.id = 'regenerateSlugBtn';
+        
+        slugContainer.appendChild(regenerateButton);
+        
+        // Evento para el botón de regenerar
+        document.getElementById('regenerateSlugBtn').addEventListener('click', function() {
+            const nombreInput = document.getElementById('vNombre');
+            const slugInput = document.getElementById('vSlug');
+            const nombre = nombreInput.value.trim();
+            
+            if (nombre) {
+                const generatedSlug = generateSlug(nombre);
+                slugInput.value = generatedSlug;
+                lastGeneratedSlug = generatedSlug;
+                slugEditedManually = false;
+                updateSlugPreview(generatedSlug);
+                
+                // Mostrar mensaje de confirmación
+                const originalText = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-check me-1"></i> Regenerado!';
+                this.classList.remove('btn-outline-secondary');
+                this.classList.add('btn-outline-success');
+                
+                setTimeout(() => {
+                    this.innerHTML = originalText;
+                    this.classList.remove('btn-outline-success');
+                    this.classList.add('btn-outline-secondary');
+                }, 1500);
+            }
+        });
+        
+        // Verificar si el slug actual es diferente al que se generaría automáticamente
+        const nombreInput = document.getElementById('vNombre');
+        const slugInput = document.getElementById('vSlug');
+        const currentNombre = nombreInput.value.trim();
+        const currentSlug = slugInput.value.trim();
+        
+        // Calcular qué slug debería generarse automáticamente
+        const shouldBeSlug = generateSlug(currentNombre);
+        
+        // Si el slug actual es diferente al que debería generarse automáticamente
+        // Y no es igual al slug original, marcar como editado manualmente
+        if (currentSlug !== shouldBeSlug && currentSlug !== originalSlug) {
+            slugEditedManually = true;
+        }
+        
+        // Inicializar el preview del slug
+        updateSlugPreview(currentSlug);
+        
+        // Auto-focus en el primer campo
+        if (nombreInput) {
+            nombreInput.focus();
+        }
+    });
+    
+    // Validación del formulario con SweetAlert2
+    document.getElementById('formAtributo').addEventListener('submit', function(e) {
+        e.preventDefault(); // Prevenir envío normal
+        
+        const nombreInput = document.getElementById('vNombre');
+        const slugInput = document.getElementById('vSlug');
+        const btnSubmit = document.getElementById('btnSubmit');
+        const nuevoNombre = nombreInput.value.trim();
+        
+        // Validar nombre
+        if (!nuevoNombre) {
+            Swal.fire({
+                icon: "warning",
+                title: "Campo requerido",
+                text: "El nombre del atributo es obligatorio",
+                confirmButtonText: "Entendido"
+            }).then(() => {
+                nombreInput.focus();
+            });
+            return false;
+        }
+        
+        // Si el slug está vacío, generarlo automáticamente
+        if (!slugInput.value.trim()) {
+            const generatedSlug = generateSlug(nuevoNombre);
+            slugInput.value = generatedSlug;
+        }
+        
+        // Determinar el mensaje según si el nombre cambió
+        let titulo = "¿Deseas guardar los cambios?";
+        let texto = "Confirma si quieres guardar los cambios realizados en el atributo.";
+        
+        if (nuevoNombre !== originalNombre) {
+            titulo = "¿Cambiar el nombre del atributo?";
+            texto = `Vas a cambiar el nombre de "${originalNombre}" a "${nuevoNombre}". Esto podría afectar a los productos que ya usan este atributo. ¿Deseas continuar?`;
+        }
+        
+        // Mostrar SweetAlert2 de confirmación
+        Swal.fire({
+            title: titulo,
+            text: texto,
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonText: "Sí, guardar",
+            cancelButtonText: "Cancelar",
+            confirmButtonColor: "#2E8B57"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Cambiar estado del botón
+                btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Guardando...';
+                btnSubmit.disabled = true;
+                
+                // Enviar formulario
+                this.submit();
+            }
+        });
+    });
+    
+    // Remover clase de error cuando el usuario escribe
+    document.querySelectorAll('input, textarea').forEach(input => {
+        input.addEventListener('input', function() {
+            this.classList.remove('is-invalid');
+        });
+    });
+    </script>
+</body>
+</html>

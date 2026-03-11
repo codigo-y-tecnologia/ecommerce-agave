@@ -55,18 +55,14 @@ Route::get('/buscar-productos', [BusquedaController::class, 'buscarProductos'])-
 // =====================================================================
 // RUTAS PARA FAVORITOS
 // =====================================================================
-// RUTAS PÚBLICAS PARA VISUALIZAR FAVORITOS
-Route::get('/favoritos', [FavoritoController::class, 'index'])
-     ->name('favoritos.index');
-
-// RUTAS PROTEGIDAS PARA ACCIONES DE FAVORITOS
-Route::middleware('auth')->group(function () {
-    Route::post('/favoritos/toggle/{producto}', [FavoritoController::class, 'toggle'])
-         ->name('favoritos.toggle');
-    Route::delete('/favoritos/{producto}', [FavoritoController::class, 'destroy'])
-         ->name('favoritos.destroy');
-    Route::get('/favoritos/sync', [FavoritoController::class, 'sync'])
-         ->name('favoritos.sync');
+// Rutas para favoritos
+Route::prefix('favoritos')->middleware(['auth'])->group(function () {
+    Route::get('/', [FavoritoController::class, 'index'])->name('favoritos.index');
+    Route::post('/toggle-producto/{id}', [FavoritoController::class, 'toggleProducto'])->name('favoritos.toggle.producto');
+    Route::post('/toggle-variacion/{id}', [FavoritoController::class, 'toggleVariacion'])->name('favoritos.toggle.variacion');
+    Route::delete('/{id}', [FavoritoController::class, 'destroy'])->name('favoritos.destroy');
+    Route::get('/check-producto/{id}', [FavoritoController::class, 'checkProducto'])->name('favoritos.check.producto');
+    Route::get('/check-variacion/{id}', [FavoritoController::class, 'checkVariacion'])->name('favoritos.check.variacion');
 });
 
 // =====================================================================

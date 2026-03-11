@@ -91,8 +91,8 @@
                             <tbody>
                                 @forelse($producto->variaciones as $variacion)
                                     @php
-                                        // Calcular oferta vigente
-                                        $tieneOferta = $variacion->ofertaVigente();
+                                        // CORREGIDO: Usar tieneDescuentoActivo() en lugar de ofertaVigente()
+                                        $tieneOferta = $variacion->tieneDescuentoActivo();
                                         $precioBase = $tieneOferta ? $variacion->dPrecio_oferta : $variacion->dPrecio;
                                         
                                         // Obtener imágenes

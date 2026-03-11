@@ -19,18 +19,10 @@ class AtributoValor extends Model
         'id_atributo',
         'vValor',
         'vSlug',
-        'dPrecio_extra',
-        'iStock',
-        'iOrden',
-        'bActivo',
-        'vHexColor',
-        'vImagenUrl'
+        'bActivo'
     ];
 
     protected $casts = [
-        'dPrecio_extra' => 'decimal:2',
-        'iStock' => 'integer',
-        'iOrden' => 'integer',
         'bActivo' => 'boolean'
     ];
 

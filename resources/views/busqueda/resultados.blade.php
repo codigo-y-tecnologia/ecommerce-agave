@@ -521,9 +521,9 @@
         }
 
         .corazon-favorito.activo {
-            color: #3483fa;
-            background: rgba(52, 131, 250, 0.1);
-            border-color: #3483fa;
+            color: #ff4757;
+            background: rgba(255, 71, 87, 0.1);
+            border-color: #ff4757;
         }
 
         .corazon-favorito.inactivo {
@@ -578,6 +578,24 @@
             font-weight: bold;
             margin: 2px;
             color: white;
+        }
+
+        /* Badge de variación */
+        .variacion-badge {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            z-index: 99;
+            max-width: 90%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         /* Responsive */
@@ -663,6 +681,11 @@
             nav.navbar ul li a {
                 display: block;
                 padding: 5px;
+            }
+            
+            .variacion-badge {
+                font-size: 9px;
+                padding: 2px 6px;
             }
         }
     </style>
@@ -878,13 +901,17 @@
                                 $precioOferta = $producto->dPrecio_oferta;
                                 $stock = $producto->iStock;
                                 $nombreProducto = $producto->productoPadre->vNombre . ' - ' . $producto->getAtributosTexto();
-                                $imagenes = $producto->imagenes ?? $producto->productoPadre->imagenes;
+                                $imagenes = $producto->imagenes;
                                 $categoria = $producto->productoPadre->categoria->vNombre ?? 'N/A';
                                 $marca = $producto->productoPadre->marca->vNombre ?? 'N/A';
                                 $etiquetas = $producto->productoPadre->etiquetas;
                                 $url = route('productos.show.public', [$producto->productoPadre->id_producto, 'variacion' => $producto->id_variacion]);
                                 $sku = $producto->vSKU;
-                                $esFavorito = $producto->productoPadre->esFavorito();
+                                // Usar esFavorito() de la variación
+                                $esFavorito = $producto->esFavorito();
+                                $productoId = $producto->productoPadre->id_producto;
+                                $variacionId = $producto->id_variacion;
+                                $atributosTexto = $producto->getAtributosCompletosTexto();
                             } else {
                                 $tieneDescuento = $producto->tieneDescuentoActivo();
                                 $precioOriginal = $producto->dPrecio_venta;
@@ -898,6 +925,9 @@
                                 $url = route('productos.show.public', $producto->id_producto);
                                 $sku = $producto->vCodigo_barras;
                                 $esFavorito = $producto->esFavorito();
+                                $productoId = $producto->id_producto;
+                                $variacionId = null;
+                                $atributosTexto = '';
                             }
                             
                             $precioActual = $tieneDescuento ? $precioOferta : $precioOriginal;
@@ -912,14 +942,16 @@
                         
                         <div class="producto-card" onclick="window.location.href='{{ $url }}'">
                             <div class="producto-imagen-container">
-                                <!-- BOTÓN DEL CORAZÓN -->
+                                <!-- BOTÓN DEL CORAZÓN - CORREGIDO PARA VARIACIONES -->
                                 <button class="corazon-favorito {{ $esFavorito ? 'activo' : 'inactivo' }}" 
-                                        data-producto="{{ $esVariacion ? $producto->productoPadre->id_producto : $producto->id_producto }}"
-                                        onclick="event.stopPropagation(); toggleFavorito(this, {{ $esVariacion ? $producto->productoPadre->id_producto : $producto->id_producto }})"
+                                        data-producto="{{ $productoId }}"
+                                        data-variacion="{{ $variacionId ?? '' }}"
+                                        data-tipo="{{ $esVariacion ? 'variacion' : 'producto' }}"
+                                        onclick="event.stopPropagation(); toggleFavorito(this, {{ $productoId }}, {{ $variacionId ?? 'null' }})"
                                         title="{{ $esFavorito ? 'Quitar de favoritos' : 'Agregar a favoritos' }}">
                                 </button>
 
-                                <!-- Badge de descuento -->
+                                <!-- Badge de descuento - AHORA SE MUESTRA PARA VARIACIONES TAMBIÉN -->
                                 @if($tieneDescuento)
                                     <div class="badge-oferta">
                                         -{{ $porcentajeDescuento }}%
@@ -927,6 +959,13 @@
                                 @elseif($estaBajoStock && !$tieneDescuento)
                                     <div class="badge-stock-bajo">
                                         ¡Últimas!
+                                    </div>
+                                @endif
+
+                                <!-- Badge de variación (solo si es variación) -->
+                                @if($esVariacion && !empty($atributosTexto))
+                                    <div class="variacion-badge" title="{{ $atributosTexto }}">
+                                        {{ $atributosTexto }}
                                     </div>
                                 @endif
 
@@ -942,7 +981,7 @@
                             <div class="producto-info">
                                 <h3>{{ $nombreProducto }}</h3>
                                 
-                                <!-- Precio con descuento -->
+                                <!-- Precio con descuento - AHORA SE MUESTRA PARA VARIACIONES TAMBIÉN -->
                                 <div class="producto-precio">
                                     @if($tieneDescuento)
                                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap;">
@@ -1095,8 +1134,8 @@
             window.location.href = url.toString();
         }
 
-        // Función para toggle favoritos en productos
-        function toggleFavorito(button, productoId) {
+        // Función para toggle favoritos en productos y variaciones - CORREGIDA
+        function toggleFavorito(button, productoId, variacionId = null) {
             if (button.disabled) return;
             button.disabled = true;
 
@@ -1105,11 +1144,20 @@
                 return;
             @endif
 
-            const esFavorito = button.getAttribute('data-es-favorito') === 'true';
+            const esFavorito = button.classList.contains('activo');
+            const tipo = variacionId ? 'variación' : 'producto';
             
             button.style.transform = 'scale(0.9)';
             
-            fetch(`/favoritos/toggle/${productoId}`, {
+            // Construir URL según el tipo
+            let url;
+            if (variacionId) {
+                url = `/favoritos/toggle-variacion/${variacionId}`;
+            } else {
+                url = `/favoritos/toggle-producto/${productoId}`;
+            }
+            
+            fetch(url, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -1132,20 +1180,20 @@
                     if (data.action === 'added') {
                         button.classList.remove('inactivo');
                         button.classList.add('activo');
-                        button.setAttribute('data-es-favorito', 'true');
-                        showNotification('✅ ¡Producto agregado a tu lista de deseos!', 'success');
+                        showNotification('✅ ' + (data.tipo === 'variacion' ? 'Variación' : 'Producto') + ' agregado a favoritos!', 'success');
                         
                         localStorage.setItem('last_favorito_action', 'added');
-                        localStorage.setItem('last_favorito_id', productoId);
+                        localStorage.setItem('last_favorito_id', data.tipo === 'variacion' ? variacionId : productoId);
+                        localStorage.setItem('last_favorito_tipo', data.tipo);
                         localStorage.setItem('last_favorito_time', Date.now());
                     } else {
                         button.classList.remove('activo');
                         button.classList.add('inactivo');
-                        button.setAttribute('data-es-favorito', 'false');
-                        showNotification('❌ Producto eliminado de tu lista de deseos', 'error');
+                        showNotification('❌ ' + (data.tipo === 'variacion' ? 'Variación' : 'Producto') + ' eliminado de favoritos', 'error');
                         
                         localStorage.setItem('last_favorito_action', 'removed');
-                        localStorage.setItem('last_favorito_id', productoId);
+                        localStorage.setItem('last_favorito_id', data.tipo === 'variacion' ? variacionId : productoId);
+                        localStorage.setItem('last_favorito_tipo', data.tipo);
                         localStorage.setItem('last_favorito_time', Date.now());
                     }
                 } else {
@@ -1199,19 +1247,26 @@
         document.addEventListener('DOMContentLoaded', function() {
             const lastAction = localStorage.getItem('last_favorito_action');
             const lastId = localStorage.getItem('last_favorito_id');
+            const lastTipo = localStorage.getItem('last_favorito_tipo');
             const lastTime = localStorage.getItem('last_favorito_time');
             
             if (lastAction && (Date.now() - lastTime) < 5000) {
-                const button = document.querySelector(`.corazon-favorito[data-producto="${lastId}"]`);
+                // Buscar el botón correspondiente
+                let selector;
+                if (lastTipo === 'variacion') {
+                    selector = `[data-variacion="${lastId}"]`;
+                } else {
+                    selector = `[data-producto="${lastId}"][data-variacion=""]`;
+                }
+                
+                const button = document.querySelector(selector);
                 if (button) {
                     if (lastAction === 'removed') {
                         button.classList.remove('activo');
                         button.classList.add('inactivo');
-                        button.setAttribute('data-es-favorito', 'false');
                     } else if (lastAction === 'added') {
                         button.classList.remove('inactivo');
                         button.classList.add('activo');
-                        button.setAttribute('data-es-favorito', 'true');
                     }
                 }
             }
@@ -1220,6 +1275,7 @@
             setTimeout(() => {
                 localStorage.removeItem('last_favorito_action');
                 localStorage.removeItem('last_favorito_id');
+                localStorage.removeItem('last_favorito_tipo');
                 localStorage.removeItem('last_favorito_time');
             }, 5000);
 
@@ -1251,19 +1307,19 @@
                 }
             });
 
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.has('favorito_agregado')) {
-                showNotification('✅ ¡Producto agregado a tu lista de deseos!', 'success');
-                const url = new URL(window.location);
-                url.searchParams.delete('favorito_agregado');
-                window.history.replaceState({}, '', url);
-            }
-            
-            // Agregar event listener al link de descuento para evitar el problema de doble clic
+            // Agregar event listener al link de descuento
             document.getElementById('link-descuento').addEventListener('click', function(e) {
                 e.preventDefault();
                 const url = new URL(this.href);
                 window.location.href = url.toString();
+            });
+            
+            // Prevenir propagación en botones
+            const buttons = document.querySelectorAll('.producto-card button, .producto-card a');
+            buttons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
             });
         });
     </script>

@@ -78,22 +78,21 @@ class VariacionController extends Controller
             $query->where('bActivo', true)
                   ->with(['hijos' => function($subQuery) {
                       $subQuery->where('bActivo', true)
-                               ->orderBy('iOrden')
                                ->orderBy('vNombre');
                   }])
-                  ->orderBy('iOrden')
                   ->orderBy('vNombre');
         }])
         ->whereNull('id_categoria_padre')
         ->where('bActivo', true)
-        ->orderBy('iOrden')
         ->orderBy('vNombre')
         ->get();
         
         $marcas = Marca::all();
         $etiquetas = Etiqueta::all();
+        
+        // CORREGIDO: Eliminado orderBy('iOrden')
         $atributosGlobales = Atributo::with(['valoresActivos' => function($query) {
-            $query->where('bActivo', true)->orderBy('iOrden');
+            $query->where('bActivo', true)->orderBy('vValor');
         }])->where('bActivo', true)->get();
         
         // Obtener impuestos activos
@@ -375,22 +374,21 @@ class VariacionController extends Controller
             $query->where('bActivo', true)
                   ->with(['hijos' => function($subQuery) {
                       $subQuery->where('bActivo', true)
-                               ->orderBy('iOrden')
                                ->orderBy('vNombre');
                   }])
-                  ->orderBy('iOrden')
                   ->orderBy('vNombre');
         }])
         ->whereNull('id_categoria_padre')
         ->where('bActivo', true)
-        ->orderBy('iOrden')
         ->orderBy('vNombre')
         ->get();
         
         $marcas = Marca::all();
         $etiquetas = Etiqueta::all();
+        
+        // CORREGIDO: Eliminado orderBy('iOrden')
         $atributosGlobales = Atributo::with(['valoresActivos' => function($query) {
-            $query->where('bActivo', true)->orderBy('iOrden');
+            $query->where('bActivo', true)->orderBy('vValor');
         }])->where('bActivo', true)->get();
         
         // Obtener impuestos activos
@@ -908,9 +906,6 @@ class VariacionController extends Controller
             $valor->vSlug = $request->vSlug ?: Str::slug($request->vValor);
             $valor->bActivo = true;
             
-            $ultimoOrden = AtributoValor::where('id_atributo', $atributo_id)->max('iOrden');
-            $valor->iOrden = $ultimoOrden ? $ultimoOrden + 1 : 0;
-            
             $valor->save();
 
             return response()->json([
@@ -964,7 +959,7 @@ class VariacionController extends Controller
     public function getJsonAtributos()
     {
         $atributos = Atributo::with(['valoresActivos' => function($query) {
-            $query->orderBy('iOrden')->orderBy('vValor');
+            $query->orderBy('vValor');
         }])->where('bActivo', true)
         ->orderBy('vNombre')
         ->get();

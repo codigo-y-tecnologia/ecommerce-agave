@@ -51,22 +51,21 @@ class ProductoController extends Controller
             $query->where('bActivo', true)
                   ->with(['hijos' => function($subQuery) {
                       $subQuery->where('bActivo', true)
-                               ->orderBy('iOrden')
                                ->orderBy('vNombre');
                   }])
-                  ->orderBy('iOrden')
                   ->orderBy('vNombre');
         }])
         ->whereNull('id_categoria_padre')
         ->where('bActivo', true)
-        ->orderBy('iOrden')
         ->orderBy('vNombre')
         ->get();
         
         $marcas = Marca::all();
         $etiquetas = Etiqueta::all();
+        
+        // CORREGIDO: Cargar atributos con sus valores activos - SIN orderBy('iOrden')
         $atributos = Atributo::with(['valoresActivos' => function($query) {
-            $query->where('bActivo', true)->orderBy('iOrden');
+            $query->where('bActivo', true);
         }])->where('bActivo', true)->get();
         
         // Obtener impuestos activos para el select
@@ -634,7 +633,7 @@ class ProductoController extends Controller
             'variaciones.atributos.valor', 
             'variaciones.atributos.atributo',
             'variaciones.impuesto',
-            'valoresAtributos.atributo' // *** NUEVO: Para atributos generales ***
+            'valoresAtributos.atributo' // Para atributos generales
         ]);
         
         return view('productos.show', compact('producto'));
@@ -649,22 +648,21 @@ class ProductoController extends Controller
             $query->where('bActivo', true)
                   ->with(['hijos' => function($subQuery) {
                       $subQuery->where('bActivo', true)
-                               ->orderBy('iOrden')
                                ->orderBy('vNombre');
                   }])
-                  ->orderBy('iOrden')
                   ->orderBy('vNombre');
         }])
         ->whereNull('id_categoria_padre')
         ->where('bActivo', true)
-        ->orderBy('iOrden')
         ->orderBy('vNombre')
         ->get();
         
         $marcas = Marca::all();
         $etiquetas = Etiqueta::all();
+        
+        // CORREGIDO: Cargar atributos con sus valores activos - SIN orderBy('iOrden')
         $atributos = Atributo::with(['valoresActivos' => function($query) {
-            $query->where('bActivo', true)->orderBy('iOrden');
+            $query->where('bActivo', true);
         }])->where('bActivo', true)->get();
         
         // Obtener impuestos activos para el select
@@ -1377,8 +1375,9 @@ class ProductoController extends Controller
     {
         $producto = Producto::with(['valoresAtributos.atributo'])->findOrFail($id);
         
+        // CORREGIDO: Cargar atributos con sus valores activos - SIN orderBy('iOrden')
         $atributos = Atributo::with(['valoresActivos' => function($query) {
-            $query->where('bActivo', true)->orderBy('iOrden');
+            $query->where('bActivo', true);
         }])->where('bActivo', true)->get();
         
         return view('productos.asignar-atributos', compact('producto', 'atributos'));
@@ -1640,8 +1639,6 @@ class ProductoController extends Controller
         $validator = Validator::make($request->all(), [
             'vValor' => 'required|max:100',
             'vSlug' => 'nullable|max:100',
-            'dPrecio_extra' => 'nullable|numeric|min:0',
-            'iStock' => 'nullable|integer|min:0'
         ]);
 
         if ($validator->fails()) {
@@ -1659,12 +1656,7 @@ class ProductoController extends Controller
             $valor->id_atributo = $atributo_id;
             $valor->vValor = $request->vValor;
             $valor->vSlug = $request->vSlug ?: Str::slug($request->vValor);
-            $valor->dPrecio_extra = $request->dPrecio_extra ?: 0;
-            $valor->iStock = $request->iStock ?: 0;
             $valor->bActivo = true;
-            
-            $ultimoOrden = AtributoValor::where('id_atributo', $atributo_id)->max('iOrden');
-            $valor->iOrden = $ultimoOrden ? $ultimoOrden + 1 : 0;
             
             $valor->save();
 
@@ -1733,8 +1725,9 @@ class ProductoController extends Controller
      */
     public function getJsonAtributos()
     {
+        // CORREGIDO: Cargar atributos con sus valores activos - SIN orderBy('iOrden')
         $atributos = Atributo::with(['valoresActivos' => function($query) {
-            $query->orderBy('iOrden')->orderBy('vValor');
+            $query->where('bActivo', true);
         }])->where('bActivo', true)
         ->orderBy('vNombre')
         ->get();

@@ -15,7 +15,6 @@ class Producto extends Model
     protected $table = 'tbl_productos';
     protected $primaryKey = 'id_producto';
     
-    // DESACTIVAR TIMESTAMPS - IMPORTANTE
     public $timestamps = false;
     
     protected $fillable = [
@@ -30,23 +29,19 @@ class Producto extends Model
         'id_marca',
         'id_categoria',
         'bActivo',
-        // NUEVOS CAMPOS
         'dPeso',
         'dLargo_cm',
         'dAncho_cm',
         'dAlto_cm',
         'vClase_envio',
-        // CAMPOS DE IMÁGENES EN BD (NUEVOS)
         'vImagen_principal',
         'vGif',
         'vImagenes_adicionales',
-        // CAMPOS DE OFERTA
         'bTiene_oferta',
         'dPrecio_oferta',
         'dFecha_inicio_oferta',
         'dFecha_fin_oferta',
         'vMotivo_oferta',
-        // CAMPOS DE FECHA
         'tFecha_registro',
         'tFecha_actualizacion'
     ];
@@ -57,17 +52,13 @@ class Producto extends Model
         'dPrecio_venta' => 'decimal:2',
         'dPrecio_final' => 'decimal:2',
         'iStock' => 'integer',
-        // NUEVOS CAMPOS
         'dPeso' => 'decimal:3',
         'dLargo_cm' => 'decimal:2',
         'dAncho_cm' => 'decimal:2',
         'dAlto_cm' => 'decimal:2',
-        // CAMPOS DE IMÁGENES (NUEVOS)
         'vImagenes_adicionales' => 'array',
-        // CAMPOS DE OFERTA
         'bTiene_oferta' => 'boolean',
         'dPrecio_oferta' => 'decimal:2',
-        // CAMPOS DE FECHA
         'tFecha_registro' => 'datetime',
         'tFecha_actualizacion' => 'datetime',
         'dFecha_inicio_oferta' => 'date',
@@ -89,22 +80,18 @@ class Producto extends Model
     {
         parent::boot();
 
-        // Al crear un producto, establecer fecha de registro si no existe
         static::creating(function ($producto) {
             if (empty($producto->tFecha_registro)) {
                 $producto->tFecha_registro = now();
             }
             
-            // Inicializar imágenes adicionales como array vacío si es null
             if (is_null($producto->vImagenes_adicionales)) {
                 $producto->vImagenes_adicionales = [];
             }
             
-            // Calcular precio final antes de guardar
             $producto->calcularPrecioFinal();
         });
 
-        // Al actualizar un producto, establecer fecha de actualización y recalcular precio final
         static::updating(function ($producto) {
             $producto->tFecha_actualizacion = now();
             $producto->calcularPrecioFinal();
@@ -113,7 +100,6 @@ class Producto extends Model
         static::deleting(function ($producto) {
             $producto->favoritos()->delete();
             $producto->eliminarTodasLasImagenes();
-            // Eliminar relaciones con impuestos
             $producto->impuestos()->detach();
         });
     }
@@ -126,7 +112,6 @@ class Producto extends Model
         $precioBase = $this->attributes['dPrecio_venta'] ?? 0;
         $totalImpuestos = 0;
         
-        // Si el producto ya tiene ID, obtenemos los impuestos de la relación
         if ($this->exists && $this->id_producto) {
             $impuestos = $this->impuestos()->where('bActivo', true)->get();
             
@@ -146,30 +131,27 @@ class Producto extends Model
     public function recalcularPrecioFinal()
     {
         $this->calcularPrecioFinal();
-        $this->saveQuietly(); // Guardar sin disparar eventos para evitar bucles
+        $this->saveQuietly();
     }
 
-    // ============ ACCESORES PARA IMÁGENES (USAN BD) ============
+    // ============ ACCESORES PARA IMÁGENES ============
 
     /**
-     * Accesor para imagen principal - Prioridad: BD > Archivo
+     * Accesor para imagen principal
      */
     public function getImagenPrincipalAttribute()
     {
-        // Prioridad 1: Campo en BD
         if ($this->vImagen_principal) {
             if (Storage::disk('public')->exists($this->vImagen_principal)) {
                 return Storage::url($this->vImagen_principal);
             }
         }
         
-        // Prioridad 2: Buscar en la carpeta (legado)
         $carpeta = 'products/' . $this->id_producto;
         if (Storage::disk('public')->exists($carpeta)) {
             $archivos = Storage::disk('public')->files($carpeta);
             foreach ($archivos as $archivo) {
                 if (strpos($archivo, 'principal_') !== false) {
-                    // Guardar en BD para futuras consultas
                     $this->vImagen_principal = $archivo;
                     $this->saveQuietly();
                     return Storage::url($archivo);
@@ -181,24 +163,21 @@ class Producto extends Model
     }
 
     /**
-     * Accesor para URL de GIF - Prioridad: BD > Archivo
+     * Accesor para URL de GIF
      */
     public function getGifUrlAttribute()
     {
-        // Prioridad 1: Campo en BD
         if ($this->vGif) {
             if (Storage::disk('public')->exists($this->vGif)) {
                 return Storage::url($this->vGif);
             }
         }
         
-        // Prioridad 2: Buscar en la carpeta (legado)
         $carpeta = 'products/' . $this->id_producto;
         if (Storage::disk('public')->exists($carpeta)) {
             $archivos = Storage::disk('public')->files($carpeta);
             foreach ($archivos as $archivo) {
                 if (strpos($archivo, 'gif_') !== false) {
-                    // Guardar en BD para futuras consultas
                     $this->vGif = $archivo;
                     $this->saveQuietly();
                     return Storage::url($archivo);
@@ -210,13 +189,12 @@ class Producto extends Model
     }
 
     /**
-     * Accesor para imágenes adicionales - Prioridad: BD > Archivo
+     * Accesor para imágenes adicionales
      */
     public function getImagenesAdicionalesAttribute()
     {
         $imagenes = [];
         
-        // Prioridad 1: Campo en BD (JSON)
         if ($this->vImagenes_adicionales && is_array($this->vImagenes_adicionales)) {
             foreach ($this->vImagenes_adicionales as $ruta) {
                 if (Storage::disk('public')->exists($ruta)) {
@@ -228,7 +206,6 @@ class Producto extends Model
             }
         }
         
-        // Prioridad 2: Buscar en la carpeta (legado)
         $carpetaAdicionales = 'products/' . $this->id_producto . '/adicionales';
         if (Storage::disk('public')->exists($carpetaAdicionales)) {
             $archivos = Storage::disk('public')->files($carpetaAdicionales);
@@ -242,7 +219,6 @@ class Producto extends Model
                 }
             }
             
-            // Guardar en BD para futuras consultas
             if (!empty($rutasGuardar)) {
                 $this->vImagenes_adicionales = $rutasGuardar;
                 $this->saveQuietly();
@@ -259,19 +235,16 @@ class Producto extends Model
     {
         $imagenes = [];
         
-        // 1. Imagen principal
         $imagenPrincipal = $this->imagen_principal;
         if ($imagenPrincipal) {
             $imagenes[] = $imagenPrincipal;
         }
         
-        // 2. GIF (si existe)
         $gifUrl = $this->gif_url;
         if ($gifUrl) {
             $imagenes[] = $gifUrl;
         }
         
-        // 3. Imágenes adicionales
         $adicionales = $this->imagenes_adicionales;
         foreach ($adicionales as $url) {
             $imagenes[] = $url;
@@ -280,10 +253,10 @@ class Producto extends Model
         return $imagenes;
     }
 
-    // ============ MÉTODOS PARA GUARDAR Y ELIMINAR IMÁGENES (ACTUALIZAN BD) ============
+    // ============ MÉTODOS PARA GUARDAR Y ELIMINAR IMÁGENES ============
 
     /**
-     * Guardar imagen principal del producto (ACTUALIZA BD)
+     * Guardar imagen principal del producto
      */
     public function guardarImagenPrincipal($imagen)
     {
@@ -297,14 +270,12 @@ class Producto extends Model
             Storage::disk('public')->makeDirectory($carpeta);
         }
         
-        // Eliminar imagen principal anterior
         $this->eliminarImagenPrincipal();
         
         $extension = $imagen->getClientOriginalExtension();
         $nombreArchivo = 'principal_' . time() . '_' . uniqid() . '.' . $extension;
         $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
         
-        // Guardar en BD
         $this->vImagen_principal = $ruta;
         $this->saveQuietly();
         
@@ -314,7 +285,7 @@ class Producto extends Model
     }
 
     /**
-     * Guardar GIF del producto (ACTUALIZA BD)
+     * Guardar GIF del producto
      */
     public function guardarGif($gif)
     {
@@ -328,14 +299,12 @@ class Producto extends Model
             Storage::disk('public')->makeDirectory($carpeta);
         }
         
-        // Eliminar GIF anterior
         $this->eliminarGif();
         
         $extension = $gif->getClientOriginalExtension();
         $nombreArchivo = 'gif_' . time() . '_' . uniqid() . '.' . $extension;
         $ruta = $gif->storeAs($carpeta, $nombreArchivo, 'public');
         
-        // Guardar en BD
         $this->vGif = $ruta;
         $this->saveQuietly();
         
@@ -345,7 +314,7 @@ class Producto extends Model
     }
 
     /**
-     * Guardar imágenes adicionales del producto (ACTUALIZA BD)
+     * Guardar imágenes adicionales del producto
      */
     public function guardarImagenesAdicionales($imagenes)
     {
@@ -359,7 +328,6 @@ class Producto extends Model
             Storage::disk('public')->makeDirectory($carpeta);
         }
         
-        // Obtener imágenes existentes de BD
         $imagenesExistentes = $this->vImagenes_adicionales ?? [];
         $numeroInicio = count($imagenesExistentes);
         
@@ -367,13 +335,11 @@ class Producto extends Model
         $contador = 0;
         $maxImagenes = 7;
         
-        // Asegurar que $imagenes sea un array
         if (!is_array($imagenes)) {
             $imagenes = [$imagenes];
         }
         
         foreach ($imagenes as $imagen) {
-            // Verificar límite máximo
             if (($numeroInicio + $contador) >= $maxImagenes) {
                 break;
             }
@@ -385,7 +351,6 @@ class Producto extends Model
             $contador++;
         }
         
-        // Combinar con las existentes y guardar en BD
         $this->vImagenes_adicionales = array_merge($imagenesExistentes, $nuevasRutas);
         $this->saveQuietly();
         
@@ -397,7 +362,7 @@ class Producto extends Model
     }
 
     /**
-     * Eliminar imagen principal (ACTUALIZA BD)
+     * Eliminar imagen principal
      */
     public function eliminarImagenPrincipal()
     {
@@ -409,7 +374,6 @@ class Producto extends Model
             $this->saveQuietly();
         }
         
-        // También eliminar archivos legacy
         $carpeta = 'products/' . $this->id_producto;
         if (Storage::disk('public')->exists($carpeta)) {
             $archivos = Storage::disk('public')->files($carpeta);
@@ -422,7 +386,7 @@ class Producto extends Model
     }
 
     /**
-     * Eliminar GIF (ACTUALIZA BD)
+     * Eliminar GIF
      */
     public function eliminarGif()
     {
@@ -434,7 +398,6 @@ class Producto extends Model
             $this->saveQuietly();
         }
         
-        // También eliminar archivos legacy
         $carpeta = 'products/' . $this->id_producto;
         if (Storage::disk('public')->exists($carpeta)) {
             $archivos = Storage::disk('public')->files($carpeta);
@@ -447,7 +410,7 @@ class Producto extends Model
     }
 
     /**
-     * Eliminar imágenes adicionales específicas (ACTUALIZA BD)
+     * Eliminar imágenes adicionales específicas
      */
     public function eliminarImagenesAdicionalesEspecificas($nombresArchivos)
     {
@@ -460,18 +423,15 @@ class Producto extends Model
             if (!in_array($nombreArchivo, $nombresArchivos)) {
                 $nuevasImagenes[] = $ruta;
             } else {
-                // Eliminar archivo físico
                 if (Storage::disk('public')->exists($ruta)) {
                     Storage::disk('public')->delete($ruta);
                 }
             }
         }
         
-        // Actualizar BD
         $this->vImagenes_adicionales = $nuevasImagenes;
         $this->saveQuietly();
         
-        // También eliminar archivos legacy sueltos
         foreach ($nombresArchivos as $nombreArchivo) {
             $rutaCompleta = $carpeta . '/' . $nombreArchivo;
             if (Storage::disk('public')->exists($rutaCompleta)) {
@@ -481,17 +441,15 @@ class Producto extends Model
     }
 
     /**
-     * Eliminar todas las imágenes (ACTUALIZA BD)
+     * Eliminar todas las imágenes
      */
     public function eliminarTodasLasImagenes()
     {
-        // Eliminar archivos físicos
         $carpeta = 'products/' . $this->id_producto;
         if (Storage::disk('public')->exists($carpeta)) {
             Storage::disk('public')->deleteDirectory($carpeta);
         }
         
-        // Limpiar BD
         $this->vImagen_principal = null;
         $this->vGif = null;
         $this->vImagenes_adicionales = [];
@@ -570,9 +528,12 @@ class Producto extends Model
         return $this->belongsToMany(Impuesto::class, 'tbl_producto_impuestos', 'id_producto', 'id_impuesto');
     }
 
+    /**
+     * CORREGIDO: Relación con favoritos - solo productos sin variación
+     */
     public function favoritos()
     {
-        return $this->hasMany(Favorito::class, 'id_producto');
+        return $this->hasMany(Favorito::class, 'id_producto')->whereNull('id_variacion');
     }
 
     public function variaciones()
@@ -693,7 +654,7 @@ class Producto extends Model
     }
 
     /**
-     * Verificar si el producto es favorito del usuario actual
+     * CORREGIDO: Verificar si el producto es favorito del usuario actual (SIN variación)
      */
     public function esFavorito()
     {
@@ -704,6 +665,7 @@ class Producto extends Model
 
             return $this->favoritos()
                 ->where('id_usuario', Auth::id())
+                ->whereNull('id_variacion')
                 ->exists();
                  
         } catch (\Exception $e) {
@@ -729,42 +691,35 @@ class Producto extends Model
 
     // ============ MÉTODOS DE OFERTA/DESCUENTO ============
 
-    // *** NUEVO: Método mejorado para verificar oferta vigente con fechas ***
     /**
-     * Verificar si la oferta está vigente basándose en la fecha ACTUAL
-     * @return bool
+     * Verificar si la oferta está vigente
      */
     public function ofertaVigente(): bool
     {
-        // Si no tiene oferta activada o no tiene precio de oferta, no es vigente
         if (!$this->bTiene_oferta || $this->dPrecio_oferta === null) {
             return false;
         }
 
         $fechaActual = now()->toDateString();
 
-        // Caso 1: Tiene ambas fechas definidas
         if ($this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
             return $fechaActual >= $this->dFecha_inicio_oferta && 
                    $fechaActual <= $this->dFecha_fin_oferta;
         }
 
-        // Caso 2: Solo tiene fecha de inicio (vigente desde esa fecha en adelante)
         if ($this->dFecha_inicio_oferta && !$this->dFecha_fin_oferta) {
             return $fechaActual >= $this->dFecha_inicio_oferta;
         }
 
-        // Caso 3: Solo tiene fecha de fin (vigente hasta esa fecha)
         if (!$this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
             return $fechaActual <= $this->dFecha_fin_oferta;
         }
 
-        // Caso 4: Tiene oferta activada pero sin fechas (se considera siempre vigente)
         return true;
     }
 
     /**
-     * Verificar si el producto tiene descuento activo (alias de ofertaVigente)
+     * Verificar si el producto tiene descuento activo
      */
     public function tieneDescuentoActivo()
     {
@@ -803,7 +758,7 @@ class Producto extends Model
     }
 
     /**
-     * Verificar si tiene descuento (por cualquier motivo)
+     * Verificar si tiene descuento
      */
     public function tieneDescuento()
     {
@@ -819,7 +774,7 @@ class Producto extends Model
     }
 
     /**
-     * Calcular porcentaje de descuento (prioriza oferta)
+     * Calcular porcentaje de descuento
      */
     public function porcentajeDescuento()
     {
@@ -865,7 +820,7 @@ class Producto extends Model
     }
 
     /**
-     * Obtener el precio a mostrar (el más bajo si hay variaciones)
+     * Obtener el precio a mostrar
      */
     public function getPrecioMostrarAttribute()
     {
@@ -878,7 +833,7 @@ class Producto extends Model
     }
 
     /**
-     * *** CORREGIDO: Ahora devuelve el stock real del producto padre, no la suma de variaciones ***
+     * Devuelve el stock real del producto padre
      */
     public function getIStockAttribute()
     {
@@ -886,7 +841,7 @@ class Producto extends Model
     }
 
     /**
-     *** NUEVO: Método para obtener el stock total incluyendo variaciones (cuando sea necesario) ***
+     * Obtener el stock total incluyendo variaciones
      */
     public function getStockTotalAttribute()
     {
@@ -948,7 +903,7 @@ class Producto extends Model
     }
 
     /**
-     * Accesor para volumen (largo × ancho × alto)
+     * Accesor para volumen
      */
     public function getVolumenAttribute()
     {
@@ -1021,7 +976,6 @@ class Producto extends Model
     public function getPesoVolumetricoAttribute()
     {
         if ($this->volumen) {
-            // Fórmula estándar: volumen (cm³) / 5000 = peso volumétrico (kg)
             return $this->volumen / 5000;
         }
         return null;
@@ -1039,7 +993,7 @@ class Producto extends Model
     }
 
     /**
-     * Determinar el peso facturable (el mayor entre peso real y volumétrico)
+     * Determinar el peso facturable
      */
     public function getPesoFacturableAttribute()
     {

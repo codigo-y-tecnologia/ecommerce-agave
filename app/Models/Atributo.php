@@ -19,7 +19,6 @@ class Atributo extends Model
         'vNombre',
         'vSlug',
         'tDescripcion',
-        'iOrden',
         'bActivo'
     ];
 
@@ -35,8 +34,7 @@ class Atributo extends Model
     public function valoresActivos()
     {
         return $this->hasMany(AtributoValor::class, 'id_atributo')
-                    ->where('bActivo', true)
-                    ->orderBy('iOrden');
+                    ->where('bActivo', true);
     }
 
     /**
