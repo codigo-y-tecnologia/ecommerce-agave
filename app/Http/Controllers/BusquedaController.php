@@ -16,6 +16,8 @@ class BusquedaController extends Controller
     // Método para la página de inicio
     public function inicio()
     {
+        $fechaActual = now()->toDateString();
+        
         // 1. Productos destacados (los más recientes) - TODOS los productos activos
         $productosDestacados = Producto::with([
                 'categoria', 
@@ -31,11 +33,11 @@ class BusquedaController extends Controller
             ->take(12)
             ->get();
         
-        // 2. Productos en descuento (incluye productos y variaciones)
+        // 2. Productos en descuento (incluye productos y variaciones como items independientes)
         $productosDescuento = $this->obtenerProductosConDescuento(12);
         
-        // 3. Productos más vendidos (simulado)
-        $productosMasVendidos = Producto::with([
+        // 3. ✨ Productos Recomendados (basado en los últimos registros, no aleatorio)
+        $productosRecomendados = Producto::with([
                 'categoria', 
                 'marca', 
                 'etiquetas', 
@@ -45,8 +47,7 @@ class BusquedaController extends Controller
                 }
             ])
             ->where('bActivo', true)
-            ->where('iStock', '>', 0)
-            ->inRandomOrder()
+            ->orderBy('id_producto', 'desc') // Ordenados por los más recientes primero
             ->take(8)
             ->get();
         
@@ -62,55 +63,62 @@ class BusquedaController extends Controller
             ])
             ->where('bActivo', true)
             ->orderBy('id_producto', 'desc')
-            ->paginate(12); // Paginación de 12 productos por página
-        
-        // Depuración: Ver cuántos productos se están cargando
-        \Log::info('Productos destacados: ' . $productosDestacados->count());
-        \Log::info('Productos en descuento: ' . $productosDescuento->count());
-        \Log::info('Productos más vendidos: ' . $productosMasVendidos->count());
-        \Log::info('Total productos en catálogo: ' . $todosLosProductos->total());
+            ->paginate(12);
         
         return view('inicio', compact(
             'productosDestacados', 
             'productosDescuento', 
-            'productosMasVendidos',
+            'productosRecomendados',
             'todosLosProductos'
         ));
     }
 
     /**
-     * Obtiene productos y variaciones con descuento
+     * Obtiene productos y variaciones con descuento activo como items independientes
      */
     private function obtenerProductosConDescuento($limite = null)
     {
-        // Colección para almacenar todos los items con descuento
+        $fechaActual = now()->toDateString();
+        
+        // Colección para almacenar TODOS los items con descuento (productos y variaciones)
         $itemsConDescuento = collect();
         
-        // 1. Obtener productos con descuento activo
+        // ===== 1. OBTENER PRODUCTOS CON DESCUENTO ACTIVO =====
         $productosConDescuento = Producto::with([
                 'categoria', 
                 'marca', 
-                'etiquetas',
-                'variaciones' => function($query) {
-                    $query->with(['atributos.atributo', 'atributos.valor']);
-                }
+                'etiquetas'
             ])
             ->where('bActivo', true)
             ->where('bTiene_oferta', 1)
-            ->where(function($query) {
-                $query->whereNull('dFecha_fin_oferta')
-                      ->orWhere('dFecha_fin_oferta', '>=', now());
+            ->where(function($query) use ($fechaActual) {
+                // Filtro de fecha de fin (si existe)
+                $query->where(function($q) use ($fechaActual) {
+                    $q->whereNull('dFecha_fin_oferta')
+                      ->orWhere('dFecha_fin_oferta', '>=', $fechaActual);
+                });
+            })
+            ->where(function($query) use ($fechaActual) {
+                // Filtro de fecha de inicio (si existe)
+                $query->where(function($q) use ($fechaActual) {
+                    $q->whereNull('dFecha_inicio_oferta')
+                      ->orWhere('dFecha_inicio_oferta', '<=', $fechaActual);
+                });
             })
             ->get();
         
         foreach ($productosConDescuento as $producto) {
             // Verificar que realmente tenga descuento activo
             if ($this->tieneDescuentoActivoProducto($producto)) {
+                // Marcar como tipo producto para identificarlo en la vista
+                $producto->tipo_item = 'producto';
+                $producto->item_id = $producto->id_producto;
+                $producto->porcentaje_descuento_calculado = $this->calcularPorcentajeDescuentoProducto($producto);
                 $itemsConDescuento->push($producto);
             }
         }
         
-        // 2. Obtener variaciones con descuento activo
+        // ===== 2. OBTENER VARIACIONES CON DESCUENTO ACTIVO =====
         $variacionesConDescuento = ProductoVariacion::with([
                 'productoPadre',
                 'productoPadre.categoria',
@@ -121,33 +129,36 @@ class BusquedaController extends Controller
             ])
             ->where('bActivo', true)
             ->where('bTiene_oferta', 1)
-            ->where(function($query) {
-                $query->whereNull('dFecha_fin_oferta')
-                      ->orWhere('dFecha_fin_oferta', '>=', now());
+            ->where(function($query) use ($fechaActual) {
+                // Filtro de fecha de fin (si existe)
+                $query->where(function($q) use ($fechaActual) {
+                    $q->whereNull('dFecha_fin_oferta')
+                      ->orWhere('dFecha_fin_oferta', '>=', $fechaActual);
+                });
+            })
+            ->where(function($query) use ($fechaActual) {
+                // Filtro de fecha de inicio (si existe)
+                $query->where(function($q) use ($fechaActual) {
+                    $q->whereNull('dFecha_inicio_oferta')
+                      ->orWhere('dFecha_inicio_oferta', '<=', $fechaActual);
+                });
             })
             ->get();
         
         foreach ($variacionesConDescuento as $variacion) {
             // Verificar que realmente tenga descuento activo
             if ($this->tieneDescuentoActivoVariacion($variacion)) {
+                // Marcar como tipo variacion para identificarlo en la vista
+                $variacion->tipo_item = 'variacion';
+                $variacion->item_id = $variacion->id_variacion;
+                $variacion->porcentaje_descuento_calculado = $this->calcularPorcentajeDescuentoVariacion($variacion);
                 $itemsConDescuento->push($variacion);
             }
         }
         
         // 3. Ordenar por porcentaje de descuento (mayor a menor)
         $itemsConDescuento = $itemsConDescuento->sortByDesc(function($item) {
-            if (isset($item->id_variacion)) {
-                // Es una variación
-                if ($item->dPrecio > 0 && $item->dPrecio_oferta) {
-                    return (($item->dPrecio - $item->dPrecio_oferta) / $item->dPrecio) * 100;
-                }
-            } else {
-                // Es un producto
-                if ($item->dPrecio_venta > 0 && $item->dPrecio_oferta) {
-                    return (($item->dPrecio_venta - $item->dPrecio_oferta) / $item->dPrecio_venta) * 100;
-                }
-            }
-            return 0;
+            return $item->porcentaje_descuento_calculado ?? 0;
         })->values();
         
         // Aplicar límite si se especifica
@@ -164,7 +175,7 @@ class BusquedaController extends Controller
     private function tieneDescuentoActivoProducto($producto)
     {
         // Si no tiene descuento activado o no tiene precio de descuento
-        if (!$producto->bTiene_oferta || $producto->dPrecio_oferta === null) {
+        if (!$producto->bTiene_oferta || $producto->dPrecio_oferta === null || $producto->dPrecio_oferta <= 0) {
             return false;
         }
 
@@ -186,7 +197,7 @@ class BusquedaController extends Controller
             return $fechaActual <= $producto->dFecha_fin_oferta;
         }
 
-        // Caso 4: Tiene descuento activado pero sin fechas
+        // Caso 4: Tiene descuento activado pero sin fechas (descuento permanente)
         return true;
     }
 
@@ -196,7 +207,7 @@ class BusquedaController extends Controller
     private function tieneDescuentoActivoVariacion($variacion)
     {
         // Si no tiene descuento activado o no tiene precio de descuento
-        if (!$variacion->bTiene_oferta || $variacion->dPrecio_oferta === null) {
+        if (!$variacion->bTiene_oferta || $variacion->dPrecio_oferta === null || $variacion->dPrecio_oferta <= 0) {
             return false;
         }
 
@@ -218,8 +229,34 @@ class BusquedaController extends Controller
             return $fechaActual <= $variacion->dFecha_fin_oferta;
         }
 
-        // Caso 4: Tiene descuento activado pero sin fechas
+        // Caso 4: Tiene descuento activado pero sin fechas (descuento permanente)
         return true;
+    }
+
+    /**
+     * Calcula el porcentaje de descuento de un producto
+     */
+    private function calcularPorcentajeDescuentoProducto($producto)
+    {
+        if (!$this->tieneDescuentoActivoProducto($producto) || $producto->dPrecio_venta <= 0) {
+            return 0;
+        }
+        
+        $descuento = (($producto->dPrecio_venta - $producto->dPrecio_oferta) / $producto->dPrecio_venta) * 100;
+        return round($descuento);
+    }
+
+    /**
+     * Calcula el porcentaje de descuento de una variación
+     */
+    private function calcularPorcentajeDescuentoVariacion($variacion)
+    {
+        if (!$this->tieneDescuentoActivoVariacion($variacion) || $variacion->dPrecio <= 0) {
+            return 0;
+        }
+        
+        $descuento = (($variacion->dPrecio - $variacion->dPrecio_oferta) / $variacion->dPrecio) * 100;
+        return round($descuento);
     }
 
     public function buscar(Request $request)
@@ -257,23 +294,26 @@ class BusquedaController extends Controller
         // 2. Procesar cada producto y sus variaciones
         foreach ($productosPadre as $producto) {
             
-            // CASO 1: Estamos en filtro de descuento - SOLO mostrar items con descuento
+            // CASO 1: Estamos en filtro de descuento - MOSTRAR TODOS los items con descuento
             if ($filtroDescuento) {
-                $itemsAgregados = false;
                 
-                // Verificar variaciones con descuento
+                // Primero, agregar TODAS las variaciones con descuento
                 foreach ($producto->variacionesActivas as $variacion) {
                     if ($this->tieneDescuentoActivoVariacion($variacion)) {
                         if ($request->con_stock != '1' || $variacion->iStock > 0) {
+                            $variacion->tipo_item = 'variacion';
+                            $variacion->item_id = $variacion->id_variacion;
                             $resultados->push($variacion);
-                            $itemsAgregados = true;
                         }
                     }
                 }
                 
-                // Verificar producto padre con descuento
-                if (!$itemsAgregados && $this->tieneDescuentoActivoProducto($producto)) {
+                // Luego, agregar el producto padre SOLO si tiene descuento
+                // (esto es independiente de si tiene variaciones o no)
+                if ($this->tieneDescuentoActivoProducto($producto)) {
                     if ($request->con_stock != '1' || $producto->iStock > 0) {
+                        $producto->tipo_item = 'producto';
+                        $producto->item_id = $producto->id_producto;
                         $resultados->push($producto);
                     }
                 }
@@ -285,6 +325,8 @@ class BusquedaController extends Controller
                     foreach ($producto->variacionesActivas as $variacion) {
                         if ($this->variacionCumpleFiltrosBasicos($variacion, $request)) {
                             if ($request->con_stock != '1' || $variacion->iStock > 0) {
+                                $variacion->tipo_item = 'variacion';
+                                $variacion->item_id = $variacion->id_variacion;
                                 $resultados->push($variacion);
                             }
                         }
@@ -294,15 +336,17 @@ class BusquedaController extends Controller
                 // Agregar el producto padre
                 if ($this->productoCumpleFiltrosBasicos($producto, $request)) {
                     if ($request->con_stock != '1' || $producto->iStock > 0) {
+                        $producto->tipo_item = 'producto';
+                        $producto->item_id = $producto->id_producto;
                         $resultados->push($producto);
                     }
                 }
             }
         }
         
-        // Eliminar duplicados
+        // Eliminar duplicados (por si acaso)
         $resultados = $resultados->unique(function($item) {
-            if (isset($item->id_variacion)) {
+            if ($item->tipo_item === 'variacion') {
                 return 'var_' . $item->id_variacion;
             }
             return 'prod_' . $item->id_producto;
@@ -465,7 +509,7 @@ class BusquedaController extends Controller
         switch ($orden) {
             case 'precio_asc':
                 return $coleccion->sortBy(function($item) {
-                    if (isset($item->id_variacion)) {
+                    if ($item->tipo_item === 'variacion') {
                         return $this->tieneDescuentoActivoVariacion($item) ? $item->dPrecio_oferta : $item->dPrecio;
                     } else {
                         return $this->tieneDescuentoActivoProducto($item) ? $item->dPrecio_oferta : $item->dPrecio_venta;
@@ -474,7 +518,7 @@ class BusquedaController extends Controller
                 
             case 'precio_desc':
                 return $coleccion->sortByDesc(function($item) {
-                    if (isset($item->id_variacion)) {
+                    if ($item->tipo_item === 'variacion') {
                         return $this->tieneDescuentoActivoVariacion($item) ? $item->dPrecio_oferta : $item->dPrecio;
                     } else {
                         return $this->tieneDescuentoActivoProducto($item) ? $item->dPrecio_oferta : $item->dPrecio_venta;
@@ -483,7 +527,7 @@ class BusquedaController extends Controller
                 
             case 'recientes':
                 return $coleccion->sortByDesc(function($item) {
-                    if (isset($item->id_variacion)) {
+                    if ($item->tipo_item === 'variacion') {
                         return $item->tFecha_registro ?? ($item->productoPadre ? $item->productoPadre->tFecha_registro : now());
                     } else {
                         return $item->tFecha_registro ?? now();
@@ -492,22 +536,13 @@ class BusquedaController extends Controller
                 
             case 'descuento_mayor':
                 return $coleccion->sortByDesc(function($item) {
-                    if (isset($item->id_variacion)) {
-                        if ($this->tieneDescuentoActivoVariacion($item) && $item->dPrecio > 0) {
-                            return (($item->dPrecio - $item->dPrecio_oferta) / $item->dPrecio) * 100;
-                        }
-                    } else {
-                        if ($this->tieneDescuentoActivoProducto($item) && $item->dPrecio_venta > 0) {
-                            return (($item->dPrecio_venta - $item->dPrecio_oferta) / $item->dPrecio_venta) * 100;
-                        }
-                    }
-                    return 0;
+                    return $item->porcentaje_descuento_calculado ?? 0;
                 })->values();
                 
             case 'nombre':
             default:
                 return $coleccion->sortBy(function($item) {
-                    if (isset($item->id_variacion)) {
+                    if ($item->tipo_item === 'variacion') {
                         if ($item->productoPadre) {
                             return $item->productoPadre->vNombre . ' - ' . $item->getAtributosTexto();
                         } else {
@@ -552,7 +587,8 @@ class BusquedaController extends Controller
             $texto = $producto->vNombre . ' - $' . number_format($precioMostrar, 2);
             
             if ($tieneDescuento) {
-                $texto .= ' (¡DESCUENTO!)';
+                $descuento = $this->calcularPorcentajeDescuentoProducto($producto);
+                $texto .= " (¡{$descuento}% OFF!)";
             }
             
             $sugerencias[] = [
@@ -560,6 +596,7 @@ class BusquedaController extends Controller
                 'text' => $texto,
                 'url' => route('productos.show.public', $producto->id_producto),
                 'en_descuento' => $tieneDescuento,
+                'porcentaje' => $tieneDescuento ? $this->calcularPorcentajeDescuentoProducto($producto) : 0,
                 'tipo' => 'producto'
             ];
         }
@@ -589,7 +626,8 @@ class BusquedaController extends Controller
             $texto = $variacion->productoPadre->vNombre . ' - ' . $variacion->getAtributosTexto() . ' - $' . number_format($precioMostrar, 2);
             
             if ($tieneDescuento) {
-                $texto .= ' (¡DESCUENTO!)';
+                $descuento = $this->calcularPorcentajeDescuentoVariacion($variacion);
+                $texto .= " (¡{$descuento}% OFF!)";
             }
             
             $sugerencias[] = [
@@ -597,11 +635,12 @@ class BusquedaController extends Controller
                 'text' => $texto,
                 'url' => route('productos.show.public', [$variacion->productoPadre->id_producto, 'variacion' => $variacion->id_variacion]),
                 'en_descuento' => $tieneDescuento,
+                'porcentaje' => $tieneDescuento ? $this->calcularPorcentajeDescuentoVariacion($variacion) : 0,
                 'tipo' => 'variacion'
             ];
         }
 
-        $sugerencias = collect($sugerencias)->sortByDesc('en_descuento')->take(10)->values()->toArray();
+        $sugerencias = collect($sugerencias)->sortByDesc('en_descuento')->sortByDesc('porcentaje')->take(10)->values()->toArray();
 
         return response()->json($sugerencias);
     }

@@ -152,7 +152,7 @@
             margin-bottom: 40px;
         }
 
-        /* Tarjeta de favorito */
+        /* Tarjeta de favorito - SOLO CORREGIDO EL ZOOM */
         .favorito-card {
             background: white;
             border-radius: 12px;
@@ -172,17 +172,24 @@
             height: 200px;
             overflow: hidden;
             background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
+        /* SOLO CAMBIÉ ESTO - de 'cover' a 'contain' para eliminar el zoom */
         .favorito-imagen {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain; /* Cambiado de 'cover' a 'contain' */
             transition: transform 0.5s ease;
+            background-color: #f8f9fa;
+            padding: 10px; /* Añadí padding para mejor presentación */
         }
 
+        /* Reduje el zoom al mínimo */
         .favorito-card:hover .favorito-imagen {
-            transform: scale(1.05);
+            transform: scale(1.02); /* Zoom mínimo en lugar de 1.05 */
         }
 
         /* Botón de eliminar favorito */
@@ -572,7 +579,7 @@
                             $porcentajeDescuento = $item->porcentaje_descuento;
                             $stock = $item->iStock;
                             $imagenes = $item->imagenes;
-                            $url = route('productos.show.public', $producto->id_producto);
+                            $url = route('productos.show.public', [$producto->id_producto, 'variacion' => $item->id_variacion]);
                             $productoPadreId = $producto->id_producto;
                             $tipo = 'variacion';
                             $id = $item->id_variacion;

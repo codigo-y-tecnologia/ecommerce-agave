@@ -138,7 +138,7 @@ class ProductoVariacion extends Model
     }
 
     /**
-     * AGREGADO: Relación con favoritos
+     * Relación con favoritos
      */
     public function favoritos()
     {
@@ -148,29 +148,34 @@ class ProductoVariacion extends Model
     // ============ MÉTODOS DE DESCUENTO ============
 
     /**
-     * Verificar si tiene descuento activo
+     * Verificar si tiene descuento activo basado en fechas
      */
     public function tieneDescuentoActivo()
     {
-        if (!$this->bTiene_oferta || $this->dPrecio_oferta === null) {
+        // Si no tiene descuento activado o no tiene precio de descuento
+        if (!$this->bTiene_oferta || $this->dPrecio_oferta === null || $this->dPrecio_oferta <= 0) {
             return false;
         }
 
         $fechaActual = now()->toDateString();
 
+        // Caso 1: Tiene ambas fechas definidas
         if ($this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
             return $fechaActual >= $this->dFecha_inicio_oferta && 
                    $fechaActual <= $this->dFecha_fin_oferta;
         }
 
+        // Caso 2: Solo tiene fecha de inicio
         if ($this->dFecha_inicio_oferta && !$this->dFecha_fin_oferta) {
             return $fechaActual >= $this->dFecha_inicio_oferta;
         }
 
+        // Caso 3: Solo tiene fecha de fin
         if (!$this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
             return $fechaActual <= $this->dFecha_fin_oferta;
         }
 
+        // Caso 4: Tiene descuento activado pero sin fechas (descuento permanente)
         return true;
     }
 
@@ -182,6 +187,9 @@ class ProductoVariacion extends Model
         return $this->tieneDescuentoActivo();
     }
 
+    /**
+     * Obtener el precio actual (con descuento si aplica)
+     */
     public function getPrecioActualAttribute()
     {
         if ($this->tieneDescuentoActivo()) {
@@ -190,13 +198,24 @@ class ProductoVariacion extends Model
         return $this->dPrecio;
     }
 
+    /**
+     * Calcular porcentaje de descuento
+     */
     public function getPorcentajeDescuentoAttribute()
     {
-        if ($this->tieneDescuentoActivo() && $this->dPrecio_oferta < $this->dPrecio) {
+        if ($this->tieneDescuentoActivo() && $this->dPrecio_oferta < $this->dPrecio && $this->dPrecio > 0) {
             $descuento = (($this->dPrecio - $this->dPrecio_oferta) / $this->dPrecio) * 100;
             return round($descuento);
         }
         return 0;
+    }
+
+    /**
+     * Verificar si tiene descuento (sin alias)
+     */
+    public function tieneDescuento()
+    {
+        return $this->tieneDescuentoActivo();
     }
 
     // ============ MÉTODO PARA OBTENER TEXTO DE ATRIBUTOS ============

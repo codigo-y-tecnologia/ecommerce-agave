@@ -529,7 +529,7 @@ class Producto extends Model
     }
 
     /**
-     * CORREGIDO: Relación con favoritos - solo productos sin variación
+     * Relación con favoritos - solo productos sin variación
      */
     public function favoritos()
     {
@@ -654,7 +654,7 @@ class Producto extends Model
     }
 
     /**
-     * CORREGIDO: Verificar si el producto es favorito del usuario actual (SIN variación)
+     * Verificar si el producto es favorito del usuario actual (SIN variación)
      */
     public function esFavorito()
     {
@@ -696,25 +696,30 @@ class Producto extends Model
      */
     public function ofertaVigente(): bool
     {
-        if (!$this->bTiene_oferta || $this->dPrecio_oferta === null) {
+        // Si no tiene descuento activado o no tiene precio de descuento o el precio es 0 o negativo
+        if (!$this->bTiene_oferta || $this->dPrecio_oferta === null || $this->dPrecio_oferta <= 0) {
             return false;
         }
 
         $fechaActual = now()->toDateString();
 
+        // Caso 1: Tiene ambas fechas definidas
         if ($this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
             return $fechaActual >= $this->dFecha_inicio_oferta && 
                    $fechaActual <= $this->dFecha_fin_oferta;
         }
 
+        // Caso 2: Solo tiene fecha de inicio
         if ($this->dFecha_inicio_oferta && !$this->dFecha_fin_oferta) {
             return $fechaActual >= $this->dFecha_inicio_oferta;
         }
 
+        // Caso 3: Solo tiene fecha de fin
         if (!$this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
             return $fechaActual <= $this->dFecha_fin_oferta;
         }
 
+        // Caso 4: Tiene descuento activado pero sin fechas (descuento permanente)
         return true;
     }
 
@@ -739,7 +744,7 @@ class Producto extends Model
      */
     public function getPorcentajeDescuentoAttribute()
     {
-        if ($this->ofertaVigente() && $this->dPrecio_oferta < $this->dPrecio_venta) {
+        if ($this->ofertaVigente() && $this->dPrecio_oferta < $this->dPrecio_venta && $this->dPrecio_venta > 0) {
             $descuento = (($this->dPrecio_venta - $this->dPrecio_oferta) / $this->dPrecio_venta) * 100;
             return round($descuento);
         }
@@ -758,37 +763,19 @@ class Producto extends Model
     }
 
     /**
-     * Verificar si tiene descuento
+     * Verificar si tiene descuento (sin alias)
      */
     public function tieneDescuento()
     {
-        if ($this->ofertaVigente() && $this->dPrecio_oferta < $this->dPrecio_venta) {
-            return true;
-        }
-        
-        if (!$this->dPrecio_compra || $this->dPrecio_compra <= 0) {
-            return false;
-        }
-        
-        return $this->dPrecio_venta < $this->dPrecio_compra;
+        return $this->ofertaVigente();
     }
 
     /**
-     * Calcular porcentaje de descuento
+     * Calcular porcentaje de descuento (método adicional)
      */
     public function porcentajeDescuento()
     {
-        if ($this->ofertaVigente() && $this->dPrecio_oferta < $this->dPrecio_venta) {
-            $descuento = (($this->dPrecio_venta - $this->dPrecio_oferta) / $this->dPrecio_venta) * 100;
-            return max(0, min(100, round($descuento)));
-        }
-        
-        if (!$this->tieneDescuento()) {
-            return 0;
-        }
-
-        $descuento = (($this->dPrecio_compra - $this->dPrecio_venta) / $this->dPrecio_compra) * 100;
-        return max(0, min(100, round($descuento)));
+        return $this->porcentajeDescuento;
     }
 
     // ============ MÉTODOS DE PRECIOS Y STOCK ============
