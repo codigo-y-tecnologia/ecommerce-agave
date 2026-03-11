@@ -27,7 +27,7 @@
             <div class="card-body text-center">
                 <h5>⚙️ Configuración Global</h5>
                 <p>Gestiona parámetros críticos del sistema.</p>
-                <a href="#" class="btn btn-danger w-100">Configurar sistema</a>
+                <a href="{{ route('superadmin.configuracion.index') }}" class="btn btn-danger w-100">Configurar sistema</a>
             </div>
         </div>
     </div>

@@ -35,7 +35,8 @@
         "files": [
         "app/Helpers/CheckoutHelper.php",
         "app/Helpers/CarritoHelper.php",
-        "app/Helpers/pedidos.php"
+        "app/Helpers/pedidos.php",
+        "app/Helpers/ConfiguracionHelper.php"
     ]
     },
     "autoload-dev": {

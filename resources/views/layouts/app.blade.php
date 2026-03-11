@@ -53,7 +53,7 @@
             <!-- Logo -->
             <a href="{{ route('home') }}" class="d-flex align-items-center text-dark fw-bold fs-4 text-decoration-none">
                  <i class="bi bi-shop fs-3 me-2" aria-hidden="true" style="line-height:1"></i>
-                AgaveShop
+                {{ config_sistema('nombre_tienda') }}
             </a>
 
             <!-- BUSCADOR -->

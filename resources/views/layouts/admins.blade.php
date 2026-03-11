@@ -13,7 +13,7 @@
     <header>
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
             <div class="container">
-                <a class="navbar-brand fw-bold" href="{{ route('home') }}">AgaveShop</a>
+                <a class="navbar-brand fw-bold" href="{{ route('home') }}">{{ config_sistema('nombre_tienda') }}</a>
 
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
@@ -89,7 +89,7 @@
                                         <li><a class="dropdown-item" href="#">Logs de seguridad</a></li>
                                     @endcan
                                     @can('configurar_sistema')
-                                        <li><a class="dropdown-item" href="#">Configuración global</a></li>
+                                        <li><a class="dropdown-item" href="{{ route('superadmin.configuracion.index') }}">Configuración global</a></li>
                                     @endcan
                                     @can('gestionar_permisos')
                                         <li><a class="dropdown-item" href="{{ route('roles.permisos') }}">Gestión de permisos y roles</a></li>

@@ -51,6 +51,7 @@ use App\Http\Controllers\Superadmin\UsuarioRolController;
 use App\Http\Controllers\Superadmin\SuperadminPerfilController;
 use App\Http\Controllers\Superadmin\CambiarEmailController;
 use App\Http\Controllers\Pedidos\ConsultaPedidoController;
+use App\Http\Controllers\Superadmin\ConfiguracionController;
 use App\Http\Controllers\DetalleVentaController;
 
 Route::get('/', [DashboardController::class, 'index'])->name('home');
@@ -495,6 +496,12 @@ Route::middleware([
 
         Route::get('/email/change/verify/{token}', [CambiarEmailController::class, 'verify'])
             ->name('email.change.verify');
+
+        Route::get('/configuracion', [ConfiguracionController::class, 'index'])
+            ->name('configuracion.index');
+
+        Route::post('/configuracion', [ConfiguracionController::class, 'update'])
+            ->name('configuracion.update');
     });
 
 Route::middleware(['auth', 'permission:gestionar_permisos'])->group(function () {
