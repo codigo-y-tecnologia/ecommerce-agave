@@ -24,14 +24,10 @@ class ConfiguracionController extends Controller
             'email_soporte' => 'required|email|max:255',
             'telefono' => 'required|string|max:20',
             'moneda' => 'required|string|max:10',
-            'envio_estandar' => 'required|numeric|min:0',
-            'envio_gratis' => 'required|numeric|min:0',
-            'iva' => 'required|numeric|min:0|max:100',
             'modo_mantenimiento' => 'required'
         ], [
             'required' => 'Este campo es obligatorio',
-            'email' => 'Debe ser un email válido',
-            'numeric' => 'Debe ser un número'
+            'email' => 'Debe ser un email válido'
         ]);
 
         foreach ($request->except('_token') as $clave => $valor) {

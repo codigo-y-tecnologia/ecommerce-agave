@@ -17,7 +17,6 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolesAndPermissionsSeeder::class,
             MigrateUsersToSpatieSeeder::class,
-            SettingsSeeder::class,
         ]);
     }
 }

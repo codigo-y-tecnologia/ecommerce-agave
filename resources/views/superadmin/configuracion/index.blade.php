@@ -80,31 +80,6 @@ value="{{ old('moneda', $configs['moneda'] ?? 'MXN') }}" required>
 </div>
 </div>
 
-{{-- CONFIG ENVÍOS --}}
-<div class="col-md-6">
-<div class="card shadow-sm">
-<div class="card-header bg-primary text-white">
-Configuración de envíos
-</div>
-
-<div class="card-body">
-
-<div class="mb-3">
-<label>Costo envío estándar</label>
-<input type="number" name="envio_estandar" class="form-control"
-value="{{ $configs['envio_estandar'] ?? '' }}">
-</div>
-
-<div class="mb-3">
-<label>Envío gratis desde</label>
-<input type="number" name="envio_gratis" class="form-control"
-value="{{ $configs['envio_gratis'] ?? '' }}">
-</div>
-
-</div>
-</div>
-</div>
-
 {{-- CONFIG SISTEMA --}}
 <div class="col-md-6">
 <div class="card shadow-sm">

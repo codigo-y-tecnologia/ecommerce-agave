@@ -5,6 +5,16 @@
 @section('content')
 <div class="container py-4">
 
+    @if ($errors->any())
+    <div class="alert alert-danger">
+        <ul>
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
     <h2 class="mb-4 text-center">⚙️ Configuración de la tienda</h2>
 
     @if (session('success'))
@@ -80,5 +90,51 @@
         </div>
     </div>
 
+    {{-- 🚚 Configuración de envíos --}}
+<div class="card mb-4 shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0">🚚 Configuración de envíos</h5>
+    </div>
+
+    <div class="card-body">
+
+        <form method="POST" action="{{ route('admin.settings.shipping') }}">
+            @csrf
+
+            <div class="mb-3">
+                <label class="form-label">Costo envío estándar</label>
+
+                <input type="number"
+                       name="envio_estandar"
+                       class="form-control @error('envio_estandar') is-invalid @enderror"
+                       step="0.01"
+                       min="0"
+                       value="{{ config('tienda.costo_de_envio') }}" required>
+
+                       @error('envio_estandar') <div class="invalid-feedback"> {{ $message }} </div> @enderror
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Envío gratis desde</label>
+
+                <input type="number"
+                       name="envio_gratis"
+                       class="form-control @error('envio_gratis') is-invalid @enderror"
+                       step="0.01"
+                       min="0"
+                       value="{{ config('tienda.envio_gratis_desde') }}" required>
+
+                       @error('envio_gratis') <div class="invalid-feedback"> {{ $message }} </div> @enderror
+                       
+            </div>
+
+            <button class="btn btn-primary">
+                Guardar configuración
+            </button>
+
+        </form>
+
+    </div>
+</div>
 </div>
 @endsection
