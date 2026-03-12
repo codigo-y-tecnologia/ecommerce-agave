@@ -115,6 +115,9 @@ Route::prefix('variaciones')->name('variaciones.')->group(function () {
     
     // Eliminar variación
     Route::delete('/producto/{producto_id}/{variacion_id}', [VariacionController::class, 'destroy'])->name('destroy');
+
+    // ===== NUEVA RUTA PARA VERIFICACIÓN EN TIEMPO REAL =====
+    Route::get('/verificar-sku', [VariacionController::class, 'verificarSKU'])->name('variaciones.verificar-sku');
 });
 
 // Ruta alternativa para el sidebar (desde la navegación principal)
@@ -167,6 +170,12 @@ Route::post('/variaciones/{id}/imagenes/upload', [VariacionController::class, 'u
 Route::delete('/variaciones/imagenes/{imagenId}', [VariacionController::class, 'deleteImagen'])->name('variaciones.imagenes.delete');
 
 // =====================================================================
+// RUTAS PARA VERIFICAR DUPLICADOS EN TIEMPO REAL
+// =====================================================================
+Route::get('/productos/verificar-nombre', [ProductoController::class, 'verificarNombre'])->name('productos.verificar-nombre');
+Route::get('/productos/verificar-sku', [ProductoController::class, 'verificarSKU'])->name('productos.verificar-sku');
+
+// =====================================================================
 // RUTA PARA DASHBOARD
 // =====================================================================
 Route::get('/dashboard', function () {
@@ -179,3 +188,8 @@ Route::get('/dashboard', function () {
 Route::fallback(function () {
     return redirect()->route('inicio.real');
 });
+
+// Nota: Estas rutas están duplicadas, pero las dejamos como están en tu archivo original
+Route::get('/productos/verificar-nombre', [ProductoController::class, 'verificarNombre'])->name('productos.verificar-nombre');
+Route::get('/productos/verificar-sku', [ProductoController::class, 'verificarSKU'])->name('productos.verificar-sku');
+Route::get('/variaciones/verificar-sku', [VariacionController::class, 'verificarSKU'])->name('variaciones.verificar-sku');

@@ -1752,4 +1752,62 @@ class ProductoController extends Controller
             'impuestos' => $impuestos
         ]);
     }
+
+    // ============ NUEVOS MÉTODOS PARA VERIFICACIÓN EN TIEMPO REAL ============
+
+    /**
+     * Verificar si un nombre de producto ya existe (para validación en tiempo real)
+     */
+    public function verificarNombre(Request $request)
+    {
+        try {
+            $nombre = $request->get('nombre');
+            
+            if (empty($nombre)) {
+                return response()->json(['exists' => false]);
+            }
+            
+            $exists = Producto::where('vNombre', $nombre)->exists();
+            
+            return response()->json([
+                'exists' => $exists,
+                'nombre' => $nombre
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error al verificar nombre: ' . $e->getMessage());
+            return response()->json([
+                'exists' => false,
+                'error' => 'Error al verificar'
+            ], 500);
+        }
+    }
+
+    /**
+     * Verificar si un SKU de producto ya existe (para validación en tiempo real)
+     */
+    public function verificarSKU(Request $request)
+    {
+        try {
+            $sku = $request->get('sku');
+            
+            if (empty($sku)) {
+                return response()->json(['exists' => false]);
+            }
+            
+            $exists = Producto::where('vCodigo_barras', $sku)->exists();
+            
+            return response()->json([
+                'exists' => $exists,
+                'sku' => $sku
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error al verificar SKU: ' . $e->getMessage());
+            return response()->json([
+                'exists' => false,
+                'error' => 'Error al verificar'
+            ], 500);
+        }
+    }
 }

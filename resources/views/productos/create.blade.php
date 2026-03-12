@@ -37,15 +37,19 @@
                             <label for="vCodigo_barras" class="form-label fw-bold">
                                 SKU <span class="text-danger">*</span>
                             </label>
-                            <input type="text" name="vCodigo_barras" id="vCodigo_barras" 
-                                   class="form-control @error('vCodigo_barras') is-invalid @enderror"
-                                   value="{{ old('vCodigo_barras') }}" 
-                                   maxlength="15" 
-                                   required
-                                   oninput="validarSKU(this)"
-                                   pattern="[A-Za-z0-9]+"
-                                   title="Solo letras y números (máximo 15 caracteres)"
-                                   autocomplete="off">
+                            <div class="position-relative">
+                                <input type="text" name="vCodigo_barras" id="vCodigo_barras" 
+                                       class="form-control @error('vCodigo_barras') is-invalid @enderror"
+                                       value="{{ old('vCodigo_barras') }}" 
+                                       maxlength="15" 
+                                       required
+                                       oninput="validarSKU(this); verificarSKUProductoLocal(this)"
+                                       pattern="[A-Za-z0-9]+"
+                                       title="Solo letras y números (máximo 15 caracteres)"
+                                       data-original-value="{{ old('vCodigo_barras') }}"
+                                       autocomplete="off">
+                                <div id="sku-error" class="duplicate-error" style="display: none;"></div>
+                            </div>
                             @error('vCodigo_barras')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -58,12 +62,17 @@
                             <label for="vNombre" class="form-label fw-bold">
                                 Nombre del producto <span class="text-danger">*</span>
                             </label>
-                            <input type="text" name="vNombre" id="vNombre" 
-                                   class="form-control @error('vNombre') is-invalid @enderror" 
-                                   value="{{ old('vNombre') }}" 
-                                   maxlength="100" 
-                                   required
-                                   autocomplete="off">
+                            <div class="position-relative">
+                                <input type="text" name="vNombre" id="vNombre" 
+                                       class="form-control @error('vNombre') is-invalid @enderror" 
+                                       value="{{ old('vNombre') }}" 
+                                       maxlength="100" 
+                                       required
+                                       autocomplete="off"
+                                       data-original-value="{{ old('vNombre') }}"
+                                       oninput="verificarNombreProductoLocal(this)">
+                                <div id="nombre-error" class="duplicate-error" style="display: none;"></div>
+                            </div>
                             @error('vNombre')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -1840,6 +1849,35 @@
         font-size: 0.9rem;
     }
 }
+
+/* Estilos para errores de duplicado */
+.duplicate-error {
+    display: none;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #dc3545;
+    animation: fadeIn 0.3s ease-in-out;
+    padding: 5px 0;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.position-relative {
+    position: relative !important;
+}
+
+.is-invalid {
+    border-color: #dc3545 !important;
+    padding-right: calc(1.5em + 0.75rem) !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right calc(0.375em + 0.1875rem) center !important;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem) !important;
+}
 </style>
 @endpush
 
@@ -1848,7 +1886,20 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-// Variables globales
+// ============ PASAR DATOS DE LA BASE DE DATOS A JAVASCRIPT ============
+const productosExistentes = @json(\App\Models\Producto::select('vCodigo_barras as sku', 'vNombre as nombre')->get());
+const variacionesExistentes = @json(\App\Models\ProductoVariacion::select('vSKU as sku')->get());
+
+// Crear sets para búsqueda rápida
+const skusExistentes = new Set(productosExistentes.map(p => p.sku));
+const nombresExistentes = new Set(productosExistentes.map(p => p.nombre));
+const skusVariacionExistentes = new Set(variacionesExistentes.map(v => v.sku));
+
+console.log('SKUs existentes:', Array.from(skusExistentes));
+console.log('Nombres existentes:', Array.from(nombresExistentes));
+console.log('SKUs de variaciones existentes:', Array.from(skusVariacionExistentes));
+
+// ============ VARIABLES GLOBALES ============
 let selectedImages = [];
 let imageCounter = 0;
 let atributosActivos = {};
@@ -1873,8 +1924,153 @@ let modalEtiqueta = null;
 let modalAtributo = null;
 let modalImpuesto = null;
 
-// Inicializar modales cuando el DOM esté listo
+// ============ VALIDACIONES LOCALES (SIN AJAX) ============
+
+// Función para verificar SKU de producto localmente
+function verificarSKUProductoLocal(input) {
+    const sku = input.value.trim();
+    const errorDiv = document.getElementById('sku-error');
+    const originalValue = input.getAttribute('data-original-value');
+    
+    // Si el SKU está vacío o es igual al valor original (en edición), no validar
+    if (sku === '' || sku === originalValue) {
+        input.classList.remove('is-invalid');
+        if (errorDiv) errorDiv.style.display = 'none';
+        return true;
+    }
+    
+    // Verificar si el SKU ya existe
+    if (skusExistentes.has(sku)) {
+        input.classList.add('is-invalid');
+        if (errorDiv) {
+            errorDiv.textContent = `⚠️ Ya existe un producto con el SKU "${sku}". Por favor, elige otro SKU.`;
+            errorDiv.style.display = 'block';
+        }
+        return false;
+    } else {
+        input.classList.remove('is-invalid');
+        if (errorDiv) errorDiv.style.display = 'none';
+        return true;
+    }
+}
+
+// Función para verificar nombre de producto localmente
+function verificarNombreProductoLocal(input) {
+    const nombre = input.value.trim();
+    const errorDiv = document.getElementById('nombre-error');
+    const originalValue = input.getAttribute('data-original-value');
+    
+    // Si el nombre está vacío o es igual al valor original (en edición), no validar
+    if (nombre === '' || nombre === originalValue) {
+        input.classList.remove('is-invalid');
+        if (errorDiv) errorDiv.style.display = 'none';
+        return true;
+    }
+    
+    // Verificar si el nombre ya existe
+    if (nombresExistentes.has(nombre)) {
+        input.classList.add('is-invalid');
+        if (errorDiv) {
+            errorDiv.textContent = `⚠️ Ya existe un producto con el nombre "${nombre}". Por favor, elige otro nombre.`;
+            errorDiv.style.display = 'block';
+        }
+        return false;
+    } else {
+        input.classList.remove('is-invalid');
+        if (errorDiv) errorDiv.style.display = 'none';
+        return true;
+    }
+}
+
+// Función para verificar SKU de variación localmente
+function verificarSKUVariacionLocal(input, valorKey) {
+    const sku = input.value.trim();
+    const container = input.closest('.form-group');
+    let errorDiv = container.querySelector('.duplicate-error');
+    
+    if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.className = 'duplicate-error';
+        container.appendChild(errorDiv);
+    }
+    
+    // Si el SKU está vacío, no validar
+    if (sku === '') {
+        input.classList.remove('is-invalid');
+        errorDiv.style.display = 'none';
+        return true;
+    }
+    
+    // Verificar si el SKU ya existe en productos o variaciones
+    if (skusExistentes.has(sku) || skusVariacionExistentes.has(sku)) {
+        input.classList.add('is-invalid');
+        errorDiv.textContent = `⚠️ Ya existe un producto o variación con el SKU "${sku}". Por favor, elige otro SKU.`;
+        errorDiv.style.display = 'block';
+        return false;
+    } else {
+        input.classList.remove('is-invalid');
+        errorDiv.style.display = 'none';
+        return true;
+    }
+}
+
+// Función para mostrar alerta personalizada de duplicado
+function mostrarAlertaDuplicado(tipo, valor, esVariacion = false) {
+    const titulo = esVariacion ? '⚠️ Variación Duplicada' : '⚠️ Producto Duplicado';
+    const texto = esVariacion 
+        ? `Ya existe una variación con el ${tipo} "${valor}". No se puede registrar otra igual.`
+        : `Ya existe un producto con el ${tipo} "${valor}". No se puede registrar otro igual.`;
+    
+    Swal.fire({
+        icon: 'warning',
+        title: titulo,
+        text: texto,
+        confirmButtonColor: '#3085d6',
+        confirmButtonText: 'Entendido',
+        timer: 4000,
+        timerProgressBar: true,
+        allowOutsideClick: false
+    });
+}
+
+// Función para validar todos los campos antes de enviar
+function validarCamposUnicosAntesDeEnviar() {
+    const skuInput = document.getElementById('vCodigo_barras');
+    const nombreInput = document.getElementById('vNombre');
+    
+    // Validar SKU
+    if (skuInput && !verificarSKUProductoLocal(skuInput)) {
+        mostrarAlertaDuplicado('SKU', skuInput.value, false);
+        skuInput.focus();
+        return false;
+    }
+    
+    // Validar Nombre
+    if (nombreInput && !verificarNombreProductoLocal(nombreInput)) {
+        mostrarAlertaDuplicado('nombre', nombreInput.value, false);
+        nombreInput.focus();
+        return false;
+    }
+    
+    // Validar SKUs de variaciones
+    const variacionesSKU = document.querySelectorAll('[id^="sku-"]');
+    for (let input of variacionesSKU) {
+        const valorKey = input.id.replace('sku-', '');
+        if (!verificarSKUVariacionLocal(input, valorKey)) {
+            mostrarAlertaDuplicado('SKU', input.value, true);
+            input.focus();
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+// ============ INICIALIZACIÓN ============
+
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Inicializando validaciones locales...');
+    
     valorModal = new bootstrap.Modal(document.getElementById('crearValorModal'));
     
     // Inicializar modales
@@ -1886,1225 +2082,231 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Inicializar los formularios rápidos
     initQuickForms();
+    
+    // Validación para nombre del producto
+    const nombreInput = document.getElementById('vNombre');
+    if (nombreInput) {
+        nombreInput.addEventListener('input', function() { verificarNombreProductoLocal(this); });
+        nombreInput.addEventListener('blur', function() { verificarNombreProductoLocal(this); });
+        console.log('Eventos de nombre asignados');
+    }
+    
+    // Validación para SKU del producto
+    const skuInput = document.getElementById('vCodigo_barras');
+    if (skuInput) {
+        skuInput.addEventListener('input', function() { 
+            validarSKU(this);
+            verificarSKUProductoLocal(this);
+        });
+        skuInput.addEventListener('blur', function() { 
+            verificarSKUProductoLocal(this);
+        });
+        console.log('Eventos de SKU asignados');
+    }
+    
+    // Usar delegación de eventos para los SKUs de variaciones
+    document.addEventListener('input', function(e) {
+        if (e.target.id && e.target.id.startsWith('sku-')) {
+            const valorKey = e.target.id.replace('sku-', '');
+            validarSKU(e.target);
+            verificarSKUVariacionLocal(e.target, valorKey);
+        }
+    });
+    
+    document.addEventListener('blur', function(e) {
+        if (e.target.id && e.target.id.startsWith('sku-')) {
+            const valorKey = e.target.id.replace('sku-', '');
+            if (e.target.value.trim() !== '') {
+                verificarSKUVariacionLocal(e.target, valorKey);
+            }
+        }
+    });
+    
+    console.log('Validaciones locales inicializadas correctamente');
 });
 
-// ============ FUNCIONES PARA ABRIR MODALES ============
+// ============ MODIFICAR EL EVENTO SUBMIT DEL FORMULARIO ============
 
-function abrirModalCategoria() {
-    document.getElementById('vNombre_categoria_modal').value = '';
-    document.getElementById('vSlug_categoria_modal').value = '';
-    document.getElementById('id_categoria_padre_modal').value = '';
-    document.getElementById('tDescripcion_categoria_modal').value = '';
-    document.getElementById('vImagen_categoria_modal').value = '';
-    document.getElementById('categoriaModalImagePreview').style.display = 'none';
-    document.getElementById('bActivo_categoria_modal').checked = true;
-    categoriaModalImagenFile = null;
-    modalCategoria.show();
-}
-
-function abrirModalMarca() {
-    document.getElementById('vNombre_marca_modal').value = '';
-    document.getElementById('tDescripcion_marca_modal').value = '';
-    modalMarca.show();
-}
-
-function abrirModalEtiqueta() {
-    document.getElementById('vNombre_eti_modal').value = '';
-    document.getElementById('tDescripcion_eti_modal').value = '';
-    modalEtiqueta.show();
-}
-
-function abrirModalAtributo() {
-    document.getElementById('vNombre_attr_modal').value = '';
-    document.getElementById('vSlug_attr_modal').value = '';
-    document.getElementById('tDescripcion_attr_modal').value = '';
-    modalAtributo.show();
-}
-
-function abrirModalImpuesto() {
-    document.getElementById('vNombre_impuesto_modal').value = '';
-    document.getElementById('eTipo_impuesto_modal').value = '';
-    document.getElementById('dPorcentaje_impuesto_modal').value = '';
-    document.getElementById('tDescripcion_impuesto_modal').value = '';
-    document.getElementById('bActivo_impuesto_modal').checked = true;
-    modalImpuesto.show();
-}
-
-// ============ FUNCIONES PARA GUARDAR DESDE MODALES ============
-
-function generarSlugCategoria(nombre) {
-    if (!nombre) {
-        document.getElementById('vSlug_categoria_modal').value = '';
-        return;
-    }
-    
-    let slug = nombre.toLowerCase();
-    slug = slug.replace(/á/gi, 'a');
-    slug = slug.replace(/é/gi, 'e');
-    slug = slug.replace(/í/gi, 'i');
-    slug = slug.replace(/ó/gi, 'o');
-    slug = slug.replace(/ú/gi, 'u');
-    slug = slug.replace(/ñ/gi, 'n');
-    slug = slug.replace(/[^a-z0-9\s]/g, '');
-    slug = slug.replace(/\s+/g, '-');
-    slug = slug.replace(/-+/g, '-');
-    slug = slug.replace(/^-+/, '').replace(/-+$/, '');
-    
-    document.getElementById('vSlug_categoria_modal').value = slug;
-}
-
-function generarSlugAtributo(nombre) {
-    if (!nombre) {
-        document.getElementById('vSlug_attr_modal').value = '';
-        return;
-    }
-    
-    let slug = nombre.toLowerCase();
-    slug = slug.replace(/á/gi, 'a');
-    slug = slug.replace(/é/gi, 'e');
-    slug = slug.replace(/í/gi, 'i');
-    slug = slug.replace(/ó/gi, 'o');
-    slug = slug.replace(/ú/gi, 'u');
-    slug = slug.replace(/ñ/gi, 'n');
-    slug = slug.replace(/[^a-z0-9\s]/g, '');
-    slug = slug.replace(/\s+/g, '-');
-    slug = slug.replace(/-+/g, '-');
-    slug = slug.replace(/^-+/, '').replace(/-+$/, '');
-    
-    document.getElementById('vSlug_attr_modal').value = slug;
-}
-
-function previewImagenCategoriaModal(input) {
-    const preview = document.getElementById('categoriaModalImagePreview');
-    const previewImg = document.getElementById('categoriaModalPreviewImg');
-    
-    if (input.files && input.files.length > 0) {
-        const file = input.files[0];
-        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-        
-        if (!validTypes.includes(file.type)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Formato no válido',
-                text: 'Solo se permiten imágenes JPG, JPEG, PNG o WebP'
-            });
-            input.value = '';
-            return;
-        }
-        
-        if (file.size > 2 * 1024 * 1024) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Archivo demasiado grande',
-                text: 'La imagen no puede exceder los 2MB'
-            });
-            input.value = '';
-            return;
-        }
-        
-        categoriaModalImagenFile = file;
-        
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-            previewImg.src = e.target.result;
-            preview.style.display = 'block';
-        }
-        
-        reader.readAsDataURL(file);
-    }
-}
-
-function cancelarImagenCategoriaModal() {
-    const preview = document.getElementById('categoriaModalImagePreview');
-    const fileInput = document.getElementById('vImagen_categoria_modal');
-    
-    preview.style.display = 'none';
-    fileInput.value = '';
-    categoriaModalImagenFile = null;
-}
-
-function guardarCategoria() {
-    const vNombre = document.getElementById('vNombre_categoria_modal').value.trim();
-    const vSlug = document.getElementById('vSlug_categoria_modal').value.trim();
-    const idCategoriaPadre = document.getElementById('id_categoria_padre_modal').value;
-    const tDescripcion = document.getElementById('tDescripcion_categoria_modal').value;
-    const bActivo = document.getElementById('bActivo_categoria_modal').checked ? 1 : 0;
-    
-    if (!vNombre) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'El nombre de la categoría es obligatorio'
-        });
-        return;
-    }
-    
-    if (!vSlug) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'El slug es obligatorio'
-        });
-        return;
-    }
-    
-    Swal.fire({
-        title: 'Creando categoría...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
-    
-    const formData = new FormData();
-    formData.append('vNombre', vNombre);
-    formData.append('vSlug', vSlug);
-    formData.append('tDescripcion', tDescripcion);
-    formData.append('bActivo', bActivo);
-    if (idCategoriaPadre) {
-        formData.append('id_categoria_padre', idCategoriaPadre);
-    }
-    if (categoriaModalImagenFile) {
-        formData.append('vImagen', categoriaModalImagenFile);
-    }
-    
-    fetch('{{ route("categorias.store") }}', {
-        method: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Accept': 'application/json'
-        },
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        Swal.close();
-        
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: data.message || 'Categoría creada exitosamente',
-                timer: 2000,
-                showConfirmButton: false
-            });
+document.addEventListener('DOMContentLoaded', function() {
+    const productoForm = document.getElementById('productoForm');
+    if (productoForm) {
+        productoForm.onsubmit = function(e) {
+            console.log('Validando antes de enviar...');
             
-            agregarCategoriaAlSelect(data.categoria);
-            modalCategoria.hide();
-        } else {
-            let errorMessage = data.message || 'Error al crear la categoría';
-            if (data.errors) {
-                errorMessage = Object.values(data.errors).flat().join('<br>');
+            // Primero validar los campos únicos
+            if (!validarCamposUnicosAntesDeEnviar()) {
+                console.log('Validación de campos únicos falló');
+                e.preventDefault();
+                return false;
             }
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                html: errorMessage
-            });
-        }
-    })
-    .catch(error => {
-        Swal.close();
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Error de conexión al servidor'
-        });
-    });
-}
-
-function guardarMarca() {
-    const vNombre = document.getElementById('vNombre_marca_modal').value.trim();
-    const tDescripcion = document.getElementById('tDescripcion_marca_modal').value;
-    
-    if (!vNombre) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'El nombre de la marca es obligatorio'
-        });
-        return;
-    }
-    
-    Swal.fire({
-        title: 'Creando marca...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
-    
-    fetch('{{ route("marcas.quick-create") }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            vNombre: vNombre,
-            tDescripcion: tDescripcion
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        Swal.close();
-        
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: data.message,
-                timer: 2000,
-                showConfirmButton: false
-            });
             
-            const select = document.getElementById('id_marca');
-            const option = document.createElement('option');
-            option.value = data.marca.id_marca;
-            option.textContent = data.marca.vNombre;
-            select.appendChild(option);
-            select.value = data.marca.id_marca;
-            
-            modalMarca.hide();
-        } else {
-            let errorMessage = data.message || 'Error al crear la marca';
-            if (data.errors) {
-                errorMessage = Object.values(data.errors).flat().join('<br>');
+            // Luego continuar con la validación de tamaño de archivos
+            if (!validarTamañoTotalAntesDeEnviar()) {
+                console.log('Validación de tamaño falló');
+                e.preventDefault();
+                return false;
             }
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                html: errorMessage
-            });
-        }
-    })
-    .catch(error => {
-        Swal.close();
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Error de conexión al servidor'
-        });
-    });
+            
+            console.log('Todas las validaciones pasaron, enviando formulario...');
+            return true;
+        };
+    }
+});
+
+// ============ FUNCIONES DE VALIDACIÓN DE SKU Y PRECIOS ============
+
+function validarSKU(input) {
+    input.value = input.value.replace(/[^A-Za-z0-9-]/g, '');
+    if (input.value.length > 50) {
+        input.value = input.value.substring(0, 50);
+    }
+    input.value = input.value.toUpperCase();
 }
 
-function guardarEtiqueta() {
-    const vNombre = document.getElementById('vNombre_eti_modal').value.trim();
-    const tDescripcion = document.getElementById('tDescripcion_eti_modal').value;
+function validarPrecio(input) {
+    let value = input.value;
+    const cursorPos = input.selectionStart;
     
-    if (!vNombre) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'El nombre de la etiqueta es obligatorio'
-        });
+    if (value === '') {
+        input.classList.remove('is-invalid');
         return;
     }
     
-    Swal.fire({
-        title: 'Creando etiqueta...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
+    value = value.replace(/[^0-9.]/g, '');
+    const puntos = value.split('.').length - 1;
+    if (puntos > 1) {
+        const partes = value.split('.');
+        value = partes[0] + '.' + partes.slice(1).join('');
+    }
+    value = value.replace(/\.{2,}/g, '.');
+    if (value.startsWith('.')) {
+        value = '0' + value;
+    }
     
-    fetch('{{ route("etiquetas.quick-create") }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            vNombre: vNombre,
-            tDescripcion: tDescripcion
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        Swal.close();
-        
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: data.message,
-                timer: 2000,
-                showConfirmButton: false
-            });
-            
-            agregarEtiquetaAlListado(data.etiqueta);
-            modalEtiqueta.hide();
-        } else {
-            let errorMessage = data.message || 'Error al crear la etiqueta';
-            if (data.errors) {
-                errorMessage = Object.values(data.errors).flat().join('<br>');
-            }
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                html: errorMessage
-            });
+    const partesNumero = value.split('.');
+    const parteEntera = partesNumero[0];
+    if (parteEntera.length > 7) {
+        value = parteEntera.substring(0, 7) + (partesNumero[1] ? '.' + partesNumero[1] : '');
+    }
+    if (value.includes('.')) {
+        const partes = value.split('.');
+        if (partes[1].length > 2) {
+            partes[1] = partes[1].substring(0, 2);
+            value = partes[0] + '.' + partes[1];
         }
-    })
-    .catch(error => {
-        Swal.close();
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Error de conexión al servidor'
-        });
-    });
+    }
+    
+    if (input.value !== value) {
+        const oldValue = input.value;
+        input.value = value;
+        const cursorDiff = value.length - oldValue.length;
+        const newCursorPos = Math.max(0, Math.min(value.length, cursorPos + cursorDiff));
+        setTimeout(() => {
+            input.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
+    }
+    input.classList.remove('is-invalid');
+    
+    if (input.id === 'dPrecio_descuento') {
+        validarPrecioDescuentoProductoInstantaneo(input);
+    }
+    
+    if (input.id === 'dPrecio_venta') {
+        actualizarPrecioFinal();
+    }
 }
 
-function guardarAtributo() {
-    const vNombre = document.getElementById('vNombre_attr_modal').value.trim();
-    const vSlug = document.getElementById('vSlug_attr_modal').value.trim();
-    const tDescripcion = document.getElementById('tDescripcion_attr_modal').value;
-    
-    if (!vNombre) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'El nombre del atributo es obligatorio'
-        });
-        return;
+function validarStock(input) {
+    input.value = input.value.replace(/[^0-9]/g, '');
+    if (input.value.length > 6) {
+        input.value = input.value.substring(0, 6);
     }
-    
-    Swal.fire({
-        title: 'Creando atributo...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
-    
-    fetch('{{ route("atributos.quick-create") }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            vNombre: vNombre,
-            vSlug: vSlug || undefined,
-            tDescripcion: tDescripcion
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        Swal.close();
-        
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: data.message,
-                timer: 2000,
-                showConfirmButton: false
-            });
-            
-            agregarAtributoAlListado(data.atributo);
-            modalAtributo.hide();
-        } else {
-            let errorMessage = data.message || 'Error al crear el atributo';
-            if (data.errors) {
-                errorMessage = Object.values(data.errors).flat().join('<br>');
-            }
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                html: errorMessage
-            });
-        }
-    })
-    .catch(error => {
-        Swal.close();
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Error de conexión al servidor'
-        });
-    });
+    if (input.value && parseInt(input.value) < 0) {
+        input.value = '0';
+    }
+    if (input.value.length > 1 && input.value.startsWith('0')) {
+        input.value = input.value.replace(/^0+/, '');
+    }
+    if (input.value === '') {
+        input.value = '0';
+    }
+    input.classList.remove('is-invalid');
 }
 
-function guardarImpuesto() {
-    const vNombre = document.getElementById('vNombre_impuesto_modal').value.trim();
-    const eTipo = document.getElementById('eTipo_impuesto_modal').value;
-    const dPorcentaje = document.getElementById('dPorcentaje_impuesto_modal').value;
-    const tDescripcion = document.getElementById('tDescripcion_impuesto_modal').value;
-    const bActivo = document.getElementById('bActivo_impuesto_modal').checked ? 1 : 0;
+// ============ FUNCIONES DE DESCUENTO ============
+
+function toggleDescuentoFields() {
+    const descuentoFields = document.getElementById('descuentoFields');
+    const tieneDescuento = document.getElementById('bTiene_descuento').checked;
+    const precioDescuento = document.getElementById('dPrecio_descuento');
+    const fechaInicio = document.getElementById('dFecha_inicio_descuento');
+    const fechaFin = document.getElementById('dFecha_fin_descuento');
     
-    if (!vNombre) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'El nombre del impuesto es obligatorio'
-        });
-        return;
-    }
-    
-    if (!eTipo) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'El tipo de impuesto es obligatorio'
-        });
-        return;
-    }
-    
-    if (!dPorcentaje || dPorcentaje <= 0) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'El porcentaje debe ser mayor a 0'
-        });
-        return;
-    }
-    
-    Swal.fire({
-        title: 'Creando impuesto...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
-    
-    fetch('{{ route("impuestos.quick-create") }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            vNombre: vNombre,
-            eTipo: eTipo,
-            dPorcentaje: dPorcentaje,
-            tDescripcion: tDescripcion,
-            bActivo: bActivo
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        Swal.close();
+    if (tieneDescuento) {
+        descuentoFields.style.display = 'block';
+        precioDescuento.required = true;
+        fechaInicio.required = true;
+        fechaFin.required = true;
         
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: data.message,
-                timer: 2000,
-                showConfirmButton: false
-            });
-            
-            const select = document.getElementById('id_impuesto');
-            const option = document.createElement('option');
-            option.value = data.impuesto.id_impuesto;
-            option.setAttribute('data-porcentaje', data.impuesto.dPorcentaje);
-            option.setAttribute('data-tipo', data.impuesto.eTipo);
-            option.textContent = data.impuesto.vNombre + ' (' + data.impuesto.eTipo + ' - ' + parseFloat(data.impuesto.dPorcentaje).toFixed(2) + '%)';
-            select.appendChild(option);
-            
-            select.value = data.impuesto.id_impuesto;
+        setTimeout(() => {
+            validarPrecioDescuentoProducto();
             actualizarPrecioFinal();
-            
-            modalImpuesto.hide();
-        } else {
-            let errorMessage = data.message || 'Error al crear el impuesto';
-            if (data.errors) {
-                errorMessage = Object.values(data.errors).flat().join('<br>');
-            }
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                html: errorMessage
-            });
-        }
-    })
-    .catch(error => {
-        Swal.close();
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Error de conexión al servidor'
-        });
-    });
-}
-
-// ============ FUNCIONES PARA FORMULARIOS RÁPIDOS ============
-
-function quickGenerarSlug(texto, inputId) {
-    if (!texto) return;
-    let slug = texto.toLowerCase();
-    slug = slug.replace(/á/gi, 'a');
-    slug = slug.replace(/é/gi, 'e');
-    slug = slug.replace(/í/gi, 'i');
-    slug = slug.replace(/ó/gi, 'o');
-    slug = slug.replace(/ú/gi, 'u');
-    slug = slug.replace(/ñ/gi, 'n');
-    slug = slug.replace(/[^a-z0-9\s]/g, '');
-    slug = slug.replace(/\s+/g, '-');
-    slug = slug.replace(/-+/g, '-');
-    slug = slug.replace(/^-+/, '').replace(/-+$/, '');
-    document.getElementById(inputId).value = slug;
-}
-
-function quickActualizarSlug(nombre, slugId) {
-    quickGenerarSlug(nombre, slugId);
-}
-
-function initQuickForms() {
-    // Formulario de Categoría
-    const categoriaForm = document.getElementById('categoriaQuickForm');
-    if (categoriaForm) {
-        categoriaForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            if (categoriaImagenFile) {
-                formData.delete('vImagen');
-                formData.append('vImagen', categoriaImagenFile);
-            }
-            
-            Swal.fire({
-                title: 'Creando categoría...',
-                text: 'Por favor espera',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
-            
-            fetch('{{ route("categorias.store") }}', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                Swal.close();
-                
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: data.message || 'Categoría creada exitosamente',
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                    
-                    agregarCategoriaAlSelect(data.categoria);
-                    limpiarFormularioCategoria();
-                } else {
-                    let errorMessage = data.message || 'Error al crear la categoría';
-                    if (data.errors) {
-                        errorMessage = Object.values(data.errors).flat().join('<br>');
-                    }
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        html: errorMessage
-                    });
-                }
-            })
-            .catch(error => {
-                Swal.close();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Error de conexión al servidor'
-                });
-            });
-        });
-    }
-    
-    // Formulario de Marca
-    const marcaForm = document.getElementById('marcaQuickForm');
-    if (marcaForm) {
-        marcaForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            
-            Swal.fire({
-                title: 'Creando marca...',
-                text: 'Por favor espera',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
-            
-            fetch('{{ route("marcas.quick-create") }}', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                Swal.close();
-                
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: data.message,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                    
-                    const select = document.getElementById('id_marca');
-                    const option = document.createElement('option');
-                    option.value = data.marca.id_marca;
-                    option.textContent = data.marca.vNombre;
-                    select.appendChild(option);
-                    select.value = data.marca.id_marca;
-                    
-                    limpiarFormularioMarca();
-                } else {
-                    let errorMessage = data.message || 'Error al crear la marca';
-                    if (data.errors) {
-                        errorMessage = Object.values(data.errors).flat().join('<br>');
-                    }
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        html: errorMessage
-                    });
-                }
-            })
-            .catch(error => {
-                Swal.close();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Error de conexión al servidor'
-                });
-            });
-        });
-    }
-    
-    // Formulario de Etiqueta
-    const etiquetaForm = document.getElementById('etiquetaQuickForm');
-    if (etiquetaForm) {
-        etiquetaForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            
-            Swal.fire({
-                title: 'Creando etiqueta...',
-                text: 'Por favor espera',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
-            
-            fetch('{{ route("etiquetas.quick-create") }}', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                Swal.close();
-                
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: data.message,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                    
-                    agregarEtiquetaAlListado(data.etiqueta);
-                    limpiarFormularioEtiqueta();
-                } else {
-                    let errorMessage = data.message || 'Error al crear la etiqueta';
-                    if (data.errors) {
-                        errorMessage = Object.values(data.errors).flat().join('<br>');
-                    }
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        html: errorMessage
-                    });
-                }
-            })
-            .catch(error => {
-                Swal.close();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Error de conexión al servidor'
-                });
-            });
-        });
-    }
-    
-    // Formulario de Atributo
-    const atributoForm = document.getElementById('atributoQuickForm');
-    if (atributoForm) {
-        atributoForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            
-            Swal.fire({
-                title: 'Creando atributo...',
-                text: 'Por favor espera',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
-            
-            fetch('{{ route("atributos.quick-create") }}', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                Swal.close();
-                
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: data.message,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                    
-                    agregarAtributoAlListado(data.atributo);
-                    
-                    document.getElementById('vNombre_attr').value = '';
-                    document.getElementById('vSlug_attr').value = '';
-                    document.getElementById('tDescripcion_attr').value = '';
-                } else {
-                    let errorMessage = data.message || 'Error al crear el atributo';
-                    if (data.errors) {
-                        errorMessage = Object.values(data.errors).flat().join('<br>');
-                    }
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        html: errorMessage
-                    });
-                }
-            })
-            .catch(error => {
-                Swal.close();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Error de conexión al servidor'
-                });
-            });
-        });
-    }
-    
-    // Formulario de Impuesto
-    const impuestoForm = document.getElementById('impuestoQuickForm');
-    if (impuestoForm) {
-        impuestoForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            
-            Swal.fire({
-                title: 'Creando impuesto...',
-                text: 'Por favor espera',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
-            
-            fetch('{{ route("impuestos.quick-create") }}', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                Swal.close();
-                
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: data.message,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                    
-                    const select = document.getElementById('id_impuesto');
-                    const option = document.createElement('option');
-                    option.value = data.impuesto.id_impuesto;
-                    option.setAttribute('data-porcentaje', data.impuesto.dPorcentaje);
-                    option.setAttribute('data-tipo', data.impuesto.eTipo);
-                    option.textContent = data.impuesto.vNombre + ' (' + data.impuesto.eTipo + ' - ' + parseFloat(data.impuesto.dPorcentaje).toFixed(2) + '%)';
-                    select.appendChild(option);
-                    
-                    select.value = data.impuesto.id_impuesto;
-                    actualizarPrecioFinal();
-                    limpiarFormularioImpuesto();
-                } else {
-                    let errorMessage = data.message || 'Error al crear el impuesto';
-                    if (data.errors) {
-                        errorMessage = Object.values(data.errors).flat().join('<br>');
-                    }
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        html: errorMessage
-                    });
-                }
-            })
-            .catch(error => {
-                Swal.close();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Error de conexión al servidor'
-                });
-            });
-        });
+        }, 100);
+    } else {
+        descuentoFields.style.display = 'none';
+        precioDescuento.required = false;
+        fechaInicio.required = false;
+        fechaFin.required = false;
+        
+        precioDescuento.classList.remove('is-invalid');
+        document.getElementById('error-precio-descuento').style.display = 'none';
+        fechaFin.classList.remove('is-invalid');
+        document.getElementById('error-fechas-descuento').style.display = 'none';
+        
+        actualizarPrecioFinal();
     }
 }
 
-// ============ FUNCIONES PARA AGREGAR ELEMENTOS DINÁMICAMENTE ============
-
-function agregarCategoriaAlSelect(categoria) {
-    const select = document.getElementById('id_categoria');
+function validarPrecioDescuentoProductoInstantaneo(input) {
+    const tieneDescuento = document.getElementById('bTiene_descuento');
+    if (!tieneDescuento || !tieneDescuento.checked) return true;
     
-    const option = document.createElement('option');
-    option.value = categoria.id_categoria;
+    const precioVenta = parseFloat(document.getElementById('dPrecio_venta').value) || 0;
+    const precioDescuento = parseFloat(input.value) || 0;
+    const errorDiv = document.getElementById('error-precio-descuento');
     
-    let icono = categoria.id_categoria_padre ? '↳ ' : '🏠 ';
-    
-    option.innerHTML = icono + categoria.vNombre;
-    
-    select.appendChild(option);
-    select.value = categoria.id_categoria;
-}
-
-function agregarEtiquetaAlListado(etiqueta) {
-    const container = document.getElementById('etiquetas-container').querySelector('.row');
-    
-    const noEtiquetasMsg = document.getElementById('no-etiquetas-msg');
-    if (noEtiquetasMsg) {
-        noEtiquetasMsg.remove();
-    }
-    
-    const col = document.createElement('div');
-    col.className = 'col-md-6 col-6 mb-2 etiqueta-item';
-    col.setAttribute('data-etiqueta-id', etiqueta.id_etiqueta);
-    
-    const divCheck = document.createElement('div');
-    divCheck.className = 'form-check';
-    
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.name = 'etiquetas[]';
-    input.value = etiqueta.id_etiqueta;
-    input.className = 'form-check-input';
-    input.id = 'etiqueta_' + etiqueta.id_etiqueta;
-    input.checked = true;
-    
-    const label = document.createElement('label');
-    label.className = 'form-check-label';
-    label.htmlFor = 'etiqueta_' + etiqueta.id_etiqueta;
-    
-    const span = document.createElement('span');
-    span.className = 'badge bg-secondary';
-    span.textContent = etiqueta.vNombre;
-    
-    label.appendChild(span);
-    divCheck.appendChild(input);
-    divCheck.appendChild(label);
-    col.appendChild(divCheck);
-    container.appendChild(col);
-}
-
-function agregarAtributoAlListado(atributo) {
-    const container = document.getElementById('atributos-container');
-    const noAtributosMsg = document.getElementById('no-atributos-msg');
-    
-    if (noAtributosMsg) {
-        noAtributosMsg.remove();
-    }
-    
-    const col = document.createElement('div');
-    col.className = 'col-md-6 mb-4 atributo-item';
-    col.setAttribute('data-atributo-id', atributo.id_atributo);
-    
-    const card = document.createElement('div');
-    card.className = 'card border h-100';
-    
-    const cardHeader = document.createElement('div');
-    cardHeader.className = 'card-header bg-light d-flex justify-content-between align-items-center';
-    cardHeader.innerHTML = `
-        <div class="form-check">
-            <input type="checkbox" class="form-check-input atributo-activo-checkbox" 
-                   id="atributo-activo-${atributo.id_atributo}"
-                   data-atributo-id="${atributo.id_atributo}"
-                   data-atributo-nombre="${atributo.vNombre}">
-            <label class="form-check-label fw-bold" for="atributo-activo-${atributo.id_atributo}" style="color: #495057;">
-                ${atributo.vNombre}
-                <span class="badge bg-secondary ms-2">0 valores</span>
-            </label>
-        </div>
-        <div>
-            <span class="badge bg-warning text-dark atributo-estado-badge" id="estado-${atributo.id_atributo}" style="display: none;">
-                <i class="fas fa-check-circle me-1"></i>Activo
-            </span>
-            <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="mostrarFormularioValor(${atributo.id_atributo}, '${atributo.vNombre}')">
-                <i class="fas fa-plus-circle me-1"></i>Agregar Valor
-            </button>
-        </div>
-    `;
-    
-    const cardBody = document.createElement('div');
-    cardBody.className = 'card-body atributo-valores-container';
-    cardBody.id = `valores-container-${atributo.id_atributo}`;
-    cardBody.style.display = 'none';
-    cardBody.style.backgroundColor = 'white';
-    
-    const alertDiv = document.createElement('div');
-    alertDiv.className = 'alert alert-warning mb-0';
-    alertDiv.innerHTML = `
-        <i class="fas fa-exclamation-triangle me-2"></i>
-        Este atributo no tiene valores. 
-        <button type="button" class="btn btn-link p-0 ms-1" onclick="mostrarFormularioValor(${atributo.id_atributo}, '${atributo.vNombre}')">
-            Crear primer valor
-        </button>
-    `;
-    
-    cardBody.appendChild(alertDiv);
-    card.appendChild(cardHeader);
-    card.appendChild(cardBody);
-    col.appendChild(card);
-    container.appendChild(col);
-    
-    const checkbox = document.getElementById(`atributo-activo-${atributo.id_atributo}`);
-    if (checkbox) {
-        checkbox.addEventListener('change', function() {
-            const atributoId = this.dataset.atributoId;
-            const atributoNombre = this.dataset.atributoNombre;
-            const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
-            const estadoBadge = document.getElementById(`estado-${atributoId}`);
-            
-            if (this.checked) {
-                valoresContainer.style.display = 'block';
-                estadoBadge.style.display = 'inline-block';
-                
-                if (!atributosActivos[atributoId]) {
-                    atributosActivos[atributoId] = {
-                        id: atributoId,
-                        nombre: atributoNombre,
-                        valores: {}
-                    };
-                }
-            } else {
-                valoresContainer.style.display = 'none';
-                estadoBadge.style.display = 'none';
-                
-                const checkboxes = valoresContainer.querySelectorAll('.valor-checkbox');
-                checkboxes.forEach(cb => {
-                    cb.checked = false;
-                });
-                
-                delete atributosActivos[atributoId];
-                
-                const seleccionarTodos = document.getElementById(`seleccionar-todos-${atributoId}`);
-                if (seleccionarTodos) {
-                    seleccionarTodos.checked = false;
-                }
-            }
-            
-            actualizarPestanasValores();
-            actualizarResumenAtributos();
-        });
+    if (precioDescuento >= precioVenta && precioDescuento > 0 && input.value !== '') {
+        input.classList.add('is-invalid');
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
+        return false;
+    } else {
+        input.classList.remove('is-invalid');
+        errorDiv.style.display = 'none';
+        return true;
     }
 }
 
-function agregarValorAlAtributo(valor) {
-    const container = document.getElementById(`valores-container-${valor.id_atributo}`);
-    if (!container) return;
+function validarPrecioDescuentoProducto() {
+    const tieneDescuento = document.getElementById('bTiene_descuento');
+    if (!tieneDescuento || !tieneDescuento.checked) return true;
     
-    const alerta = container.querySelector('.alert-warning');
-    if (alerta) {
-        alerta.remove();
-    }
+    const precioVenta = parseFloat(document.getElementById('dPrecio_venta').value) || 0;
+    const precioDescuento = parseFloat(document.getElementById('dPrecio_descuento').value) || 0;
+    const input = document.getElementById('dPrecio_descuento');
+    const errorDiv = document.getElementById('error-precio-descuento');
     
-    let selectAllDiv = container.querySelector('.mb-3');
-    if (!selectAllDiv) {
-        selectAllDiv = document.createElement('div');
-        selectAllDiv.className = 'mb-3';
-        selectAllDiv.innerHTML = `
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input seleccionar-todos-checkbox" id="seleccionar-todos-${valor.id_atributo}" data-atributo-id="${valor.id_atributo}">
-                <label class="form-check-label" for="seleccionar-todos-${valor.id_atributo}">
-                    <strong>Seleccionar todos</strong>
-                </label>
-            </div>
-        `;
-        container.appendChild(selectAllDiv);
-        
-        const hr = document.createElement('hr');
-        hr.className = 'my-2';
-        container.appendChild(hr);
-        
-        const selectAllCheckbox = document.getElementById(`seleccionar-todos-${valor.id_atributo}`);
-        if (selectAllCheckbox) {
-            selectAllCheckbox.addEventListener('change', function() {
-                const atributoId = this.dataset.atributoId;
-                const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
-                const valorCheckboxes = valoresContainer.querySelectorAll('.valor-checkbox');
-                
-                valorCheckboxes.forEach(cb => {
-                    cb.checked = this.checked;
-                    
-                    const atributoNombre = cb.dataset.atributoNombre;
-                    const valorId = cb.value;
-                    const valorNombre = cb.dataset.valorNombre;
-                    
-                    if (this.checked) {
-                        if (!atributosActivos[atributoId]) {
-                            atributosActivos[atributoId] = {
-                                id: atributoId,
-                                nombre: atributoNombre,
-                                valores: {}
-                            };
-                        }
-                        atributosActivos[atributoId].valores[valorId] = {
-                            id: valorId,
-                            nombre: valorNombre,
-                            atributoId: atributoId,
-                            atributoNombre: atributoNombre
-                        };
-                    } else {
-                        if (atributosActivos[atributoId]) {
-                            delete atributosActivos[atributoId].valores[valorId];
-                            if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
-                                delete atributosActivos[atributoId];
-                            }
-                        }
-                    }
-                });
-                
-                actualizarPestanasValores();
-                actualizarResumenAtributos();
-            });
-        }
-    }
-    
-    let row = container.querySelector('.row:not(.mb-3)');
-    if (!row) {
-        row = document.createElement('div');
-        row.className = 'row';
-        container.appendChild(row);
-    }
-    
-    const col = document.createElement('div');
-    col.className = 'col-md-6 mb-2';
-    
-    const divCheck = document.createElement('div');
-    divCheck.className = 'form-check';
-    
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.name = `atributos[${valor.id_atributo}][]`;
-    input.value = valor.id_atributo_valor;
-    input.className = 'form-check-input valor-checkbox';
-    input.id = `valor-${valor.id_atributo_valor}`;
-    input.setAttribute('data-atributo-id', valor.id_atributo);
-    input.setAttribute('data-atributo-nombre', valor.atributo_nombre || '');
-    input.setAttribute('data-valor-nombre', valor.vValor);
-    
-    const label = document.createElement('label');
-    label.className = 'form-check-label';
-    label.htmlFor = `valor-${valor.id_atributo_valor}`;
-    label.textContent = valor.vValor;
-    
-    divCheck.appendChild(input);
-    divCheck.appendChild(label);
-    col.appendChild(divCheck);
-    row.appendChild(col);
-    
-    input.addEventListener('change', function() {
-        const atributoId = this.dataset.atributoId;
-        const atributoNombre = this.dataset.atributoNombre;
-        const valorId = this.value;
-        const valorNombre = this.dataset.valorNombre;
-        
-        const atributoActivo = document.getElementById(`atributo-activo-${atributoId}`);
-        if (!atributoActivo.checked) {
-            atributoActivo.checked = true;
-            atributoActivo.dispatchEvent(new Event('change'));
-        }
-        
-        if (!atributosActivos[atributoId]) {
-            atributosActivos[atributoId] = {
-                id: atributoId,
-                nombre: atributoNombre,
-                valores: {}
-            };
-        }
-        
-        if (this.checked) {
-            atributosActivos[atributoId].valores[valorId] = {
-                id: valorId,
-                nombre: valorNombre,
-                atributoId: atributoId,
-                atributoNombre: atributoNombre
-            };
-        } else {
-            delete atributosActivos[atributoId].valores[valorId];
-            if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
-                delete atributosActivos[atributoId];
-            }
-        }
-        
-        const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
-        const valorCheckboxes = valoresContainer.querySelectorAll('.valor-checkbox');
-        const seleccionarTodos = document.getElementById(`seleccionar-todos-${atributoId}`);
-        const seleccionados = valoresContainer.querySelectorAll('.valor-checkbox:checked');
-        
-        if (seleccionarTodos) {
-            if (seleccionados.length === valorCheckboxes.length) {
-                seleccionarTodos.checked = true;
-                seleccionarTodos.indeterminate = false;
-            } else if (seleccionados.length > 0) {
-                seleccionarTodos.checked = false;
-                seleccionarTodos.indeterminate = true;
-            } else {
-                seleccionarTodos.checked = false;
-                seleccionarTodos.indeterminate = false;
-            }
-        }
-        
-        actualizarPestanasValores();
-        actualizarResumenAtributos();
-    });
-    
-    const badge = container.closest('.card').querySelector('.badge.bg-secondary');
-    if (badge) {
-        const valorCount = container.querySelectorAll('.valor-checkbox').length;
-        badge.textContent = valorCount + ' valores';
+    if (precioDescuento >= precioVenta && precioDescuento > 0) {
+        input.classList.add('is-invalid');
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
+        return false;
+    } else {
+        input.classList.remove('is-invalid');
+        errorDiv.style.display = 'none';
+        return true;
     }
 }
-
-// ============ FUNCIONES DE VALIDACIÓN DE FECHAS Y PRECIOS ============
 
 function validarFechasDescuento() {
     const fechaInicio = document.getElementById('dFecha_inicio_descuento');
@@ -3154,47 +2356,6 @@ function validarFechasDescuentoVariacion(inicioId, finId, valorKey) {
         }
     }
     return true;
-}
-
-function validarPrecioDescuentoProductoInstantaneo(input) {
-    const tieneDescuento = document.getElementById('bTiene_descuento');
-    if (!tieneDescuento || !tieneDescuento.checked) return true;
-    
-    const precioVenta = parseFloat(document.getElementById('dPrecio_venta').value) || 0;
-    const precioDescuento = parseFloat(input.value) || 0;
-    const errorDiv = document.getElementById('error-precio-descuento');
-    
-    if (precioDescuento >= precioVenta && precioDescuento > 0 && input.value !== '') {
-        input.classList.add('is-invalid');
-        errorDiv.style.display = 'block';
-        errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
-        return false;
-    } else {
-        input.classList.remove('is-invalid');
-        errorDiv.style.display = 'none';
-        return true;
-    }
-}
-
-function validarPrecioDescuentoProducto() {
-    const tieneDescuento = document.getElementById('bTiene_descuento');
-    if (!tieneDescuento || !tieneDescuento.checked) return true;
-    
-    const precioVenta = parseFloat(document.getElementById('dPrecio_venta').value) || 0;
-    const precioDescuento = parseFloat(document.getElementById('dPrecio_descuento').value) || 0;
-    const input = document.getElementById('dPrecio_descuento');
-    const errorDiv = document.getElementById('error-precio-descuento');
-    
-    if (precioDescuento >= precioVenta && precioDescuento > 0) {
-        input.classList.add('is-invalid');
-        errorDiv.style.display = 'block';
-        errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
-        return false;
-    } else {
-        input.classList.remove('is-invalid');
-        errorDiv.style.display = 'none';
-        return true;
-    }
 }
 
 function validarPrecioDescuentoVariacionInstantaneo(input) {
@@ -3250,6 +2411,145 @@ function validarPrecioDescuentoVariacion(input) {
     }
     return true;
 }
+
+function toggleDescuentoVariacion(checkbox, valorKey) {
+    const fields = document.querySelector(`.descuento-fields-${valorKey}`);
+    const precioDescuento = document.getElementById(`precio_descuento-${valorKey}`);
+    const fechaInicio = document.getElementById(`fecha-inicio-${valorKey}`);
+    const fechaFin = document.getElementById(`fecha-fin-${valorKey}`);
+    const errorDiv = document.getElementById(`error-precio-descuento-${valorKey}`);
+    
+    if (checkbox.checked) {
+        fields.style.display = 'block';
+        precioDescuento.required = true;
+        fechaInicio.required = true;
+        fechaFin.required = true;
+        
+        setTimeout(() => {
+            validarPrecioDescuentoVariacion(precioDescuento);
+            actualizarPrecioFinalVariacion(valorKey);
+        }, 100);
+    } else {
+        fields.style.display = 'none';
+        precioDescuento.required = false;
+        fechaInicio.required = false;
+        fechaFin.required = false;
+        
+        precioDescuento.classList.remove('is-invalid');
+        if (errorDiv) errorDiv.style.display = 'none';
+        fechaFin.classList.remove('is-invalid');
+        document.getElementById(`error-fechas-descuento-${valorKey}`).style.display = 'none';
+        
+        actualizarPrecioFinalVariacion(valorKey);
+    }
+}
+
+// ============ FUNCIÓN DE CÁLCULO DE IMPUESTO Y PRECIO FINAL ============
+
+function actualizarPrecioFinal() {
+    const precioVentaInput = document.getElementById('dPrecio_venta');
+    const tieneDescuento = document.getElementById('bTiene_descuento')?.checked;
+    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
+    const impuestoSelect = document.getElementById('id_impuesto');
+    
+    if (!precioVentaInput) return;
+    
+    // Determinar qué precio usar (original o con descuento)
+    let precioBase = parseFloat(precioVentaInput.value) || 0;
+    let precioOriginal = precioBase;
+    
+    if (tieneDescuento && precioDescuentoInput && precioDescuentoInput.value) {
+        const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
+        if (precioDescuento > 0 && precioDescuento < precioBase) {
+            precioBase = precioDescuento;
+        }
+    }
+    
+    // Mostrar precio base (el que se usará para calcular impuestos)
+    document.getElementById('precio-base-display').textContent = '$' + precioBase.toFixed(2);
+    
+    // Mostrar precio original si hay descuento
+    const precioOriginalDisplay = document.getElementById('precio-original-display');
+    if (tieneDescuento && precioBase < precioOriginal) {
+        precioOriginalDisplay.style.display = 'block';
+        precioOriginalDisplay.textContent = 'Precio original: $' + precioOriginal.toFixed(2);
+        precioOriginalDisplay.className = 'text-muted';
+    } else {
+        precioOriginalDisplay.style.display = 'none';
+    }
+    
+    // Obtener impuesto seleccionado
+    let totalImpuestos = 0;
+    let porcentaje = 0;
+    
+    if (impuestoSelect && impuestoSelect.value) {
+        const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
+        porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
+        
+        totalImpuestos = precioBase * (porcentaje / 100);
+    }
+    
+    const precioFinal = precioBase + totalImpuestos;
+    
+    // Mostrar resultados
+    document.getElementById('total-impuestos-display').textContent = '$' + totalImpuestos.toFixed(2);
+    document.getElementById('precio-final-display').textContent = '$' + precioFinal.toFixed(2);
+    
+    if (porcentaje > 0) {
+        document.getElementById('porcentaje-impuestos-display').textContent = porcentaje.toFixed(2) + '%';
+    } else {
+        document.getElementById('porcentaje-impuestos-display').textContent = '0%';
+    }
+}
+
+function actualizarPrecioFinalVariacion(valorKey) {
+    const precioInput = document.getElementById(`precio-${valorKey}`);
+    const descuentoCheckbox = document.getElementById(`descuento-${valorKey}`);
+    const precioDescuentoInput = document.getElementById(`precio_descuento-${valorKey}`);
+    const impuestoSelect = document.getElementById(`impuesto-${valorKey}`);
+    const precioFinalSpan = document.getElementById(`precio-final-${valorKey}`);
+    const detalleImpuestoSpan = document.getElementById(`detalle-impuesto-${valorKey}`);
+    
+    if (!precioInput || !precioFinalSpan) return;
+    
+    // Determinar qué precio usar (original o con descuento)
+    let precioBase = parseFloat(precioInput.value) || 0;
+    
+    if (descuentoCheckbox && descuentoCheckbox.checked && precioDescuentoInput && precioDescuentoInput.value) {
+        const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
+        if (precioDescuento > 0 && precioDescuento < precioBase) {
+            precioBase = precioDescuento;
+        }
+    }
+    
+    // Obtener impuesto seleccionado
+    let totalImpuestos = 0;
+    let porcentaje = 0;
+    let nombreImpuesto = '';
+    
+    if (impuestoSelect && impuestoSelect.value) {
+        const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
+        porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
+        nombreImpuesto = selectedOption.text.split('(')[0].trim();
+        
+        totalImpuestos = precioBase * (porcentaje / 100);
+    }
+    
+    const precioFinal = precioBase + totalImpuestos;
+    
+    // Mostrar resultados
+    precioFinalSpan.textContent = '$' + precioFinal.toFixed(2);
+    
+    if (detalleImpuestoSpan) {
+        if (porcentaje > 0) {
+            detalleImpuestoSpan.textContent = `${nombreImpuesto}: ${porcentaje.toFixed(2)}% ($${totalImpuestos.toFixed(2)})`;
+        } else {
+            detalleImpuestoSpan.textContent = 'Sin impuesto';
+        }
+    }
+}
+
+// ============ FUNCIONES DE DIMENSIONES ============
 
 function validarDimension(input, maxDecimales, maxValor) {
     let value = input.value;
@@ -3396,255 +2696,7 @@ function permitirBorrado(e) {
     return false;
 }
 
-function validarSKU(input) {
-    input.value = input.value.replace(/[^A-Za-z0-9-]/g, '');
-    if (input.value.length > 50) {
-        input.value = input.value.substring(0, 50);
-    }
-    input.value = input.value.toUpperCase();
-    input.classList.remove('is-invalid');
-}
-
-function validarPrecio(input) {
-    let value = input.value;
-    const cursorPos = input.selectionStart;
-    
-    if (value === '') {
-        input.classList.remove('is-invalid');
-        return;
-    }
-    
-    value = value.replace(/[^0-9.]/g, '');
-    const puntos = value.split('.').length - 1;
-    if (puntos > 1) {
-        const partes = value.split('.');
-        value = partes[0] + '.' + partes.slice(1).join('');
-    }
-    value = value.replace(/\.{2,}/g, '.');
-    if (value.startsWith('.')) {
-        value = '0' + value;
-    }
-    
-    const partesNumero = value.split('.');
-    const parteEntera = partesNumero[0];
-    if (parteEntera.length > 7) {
-        value = parteEntera.substring(0, 7) + (partesNumero[1] ? '.' + partesNumero[1] : '');
-    }
-    if (value.includes('.')) {
-        const partes = value.split('.');
-        if (partes[1].length > 2) {
-            partes[1] = partes[1].substring(0, 2);
-            value = partes[0] + '.' + partes[1];
-        }
-    }
-    
-    if (input.value !== value) {
-        const oldValue = input.value;
-        input.value = value;
-        const cursorDiff = value.length - oldValue.length;
-        const newCursorPos = Math.max(0, Math.min(value.length, cursorPos + cursorDiff));
-        setTimeout(() => {
-            input.setSelectionRange(newCursorPos, newCursorPos);
-        }, 0);
-    }
-    input.classList.remove('is-invalid');
-    
-    if (input.id === 'dPrecio_descuento') {
-        validarPrecioDescuentoProductoInstantaneo(input);
-    }
-    
-    if (input.id === 'dPrecio_venta') {
-        actualizarPrecioFinal();
-    }
-}
-
-function validarStock(input) {
-    input.value = input.value.replace(/[^0-9]/g, '');
-    if (input.value.length > 6) {
-        input.value = input.value.substring(0, 6);
-    }
-    if (input.value && parseInt(input.value) < 0) {
-        input.value = '0';
-    }
-    if (input.value.length > 1 && input.value.startsWith('0')) {
-        input.value = input.value.replace(/^0+/, '');
-    }
-    if (input.value === '') {
-        input.value = '0';
-    }
-    input.classList.remove('is-invalid');
-}
-
-function toggleDescuentoFields() {
-    const descuentoFields = document.getElementById('descuentoFields');
-    const tieneDescuento = document.getElementById('bTiene_descuento').checked;
-    const precioDescuento = document.getElementById('dPrecio_descuento');
-    const fechaInicio = document.getElementById('dFecha_inicio_descuento');
-    const fechaFin = document.getElementById('dFecha_fin_descuento');
-    
-    if (tieneDescuento) {
-        descuentoFields.style.display = 'block';
-        precioDescuento.required = true;
-        fechaInicio.required = true;
-        fechaFin.required = true;
-        
-        setTimeout(() => {
-            validarPrecioDescuentoProducto();
-            actualizarPrecioFinal();
-        }, 100);
-    } else {
-        descuentoFields.style.display = 'none';
-        precioDescuento.required = false;
-        fechaInicio.required = false;
-        fechaFin.required = false;
-        
-        precioDescuento.classList.remove('is-invalid');
-        document.getElementById('error-precio-descuento').style.display = 'none';
-        fechaFin.classList.remove('is-invalid');
-        document.getElementById('error-fechas-descuento').style.display = 'none';
-        
-        actualizarPrecioFinal();
-    }
-}
-
-function toggleDescuentoVariacion(checkbox, valorKey) {
-    const fields = document.querySelector(`.descuento-fields-${valorKey}`);
-    const precioDescuento = document.getElementById(`precio_descuento-${valorKey}`);
-    const fechaInicio = document.getElementById(`fecha-inicio-${valorKey}`);
-    const fechaFin = document.getElementById(`fecha-fin-${valorKey}`);
-    const errorDiv = document.getElementById(`error-precio-descuento-${valorKey}`);
-    
-    if (checkbox.checked) {
-        fields.style.display = 'block';
-        precioDescuento.required = true;
-        fechaInicio.required = true;
-        fechaFin.required = true;
-        
-        setTimeout(() => {
-            validarPrecioDescuentoVariacion(precioDescuento);
-            actualizarPrecioFinalVariacion(valorKey);
-        }, 100);
-    } else {
-        fields.style.display = 'none';
-        precioDescuento.required = false;
-        fechaInicio.required = false;
-        fechaFin.required = false;
-        
-        precioDescuento.classList.remove('is-invalid');
-        if (errorDiv) errorDiv.style.display = 'none';
-        fechaFin.classList.remove('is-invalid');
-        document.getElementById(`error-fechas-descuento-${valorKey}`).style.display = 'none';
-        
-        actualizarPrecioFinalVariacion(valorKey);
-    }
-}
-
-// ============ FUNCIÓN DE CÁLCULO DE IMPUESTO Y PRECIO FINAL ============
-
-function actualizarPrecioFinal() {
-    const precioVentaInput = document.getElementById('dPrecio_venta');
-    const tieneDescuento = document.getElementById('bTiene_descuento')?.checked;
-    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
-    const impuestoSelect = document.getElementById('id_impuesto');
-    
-    if (!precioVentaInput) return;
-    
-    // Determinar qué precio usar (original o con descuento)
-    let precioBase = parseFloat(precioVentaInput.value) || 0;
-    let precioOriginal = precioBase;
-    
-    if (tieneDescuento && precioDescuentoInput && precioDescuentoInput.value) {
-        const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
-        if (precioDescuento > 0 && precioDescuento < precioBase) {
-            precioBase = precioDescuento;
-        }
-    }
-    
-    // Mostrar precio base (el que se usará para calcular impuestos)
-    document.getElementById('precio-base-display').textContent = '$' + precioBase.toFixed(2);
-    
-    // Mostrar precio original si hay descuento
-    const precioOriginalDisplay = document.getElementById('precio-original-display');
-    if (tieneDescuento && precioBase < precioOriginal) {
-        precioOriginalDisplay.style.display = 'block';
-        precioOriginalDisplay.textContent = 'Precio original: $' + precioOriginal.toFixed(2);
-        precioOriginalDisplay.className = 'text-muted';
-    } else {
-        precioOriginalDisplay.style.display = 'none';
-    }
-    
-    // Obtener impuesto seleccionado
-    let totalImpuestos = 0;
-    let porcentaje = 0;
-    
-    if (impuestoSelect && impuestoSelect.value) {
-        const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
-        porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
-        
-        totalImpuestos = precioBase * (porcentaje / 100);
-    }
-    
-    const precioFinal = precioBase + totalImpuestos;
-    
-    // Mostrar resultados
-    document.getElementById('total-impuestos-display').textContent = '$' + totalImpuestos.toFixed(2);
-    document.getElementById('precio-final-display').textContent = '$' + precioFinal.toFixed(2);
-    
-    if (porcentaje > 0) {
-        document.getElementById('porcentaje-impuestos-display').textContent = porcentaje.toFixed(2) + '%';
-    } else {
-        document.getElementById('porcentaje-impuestos-display').textContent = '0%';
-    }
-}
-
-function actualizarPrecioFinalVariacion(valorKey) {
-    const precioInput = document.getElementById(`precio-${valorKey}`);
-    const descuentoCheckbox = document.getElementById(`descuento-${valorKey}`);
-    const precioDescuentoInput = document.getElementById(`precio_descuento-${valorKey}`);
-    const impuestoSelect = document.getElementById(`impuesto-${valorKey}`);
-    const precioFinalSpan = document.getElementById(`precio-final-${valorKey}`);
-    const detalleImpuestoSpan = document.getElementById(`detalle-impuesto-${valorKey}`);
-    
-    if (!precioInput || !precioFinalSpan) return;
-    
-    // Determinar qué precio usar (original o con descuento)
-    let precioBase = parseFloat(precioInput.value) || 0;
-    
-    if (descuentoCheckbox && descuentoCheckbox.checked && precioDescuentoInput && precioDescuentoInput.value) {
-        const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
-        if (precioDescuento > 0 && precioDescuento < precioBase) {
-            precioBase = precioDescuento;
-        }
-    }
-    
-    // Obtener impuesto seleccionado
-    let totalImpuestos = 0;
-    let porcentaje = 0;
-    let nombreImpuesto = '';
-    
-    if (impuestoSelect && impuestoSelect.value) {
-        const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
-        porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
-        nombreImpuesto = selectedOption.text.split('(')[0].trim();
-        
-        totalImpuestos = precioBase * (porcentaje / 100);
-    }
-    
-    const precioFinal = precioBase + totalImpuestos;
-    
-    // Mostrar resultados
-    precioFinalSpan.textContent = '$' + precioFinal.toFixed(2);
-    
-    if (detalleImpuestoSpan) {
-        if (porcentaje > 0) {
-            detalleImpuestoSpan.textContent = `${nombreImpuesto}: ${porcentaje.toFixed(2)}% ($${totalImpuestos.toFixed(2)})`;
-        } else {
-            detalleImpuestoSpan.textContent = 'Sin impuesto';
-        }
-    }
-}
-
-// ============ FUNCIONES DE IMÁGENES Y VIDEO DEL PRODUCTO PRINCIPAL ============
+// ============ FUNCIONES DE IMÁGENES ============
 
 function calcularTamañoTotal() {
     let total = 0;
@@ -3705,6 +2757,19 @@ function actualizarBarraProgresoTamaño() {
         limiteMsg.style.display = 'none';
         document.getElementById('btnSubmit').disabled = false;
     }
+}
+
+function actualizarContadorImagenes() {
+    let total = (imagenPrincipalFile ? 1 : 0) + (gifFile ? 1 : 0) + selectedImages.length;
+    
+    // Agregar imágenes de variaciones
+    Object.keys(imagenesVariacion).forEach(valorKey => {
+        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+            total += imagenesVariacion[valorKey].imagenes.length;
+        }
+    });
+    
+    document.getElementById('total-imagenes').textContent = total;
 }
 
 function previewImagenPrincipal(input) {
@@ -3820,200 +2885,6 @@ function cancelarGif() {
     gifFile = null;
     actualizarBarraProgresoTamaño();
     actualizarContadorImagenes();
-}
-
-// ============ FUNCIONES PARA IMÁGENES DE CATEGORÍA ============
-
-function previewImagenCategoria(input) {
-    const preview = document.getElementById('categoriaImagePreview');
-    const previewImg = document.getElementById('categoriaPreviewImg');
-    
-    if (input.files && input.files.length > 0) {
-        const file = input.files[0];
-        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-        
-        if (!validTypes.includes(file.type)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Formato no válido',
-                text: 'Solo se permiten imágenes JPG, JPEG, PNG o WebP'
-            });
-            input.value = '';
-            return;
-        }
-        
-        categoriaImagenFile = file;
-        
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-            previewImg.src = e.target.result;
-            preview.style.display = 'block';
-        }
-        
-        reader.readAsDataURL(file);
-    }
-}
-
-function cancelarImagenCategoria() {
-    const preview = document.getElementById('categoriaImagePreview');
-    const fileInput = document.getElementById('vImagen_categoria');
-    
-    preview.style.display = 'none';
-    fileInput.value = '';
-    categoriaImagenFile = null;
-}
-
-function resetearInputImagen() {
-    const fileInput = document.getElementById('vImagen_categoria');
-    fileInput.value = '';
-    document.getElementById('categoriaImagePreview').style.display = 'none';
-    categoriaImagenFile = null;
-}
-
-function limpiarFormularioCategoria() {
-    document.getElementById('vNombre_categoria').value = '';
-    document.getElementById('vSlug_categoria').value = '';
-    document.getElementById('id_categoria_padre_quick').value = '';
-    document.getElementById('tDescripcion_categoria').value = '';
-    document.getElementById('bActivo_categoria').checked = true;
-    document.getElementById('vImagen_categoria').value = '';
-    document.getElementById('categoriaImagePreview').style.display = 'none';
-    categoriaImagenFile = null;
-}
-
-function limpiarFormularioMarca() {
-    document.getElementById('vNombre_marca').value = '';
-    document.getElementById('tDescripcion_marca').value = '';
-}
-
-function limpiarFormularioEtiqueta() {
-    document.getElementById('vNombre_eti').value = '';
-    document.getElementById('tDescripcion_eti').value = '';
-}
-
-function limpiarFormularioImpuesto() {
-    document.getElementById('vNombre_impuesto').value = '';
-    document.getElementById('eTipo_impuesto').value = '';
-    document.getElementById('dPorcentaje_impuesto').value = '';
-    document.getElementById('tDescripcion_impuesto').value = '';
-    document.getElementById('bActivo_impuesto').checked = true;
-}
-
-// ============ FUNCIONES PARA VALORES DE ATRIBUTOS ============
-
-function mostrarFormularioValor(atributoId, atributoNombre) {
-    document.getElementById('atributoNombreModal').textContent = atributoNombre;
-    document.getElementById('valor_atributo_id').value = atributoId;
-    document.getElementById('vValor_modal').value = '';
-    document.getElementById('vSlug_valor_modal').value = '';
-    document.getElementById('bActivo_valor_modal').checked = true;
-    
-    valorModal.show();
-}
-
-function generarSlugValor(valor) {
-    if (!valor) {
-        document.getElementById('vSlug_valor_modal').value = '';
-        return;
-    }
-    
-    let slug = valor.toLowerCase();
-    slug = slug.replace(/á/gi, 'a');
-    slug = slug.replace(/é/gi, 'e');
-    slug = slug.replace(/í/gi, 'i');
-    slug = slug.replace(/ó/gi, 'o');
-    slug = slug.replace(/ú/gi, 'u');
-    slug = slug.replace(/ñ/gi, 'n');
-    slug = slug.replace(/[^a-z0-9\s]/g, '');
-    slug = slug.replace(/\s+/g, '-');
-    slug = slug.replace(/-+/g, '-');
-    slug = slug.replace(/^-+/, '').replace(/-+$/, '');
-    
-    document.getElementById('vSlug_valor_modal').value = slug;
-}
-
-function guardarValorAtributo() {
-    const atributoId = document.getElementById('valor_atributo_id').value;
-    const vValor = document.getElementById('vValor_modal').value.trim();
-    const vSlug = document.getElementById('vSlug_valor_modal').value.trim();
-    const bActivo = document.getElementById('bActivo_valor_modal').checked ? 1 : 0;
-    
-    if (!vValor) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'El valor es obligatorio'
-        });
-        return;
-    }
-    
-    Swal.fire({
-        title: 'Creando valor...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
-    
-    fetch(`/atributos/${atributoId}/valores-quick`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            vValor: vValor,
-            vSlug: vSlug,
-            bActivo: bActivo
-        })
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => { throw err; });
-        }
-        return response.json();
-    })
-    .then(data => {
-        Swal.close();
-        
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: data.message || 'Valor creado exitosamente',
-                timer: 2000,
-                showConfirmButton: false
-            });
-            
-            valorModal.hide();
-            
-            agregarValorAlAtributo(data.valor);
-            
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: data.message || 'Error al crear el valor'
-            });
-        }
-    })
-    .catch(error => {
-        Swal.close();
-        
-        let errorMessage = 'Error en la solicitud';
-        if (error.errors) {
-            errorMessage = Object.values(error.errors).flat().join(', ');
-        } else if (error.message) {
-            errorMessage = error.message;
-        }
-        
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: errorMessage
-        });
-    });
 }
 
 function handleImageSelection(event) {
@@ -4199,213 +3070,110 @@ function renderSelectedImages() {
     });
 }
 
-function actualizarContadorImagenes() {
-    let total = (imagenPrincipalFile ? 1 : 0) + (gifFile ? 1 : 0) + selectedImages.length;
+function validarTamañoTotalAntesDeEnviar() {
+    const totalSize = calcularTamañoTotal();
+    const maxSize = 50 * 1024 * 1024; // 50MB
     
-    // Agregar imágenes de variaciones
-    Object.keys(imagenesVariacion).forEach(valorKey => {
-        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
-            total += imagenesVariacion[valorKey].imagenes.length;
+    // Lista de archivos para mostrar al usuario
+    let archivosGrandes = [];
+    
+    // Verificar archivos individualmente
+    if (imagenPrincipalFile && imagenPrincipalFile.size > 5 * 1024 * 1024) {
+        archivosGrandes.push(`Imagen principal: ${(imagenPrincipalFile.size / (1024 * 1024)).toFixed(2)}MB (máx 5MB)`);
+    }
+    
+    if (gifFile && gifFile.size > 10 * 1024 * 1024) {
+        archivosGrandes.push(`GIF: ${(gifFile.size / (1024 * 1024)).toFixed(2)}MB (máx 10MB)`);
+    }
+    
+    selectedImages.forEach(img => {
+        if (img.file.size > 5 * 1024 * 1024) {
+            archivosGrandes.push(`Imagen adicional "${img.file.name}": ${(img.file.size / (1024 * 1024)).toFixed(2)}MB (máx 5MB)`);
         }
     });
     
-    document.getElementById('total-imagenes').textContent = total;
+    // Verificar imágenes de variaciones
+    Object.keys(imagenesVariacion).forEach(valorKey => {
+        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+            imagenesVariacion[valorKey].imagenes.forEach(img => {
+                if (img.file.size > 5 * 1024 * 1024) {
+                    archivosGrandes.push(`Imagen adicional de variación "${img.name}": ${(img.file.size / (1024 * 1024)).toFixed(2)}MB (máx 5MB)`);
+                }
+            });
+        }
+    });
+    
+    if (archivosGrandes.length > 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Archivos demasiado grandes',
+            html: `
+                <div class="text-left">
+                    <p class="mb-3">Los siguientes archivos exceden su límite individual:</p>
+                    <ul class="text-left">
+                        ${archivosGrandes.map(msg => `<li class="mb-2">⚠️ ${msg}</li>`).join('')}
+                    </ul>
+                    <hr>
+                    <p class="text-muted small mb-0">Por favor, reduce el tamaño de estos archivos antes de continuar.</p>
+                </div>
+            `,
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#3085d6'
+        });
+        return false;
+    }
+    
+    if (totalSize > maxSize) {
+        const exceso = totalSize - maxSize;
+        
+        Swal.fire({
+            icon: 'error',
+            title: 'Archivos demasiado grandes',
+            html: `
+                <div class="text-center">
+                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                    <h5 class="mb-3">El tamaño total excede el límite del servidor</h5>
+                    <p class="mb-2"><strong>Tamaño actual:</strong> ${(totalSize / (1024 * 1024)).toFixed(2)}MB</p>
+                    <p class="mb-2"><strong>Límite permitido:</strong> 50MB</p>
+                    <p class="mb-3"><strong>Debes reducir:</strong> ${(exceso / (1024 * 1024)).toFixed(2)}MB</p>
+                    
+                    <div class="bg-light p-3 rounded mt-3">
+                        <p class="fw-bold mb-2">📊 Desglose de archivos:</p>
+                        <ul class="text-left small">
+                            ${imagenPrincipalFile ? `<li>📷 Imagen principal: ${(imagenPrincipalFile.size / (1024 * 1024)).toFixed(2)}MB</li>` : ''}
+                            ${gifFile ? `<li>🎬 GIF: ${(gifFile.size / (1024 * 1024)).toFixed(2)}MB</li>` : ''}
+                            ${selectedImages.map(img => `<li>🖼️ ${img.file.name.substring(0, 20)}...: ${(img.file.size / (1024 * 1024)).toFixed(2)}MB</li>`).join('')}
+                        </ul>
+                    </div>
+                    
+                    <hr>
+                    <p class="text-muted small mt-3">💡 Recomendaciones:</p>
+                    <ul class="text-left small">
+                        <li>Comprime las imágenes antes de subirlas</li>
+                        <li>Sube menos imágenes adicionales</li>
+                    </ul>
+                </div>
+            `,
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#3085d6',
+            width: '600px'
+        });
+        return false;
+    }
+    
+    if (!imagenPrincipalFile) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Imagen principal requerida',
+            text: 'Debes seleccionar una imagen principal para el producto'
+        });
+        return false;
+    }
+    
+    return true;
 }
 
 // ============ FUNCIONES DE ATRIBUTOS Y VARIACIONES ============
-
-document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
-    checkbox.addEventListener('change', function() {
-        const atributoId = this.dataset.atributoId;
-        const atributoNombre = this.dataset.atributoNombre;
-        const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
-        const estadoBadge = document.getElementById(`estado-${atributoId}`);
-        
-        if (this.checked) {
-            valoresContainer.style.display = 'block';
-            estadoBadge.style.display = 'inline-block';
-            
-            if (!atributosActivos[atributoId]) {
-                atributosActivos[atributoId] = {
-                    id: atributoId,
-                    nombre: atributoNombre,
-                    valores: {}
-                };
-            }
-        } else {
-            valoresContainer.style.display = 'none';
-            estadoBadge.style.display = 'none';
-            
-            const checkboxes = valoresContainer.querySelectorAll('.valor-checkbox');
-            checkboxes.forEach(cb => {
-                cb.checked = false;
-            });
-            
-            delete atributosActivos[atributoId];
-            
-            const seleccionarTodos = document.getElementById(`seleccionar-todos-${atributoId}`);
-            if (seleccionarTodos) {
-                seleccionarTodos.checked = false;
-            }
-        }
-        
-        actualizarPestanasValores();
-        actualizarResumenAtributos();
-    });
-});
-
-document.querySelectorAll('.seleccionar-todos-checkbox').forEach(checkbox => {
-    checkbox.addEventListener('change', function() {
-        const atributoId = this.dataset.atributoId;
-        const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
-        const valorCheckboxes = valoresContainer.querySelectorAll('.valor-checkbox');
-        
-        valorCheckboxes.forEach(cb => {
-            cb.checked = this.checked;
-            
-            const atributoNombre = cb.dataset.atributoNombre;
-            const valorId = cb.value;
-            const valorNombre = cb.dataset.valorNombre;
-            
-            if (this.checked) {
-                if (!atributosActivos[atributoId]) {
-                    atributosActivos[atributoId] = {
-                        id: atributoId,
-                        nombre: atributoNombre,
-                        valores: {}
-                    };
-                }
-                atributosActivos[atributoId].valores[valorId] = {
-                    id: valorId,
-                    nombre: valorNombre,
-                    atributoId: atributoId,
-                    atributoNombre: atributoNombre
-                };
-            } else {
-                if (atributosActivos[atributoId]) {
-                    delete atributosActivos[atributoId].valores[valorId];
-                    if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
-                        delete atributosActivos[atributoId];
-                    }
-                }
-            }
-        });
-        
-        actualizarPestanasValores();
-        actualizarResumenAtributos();
-    });
-});
-
-document.querySelectorAll('.valor-checkbox').forEach(checkbox => {
-    checkbox.addEventListener('change', function() {
-        const atributoId = this.dataset.atributoId;
-        const atributoNombre = this.dataset.atributoNombre;
-        const valorId = this.value;
-        const valorNombre = this.dataset.valorNombre;
-        
-        const atributoActivo = document.getElementById(`atributo-activo-${atributoId}`);
-        if (!atributoActivo.checked) {
-            atributoActivo.checked = true;
-            atributoActivo.dispatchEvent(new Event('change'));
-        }
-        
-        if (!atributosActivos[atributoId]) {
-            atributosActivos[atributoId] = {
-                id: atributoId,
-                nombre: atributoNombre,
-                valores: {}
-            };
-        }
-        
-        if (this.checked) {
-            atributosActivos[atributoId].valores[valorId] = {
-                id: valorId,
-                nombre: valorNombre,
-                atributoId: atributoId,
-                atributoNombre: atributoNombre
-            };
-        } else {
-            delete atributosActivos[atributoId].valores[valorId];
-            if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
-                delete atributosActivos[atributoId];
-            }
-        }
-        
-        const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
-        const valorCheckboxes = valoresContainer.querySelectorAll('.valor-checkbox');
-        const seleccionarTodos = document.getElementById(`seleccionar-todos-${atributoId}`);
-        const seleccionados = valoresContainer.querySelectorAll('.valor-checkbox:checked');
-        
-        if (seleccionarTodos) {
-            if (seleccionados.length === valorCheckboxes.length) {
-                seleccionarTodos.checked = true;
-                seleccionarTodos.indeterminate = false;
-            } else if (seleccionados.length > 0) {
-                seleccionarTodos.checked = false;
-                seleccionarTodos.indeterminate = true;
-            } else {
-                seleccionarTodos.checked = false;
-                seleccionarTodos.indeterminate = false;
-            }
-        }
-        
-        actualizarPestanasValores();
-        actualizarResumenAtributos();
-    });
-});
-
-function actualizarResumenAtributos() {
-    const resumenDiv = document.getElementById('resumen-atributos');
-    const lista = document.getElementById('atributos-activos-lista');
-    const totalAtributosBadge = document.getElementById('total-atributos-activos-badge');
-    
-    lista.innerHTML = '';
-    let atributosCount = 0;
-    let totalValores = 0;
-    
-    Object.values(atributosActivos).forEach(atributo => {
-        const valoresArray = Object.values(atributo.valores);
-        if (valoresArray.length > 0) {
-            atributosCount++;
-            totalValores += valoresArray.length;
-            
-            const item = document.createElement('div');
-            item.className = 'p-2 bg-white border rounded';
-            
-            const span1 = document.createElement('span');
-            span1.className = 'fw-bold text-primary';
-            span1.textContent = atributo.nombre + ': ';
-            
-            const span2 = document.createElement('span');
-            span2.className = 'badge bg-success ms-2';
-            span2.textContent = valoresArray.length + ' valores';
-            
-            const div = document.createElement('div');
-            div.className = 'mt-1 small';
-            
-            valoresArray.forEach(v => {
-                const badge = document.createElement('span');
-                badge.className = 'badge bg-light text-dark me-1';
-                badge.textContent = v.nombre;
-                div.appendChild(badge);
-            });
-            
-            item.appendChild(span1);
-            item.appendChild(span2);
-            item.appendChild(div);
-            
-            lista.appendChild(item);
-        }
-    });
-    
-    if (atributosCount > 0) {
-        resumenDiv.style.display = 'block';
-        totalAtributosBadge.textContent = atributosCount + ' atributos activos (' + totalValores + ' valores)';
-    } else {
-        resumenDiv.style.display = 'none';
-        totalAtributosBadge.textContent = '0 atributos activos';
-    }
-}
 
 function actualizarPestanasValores() {
     const tabsContainer = document.getElementById('valores-activos-tabs-container');
@@ -4504,7 +3272,7 @@ function actualizarPestanasValores() {
                         <div class="col-md-4 text-end">
                             <span class="badge bg-white text-dark p-2">
                                 <i class="fas fa-barcode me-1"></i>
-                                SKU: ${skuSugerido}
+                                SKU Sugerido: ${skuSugerido}
                             </span>
                         </div>
                     </div>
@@ -4611,7 +3379,8 @@ function actualizarPestanasValores() {
                                        value="${skuSugerido}"
                                        maxlength="50"
                                        required
-                                       oninput="validarSKU(this)"
+                                       oninput="validarSKU(this); verificarSKUVariacionLocal(this, '${valorKey}')"
+                                       onblur="verificarSKUVariacionLocal(this, '${valorKey}')"
                                        pattern="[A-Za-z0-9-]+"
                                        title="Solo letras, números y guiones"
                                        placeholder="Ej: ${skuSugerido}"
@@ -4621,7 +3390,7 @@ function actualizarPestanasValores() {
                             </div>
                             <small class="form-text text-muted">
                                 <i class="fas fa-lightbulb me-1"></i>
-                                Sugerido: ${skuSugerido}
+                                El SKU debe ser único
                             </small>
                         </div>
                     </div>
@@ -4639,9 +3408,6 @@ function actualizarPestanasValores() {
                                     Variación activa
                                 </label>
                             </div>
-                            <small class="form-text text-muted d-block">
-                                Desactivar para ocultar esta variación
-                            </small>
                         </div>
                     </div>
                 </div>
@@ -4986,6 +3752,59 @@ function generarSkuSugerido(productoSku, combinacion) {
     return sku;
 }
 
+function actualizarResumenAtributos() {
+    const resumenDiv = document.getElementById('resumen-atributos');
+    const lista = document.getElementById('atributos-activos-lista');
+    const totalAtributosBadge = document.getElementById('total-atributos-activos-badge');
+    
+    lista.innerHTML = '';
+    let atributosCount = 0;
+    let totalValores = 0;
+    
+    Object.values(atributosActivos).forEach(atributo => {
+        const valoresArray = Object.values(atributo.valores);
+        if (valoresArray.length > 0) {
+            atributosCount++;
+            totalValores += valoresArray.length;
+            
+            const item = document.createElement('div');
+            item.className = 'p-2 bg-white border rounded';
+            
+            const span1 = document.createElement('span');
+            span1.className = 'fw-bold text-primary';
+            span1.textContent = atributo.nombre + ': ';
+            
+            const span2 = document.createElement('span');
+            span2.className = 'badge bg-success ms-2';
+            span2.textContent = valoresArray.length + ' valores';
+            
+            const div = document.createElement('div');
+            div.className = 'mt-1 small';
+            
+            valoresArray.forEach(v => {
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-light text-dark me-1';
+                badge.textContent = v.nombre;
+                div.appendChild(badge);
+            });
+            
+            item.appendChild(span1);
+            item.appendChild(span2);
+            item.appendChild(div);
+            
+            lista.appendChild(item);
+        }
+    });
+    
+    if (atributosCount > 0) {
+        resumenDiv.style.display = 'block';
+        totalAtributosBadge.textContent = atributosCount + ' atributos activos (' + totalValores + ' valores)';
+    } else {
+        resumenDiv.style.display = 'none';
+        totalAtributosBadge.textContent = '0 atributos activos';
+    }
+}
+
 // ============ FUNCIONES PARA IMÁGENES DE VARIACIONES ============
 
 function previewImagenPrincipalVariacion(input, previewId) {
@@ -5245,492 +4064,1411 @@ function eliminarImagenAdicionalVariacion(valorKey, imageId) {
     }
 }
 
-function activarTabAtributos() {
-    const tab = document.getElementById('atributos-tab');
-    if (tab) {
-        tab.click();
-        tab.scrollIntoView({ behavior: 'smooth' });
-    }
+// ============ FUNCIONES PARA MODALES Y CREACIÓN RÁPIDA ============
+
+function abrirModalCategoria() {
+    document.getElementById('vNombre_categoria_modal').value = '';
+    document.getElementById('vSlug_categoria_modal').value = '';
+    document.getElementById('id_categoria_padre_modal').value = '';
+    document.getElementById('tDescripcion_categoria_modal').value = '';
+    document.getElementById('vImagen_categoria_modal').value = '';
+    document.getElementById('categoriaModalImagePreview').style.display = 'none';
+    document.getElementById('bActivo_categoria_modal').checked = true;
+    categoriaModalImagenFile = null;
+    modalCategoria.show();
 }
 
-function activarTabEtiquetas() {
-    const tab = document.getElementById('etiquetas-tab');
-    if (tab) {
-        tab.click();
-        tab.scrollIntoView({ behavior: 'smooth' });
-    }
+function abrirModalMarca() {
+    document.getElementById('vNombre_marca_modal').value = '';
+    document.getElementById('tDescripcion_marca_modal').value = '';
+    modalMarca.show();
 }
 
-function activarTabImpuestos() {
-    const tab = document.getElementById('impuestos-tab');
-    if (tab) {
-        tab.click();
-        tab.scrollIntoView({ behavior: 'smooth' });
-    }
+function abrirModalEtiqueta() {
+    document.getElementById('vNombre_eti_modal').value = '';
+    document.getElementById('tDescripcion_eti_modal').value = '';
+    modalEtiqueta.show();
 }
 
-// ============ EVENT LISTENERS ============
+function abrirModalAtributo() {
+    document.getElementById('vNombre_attr_modal').value = '';
+    document.getElementById('vSlug_attr_modal').value = '';
+    document.getElementById('tDescripcion_attr_modal').value = '';
+    modalAtributo.show();
+}
 
-document.addEventListener('DOMContentLoaded', function() {
-    const pesoInput = document.getElementById('dPeso');
-    if (pesoInput) {
-        pesoInput.addEventListener('blur', function() {
-            formatearPeso(this);
-        });
-    }
-    
-    const dimensionInputs = ['dLargo_cm', 'dAncho_cm', 'dAlto_cm'];
-    dimensionInputs.forEach(id => {
-        const input = document.getElementById(id);
-        if (input) {
-            input.addEventListener('blur', function() {
-                formatearDimensionCm(this);
-            });
-        }
-    });
+function abrirModalImpuesto() {
+    document.getElementById('vNombre_impuesto_modal').value = '';
+    document.getElementById('eTipo_impuesto_modal').value = '';
+    document.getElementById('dPorcentaje_impuesto_modal').value = '';
+    document.getElementById('tDescripcion_impuesto_modal').value = '';
+    document.getElementById('bActivo_impuesto_modal').checked = true;
+    modalImpuesto.show();
+}
 
-    const precioVenta = document.getElementById('dPrecio_venta');
-    if (precioVenta) {
-        precioVenta.addEventListener('input', function() {
-            if (document.getElementById('bTiene_descuento')?.checked) {
-                validarPrecioDescuentoProducto();
-            }
-            actualizarPrecioFinal();
-        });
-    }
-    
-    document.getElementById('dPrecio_descuento')?.addEventListener('input', function() {
-        actualizarPrecioFinal();
-    });
-    
-    document.getElementById('id_impuesto')?.addEventListener('change', actualizarPrecioFinal);
-    
-    if (document.getElementById('bTiene_descuento')) {
-        if (document.getElementById('bTiene_descuento').checked) {
-            toggleDescuentoFields();
-        }
-    }
-    
-    document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
-        if (checkbox.checked) {
-            checkbox.dispatchEvent(new Event('change'));
-        }
-    });
-    
-    document.getElementById('selected-images-count').textContent = '0 archivos';
-    
-    renderSelectedImages();
-    actualizarResumenAtributos();
-    actualizarPestanasValores();
-    actualizarContadorImagenes();
-    actualizarPrecioFinal();
-    
-    // Delegación de eventos para los selects de impuestos de variaciones
-    document.addEventListener('change', function(e) {
-        if (e.target.id && e.target.id.startsWith('impuesto-')) {
-            const valorKey = e.target.id.replace('impuesto-', '');
-            actualizarPrecioFinalVariacion(valorKey);
-        }
-    });
-    
-    document.addEventListener('input', function(e) {
-        if (e.target.id && e.target.id.startsWith('precio-') && !e.target.id.startsWith('precio_descuento-')) {
-            const valorKey = e.target.id.replace('precio-', '');
-            actualizarPrecioFinalVariacion(valorKey);
-        }
-    });
-    
-    const productoForm = document.getElementById('productoForm');
-    if (productoForm) {
-        productoForm.addEventListener('submit', function(e) {
-            const totalSize = calcularTamañoTotal();
-            if (totalSize > maxTotalSize) {
-                e.preventDefault();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Límite de tamaño excedido',
-                    text: `El tamaño total de los archivos (${(totalSize / (1024 * 1024)).toFixed(2)}MB) excede el límite permitido de 50MB.`
-                });
-                return false;
-            }
-        });
-    }
-});
+function mostrarFormularioValor(atributoId, atributoNombre) {
+    document.getElementById('atributoNombreModal').textContent = atributoNombre;
+    document.getElementById('valor_atributo_id').value = atributoId;
+    document.getElementById('vValor_modal').value = '';
+    document.getElementById('vSlug_valor_modal').value = '';
+    document.getElementById('bActivo_valor_modal').checked = true;
+    valorModal.show();
+}
 
-// ============ FUNCIÓN PRINCIPAL DE ENVÍO DEL FORMULARIO ============
+function generarSlugValor(valor) {
+    if (!valor) {
+        document.getElementById('vSlug_valor_modal').value = '';
+        return;
+    }
+    
+    let slug = valor.toLowerCase();
+    slug = slug.replace(/á/g, 'a');
+    slug = slug.replace(/é/g, 'e');
+    slug = slug.replace(/í/g, 'i');
+    slug = slug.replace(/ó/g, 'o');
+    slug = slug.replace(/ú/g, 'u');
+    slug = slug.replace(/ñ/g, 'n');
+    slug = slug.replace(/[^a-z0-9\s]/g, '');
+    slug = slug.replace(/\s+/g, '-');
+    slug = slug.replace(/-+/g, '-');
+    slug = slug.replace(/^-+/, '').replace(/-+$/, '');
+    document.getElementById('vSlug_valor_modal').value = slug;
+}
 
-document.getElementById('productoForm').addEventListener('submit', function(e) {
-    // Primero validar con JavaScript
-    if (!validarTamañoTotalAntesDeEnviar()) {
-        e.preventDefault();
-        return false;
-    }
+function guardarValorAtributo() {
+    const atributoId = document.getElementById('valor_atributo_id').value;
+    const vValor = document.getElementById('vValor_modal').value.trim();
+    const vSlug = document.getElementById('vSlug_valor_modal').value.trim();
+    const bActivo = document.getElementById('bActivo_valor_modal').checked ? 1 : 0;
     
-    const btnSubmit = document.getElementById('btnSubmit');
-    
-    // Validación de fechas de descuento en producto principal
-    if (document.getElementById('bTiene_descuento') && document.getElementById('bTiene_descuento').checked) {
-        const precioVenta = parseFloat(document.getElementById('dPrecio_venta').value) || 0;
-        const precioDescuento = parseFloat(document.getElementById('dPrecio_descuento').value) || 0;
-        
-        if (precioDescuento >= precioVenta) {
-            e.preventDefault();
-            Swal.fire({
-                icon: 'error',
-                title: 'Error en precio de descuento',
-                text: 'El precio de descuento debe ser menor que el precio de venta'
-            });
-            document.getElementById('dPrecio_descuento').focus();
-            return false;
-        }
-        
-        const fechaInicio = document.getElementById('dFecha_inicio_descuento').value;
-        const fechaFin = document.getElementById('dFecha_fin_descuento').value;
-        
-        if (!fechaInicio || !fechaFin) {
-            e.preventDefault();
-            Swal.fire({
-                icon: 'error',
-                title: 'Fechas requeridas',
-                text: 'Cuando el descuento está activo, las fechas de inicio y fin son obligatorias'
-            });
-            return false;
-        }
-        
-        if (new Date(fechaFin) < new Date(fechaInicio)) {
-            e.preventDefault();
-            Swal.fire({
-                icon: 'error',
-                title: 'Error en fechas de descuento',
-                text: 'La fecha de fin debe ser igual o posterior a la fecha de inicio'
-            });
-            return false;
-        }
-    }
-    
-    // Validación de fechas de descuento en variaciones
-    let erroresFechasVariaciones = [];
-    document.querySelectorAll('[id^="fecha-fin-"]').forEach(input => {
-        const valorKey = input.id.replace('fecha-fin-', '');
-        const fechaInicio = document.getElementById(`fecha-inicio-${valorKey}`);
-        const fechaFin = input;
-        
-        if (fechaInicio && fechaInicio.value && fechaFin.value) {
-            const inicio = new Date(fechaInicio.value);
-            const fin = new Date(fechaFin.value);
-            
-            if (fin < inicio) {
-                erroresFechasVariaciones.push('En una variación, la fecha de fin no puede ser anterior a la fecha de inicio');
-                fechaFin.classList.add('is-invalid');
-                document.getElementById(`error-fechas-descuento-${valorKey}`).style.display = 'block';
-            }
-        }
-    });
-    
-    if (erroresFechasVariaciones.length > 0) {
-        e.preventDefault();
+    if (!vValor) {
         Swal.fire({
             icon: 'error',
-            title: 'Errores en fechas de descuento',
-            html: erroresFechasVariaciones.join('<br>')
+            title: 'Error',
+            text: 'El valor es obligatorio'
         });
-        return false;
+        return;
     }
     
-    let errorVariaciones = [];
-    document.querySelectorAll('.variacion-precio-descuento').forEach(input => {
-        const valorKey = input.dataset.valorKey;
-        const checkbox = document.getElementById(`descuento-${valorKey}`);
-        
-        if (checkbox && checkbox.checked && input.value) {
-            const precioNormalId = input.dataset.precioNormalId;
-            const precioNormal = document.getElementById(precioNormalId);
-            
-            if (precioNormal) {
-                const precioNormalValor = parseFloat(precioNormal.value) || 0;
-                const precioDescuentoValor = parseFloat(input.value) || 0;
-                
-                if (precioDescuentoValor >= precioNormalValor) {
-                    errorVariaciones.push(`En una variación, el precio de descuento debe ser menor que el precio normal`);
-                    input.classList.add('is-invalid');
-                } else {
-                    input.classList.remove('is-invalid');
-                }
-            }
-        }
+    Swal.fire({
+        title: 'Creando valor...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
     });
     
-    if (errorVariaciones.length > 0) {
-        e.preventDefault();
-        Swal.fire({
-            icon: 'error',
-            title: 'Errores en precios de descuento',
-            html: errorVariaciones.join('<br>')
-        });
-        return false;
-    }
-    
-    const skuInputs = document.querySelectorAll('input[name*="[vSKU]"]');
-    let variacionesValidas = true;
-    
-    skuInputs.forEach(input => {
-        if (!input.value.trim()) {
-            variacionesValidas = false;
-            input.classList.add('is-invalid');
-        }
-    });
-    
-    if (!variacionesValidas) {
-        e.preventDefault();
-        Swal.fire({
-            icon: 'error',
-            title: 'Error en variaciones',
-            text: 'Todas las variaciones deben tener un SKU asignado'
-        });
-        return false;
-    }
-    
-    // Crear un nuevo FormData para asegurar que todas las imágenes se incluyan
-    const form = this;
-    const formData = new FormData(form);
-    
-    // Eliminar las entradas de variaciones que ya existen para reemplazarlas
-    const keysToRemove = [];
-    for (let pair of formData.entries()) {
-        if (pair[0].startsWith('variaciones[')) {
-            keysToRemove.push(pair[0]);
-        }
-    }
-    keysToRemove.forEach(key => formData.delete(key));
-    
-    // Reconstruir las variaciones con todas las imágenes
-    const variacionesKeys = new Set();
-    
-    // Primero, recolectar todas las claves de variaciones
-    document.querySelectorAll('input[name*="[vSKU]"]').forEach(input => {
-        const match = input.name.match(/variaciones\[([^\]]+)\]/);
-        if (match && match[1]) {
-            variacionesKeys.add(match[1]);
-        }
-    });
-    
-    // Para cada variación, agregar todos los campos
-    variacionesKeys.forEach(valorKey => {
-        // Campos básicos
-        const idAtributo = document.querySelector(`input[name="variaciones[${valorKey}][id_atributo]"]`);
-        const idAtributoValor = document.querySelector(`input[name="variaciones[${valorKey}][id_atributo_valor]"]`);
-        const vNombreVariacion = document.querySelector(`input[name="variaciones[${valorKey}][vNombre_variacion]"]`);
-        const vSKU = document.querySelector(`input[name="variaciones[${valorKey}][vSKU]"]`);
-        const bActivo = document.querySelector(`input[name="variaciones[${valorKey}][bActivo]"]`);
-        const dPrecio = document.querySelector(`input[name="variaciones[${valorKey}][dPrecio]"]`);
-        const iStock = document.querySelector(`input[name="variaciones[${valorKey}][iStock]"]`);
-        const vClaseEnvio = document.querySelector(`select[name="variaciones[${valorKey}][vClase_envio]"]`);
-        const idImpuesto = document.querySelector(`select[name="variaciones[${valorKey}][id_impuesto]"]`);
-        const dPeso = document.querySelector(`input[name="variaciones[${valorKey}][dPeso]"]`);
-        const dLargoCm = document.querySelector(`input[name="variaciones[${valorKey}][dLargo_cm]"]`);
-        const dAnchoCm = document.querySelector(`input[name="variaciones[${valorKey}][dAncho_cm]"]`);
-        const dAltoCm = document.querySelector(`input[name="variaciones[${valorKey}][dAlto_cm]"]`);
-        const bTieneDescuento = document.querySelector(`input[name="variaciones[${valorKey}][bTiene_descuento]"]`);
-        const dPrecioDescuento = document.querySelector(`input[name="variaciones[${valorKey}][dPrecio_descuento]"]`);
-        const dFechaInicioDescuento = document.querySelector(`input[name="variaciones[${valorKey}][dFecha_inicio_descuento]"]`);
-        const dFechaFinDescuento = document.querySelector(`input[name="variaciones[${valorKey}][dFecha_fin_descuento]"]`);
-        const vMotivoDescuento = document.querySelector(`input[name="variaciones[${valorKey}][vMotivo_descuento]"]`);
-        const tDescripcion = document.querySelector(`textarea[name="variaciones[${valorKey}][tDescripcion]"]`);
-        
-        // Agregar campos básicos si existen
-        if (idAtributo) formData.append(`variaciones[${valorKey}][id_atributo]`, idAtributo.value);
-        if (idAtributoValor) formData.append(`variaciones[${valorKey}][id_atributo_valor]`, idAtributoValor.value);
-        if (vNombreVariacion) formData.append(`variaciones[${valorKey}][vNombre_variacion]`, vNombreVariacion.value);
-        if (vSKU) formData.append(`variaciones[${valorKey}][vSKU]`, vSKU.value);
-        if (bActivo && bActivo.checked) formData.append(`variaciones[${valorKey}][bActivo]`, '1');
-        if (dPrecio) formData.append(`variaciones[${valorKey}][dPrecio]`, dPrecio.value);
-        if (iStock) formData.append(`variaciones[${valorKey}][iStock]`, iStock.value);
-        if (vClaseEnvio && vClaseEnvio.value) formData.append(`variaciones[${valorKey}][vClase_envio]`, vClaseEnvio.value);
-        if (idImpuesto && idImpuesto.value) formData.append(`variaciones[${valorKey}][id_impuesto]`, idImpuesto.value);
-        if (dPeso && dPeso.value) formData.append(`variaciones[${valorKey}][dPeso]`, dPeso.value);
-        if (dLargoCm && dLargoCm.value) formData.append(`variaciones[${valorKey}][dLargo_cm]`, dLargoCm.value);
-        if (dAnchoCm && dAnchoCm.value) formData.append(`variaciones[${valorKey}][dAncho_cm]`, dAnchoCm.value);
-        if (dAltoCm && dAltoCm.value) formData.append(`variaciones[${valorKey}][dAlto_cm]`, dAltoCm.value);
-        if (bTieneDescuento && bTieneDescuento.checked) formData.append(`variaciones[${valorKey}][bTiene_descuento]`, '1');
-        if (dPrecioDescuento && dPrecioDescuento.value) formData.append(`variaciones[${valorKey}][dPrecio_descuento]`, dPrecioDescuento.value);
-        if (dFechaInicioDescuento && dFechaInicioDescuento.value) formData.append(`variaciones[${valorKey}][dFecha_inicio_descuento]`, dFechaInicioDescuento.value);
-        if (dFechaFinDescuento && dFechaFinDescuento.value) formData.append(`variaciones[${valorKey}][dFecha_fin_descuento]`, dFechaFinDescuento.value);
-        if (vMotivoDescuento && vMotivoDescuento.value) formData.append(`variaciones[${valorKey}][vMotivo_descuento]`, vMotivoDescuento.value);
-        if (tDescripcion && tDescripcion.value) formData.append(`variaciones[${valorKey}][tDescripcion]`, tDescripcion.value);
-        
-        // Imagen principal de la variación
-        const imagenPrincipalInput = document.getElementById(`img_principal_${valorKey}`);
-        if (imagenPrincipalInput && imagenPrincipalInput.files && imagenPrincipalInput.files[0]) {
-            formData.append(`variaciones[${valorKey}][imagen_principal]`, imagenPrincipalInput.files[0]);
-        }
-        
-        // GIF de la variación
-        const gifInput = document.getElementById(`gif_${valorKey}`);
-        if (gifInput && gifInput.files && gifInput.files[0]) {
-            formData.append(`variaciones[${valorKey}][gif]`, gifInput.files[0]);
-        }
-        
-        // Imágenes adicionales de la variación
-        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
-            imagenesVariacion[valorKey].imagenes.forEach((img, index) => {
-                formData.append(`variaciones[${valorKey}][imagenes_adicionales][]`, img.file);
-            });
-        }
-    });
-    
-    if (btnSubmit) {
-        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Guardando...';
-        btnSubmit.disabled = true;
-    }
-    
-    // Enviar con fetch
-    e.preventDefault();
-    
-    fetch(form.action, {
+    fetch(`/atributos/${atributoId}/valores-quick`, {
         method: 'POST',
-        body: formData,
         headers: {
+            'Content-Type': 'application/json',
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
             'Accept': 'application/json'
-        }
+        },
+        body: JSON.stringify({
+            vValor: vValor,
+            vSlug: vSlug,
+            bActivo: bActivo
+        })
     })
     .then(response => {
-        if (response.redirected) {
-            window.location.href = response.url;
-        } else if (response.ok) {
-            return response.json().then(data => {
-                if (data.success && data.redirect) {
-                    window.location.href = data.redirect;
-                } else {
-                    window.location.href = '{{ route("productos.index") }}';
-                }
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
+    .then(data => {
+        Swal.close();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message || 'Valor creado exitosamente',
+                timer: 2000,
+                showConfirmButton: false
             });
+            
+            valorModal.hide();
+            agregarValorAlAtributo(data.valor);
         } else {
-            return response.json().then(data => {
-                throw new Error(data.message || 'Error al guardar el producto');
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.message || 'Error al crear el valor'
             });
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: error.message || 'Error al guardar el producto'
-        });
-        if (btnSubmit) {
-            btnSubmit.innerHTML = '<i class="fas fa-save me-2"></i> Guardar Producto';
-            btnSubmit.disabled = false;
+        Swal.close();
+        
+        let errorMessage = 'Error en la solicitud';
+        if (error.errors) {
+            errorMessage = Object.values(error.errors).flat().join(', ');
+        } else if (error.message) {
+            errorMessage = error.message;
         }
-    });
-    
-    return false;
-});
-
-// Función de validación de tamaño total
-function validarTamañoTotalAntesDeEnviar() {
-    const totalSize = calcularTamañoTotal();
-    const maxSize = 50 * 1024 * 1024; // 50MB
-    
-    // Lista de archivos para mostrar al usuario
-    let archivosGrandes = [];
-    
-    // Verificar archivos individualmente
-    if (imagenPrincipalFile && imagenPrincipalFile.size > 5 * 1024 * 1024) {
-        archivosGrandes.push(`Imagen principal: ${(imagenPrincipalFile.size / (1024 * 1024)).toFixed(2)}MB (máx 5MB)`);
-    }
-    
-    if (gifFile && gifFile.size > 10 * 1024 * 1024) {
-        archivosGrandes.push(`GIF: ${(gifFile.size / (1024 * 1024)).toFixed(2)}MB (máx 10MB)`);
-    }
-    
-    selectedImages.forEach(img => {
-        if (img.file.size > 5 * 1024 * 1024) {
-            archivosGrandes.push(`Imagen adicional "${img.file.name}": ${(img.file.size / (1024 * 1024)).toFixed(2)}MB (máx 5MB)`);
-        }
-    });
-    
-    // Verificar imágenes de variaciones
-    Object.keys(imagenesVariacion).forEach(valorKey => {
-        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
-            imagenesVariacion[valorKey].imagenes.forEach(img => {
-                if (img.file.size > 5 * 1024 * 1024) {
-                    archivosGrandes.push(`Imagen adicional de variación "${img.name}": ${(img.file.size / (1024 * 1024)).toFixed(2)}MB (máx 5MB)`);
-                }
-            });
-        }
-    });
-    
-    if (archivosGrandes.length > 0) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Archivos demasiado grandes',
-            html: `
-                <div class="text-left">
-                    <p class="mb-3">Los siguientes archivos exceden su límite individual:</p>
-                    <ul class="text-left">
-                        ${archivosGrandes.map(msg => `<li class="mb-2">⚠️ ${msg}</li>`).join('')}
-                    </ul>
-                    <hr>
-                    <p class="text-muted small mb-0">Por favor, reduce el tamaño de estos archivos antes de continuar.</p>
-                </div>
-            `,
-            confirmButtonText: 'Entendido',
-            confirmButtonColor: '#3085d6'
-        });
-        return false;
-    }
-    
-    if (totalSize > maxSize) {
-        // Calcular cuánto hay que reducir
-        const exceso = totalSize - maxSize;
         
         Swal.fire({
             icon: 'error',
-            title: 'Archivos demasiado grandes',
-            html: `
-                <div class="text-center">
-                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
-                    <h5 class="mb-3">El tamaño total excede el límite del servidor</h5>
-                    <p class="mb-2"><strong>Tamaño actual:</strong> ${(totalSize / (1024 * 1024)).toFixed(2)}MB</p>
-                    <p class="mb-2"><strong>Límite permitido:</strong> 50MB</p>
-                    <p class="mb-3"><strong>Debes reducir:</strong> ${(exceso / (1024 * 1024)).toFixed(2)}MB</p>
-                    
-                    <div class="bg-light p-3 rounded mt-3">
-                        <p class="fw-bold mb-2">📊 Desglose de archivos:</p>
-                        <ul class="text-left small">
-                            ${imagenPrincipalFile ? `<li>📷 Imagen principal: ${(imagenPrincipalFile.size / (1024 * 1024)).toFixed(2)}MB</li>` : ''}
-                            ${gifFile ? `<li>🎬 GIF: ${(gifFile.size / (1024 * 1024)).toFixed(2)}MB</li>` : ''}
-                            ${selectedImages.map(img => `<li>🖼️ ${img.file.name.substring(0, 20)}...: ${(img.file.size / (1024 * 1024)).toFixed(2)}MB</li>`).join('')}
-                        </ul>
-                    </div>
-                    
-                    <hr>
-                    <p class="text-muted small mt-3">💡 Recomendaciones:</p>
-                    <ul class="text-left small">
-                        <li>Comprime las imágenes antes de subirlas</li>
-                        <li>Sube menos imágenes adicionales</li>
-                    </ul>
-                </div>
-            `,
-            confirmButtonText: 'Entendido',
-            confirmButtonColor: '#3085d6',
-            width: '600px'
+            title: 'Error',
+            text: errorMessage
         });
-        return false;
+    });
+}
+
+function agregarValorAlAtributo(valor) {
+    const container = document.getElementById(`valores-container-${valor.id_atributo}`);
+    if (!container) return;
+    
+    const alerta = container.querySelector('.alert-warning');
+    if (alerta) {
+        alerta.remove();
     }
     
-    if (!imagenPrincipalFile) {
+    let selectAllDiv = container.querySelector('.mb-3');
+    if (!selectAllDiv) {
+        selectAllDiv = document.createElement('div');
+        selectAllDiv.className = 'mb-3';
+        selectAllDiv.innerHTML = `
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input seleccionar-todos-checkbox" id="seleccionar-todos-${valor.id_atributo}" data-atributo-id="${valor.id_atributo}">
+                <label class="form-check-label" for="seleccionar-todos-${valor.id_atributo}">
+                    <strong>Seleccionar todos</strong>
+                </label>
+            </div>
+        `;
+        container.appendChild(selectAllDiv);
+        
+        const hr = document.createElement('hr');
+        hr.className = 'my-2';
+        container.appendChild(hr);
+    }
+    
+    let row = container.querySelector('.row:not(.mb-3)');
+    if (!row) {
+        row = document.createElement('div');
+        row.className = 'row';
+        container.appendChild(row);
+    }
+    
+    const col = document.createElement('div');
+    col.className = 'col-md-6 mb-2';
+    
+    const divCheck = document.createElement('div');
+    divCheck.className = 'form-check';
+    
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.name = `atributos[${valor.id_atributo}][]`;
+    input.value = valor.id_atributo_valor;
+    input.className = 'form-check-input valor-checkbox';
+    input.id = `valor-${valor.id_atributo_valor}`;
+    input.setAttribute('data-atributo-id', valor.id_atributo);
+    input.setAttribute('data-atributo-nombre', valor.atributo_nombre || '');
+    input.setAttribute('data-valor-nombre', valor.vValor);
+    
+    const label = document.createElement('label');
+    label.className = 'form-check-label';
+    label.htmlFor = `valor-${valor.id_atributo_valor}`;
+    label.textContent = valor.vValor;
+    
+    divCheck.appendChild(input);
+    divCheck.appendChild(label);
+    col.appendChild(divCheck);
+    row.appendChild(col);
+    
+    input.addEventListener('change', function() {
+        const atributoId = this.dataset.atributoId;
+        const atributoNombre = this.dataset.atributoNombre;
+        const valorId = this.value;
+        const valorNombre = this.dataset.valorNombre;
+        
+        const atributoActivo = document.getElementById(`atributo-activo-${atributoId}`);
+        if (!atributoActivo.checked) {
+            atributoActivo.checked = true;
+            atributoActivo.dispatchEvent(new Event('change'));
+        }
+        
+        if (!atributosActivos[atributoId]) {
+            atributosActivos[atributoId] = {
+                id: atributoId,
+                nombre: atributoNombre,
+                valores: {}
+            };
+        }
+        
+        if (this.checked) {
+            atributosActivos[atributoId].valores[valorId] = {
+                id: valorId,
+                nombre: valorNombre,
+                atributoId: atributoId,
+                atributoNombre: atributoNombre
+            };
+        } else {
+            delete atributosActivos[atributoId].valores[valorId];
+            if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
+                delete atributosActivos[atributoId];
+            }
+        }
+        
+        const seleccionados = container.querySelectorAll('.valor-checkbox:checked');
+        const seleccionarTodos = document.getElementById(`seleccionar-todos-${atributoId}`);
+        if (seleccionarTodos) {
+            seleccionarTodos.indeterminate = seleccionados.length > 0 && seleccionados.length < container.querySelectorAll('.valor-checkbox').length;
+        }
+        
+        actualizarPestanasValores();
+        actualizarResumenAtributos();
+    });
+    
+    const badge = container.closest('.card').querySelector('.badge.bg-secondary');
+    if (badge) {
+        const valorCount = container.querySelectorAll('.valor-checkbox').length;
+        badge.textContent = valorCount + ' valores';
+    }
+}
+
+function initQuickForms() {
+    const categoriaForm = document.getElementById('categoriaQuickForm');
+    if (categoriaForm) {
+        categoriaForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            if (categoriaImagenFile) {
+                formData.append('vImagen', categoriaImagenFile);
+            }
+            
+            Swal.fire({
+                title: 'Creando categoría...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            
+            fetch('{{ route("categorias.store") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                Swal.close();
+                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: data.message || 'Categoría creada exitosamente',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    agregarCategoriaAlSelect(data.categoria);
+                    limpiarFormularioCategoria();
+                } else {
+                    let errorMessage = data.message || 'Error al crear la categoría';
+                    if (data.errors) {
+                        errorMessage = Object.values(data.errors).flat().join('<br>');
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: errorMessage
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error de conexión al servidor'
+                });
+            });
+        });
+    }
+    
+    const marcaForm = document.getElementById('marcaQuickForm');
+    if (marcaForm) {
+        marcaForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            Swal.fire({
+                title: 'Creando marca...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            
+            fetch('{{ route("marcas.quick-create") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                Swal.close();
+                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: data.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    const select = document.getElementById('id_marca');
+                    const option = document.createElement('option');
+                    option.value = data.marca.id_marca;
+                    option.textContent = data.marca.vNombre;
+                    select.appendChild(option);
+                    select.value = data.marca.id_marca;
+                    
+                    limpiarFormularioMarca();
+                } else {
+                    let errorMessage = data.message || 'Error al crear la marca';
+                    if (data.errors) {
+                        errorMessage = Object.values(data.errors).flat().join('<br>');
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: errorMessage
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error de conexión al servidor'
+                });
+            });
+        });
+    }
+    
+    const etiquetaForm = document.getElementById('etiquetaQuickForm');
+    if (etiquetaForm) {
+        etiquetaForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            Swal.fire({
+                title: 'Creando etiqueta...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            
+            fetch('{{ route("etiquetas.quick-create") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                Swal.close();
+                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: data.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    agregarEtiquetaAlListado(data.etiqueta);
+                    limpiarFormularioEtiqueta();
+                } else {
+                    let errorMessage = data.message || 'Error al crear la etiqueta';
+                    if (data.errors) {
+                        errorMessage = Object.values(data.errors).flat().join('<br>');
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: errorMessage
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error de conexión al servidor'
+                });
+            });
+        });
+    }
+    
+    const atributoForm = document.getElementById('atributoQuickForm');
+    if (atributoForm) {
+        atributoForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            Swal.fire({
+                title: 'Creando atributo...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            
+            fetch('{{ route("atributos.quick-create") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                Swal.close();
+                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: data.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    agregarAtributoAlListado(data.atributo);
+                    
+                    document.getElementById('vNombre_attr').value = '';
+                    document.getElementById('vSlug_attr').value = '';
+                    document.getElementById('tDescripcion_attr').value = '';
+                } else {
+                    let errorMessage = data.message || 'Error al crear el atributo';
+                    if (data.errors) {
+                        errorMessage = Object.values(data.errors).flat().join('<br>');
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: errorMessage
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error de conexión al servidor'
+                });
+            });
+        });
+    }
+    
+    const impuestoForm = document.getElementById('impuestoQuickForm');
+    if (impuestoForm) {
+        impuestoForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            Swal.fire({
+                title: 'Creando impuesto...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            
+            fetch('{{ route("impuestos.quick-create") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                Swal.close();
+                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: data.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    const select = document.getElementById('id_impuesto');
+                    const option = document.createElement('option');
+                    option.value = data.impuesto.id_impuesto;
+                    option.setAttribute('data-porcentaje', data.impuesto.dPorcentaje);
+                    option.setAttribute('data-tipo', data.impuesto.eTipo);
+                    option.textContent = data.impuesto.vNombre + ' (' + data.impuesto.eTipo + ' - ' + parseFloat(data.impuesto.dPorcentaje).toFixed(2) + '%)';
+                    select.appendChild(option);
+                    
+                    select.value = data.impuesto.id_impuesto;
+                    actualizarPrecioFinal();
+                    limpiarFormularioImpuesto();
+                } else {
+                    let errorMessage = data.message || 'Error al crear el impuesto';
+                    if (data.errors) {
+                        errorMessage = Object.values(data.errors).flat().join('<br>');
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: errorMessage
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Error de conexión al servidor'
+                });
+            });
+        });
+    }
+}
+
+function agregarCategoriaAlSelect(categoria) {
+    const select = document.getElementById('id_categoria');
+    
+    const option = document.createElement('option');
+    option.value = categoria.id_categoria;
+    let icono = categoria.id_categoria_padre ? '↳ ' : '🏠 ';
+    option.innerHTML = icono + categoria.vNombre;
+    select.appendChild(option);
+    select.value = categoria.id_categoria;
+}
+
+function agregarEtiquetaAlListado(etiqueta) {
+    const container = document.getElementById('etiquetas-container').querySelector('.row');
+    
+    const noEtiquetasMsg = document.getElementById('no-etiquetas-msg');
+    if (noEtiquetasMsg) {
+        noEtiquetasMsg.remove();
+    }
+    
+    const col = document.createElement('div');
+    col.className = 'col-md-6 col-6 mb-2 etiqueta-item';
+    col.setAttribute('data-etiqueta-id', etiqueta.id_etiqueta);
+    
+    const divCheck = document.createElement('div');
+    divCheck.className = 'form-check';
+    
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.name = 'etiquetas[]';
+    input.value = etiqueta.id_etiqueta;
+    input.className = 'form-check-input';
+    input.id = 'etiqueta_' + etiqueta.id_etiqueta;
+    input.checked = true;
+    
+    const label = document.createElement('label');
+    label.className = 'form-check-label';
+    label.htmlFor = 'etiqueta_' + etiqueta.id_etiqueta;
+    
+    const span = document.createElement('span');
+    span.className = 'badge bg-secondary';
+    span.textContent = etiqueta.vNombre;
+    
+    label.appendChild(span);
+    divCheck.appendChild(input);
+    divCheck.appendChild(label);
+    col.appendChild(divCheck);
+    container.appendChild(col);
+}
+
+function agregarAtributoAlListado(atributo) {
+    const container = document.getElementById('atributos-container');
+    const noAtributosMsg = document.getElementById('no-atributos-msg');
+    
+    if (noAtributosMsg) {
+        noAtributosMsg.remove();
+    }
+    
+    const col = document.createElement('div');
+    col.className = 'col-md-6 mb-4 atributo-item';
+    col.setAttribute('data-atributo-id', atributo.id_atributo);
+    
+    const card = document.createElement('div');
+    card.className = 'card border h-100';
+    
+    const cardHeader = document.createElement('div');
+    cardHeader.className = 'card-header bg-light d-flex justify-content-between align-items-center';
+    cardHeader.innerHTML = `
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input atributo-activo-checkbox" 
+                   id="atributo-activo-${atributo.id_atributo}"
+                   data-atributo-id="${atributo.id_atributo}"
+                   data-atributo-nombre="${atributo.vNombre}">
+            <label class="form-check-label fw-bold" for="atributo-activo-${atributo.id_atributo}" style="color: #495057;">
+                ${atributo.vNombre}
+                <span class="badge bg-secondary ms-2">0 valores</span>
+            </label>
+        </div>
+        <div>
+            <span class="badge bg-warning text-dark atributo-estado-badge" id="estado-${atributo.id_atributo}" style="display: none;">
+                <i class="fas fa-check-circle me-1"></i>Activo
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="mostrarFormularioValor(${atributo.id_atributo}, '${atributo.vNombre}')">
+                <i class="fas fa-plus-circle me-1"></i>Agregar Valor
+            </button>
+        </div>
+    `;
+    
+    const cardBody = document.createElement('div');
+    cardBody.className = 'card-body atributo-valores-container';
+    cardBody.id = `valores-container-${atributo.id_atributo}`;
+    cardBody.style.display = 'none';
+    cardBody.style.backgroundColor = 'white';
+    
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-warning mb-0';
+    alertDiv.innerHTML = `
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        Este atributo no tiene valores. 
+        <button type="button" class="btn btn-link p-0 ms-1" onclick="mostrarFormularioValor(${atributo.id_atributo}, '${atributo.vNombre}')">
+            Crear primer valor
+        </button>
+    `;
+    
+    cardBody.appendChild(alertDiv);
+    card.appendChild(cardHeader);
+    card.appendChild(cardBody);
+    col.appendChild(card);
+    container.appendChild(col);
+    
+    const checkbox = document.getElementById(`atributo-activo-${atributo.id_atributo}`);
+    if (checkbox) {
+        checkbox.addEventListener('change', function() {
+            const atributoId = this.dataset.atributoId;
+            const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+            const estadoBadge = document.getElementById(`estado-${atributoId}`);
+            
+            if (this.checked) {
+                valoresContainer.style.display = 'block';
+                estadoBadge.style.display = 'inline-block';
+                
+                if (!atributosActivos[atributoId]) {
+                    atributosActivos[atributoId] = {
+                        id: atributoId,
+                        nombre: this.dataset.atributoNombre,
+                        valores: {}
+                    };
+                }
+            } else {
+                valoresContainer.style.display = 'none';
+                estadoBadge.style.display = 'none';
+                delete atributosActivos[atributoId];
+            }
+            
+            actualizarPestanasValores();
+            actualizarResumenAtributos();
+        });
+    }
+}
+
+function guardarCategoria() {
+    const vNombre = document.getElementById('vNombre_categoria_modal').value.trim();
+    const vSlug = document.getElementById('vSlug_categoria_modal').value.trim();
+    const idCategoriaPadre = document.getElementById('id_categoria_padre_modal').value;
+    const tDescripcion = document.getElementById('tDescripcion_categoria_modal').value;
+    const bActivo = document.getElementById('bActivo_categoria_modal').checked ? 1 : 0;
+    
+    if (!vNombre || !vSlug) {
         Swal.fire({
             icon: 'error',
-            title: 'Imagen principal requerida',
-            text: 'Debes seleccionar una imagen principal para el producto'
+            title: 'Error',
+            text: 'El nombre y slug son obligatorios'
         });
-        return false;
+        return;
     }
     
-    return true;
+    Swal.fire({
+        title: 'Creando categoría...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+    
+    const formData = new FormData();
+    formData.append('vNombre', vNombre);
+    formData.append('vSlug', vSlug);
+    formData.append('tDescripcion', tDescripcion);
+    formData.append('bActivo', bActivo);
+    if (idCategoriaPadre) {
+        formData.append('id_categoria_padre', idCategoriaPadre);
+    }
+    if (categoriaModalImagenFile) {
+        formData.append('vImagen', categoriaModalImagenFile);
+    }
+    
+    fetch('{{ route("categorias.store") }}', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        Swal.close();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message || 'Categoría creada exitosamente',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            agregarCategoriaAlSelect(data.categoria);
+            modalCategoria.hide();
+        } else {
+            let errorMessage = data.message || 'Error al crear la categoría';
+            if (data.errors) {
+                errorMessage = Object.values(data.errors).flat().join('<br>');
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                html: errorMessage
+            });
+        }
+    })
+    .catch(error => {
+        Swal.close();
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error de conexión al servidor'
+        });
+    });
 }
+
+function guardarMarca() {
+    const vNombre = document.getElementById('vNombre_marca_modal').value.trim();
+    const tDescripcion = document.getElementById('tDescripcion_marca_modal').value;
+    
+    if (!vNombre) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'El nombre de la marca es obligatorio'
+        });
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Creando marca...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+    
+    fetch('{{ route("marcas.quick-create") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            vNombre: vNombre,
+            tDescripcion: tDescripcion
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        Swal.close();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            const select = document.getElementById('id_marca');
+            const option = document.createElement('option');
+            option.value = data.marca.id_marca;
+            option.textContent = data.marca.vNombre;
+            select.appendChild(option);
+            select.value = data.marca.id_marca;
+            
+            modalMarca.hide();
+        } else {
+            let errorMessage = data.message || 'Error al crear la marca';
+            if (data.errors) {
+                errorMessage = Object.values(data.errors).flat().join('<br>');
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                html: errorMessage
+            });
+        }
+    })
+    .catch(error => {
+        Swal.close();
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error de conexión al servidor'
+        });
+    });
+}
+
+function guardarEtiqueta() {
+    const vNombre = document.getElementById('vNombre_eti_modal').value.trim();
+    const tDescripcion = document.getElementById('tDescripcion_eti_modal').value;
+    
+    if (!vNombre) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'El nombre de la etiqueta es obligatorio'
+        });
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Creando etiqueta...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+    
+    fetch('{{ route("etiquetas.quick-create") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            vNombre: vNombre,
+            tDescripcion: tDescripcion
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        Swal.close();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            agregarEtiquetaAlListado(data.etiqueta);
+            modalEtiqueta.hide();
+        } else {
+            let errorMessage = data.message || 'Error al crear la etiqueta';
+            if (data.errors) {
+                errorMessage = Object.values(data.errors).flat().join('<br>');
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                html: errorMessage
+            });
+        }
+    })
+    .catch(error => {
+        Swal.close();
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error de conexión al servidor'
+        });
+    });
+}
+
+function guardarAtributo() {
+    const vNombre = document.getElementById('vNombre_attr_modal').value.trim();
+    const vSlug = document.getElementById('vSlug_attr_modal').value.trim();
+    const tDescripcion = document.getElementById('tDescripcion_attr_modal').value;
+    
+    if (!vNombre) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'El nombre del atributo es obligatorio'
+        });
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Creando atributo...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+    
+    fetch('{{ route("atributos.quick-create") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            vNombre: vNombre,
+            vSlug: vSlug || undefined,
+            tDescripcion: tDescripcion
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        Swal.close();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            agregarAtributoAlListado(data.atributo);
+            modalAtributo.hide();
+        } else {
+            let errorMessage = data.message || 'Error al crear el atributo';
+            if (data.errors) {
+                errorMessage = Object.values(data.errors).flat().join('<br>');
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                html: errorMessage
+            });
+        }
+    })
+    .catch(error => {
+        Swal.close();
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error de conexión al servidor'
+        });
+    });
+}
+
+function guardarImpuesto() {
+    const vNombre = document.getElementById('vNombre_impuesto_modal').value.trim();
+    const eTipo = document.getElementById('eTipo_impuesto_modal').value;
+    const dPorcentaje = document.getElementById('dPorcentaje_impuesto_modal').value;
+    const tDescripcion = document.getElementById('tDescripcion_impuesto_modal').value;
+    const bActivo = document.getElementById('bActivo_impuesto_modal').checked ? 1 : 0;
+    
+    if (!vNombre || !eTipo || !dPorcentaje) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Todos los campos obligatorios deben estar llenos'
+        });
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Creando impuesto...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+    
+    fetch('{{ route("impuestos.quick-create") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            vNombre: vNombre,
+            eTipo: eTipo,
+            dPorcentaje: dPorcentaje,
+            tDescripcion: tDescripcion,
+            bActivo: bActivo
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        Swal.close();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            const select = document.getElementById('id_impuesto');
+            const option = document.createElement('option');
+            option.value = data.impuesto.id_impuesto;
+            option.setAttribute('data-porcentaje', data.impuesto.dPorcentaje);
+            option.setAttribute('data-tipo', data.impuesto.eTipo);
+            option.textContent = data.impuesto.vNombre + ' (' + data.impuesto.eTipo + ' - ' + parseFloat(data.impuesto.dPorcentaje).toFixed(2) + '%)';
+            select.appendChild(option);
+            select.value = data.impuesto.id_impuesto;
+            actualizarPrecioFinal();
+            modalImpuesto.hide();
+        } else {
+            let errorMessage = data.message || 'Error al crear el impuesto';
+            if (data.errors) {
+                errorMessage = Object.values(data.errors).flat().join('<br>');
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                html: errorMessage
+            });
+        }
+    })
+    .catch(error => {
+        Swal.close();
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error de conexión al servidor'
+        });
+    });
+}
+
+function limpiarFormularioCategoria() {
+    document.getElementById('vNombre_categoria').value = '';
+    document.getElementById('vSlug_categoria').value = '';
+    document.getElementById('id_categoria_padre_quick').value = '';
+    document.getElementById('tDescripcion_categoria').value = '';
+    document.getElementById('bActivo_categoria').checked = true;
+    document.getElementById('vImagen_categoria').value = '';
+    document.getElementById('categoriaImagePreview').style.display = 'none';
+    categoriaImagenFile = null;
+}
+
+function limpiarFormularioMarca() {
+    document.getElementById('vNombre_marca').value = '';
+    document.getElementById('tDescripcion_marca').value = '';
+}
+
+function limpiarFormularioEtiqueta() {
+    document.getElementById('vNombre_eti').value = '';
+    document.getElementById('tDescripcion_eti').value = '';
+}
+
+function limpiarFormularioImpuesto() {
+    document.getElementById('vNombre_impuesto').value = '';
+    document.getElementById('eTipo_impuesto').value = '';
+    document.getElementById('dPorcentaje_impuesto').value = '';
+    document.getElementById('tDescripcion_impuesto').value = '';
+    document.getElementById('bActivo_impuesto').checked = true;
+}
+
+function previewImagenCategoria(input) {
+    const preview = document.getElementById('categoriaImagePreview');
+    const previewImg = document.getElementById('categoriaPreviewImg');
+    
+    if (input.files && input.files.length > 0) {
+        const file = input.files[0];
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        
+        if (!validTypes.includes(file.type)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Formato no válido',
+                text: 'Solo se permiten imágenes JPG, JPEG, PNG o WebP'
+            });
+            input.value = '';
+            return;
+        }
+        
+        categoriaImagenFile = file;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            preview.style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+    }
+}
+
+function cancelarImagenCategoria() {
+    document.getElementById('categoriaImagePreview').style.display = 'none';
+    document.getElementById('vImagen_categoria').value = '';
+    categoriaImagenFile = null;
+}
+
+function resetearInputImagen() {
+    cancelarImagenCategoria();
+}
+
+function previewImagenCategoriaModal(input) {
+    const preview = document.getElementById('categoriaModalImagePreview');
+    const previewImg = document.getElementById('categoriaModalPreviewImg');
+    
+    if (input.files && input.files.length > 0) {
+        const file = input.files[0];
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        
+        if (!validTypes.includes(file.type)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Formato no válido',
+                text: 'Solo se permiten imágenes JPG, JPEG, PNG o WebP'
+            });
+            input.value = '';
+            return;
+        }
+        
+        if (file.size > 2 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Archivo demasiado grande',
+                text: 'La imagen no puede exceder los 2MB'
+            });
+            input.value = '';
+            return;
+        }
+        
+        categoriaModalImagenFile = file;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            preview.style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+    }
+}
+
+function cancelarImagenCategoriaModal() {
+    document.getElementById('categoriaModalImagePreview').style.display = 'none';
+    document.getElementById('vImagen_categoria_modal').value = '';
+    categoriaModalImagenFile = null;
+}
+
+function generarSlugCategoria(nombre) {
+    if (!nombre) {
+        document.getElementById('vSlug_categoria_modal').value = '';
+        return;
+    }
+    let slug = nombre.toLowerCase()
+        .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i').replace(/ó/g, 'o').replace(/ú/g, 'u')
+        .replace(/ñ/g, 'n')
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+/, '').replace(/-+$/, '');
+    document.getElementById('vSlug_categoria_modal').value = slug;
+}
+
+function generarSlugAtributo(nombre) {
+    if (!nombre) {
+        document.getElementById('vSlug_attr_modal').value = '';
+        return;
+    }
+    let slug = nombre.toLowerCase()
+        .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i').replace(/ó/g, 'o').replace(/ú/g, 'u')
+        .replace(/ñ/g, 'n')
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+/, '').replace(/-+$/, '');
+    document.getElementById('vSlug_attr_modal').value = slug;
+}
+
+function quickGenerarSlug(texto, inputId) {
+    if (!texto) return;
+    let slug = texto.toLowerCase()
+        .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i').replace(/ó/g, 'o').replace(/ú/g, 'u')
+        .replace(/ñ/g, 'n')
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+/, '').replace(/-+$/, '');
+    document.getElementById(inputId).value = slug;
+}
+
+function quickActualizarSlug(nombre, slugId) {
+    quickGenerarSlug(nombre, slugId);
+}
+
+// ============ EVENT LISTENERS ADICIONALES ============
+
+document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const atributoId = this.dataset.atributoId;
+        const atributoNombre = this.dataset.atributoNombre;
+        const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+        const estadoBadge = document.getElementById(`estado-${atributoId}`);
+        
+        if (this.checked) {
+            valoresContainer.style.display = 'block';
+            estadoBadge.style.display = 'inline-block';
+            
+            if (!atributosActivos[atributoId]) {
+                atributosActivos[atributoId] = {
+                    id: atributoId,
+                    nombre: atributoNombre,
+                    valores: {}
+                };
+            }
+        } else {
+            valoresContainer.style.display = 'none';
+            estadoBadge.style.display = 'none';
+            
+            const checkboxes = valoresContainer.querySelectorAll('.valor-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+            });
+            
+            delete atributosActivos[atributoId];
+            
+            const seleccionarTodos = document.getElementById(`seleccionar-todos-${atributoId}`);
+            if (seleccionarTodos) {
+                seleccionarTodos.checked = false;
+            }
+        }
+        
+        actualizarPestanasValores();
+        actualizarResumenAtributos();
+    });
+});
+
+document.querySelectorAll('.seleccionar-todos-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const atributoId = this.dataset.atributoId;
+        const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+        const valorCheckboxes = valoresContainer.querySelectorAll('.valor-checkbox');
+        
+        valorCheckboxes.forEach(cb => {
+            cb.checked = this.checked;
+            
+            const atributoNombre = cb.dataset.atributoNombre;
+            const valorId = cb.value;
+            const valorNombre = cb.dataset.valorNombre;
+            
+            if (this.checked) {
+                if (!atributosActivos[atributoId]) {
+                    atributosActivos[atributoId] = {
+                        id: atributoId,
+                        nombre: atributoNombre,
+                        valores: {}
+                    };
+                }
+                atributosActivos[atributoId].valores[valorId] = {
+                    id: valorId,
+                    nombre: valorNombre,
+                    atributoId: atributoId,
+                    atributoNombre: atributoNombre
+                };
+            } else {
+                if (atributosActivos[atributoId]) {
+                    delete atributosActivos[atributoId].valores[valorId];
+                    if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
+                        delete atributosActivos[atributoId];
+                    }
+                }
+            }
+        });
+        
+        actualizarPestanasValores();
+        actualizarResumenAtributos();
+    });
+});
+
+document.querySelectorAll('.valor-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const atributoId = this.dataset.atributoId;
+        const atributoNombre = this.dataset.atributoNombre;
+        const valorId = this.value;
+        const valorNombre = this.dataset.valorNombre;
+        
+        const atributoActivo = document.getElementById(`atributo-activo-${atributoId}`);
+        if (!atributoActivo.checked) {
+            atributoActivo.checked = true;
+            atributoActivo.dispatchEvent(new Event('change'));
+        }
+        
+        if (!atributosActivos[atributoId]) {
+            atributosActivos[atributoId] = {
+                id: atributoId,
+                nombre: atributoNombre,
+                valores: {}
+            };
+        }
+        
+        if (this.checked) {
+            atributosActivos[atributoId].valores[valorId] = {
+                id: valorId,
+                nombre: valorNombre,
+                atributoId: atributoId,
+                atributoNombre: atributoNombre
+            };
+        } else {
+            delete atributosActivos[atributoId].valores[valorId];
+            if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
+                delete atributosActivos[atributoId];
+            }
+        }
+        
+        const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+        const valorCheckboxes = valoresContainer.querySelectorAll('.valor-checkbox');
+        const seleccionarTodos = document.getElementById(`seleccionar-todos-${atributoId}`);
+        const seleccionados = valoresContainer.querySelectorAll('.valor-checkbox:checked');
+        
+        if (seleccionarTodos) {
+            if (seleccionados.length === valorCheckboxes.length) {
+                seleccionarTodos.checked = true;
+                seleccionarTodos.indeterminate = false;
+            } else if (seleccionados.length > 0) {
+                seleccionarTodos.checked = false;
+                seleccionarTodos.indeterminate = true;
+            } else {
+                seleccionarTodos.checked = false;
+                seleccionarTodos.indeterminate = false;
+            }
+        }
+        
+        actualizarPestanasValores();
+        actualizarResumenAtributos();
+    });
+});
+
+// Inicializar resumen y pestañas
+document.addEventListener('DOMContentLoaded', function() {
+    actualizarResumenAtributos();
+    actualizarPestanasValores();
+});
 </script>
 @endpush
 

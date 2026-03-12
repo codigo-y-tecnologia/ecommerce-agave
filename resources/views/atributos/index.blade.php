@@ -3,26 +3,37 @@
 @section('title', 'Atributos')
 @section('content')
 <div class="container">
-    <div class="card">
-        <div class="card-header">
+    <div class="card shadow-sm">
+        <div class="card-header bg-success text-white">
             <div class="d-flex justify-content-between align-items-center">
-                <h2>Atributos</h2>
-                <a href="{{ route('atributos.create') }}" class="btn btn-primary">+ Nuevo Atributo</a>
+                <h2 class="mb-0"><i class="fas fa-cubes me-2"></i>Atributos</h2>
+                <a href="{{ route('atributos.create') }}" class="btn btn-light">
+                    <i class="fas fa-plus-circle me-1"></i> Nuevo Atributo
+                </a>
             </div>
             
             <!-- Formulario de búsqueda -->
             <form method="GET" action="{{ route('atributos.index') }}" class="mt-3">
                 <div class="row">
                     <div class="col-md-8">
-                        <input type="text" name="search" class="form-control" 
-                               placeholder="Buscar por ID o nombre..." 
-                               value="{{ request('search') }}">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white">
+                                <i class="fas fa-search text-success"></i>
+                            </span>
+                            <input type="text" name="search" class="form-control" 
+                                   placeholder="Buscar por ID o nombre..." 
+                                   value="{{ request('search') }}">
+                        </div>
                     </div>
                     <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary w-100">Buscar</button>
+                        <button type="submit" class="btn btn-light w-100">
+                            <i class="fas fa-search me-1"></i> Buscar
+                        </button>
                     </div>
                     <div class="col-md-2">
-                        <a href="{{ route('atributos.index') }}" class="btn btn-secondary w-100">Limpiar</a>
+                        <a href="{{ route('atributos.index') }}" class="btn btn-outline-light w-100">
+                            <i class="fas fa-times me-1"></i> Limpiar
+                        </a>
                     </div>
                 </div>
             </form>
@@ -30,27 +41,38 @@
 
         <div class="card-body">
             @if(session('success'))
-                <div class="alert alert-success">
-                    {{ session('success') }}
-                </div>
+                <script>
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: '{{ session('success') }}',
+                        confirmButtonColor: '#2E8B57'
+                    });
+                </script>
             @endif
 
             @if(session('error'))
-                <div class="alert alert-danger">
-                    {{ session('error') }}
-                </div>
+                <script>
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: '{{ session('error') }}',
+                        confirmButtonColor: '#2E8B57'
+                    });
+                </script>
             @endif
 
             @if(request('search') && request('search') != '')
                 <div class="alert alert-info mb-3">
-                    Resultados para: "{{ request('search') }}"
+                    <i class="fas fa-info-circle me-1"></i>
+                    Resultados para: <strong>"{{ request('search') }}"</strong>
                 </div>
             @endif
 
             @if($atributos->count() > 0)
             <div class="table-responsive">
                 <table class="table table-hover">
-                    <thead>
+                    <thead class="table-light">
                         <tr>
                             <th>ID</th>
                             <th>Nombre</th>
@@ -63,12 +85,13 @@
                     <tbody>
                         @foreach($atributos as $atributo)
                         <tr>
-                            <td>#{{ $atributo->id_atributo }}</td>
+                            <td><span class="badge bg-dark">#{{ $atributo->id_atributo }}</span></td>
                             <td>
                                 <div>
-                                    <strong>{{ $atributo->vNombre }}</strong>
+                                    <strong class="text-success">{{ $atributo->vNombre }}</strong>
                                     @if($atributo->tDescripcion)
-                                    <div class="text-muted" style="font-size: 0.85rem; margin-top: 2px;">
+                                    <div class="text-muted small mt-1">
+                                        <i class="fas fa-align-left me-1"></i>
                                         {{ Str::limit($atributo->tDescripcion, 50) }}
                                     </div>
                                     @endif
@@ -79,9 +102,6 @@
                             </td>
                             <td>
                                 <span class="badge bg-info">{{ $atributo->valores_count }} valores</span>
-                                <a href="{{ route('atributos.valores', $atributo) }}" class="btn btn-sm btn-outline-primary ms-1">
-                                    Gestionar
-                                </a>
                             </td>
                             <td>
                                 @if($atributo->bActivo)
@@ -92,16 +112,19 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{{ route('atributos.show', $atributo) }}" class="btn btn-info">
-                                        Ver
+                                    <a href="{{ route('atributos.show', $atributo) }}" class="btn btn-info text-white" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
                                     </a>
-                                    <a href="{{ route('atributos.edit', $atributo) }}" class="btn btn-warning">
-                                        Editar
+                                    <a href="{{ route('atributos.edit', $atributo) }}" class="btn btn-warning" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{{ route('atributos.valores', $atributo) }}" class="btn btn-success" title="Gestionar valores">
+                                        <i class="fas fa-list"></i>
                                     </a>
                                     <button type="button" class="btn btn-danger btn-eliminar" 
                                             data-id="{{ $atributo->id_atributo }}"
                                             data-nombre="{{ $atributo->vNombre }}">
-                                        Eliminar
+                                        <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
                             </td>
@@ -112,22 +135,23 @@
             </div>
             
             <div class="mt-3 p-3 bg-light rounded">
-                <strong>Total:</strong> {{ $atributos->count() }} atributos
+                <strong>Total:</strong> {{ $atributos->count() }} atributos encontrados
             </div>
             
             @else
             <div class="text-center py-5">
+                <i class="fas fa-cubes fa-4x text-muted mb-3"></i>
                 @if(request('search'))
                     <h4 class="text-muted">No se encontraron resultados</h4>
                     <p class="text-muted">No hay atributos que coincidan con "{{ request('search') }}"</p>
-                    <a href="{{ route('atributos.index') }}" class="btn btn-primary">
-                        Ver todos los atributos
+                    <a href="{{ route('atributos.index') }}" class="btn btn-success">
+                        <i class="fas fa-times me-1"></i> Limpiar búsqueda
                     </a>
                 @else
                     <h4 class="text-muted">No hay atributos registrados</h4>
                     <p class="text-muted">Comienza agregando tu primer atributo</p>
-                    <a href="{{ route('atributos.create') }}" class="btn btn-primary">
-                        + Crear Primer Atributo
+                    <a href="{{ route('atributos.create') }}" class="btn btn-success">
+                        <i class="fas fa-plus-circle me-1"></i> Crear Primer Atributo
                     </a>
                 @endif
             </div>
@@ -147,81 +171,42 @@
 @endforeach
 @endsection
 
-@push('styles')
-<!-- SweetAlert2 CSS (opcional) -->
-<style>
-.swal2-popup {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-.swal2-confirm {
-    background-color: #d33 !important;
-}
-</style>
-@endpush
-
 @push('scripts')
-<!-- SweetAlert2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Verificar si SweetAlert2 está cargado
-    if (typeof Swal === 'undefined') {
-        console.error('SweetAlert2 no está cargado. Cargando desde CDN...');
-        // Cargar SweetAlert2 dinámicamente si no está disponible
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
-        script.onload = initDeleteButtons;
-        document.head.appendChild(script);
-    } else {
-        initDeleteButtons();
-    }
-
-    function initDeleteButtons() {
-        // Confirmación de eliminación con SweetAlert2
-        document.querySelectorAll('.btn-eliminar').forEach(button => {
-            button.addEventListener('click', function() {
-                const id = this.getAttribute('data-id');
-                const nombre = this.getAttribute('data-nombre');
-                
-                Swal.fire({
-                    title: "¿Estás seguro?",
-                    html: `Vas a eliminar el atributo: <strong>"${nombre}"</strong><br>
-                           <span class="text-danger">¡No podrás revertir esta acción! Todos los valores asociados también serán eliminados.</span>`,
-                    icon: "warning",
-                    showCancelButton: true,
-                    confirmButtonColor: "#d33",
-                    cancelButtonColor: "#3085d6",
-                    confirmButtonText: "Sí, eliminar",
-                    cancelButtonText: "Cancelar",
-                    customClass: {
-                        popup: 'animated fadeIn'
-                    },
-                    showClass: {
-                        popup: 'animate__animated animate__fadeIn'
-                    },
-                    hideClass: {
-                        popup: 'animate__animated animate__fadeOut'
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        // Mostrar mensaje de eliminando
-                        Swal.fire({
-                            title: "Eliminando...",
-                            text: "Por favor espera",
-                            allowOutsideClick: false,
-                            didOpen: () => {
-                                Swal.showLoading();
-                            }
-                        });
-                        
-                        // Enviar formulario
-                        document.getElementById(`delete-form-${id}`).submit();
-                    }
-                });
+    // Confirmación de eliminación con SweetAlert2
+    document.querySelectorAll('.btn-eliminar').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            const nombre = this.getAttribute('data-nombre');
+            
+            Swal.fire({
+                title: "¿Estás seguro?",
+                html: `Vas a eliminar el atributo: <strong>"${nombre}"</strong><br>
+                       <span class="text-danger">¡No podrás revertir esta acción! Todos los valores asociados también serán eliminados.</span>`,
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#d33",
+                cancelButtonColor: "#3085d6",
+                confirmButtonText: "Sí, eliminar",
+                cancelButtonText: "Cancelar"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: "Eliminando...",
+                        text: "Por favor espera",
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                    
+                    document.getElementById(`delete-form-${id}`).submit();
+                }
             });
         });
-    }
+    });
 });
 </script>
 @endpush

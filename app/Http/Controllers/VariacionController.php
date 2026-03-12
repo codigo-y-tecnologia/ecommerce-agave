@@ -969,4 +969,34 @@ class VariacionController extends Controller
             'atributos' => $atributos
         ]);
     }
+
+    // ============ NUEVO MÉTODO PARA VERIFICACIÓN EN TIEMPO REAL ============
+
+    /**
+     * Verificar si un SKU de variación ya existe (para validación en tiempo real)
+     */
+    public function verificarSKU(Request $request)
+    {
+        try {
+            $sku = $request->get('sku');
+            
+            if (empty($sku)) {
+                return response()->json(['exists' => false]);
+            }
+            
+            $exists = ProductoVariacion::where('vSKU', $sku)->exists();
+            
+            return response()->json([
+                'exists' => $exists,
+                'sku' => $sku
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error al verificar SKU de variación: ' . $e->getMessage());
+            return response()->json([
+                'exists' => false,
+                'error' => 'Error al verificar'
+            ], 500);
+        }
+    }
 }
