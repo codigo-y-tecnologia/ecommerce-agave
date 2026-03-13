@@ -16,7 +16,10 @@ class ConfiguracionServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $configArray = Cache::remember('configuraciones_sistema', 3600, function () {
+
+        //logger('Configuraciones cargadas');
+
+        $configArray = Cache::rememberForever('configuraciones_sistema', function () {
 
             $configuraciones = Configuracion::all();
 

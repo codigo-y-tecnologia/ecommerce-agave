@@ -35,11 +35,14 @@
                 @csrf
 
                 <div class="form-check form-switch">
+                    <input type="hidden" name="value" value="0">
+
                     <input class="form-check-input"
                            type="checkbox"
                            name="value"
+                           value="1"
                            onchange="this.form.submit()"
-                           {{ \App\Models\Setting::getValue('auto_register_guest_after_purchase') ? 'checked' : '' }}>
+                           @checked(setting('auto_register_guest_after_purchase'))>
 
                     <label class="form-check-label fw-bold">
                         Registrar automáticamente a invitados después del pago
@@ -68,11 +71,14 @@
                 @csrf
 
                 <div class="form-check form-switch">
+                    <input type="hidden" name="value" value="0">
+
                     <input class="form-check-input"
                            type="checkbox"
                            name="value"
+                           value="1"
                            onchange="this.form.submit()"
-                           {{ \App\Models\Setting::getValue('allow_order_returns') ? 'checked' : '' }}>
+                           @checked(setting('allow_order_returns'))>
 
                     <label class="form-check-label fw-bold">
                         Permitir devoluciones y cancelaciones de pedidos

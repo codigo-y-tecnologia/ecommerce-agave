@@ -86,8 +86,8 @@ class CheckoutController extends Controller
         $tipoCupon = $cupon?->eTipo ?? null;
 
         // Definir reglas de envío
-        $montoEnvioGratis = 1500; // Envío gratis si el total >= 1500
-        $costoEnvioFijo = 150;   // Costo de envío si no alcanza
+        $montoEnvioGratis = config('tienda.envio_gratis_desde'); // Envío gratis si el total >= costo de envío gratis definido
+        $costoEnvioFijo = config('tienda.costo_de_envio');   // Costo de envío si no alcanza
         $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
 
         $descuento = 0;
@@ -637,8 +637,8 @@ class CheckoutController extends Controller
             }
 
             // 🚚 Cálculo de envío
-            $montoEnvioGratis = 1500;
-            $costoEnvioFijo = 150;
+            $montoEnvioGratis = config('tienda.envio_gratis_desde');
+            $costoEnvioFijo = config('tienda.costo_de_envio');
             $envio = ($total >= $montoEnvioGratis) ? 0 : $costoEnvioFijo;
 
             // 💸 Cálculo de descuento

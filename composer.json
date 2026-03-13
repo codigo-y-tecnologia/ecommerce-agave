@@ -36,7 +36,8 @@
         "app/Helpers/CheckoutHelper.php",
         "app/Helpers/CarritoHelper.php",
         "app/Helpers/pedidos.php",
-        "app/Helpers/ConfiguracionHelper.php"
+        "app/Helpers/ConfiguracionHelper.php",
+        "app/Helpers/SettingHelper.php"
     ]
     },
     "autoload-dev": {

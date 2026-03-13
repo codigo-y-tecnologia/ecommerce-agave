@@ -32,7 +32,7 @@ class CrearPagoDesdeCarritoService
             $impuestosPorTipo = $totales['impuestos_por_tipo'];
             $subtotalConImpuestos = $totales['subtotal_con_impuestos'];
 
-            $envioBase = $total >= 1500 ? 0 : 150;
+            $envioBase = $total >= config('tienda.envio_gratis_desde') ? 0 : config('tienda.costo_de_envio');
 
             $resultado = app(CalcularDescuentoService::class)
                 ->ejecutar($cupon, $total, $envioBase);

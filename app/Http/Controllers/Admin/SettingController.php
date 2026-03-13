@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\{Setting, Configuracion};
 use Illuminate\Support\Facades\Cache;
+use App\Services\System\SettingsService;
 
 class SettingController extends Controller
 {
@@ -16,9 +17,10 @@ class SettingController extends Controller
 
     public function updateAutoRegister(Request $request)
     {
-        Setting::updateOrCreate(
-            ['key' => 'auto_register_guest_after_purchase'],
-            ['value' => $request->boolean('value')]
+
+        app(SettingsService::class)->set(
+            'auto_register_guest_after_purchase',
+            $request->boolean('value')
         );
 
         return back()->with('success', 'Configuración actualizada');
@@ -26,9 +28,10 @@ class SettingController extends Controller
 
     public function updateAllowReturns(Request $request)
     {
-        Setting::updateOrCreate(
-            ['key' => 'allow_order_returns'],
-            ['value' => $request->boolean('value')]
+
+        app(SettingsService::class)->set(
+            'allow_order_returns',
+            $request->boolean('value')
         );
 
         return back()->with(
