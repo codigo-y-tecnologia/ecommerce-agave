@@ -114,7 +114,7 @@ class VariacionController extends Controller
         $productoPadre = Producto::findOrFail($producto_id);
         
         $validator = Validator::make($request->all(), [
-            'vSKU' => 'required|unique:tbl_producto_variaciones,vSKU|max:50',
+            'vSKU' => 'required|unique:tbl_producto_variaciones,vSKU|max:22',
             'dPrecio' => [
                 'required',
                 'numeric',

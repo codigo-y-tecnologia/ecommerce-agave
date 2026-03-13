@@ -91,7 +91,7 @@
                             <tbody>
                                 @forelse($producto->variaciones as $variacion)
                                     @php
-                                        // CORREGIDO: Usar tieneDescuentoActivo() en lugar de ofertaVigente()
+                                        // Verificar si tiene oferta activa
                                         $tieneOferta = $variacion->tieneDescuentoActivo();
                                         $precioBase = $tieneOferta ? $variacion->dPrecio_oferta : $variacion->dPrecio;
                                         

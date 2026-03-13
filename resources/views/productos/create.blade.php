@@ -198,7 +198,7 @@
                 </div>
 
                 <!-- CAMPOS DE DESCUENTO (OCULTOS INICIALMENTE) -->
-                <div id="descuentoFields" style="display: none;">
+                <div id="descuentoFields" style="display: {{ old('bTiene_descuento') ? 'block' : 'none' }};">
                     <div class="row">
                         <div class="col-md-4">
                             <div class="form-group mb-3">
@@ -212,7 +212,7 @@
                                            id="dPrecio_descuento" 
                                            class="form-control @error('dPrecio_descuento') is-invalid @enderror"
                                            value="{{ old('dPrecio_descuento') }}" 
-                                           oninput="validarPrecio(this); validarPrecioDescuentoProductoInstantaneo(this); actualizarPrecioFinal();"
+                                           oninput="validarPrecio(this); validarPrecioDescuentoProducto(); actualizarPrecioFinal();"
                                            onblur="validarPrecioDescuentoProducto()"
                                            placeholder="0.00"
                                            autocomplete="off">
@@ -1895,10 +1895,6 @@ const skusExistentes = new Set(productosExistentes.map(p => p.sku));
 const nombresExistentes = new Set(productosExistentes.map(p => p.nombre));
 const skusVariacionExistentes = new Set(variacionesExistentes.map(v => v.sku));
 
-console.log('SKUs existentes:', Array.from(skusExistentes));
-console.log('Nombres existentes:', Array.from(nombresExistentes));
-console.log('SKUs de variaciones existentes:', Array.from(skusVariacionExistentes));
-
 // ============ VARIABLES GLOBALES ============
 let selectedImages = [];
 let imageCounter = 0;
@@ -1924,26 +1920,23 @@ let modalEtiqueta = null;
 let modalAtributo = null;
 let modalImpuesto = null;
 
-// ============ VALIDACIONES LOCALES (SIN AJAX) ============
+// ============ VALIDACIONES LOCALES ============
 
-// Función para verificar SKU de producto localmente
 function verificarSKUProductoLocal(input) {
     const sku = input.value.trim();
     const errorDiv = document.getElementById('sku-error');
     const originalValue = input.getAttribute('data-original-value');
     
-    // Si el SKU está vacío o es igual al valor original (en edición), no validar
     if (sku === '' || sku === originalValue) {
         input.classList.remove('is-invalid');
         if (errorDiv) errorDiv.style.display = 'none';
         return true;
     }
     
-    // Verificar si el SKU ya existe
     if (skusExistentes.has(sku)) {
         input.classList.add('is-invalid');
         if (errorDiv) {
-            errorDiv.textContent = `⚠️ Ya existe un producto con el SKU "${sku}". Por favor, elige otro SKU.`;
+            errorDiv.textContent = `⚠️ Ya existe un producto con el SKU "${sku}".`;
             errorDiv.style.display = 'block';
         }
         return false;
@@ -1954,24 +1947,21 @@ function verificarSKUProductoLocal(input) {
     }
 }
 
-// Función para verificar nombre de producto localmente
 function verificarNombreProductoLocal(input) {
     const nombre = input.value.trim();
     const errorDiv = document.getElementById('nombre-error');
     const originalValue = input.getAttribute('data-original-value');
     
-    // Si el nombre está vacío o es igual al valor original (en edición), no validar
     if (nombre === '' || nombre === originalValue) {
         input.classList.remove('is-invalid');
         if (errorDiv) errorDiv.style.display = 'none';
         return true;
     }
     
-    // Verificar si el nombre ya existe
     if (nombresExistentes.has(nombre)) {
         input.classList.add('is-invalid');
         if (errorDiv) {
-            errorDiv.textContent = `⚠️ Ya existe un producto con el nombre "${nombre}". Por favor, elige otro nombre.`;
+            errorDiv.textContent = `⚠️ Ya existe un producto con el nombre "${nombre}".`;
             errorDiv.style.display = 'block';
         }
         return false;
@@ -1982,7 +1972,6 @@ function verificarNombreProductoLocal(input) {
     }
 }
 
-// Función para verificar SKU de variación localmente
 function verificarSKUVariacionLocal(input, valorKey) {
     const sku = input.value.trim();
     const container = input.closest('.form-group');
@@ -1994,17 +1983,15 @@ function verificarSKUVariacionLocal(input, valorKey) {
         container.appendChild(errorDiv);
     }
     
-    // Si el SKU está vacío, no validar
     if (sku === '') {
         input.classList.remove('is-invalid');
         errorDiv.style.display = 'none';
         return true;
     }
     
-    // Verificar si el SKU ya existe en productos o variaciones
     if (skusExistentes.has(sku) || skusVariacionExistentes.has(sku)) {
         input.classList.add('is-invalid');
-        errorDiv.textContent = `⚠️ Ya existe un producto o variación con el SKU "${sku}". Por favor, elige otro SKU.`;
+        errorDiv.textContent = `⚠️ Ya existe un producto o variación con el SKU "${sku}".`;
         errorDiv.style.display = 'block';
         return false;
     } else {
@@ -2014,147 +2001,229 @@ function verificarSKUVariacionLocal(input, valorKey) {
     }
 }
 
-// Función para mostrar alerta personalizada de duplicado
-function mostrarAlertaDuplicado(tipo, valor, esVariacion = false) {
-    const titulo = esVariacion ? '⚠️ Variación Duplicada' : '⚠️ Producto Duplicado';
-    const texto = esVariacion 
-        ? `Ya existe una variación con el ${tipo} "${valor}". No se puede registrar otra igual.`
-        : `Ya existe un producto con el ${tipo} "${valor}". No se puede registrar otro igual.`;
-    
-    Swal.fire({
-        icon: 'warning',
-        title: titulo,
-        text: texto,
-        confirmButtonColor: '#3085d6',
-        confirmButtonText: 'Entendido',
-        timer: 4000,
-        timerProgressBar: true,
-        allowOutsideClick: false
-    });
-}
+function validarPrecioDescuentoProducto() {
+    const tieneDescuentoCheckbox = document.getElementById('bTiene_descuento');
+    const precioVentaInput = document.getElementById('dPrecio_venta');
+    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
+    const errorDiv = document.getElementById('error-precio-descuento');
 
-// Función para validar todos los campos antes de enviar
-function validarCamposUnicosAntesDeEnviar() {
-    const skuInput = document.getElementById('vCodigo_barras');
-    const nombreInput = document.getElementById('vNombre');
-    
-    // Validar SKU
-    if (skuInput && !verificarSKUProductoLocal(skuInput)) {
-        mostrarAlertaDuplicado('SKU', skuInput.value, false);
-        skuInput.focus();
-        return false;
+    if (!tieneDescuentoCheckbox || !tieneDescuentoCheckbox.checked) {
+        if (precioDescuentoInput) {
+            precioDescuentoInput.classList.remove('is-invalid');
+        }
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+        }
+        return true;
     }
-    
-    // Validar Nombre
-    if (nombreInput && !verificarNombreProductoLocal(nombreInput)) {
-        mostrarAlertaDuplicado('nombre', nombreInput.value, false);
-        nombreInput.focus();
-        return false;
+
+    const precioVenta = parseFloat(precioVentaInput?.value) || 0;
+    const precioDescuento = parseFloat(precioDescuentoInput?.value) || 0;
+    const inputValue = precioDescuentoInput?.value;
+
+    let esValido = true;
+
+    if (inputValue && inputValue !== '') {
+        if (precioDescuento >= precioVenta || precioDescuento === 0) {
+            esValido = false;
+        }
+    } else {
+        esValido = false;
     }
-    
-    // Validar SKUs de variaciones
-    const variacionesSKU = document.querySelectorAll('[id^="sku-"]');
-    for (let input of variacionesSKU) {
-        const valorKey = input.id.replace('sku-', '');
-        if (!verificarSKUVariacionLocal(input, valorKey)) {
-            mostrarAlertaDuplicado('SKU', input.value, true);
-            input.focus();
-            return false;
+
+    if (!esValido) {
+        precioDescuentoInput.classList.add('is-invalid');
+        if (errorDiv) {
+            errorDiv.style.display = 'block';
+            if (precioDescuento >= precioVenta && inputValue) {
+                errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta.';
+            } else {
+                errorDiv.textContent = 'Este campo es obligatorio cuando el descuento está activo.';
+            }
+        }
+    } else {
+        precioDescuentoInput.classList.remove('is-invalid');
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
         }
     }
     
+    return esValido;
+}
+
+function validarPrecioDescuentoVariacionInstantaneo(input) {
+    const precioNormalId = input.dataset.precioNormalId;
+    const precioNormal = document.getElementById(precioNormalId);
+    const valorKey = input.dataset.valorKey;
+    const checkbox = document.getElementById(`descuento-${valorKey}`);
+    const errorDiv = document.getElementById(`error-precio-descuento-${valorKey}`);
+    
+    if (!checkbox || !checkbox.checked) return true;
+    
+    if (precioNormal && input.value) {
+        const precioNormalValor = parseFloat(precioNormal.value) || 0;
+        const precioDescuentoValor = parseFloat(input.value) || 0;
+        
+        if (precioDescuentoValor >= precioNormalValor && precioDescuentoValor > 0 && input.value !== '') {
+            input.classList.add('is-invalid');
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio normal';
+            return false;
+        } else {
+            input.classList.remove('is-invalid');
+            errorDiv.style.display = 'none';
+            return true;
+        }
+    }
     return true;
 }
 
-// ============ INICIALIZACIÓN ============
-
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Inicializando validaciones locales...');
-    
-    valorModal = new bootstrap.Modal(document.getElementById('crearValorModal'));
-    
-    // Inicializar modales
-    modalCategoria = new bootstrap.Modal(document.getElementById('modalCategoria'));
-    modalMarca = new bootstrap.Modal(document.getElementById('modalMarca'));
-    modalEtiqueta = new bootstrap.Modal(document.getElementById('modalEtiqueta'));
-    modalAtributo = new bootstrap.Modal(document.getElementById('modalAtributo'));
-    modalImpuesto = new bootstrap.Modal(document.getElementById('modalImpuesto'));
-
-    // Inicializar los formularios rápidos
-    initQuickForms();
-    
-    // Validación para nombre del producto
-    const nombreInput = document.getElementById('vNombre');
-    if (nombreInput) {
-        nombreInput.addEventListener('input', function() { verificarNombreProductoLocal(this); });
-        nombreInput.addEventListener('blur', function() { verificarNombreProductoLocal(this); });
-        console.log('Eventos de nombre asignados');
-    }
-    
-    // Validación para SKU del producto
+// ============ VALIDACIÓN FINAL CON SWEETALERT ============
+function validarCamposUnicosAntesDeEnviar() {
     const skuInput = document.getElementById('vCodigo_barras');
-    if (skuInput) {
-        skuInput.addEventListener('input', function() { 
-            validarSKU(this);
-            verificarSKUProductoLocal(this);
-        });
-        skuInput.addEventListener('blur', function() { 
-            verificarSKUProductoLocal(this);
-        });
-        console.log('Eventos de SKU asignados');
+    const nombreInput = document.getElementById('vNombre');
+    const tieneDescuentoCheckbox = document.getElementById('bTiene_descuento');
+    const precioVentaInput = document.getElementById('dPrecio_venta');
+    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
+    const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
+    const fechaFinInput = document.getElementById('dFecha_fin_descuento');
+
+    let errores = [];
+
+    // 1. Validar SKU del Producto
+    if (skuInput && !verificarSKUProductoLocal(skuInput)) {
+        errores.push(`Ya existe un producto con el SKU "${skuInput.value}".`);
     }
-    
-    // Usar delegación de eventos para los SKUs de variaciones
-    document.addEventListener('input', function(e) {
-        if (e.target.id && e.target.id.startsWith('sku-')) {
-            const valorKey = e.target.id.replace('sku-', '');
-            validarSKU(e.target);
-            verificarSKUVariacionLocal(e.target, valorKey);
+
+    // 2. Validar Nombre del Producto
+    if (nombreInput && !verificarNombreProductoLocal(nombreInput)) {
+        errores.push(`Ya existe un producto con el nombre "${nombreInput.value}".`);
+    }
+
+    // 3. Validar Descuento del Producto
+    if (tieneDescuentoCheckbox && tieneDescuentoCheckbox.checked) {
+        const precioVenta = parseFloat(precioVentaInput?.value) || 0;
+        const precioDescuento = parseFloat(precioDescuentoInput?.value) || 0;
+        const precioDescuentoValor = precioDescuentoInput?.value;
+
+        if (!precioDescuentoValor || precioDescuentoValor === '') {
+            errores.push('El precio de descuento es obligatorio cuando el descuento está activo.');
+        } else if (precioDescuento >= precioVenta) {
+            errores.push(`El precio de descuento ($${precioDescuento.toFixed(2)}) debe ser menor que el precio de venta ($${precioVenta.toFixed(2)}).`);
         }
-    });
-    
-    document.addEventListener('blur', function(e) {
-        if (e.target.id && e.target.id.startsWith('sku-')) {
-            const valorKey = e.target.id.replace('sku-', '');
-            if (e.target.value.trim() !== '') {
-                verificarSKUVariacionLocal(e.target, valorKey);
+
+        if (!fechaInicioInput?.value) {
+            errores.push('La fecha de inicio es obligatoria cuando el descuento está activo.');
+        }
+        if (!fechaFinInput?.value) {
+            errores.push('La fecha de fin es obligatoria cuando el descuento está activo.');
+        }
+
+        if (fechaInicioInput?.value && fechaFinInput?.value) {
+            const inicio = new Date(fechaInicioInput.value);
+            const fin = new Date(fechaFinInput.value);
+            if (fin < inicio) {
+                errores.push('La fecha de fin no puede ser anterior a la fecha de inicio.');
             }
         }
+    }
+
+    // 4. Validar SKUs de variaciones
+    const variacionesSKU = document.querySelectorAll('[id^="sku-"]');
+    for (let input of variacionesSKU) {
+        if (input.value && input.value.trim() !== '') {
+            const valorKey = input.id.replace('sku-', '');
+            if (!verificarSKUVariacionLocal(input, valorKey)) {
+                errores.push(`Ya existe un producto o variación con el SKU "${input.value}".`);
+                // Solo mostramos el primer error de SKU para no saturar
+                break;
+            }
+        }
+    }
+
+    // 5. Validar descuentos de variaciones
+    Object.keys(atributosActivos).forEach(atributoId => {
+        Object.keys(atributosActivos[atributoId].valores).forEach(valorId => {
+            const valorKey = `${atributoId}_${valorId}`;
+            const descuentoCheckbox = document.getElementById(`descuento-${valorKey}`);
+            const precioInput = document.getElementById(`precio-${valorKey}`);
+            const precioDescuentoInput = document.getElementById(`precio_descuento-${valorKey}`);
+            const fechaInicioInput = document.getElementById(`fecha-inicio-${valorKey}`);
+            const fechaFinInput = document.getElementById(`fecha-fin-${valorKey}`);
+            const valorNombre = atributosActivos[atributoId].valores[valorId].nombre;
+            
+            if (descuentoCheckbox && descuentoCheckbox.checked) {
+                const precioNormal = parseFloat(precioInput?.value) || 0;
+                const precioDescuento = parseFloat(precioDescuentoInput?.value) || 0;
+                
+                if (!precioDescuentoInput?.value || precioDescuentoInput.value === '') {
+                    errores.push(`El precio de descuento es obligatorio para la variación "${valorNombre}".`);
+                } else if (precioDescuento >= precioNormal) {
+                    errores.push(`El precio de descuento ($${precioDescuento.toFixed(2)}) debe ser menor que el precio normal ($${precioNormal.toFixed(2)}) para la variación "${valorNombre}".`);
+                }
+                
+                if (!fechaInicioInput?.value) {
+                    errores.push(`La fecha de inicio es obligatoria para la variación "${valorNombre}".`);
+                }
+                if (!fechaFinInput?.value) {
+                    errores.push(`La fecha de fin es obligatoria para la variación "${valorNombre}".`);
+                }
+                
+                if (fechaInicioInput?.value && fechaFinInput?.value) {
+                    const inicio = new Date(fechaInicioInput.value);
+                    const fin = new Date(fechaFinInput.value);
+                    if (fin < inicio) {
+                        errores.push(`La fecha de fin no puede ser anterior a la fecha de inicio para la variación "${valorNombre}".`);
+                    }
+                }
+            }
+        });
     });
-    
-    console.log('Validaciones locales inicializadas correctamente');
-});
 
-// ============ MODIFICAR EL EVENTO SUBMIT DEL FORMULARIO ============
+    // 6. Mostrar errores con SweetAlert
+    if (errores.length > 0) {
+        Swal.fire({
+            icon: 'error',
+            title: '¡Error de validación!',
+            html: `
+                <div class="text-left" style="max-height: 400px; overflow-y: auto;">
+                    <p class="mb-2">Por favor, corrige los siguientes errores:</p>
+                    <ul class="text-left">
+                        ${errores.map(err => `<li class="mb-1">⚠️ ${err}</li>`).join('')}
+                    </ul>
+                </div>
+            `,
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#d33',
+            width: '600px'
+        });
+        return false;
+    }
 
+    return true;
+}
+
+// ============ EVENTO SUBMIT ============
 document.addEventListener('DOMContentLoaded', function() {
     const productoForm = document.getElementById('productoForm');
     if (productoForm) {
         productoForm.onsubmit = function(e) {
-            console.log('Validando antes de enviar...');
-            
-            // Primero validar los campos únicos
             if (!validarCamposUnicosAntesDeEnviar()) {
-                console.log('Validación de campos únicos falló');
                 e.preventDefault();
                 return false;
             }
             
-            // Luego continuar con la validación de tamaño de archivos
             if (!validarTamañoTotalAntesDeEnviar()) {
-                console.log('Validación de tamaño falló');
                 e.preventDefault();
                 return false;
             }
             
-            console.log('Todas las validaciones pasaron, enviando formulario...');
             return true;
         };
     }
 });
 
 // ============ FUNCIONES DE VALIDACIÓN DE SKU Y PRECIOS ============
-
 function validarSKU(input) {
     input.value = input.value.replace(/[^A-Za-z0-9-]/g, '');
     if (input.value.length > 50) {
@@ -2208,7 +2277,7 @@ function validarPrecio(input) {
     input.classList.remove('is-invalid');
     
     if (input.id === 'dPrecio_descuento') {
-        validarPrecioDescuentoProductoInstantaneo(input);
+        validarPrecioDescuentoProducto();
     }
     
     if (input.id === 'dPrecio_venta') {
@@ -2234,22 +2303,22 @@ function validarStock(input) {
 }
 
 // ============ FUNCIONES DE DESCUENTO ============
-
 function toggleDescuentoFields() {
     const descuentoFields = document.getElementById('descuentoFields');
     const tieneDescuento = document.getElementById('bTiene_descuento').checked;
     const precioDescuento = document.getElementById('dPrecio_descuento');
     const fechaInicio = document.getElementById('dFecha_inicio_descuento');
     const fechaFin = document.getElementById('dFecha_fin_descuento');
-    
+
     if (tieneDescuento) {
         descuentoFields.style.display = 'block';
         precioDescuento.required = true;
         fechaInicio.required = true;
         fechaFin.required = true;
-        
+
         setTimeout(() => {
             validarPrecioDescuentoProducto();
+            validarFechasDescuento();
             actualizarPrecioFinal();
         }, 100);
     } else {
@@ -2257,54 +2326,13 @@ function toggleDescuentoFields() {
         precioDescuento.required = false;
         fechaInicio.required = false;
         fechaFin.required = false;
-        
+
         precioDescuento.classList.remove('is-invalid');
         document.getElementById('error-precio-descuento').style.display = 'none';
         fechaFin.classList.remove('is-invalid');
         document.getElementById('error-fechas-descuento').style.display = 'none';
-        
+
         actualizarPrecioFinal();
-    }
-}
-
-function validarPrecioDescuentoProductoInstantaneo(input) {
-    const tieneDescuento = document.getElementById('bTiene_descuento');
-    if (!tieneDescuento || !tieneDescuento.checked) return true;
-    
-    const precioVenta = parseFloat(document.getElementById('dPrecio_venta').value) || 0;
-    const precioDescuento = parseFloat(input.value) || 0;
-    const errorDiv = document.getElementById('error-precio-descuento');
-    
-    if (precioDescuento >= precioVenta && precioDescuento > 0 && input.value !== '') {
-        input.classList.add('is-invalid');
-        errorDiv.style.display = 'block';
-        errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
-        return false;
-    } else {
-        input.classList.remove('is-invalid');
-        errorDiv.style.display = 'none';
-        return true;
-    }
-}
-
-function validarPrecioDescuentoProducto() {
-    const tieneDescuento = document.getElementById('bTiene_descuento');
-    if (!tieneDescuento || !tieneDescuento.checked) return true;
-    
-    const precioVenta = parseFloat(document.getElementById('dPrecio_venta').value) || 0;
-    const precioDescuento = parseFloat(document.getElementById('dPrecio_descuento').value) || 0;
-    const input = document.getElementById('dPrecio_descuento');
-    const errorDiv = document.getElementById('error-precio-descuento');
-    
-    if (precioDescuento >= precioVenta && precioDescuento > 0) {
-        input.classList.add('is-invalid');
-        errorDiv.style.display = 'block';
-        errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
-        return false;
-    } else {
-        input.classList.remove('is-invalid');
-        errorDiv.style.display = 'none';
-        return true;
     }
 }
 
@@ -2351,33 +2379,6 @@ function validarFechasDescuentoVariacion(inicioId, finId, valorKey) {
             return false;
         } else {
             fechaFin.classList.remove('is-invalid');
-            errorDiv.style.display = 'none';
-            return true;
-        }
-    }
-    return true;
-}
-
-function validarPrecioDescuentoVariacionInstantaneo(input) {
-    const precioNormalId = input.dataset.precioNormalId;
-    const precioNormal = document.getElementById(precioNormalId);
-    const valorKey = input.dataset.valorKey;
-    const checkbox = document.getElementById(`descuento-${valorKey}`);
-    const errorDiv = document.getElementById(`error-precio-descuento-${valorKey}`);
-    
-    if (!checkbox || !checkbox.checked) return true;
-    
-    if (precioNormal && input.value) {
-        const precioNormalValor = parseFloat(precioNormal.value) || 0;
-        const precioDescuentoValor = parseFloat(input.value) || 0;
-        
-        if (precioDescuentoValor >= precioNormalValor && precioDescuentoValor > 0 && input.value !== '') {
-            input.classList.add('is-invalid');
-            errorDiv.style.display = 'block';
-            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio normal';
-            return false;
-        } else {
-            input.classList.remove('is-invalid');
             errorDiv.style.display = 'none';
             return true;
         }
@@ -2445,7 +2446,6 @@ function toggleDescuentoVariacion(checkbox, valorKey) {
 }
 
 // ============ FUNCIÓN DE CÁLCULO DE IMPUESTO Y PRECIO FINAL ============
-
 function actualizarPrecioFinal() {
     const precioVentaInput = document.getElementById('dPrecio_venta');
     const tieneDescuento = document.getElementById('bTiene_descuento')?.checked;
@@ -2454,7 +2454,6 @@ function actualizarPrecioFinal() {
     
     if (!precioVentaInput) return;
     
-    // Determinar qué precio usar (original o con descuento)
     let precioBase = parseFloat(precioVentaInput.value) || 0;
     let precioOriginal = precioBase;
     
@@ -2465,10 +2464,8 @@ function actualizarPrecioFinal() {
         }
     }
     
-    // Mostrar precio base (el que se usará para calcular impuestos)
     document.getElementById('precio-base-display').textContent = '$' + precioBase.toFixed(2);
     
-    // Mostrar precio original si hay descuento
     const precioOriginalDisplay = document.getElementById('precio-original-display');
     if (tieneDescuento && precioBase < precioOriginal) {
         precioOriginalDisplay.style.display = 'block';
@@ -2478,20 +2475,17 @@ function actualizarPrecioFinal() {
         precioOriginalDisplay.style.display = 'none';
     }
     
-    // Obtener impuesto seleccionado
     let totalImpuestos = 0;
     let porcentaje = 0;
     
     if (impuestoSelect && impuestoSelect.value) {
         const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
         porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
-        
         totalImpuestos = precioBase * (porcentaje / 100);
     }
     
     const precioFinal = precioBase + totalImpuestos;
     
-    // Mostrar resultados
     document.getElementById('total-impuestos-display').textContent = '$' + totalImpuestos.toFixed(2);
     document.getElementById('precio-final-display').textContent = '$' + precioFinal.toFixed(2);
     
@@ -2512,7 +2506,6 @@ function actualizarPrecioFinalVariacion(valorKey) {
     
     if (!precioInput || !precioFinalSpan) return;
     
-    // Determinar qué precio usar (original o con descuento)
     let precioBase = parseFloat(precioInput.value) || 0;
     
     if (descuentoCheckbox && descuentoCheckbox.checked && precioDescuentoInput && precioDescuentoInput.value) {
@@ -2522,7 +2515,6 @@ function actualizarPrecioFinalVariacion(valorKey) {
         }
     }
     
-    // Obtener impuesto seleccionado
     let totalImpuestos = 0;
     let porcentaje = 0;
     let nombreImpuesto = '';
@@ -2531,13 +2523,11 @@ function actualizarPrecioFinalVariacion(valorKey) {
         const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
         porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
         nombreImpuesto = selectedOption.text.split('(')[0].trim();
-        
         totalImpuestos = precioBase * (porcentaje / 100);
     }
     
     const precioFinal = precioBase + totalImpuestos;
     
-    // Mostrar resultados
     precioFinalSpan.textContent = '$' + precioFinal.toFixed(2);
     
     if (detalleImpuestoSpan) {
@@ -2550,7 +2540,6 @@ function actualizarPrecioFinalVariacion(valorKey) {
 }
 
 // ============ FUNCIONES DE DIMENSIONES ============
-
 function validarDimension(input, maxDecimales, maxValor) {
     let value = input.value;
     const cursorPos = input.selectionStart;
@@ -2697,7 +2686,6 @@ function permitirBorrado(e) {
 }
 
 // ============ FUNCIONES DE IMÁGENES ============
-
 function calcularTamañoTotal() {
     let total = 0;
     
@@ -2708,7 +2696,6 @@ function calcularTamañoTotal() {
         total += img.file.size;
     });
     
-    // Agregar imágenes de variaciones
     Object.keys(imagenesVariacion).forEach(valorKey => {
         if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
             imagenesVariacion[valorKey].imagenes.forEach(img => {
@@ -2762,7 +2749,6 @@ function actualizarBarraProgresoTamaño() {
 function actualizarContadorImagenes() {
     let total = (imagenPrincipalFile ? 1 : 0) + (gifFile ? 1 : 0) + selectedImages.length;
     
-    // Agregar imágenes de variaciones
     Object.keys(imagenesVariacion).forEach(valorKey => {
         if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
             total += imagenesVariacion[valorKey].imagenes.length;
@@ -2893,10 +2879,8 @@ function handleImageSelection(event) {
     const currentCount = selectedImages.length;
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     
-    // Calcular tamaño actual
     const tamanioActual = calcularTamañoTotal();
     
-    // Verificar si con estos archivos nuevos se excede el límite
     let nuevoTamanio = tamanioActual;
     for (let i = 0; i < files.length; i++) {
         nuevoTamanio += files[i].size;
@@ -3072,12 +3056,10 @@ function renderSelectedImages() {
 
 function validarTamañoTotalAntesDeEnviar() {
     const totalSize = calcularTamañoTotal();
-    const maxSize = 50 * 1024 * 1024; // 50MB
+    const maxSize = 50 * 1024 * 1024;
     
-    // Lista de archivos para mostrar al usuario
     let archivosGrandes = [];
     
-    // Verificar archivos individualmente
     if (imagenPrincipalFile && imagenPrincipalFile.size > 5 * 1024 * 1024) {
         archivosGrandes.push(`Imagen principal: ${(imagenPrincipalFile.size / (1024 * 1024)).toFixed(2)}MB (máx 5MB)`);
     }
@@ -3092,7 +3074,6 @@ function validarTamañoTotalAntesDeEnviar() {
         }
     });
     
-    // Verificar imágenes de variaciones
     Object.keys(imagenesVariacion).forEach(valorKey => {
         if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
             imagenesVariacion[valorKey].imagenes.forEach(img => {
@@ -3108,7 +3089,7 @@ function validarTamañoTotalAntesDeEnviar() {
             icon: 'error',
             title: 'Archivos demasiado grandes',
             html: `
-                <div class="text-left">
+                <div class="text-left" style="max-height: 300px; overflow-y: auto;">
                     <p class="mb-3">Los siguientes archivos exceden su límite individual:</p>
                     <ul class="text-left">
                         ${archivosGrandes.map(msg => `<li class="mb-2">⚠️ ${msg}</li>`).join('')}
@@ -3118,7 +3099,8 @@ function validarTamañoTotalAntesDeEnviar() {
                 </div>
             `,
             confirmButtonText: 'Entendido',
-            confirmButtonColor: '#3085d6'
+            confirmButtonColor: '#3085d6',
+            width: '600px'
         });
         return false;
     }
@@ -3137,7 +3119,7 @@ function validarTamañoTotalAntesDeEnviar() {
                     <p class="mb-2"><strong>Límite permitido:</strong> 50MB</p>
                     <p class="mb-3"><strong>Debes reducir:</strong> ${(exceso / (1024 * 1024)).toFixed(2)}MB</p>
                     
-                    <div class="bg-light p-3 rounded mt-3">
+                    <div class="bg-light p-3 rounded mt-3" style="max-height: 200px; overflow-y: auto;">
                         <p class="fw-bold mb-2">📊 Desglose de archivos:</p>
                         <ul class="text-left small">
                             ${imagenPrincipalFile ? `<li>📷 Imagen principal: ${(imagenPrincipalFile.size / (1024 * 1024)).toFixed(2)}MB</li>` : ''}
@@ -3174,7 +3156,6 @@ function validarTamañoTotalAntesDeEnviar() {
 }
 
 // ============ FUNCIONES DE ATRIBUTOS Y VARIACIONES ============
-
 function actualizarPestanasValores() {
     const tabsContainer = document.getElementById('valores-activos-tabs-container');
     const noAtributosMsg = document.getElementById('no-atributos-activos-message');
@@ -3806,7 +3787,6 @@ function actualizarResumenAtributos() {
 }
 
 // ============ FUNCIONES PARA IMÁGENES DE VARIACIONES ============
-
 function previewImagenPrincipalVariacion(input, previewId) {
     const previewContainer = document.getElementById(previewId);
     
@@ -3842,7 +3822,6 @@ function previewImagenPrincipalVariacion(input, previewId) {
         }
         reader.readAsDataURL(file);
         
-        // Actualizar barra de progreso
         actualizarBarraProgresoTamaño();
         actualizarContadorImagenes();
     } else {
@@ -3884,7 +3863,6 @@ function previewGifVariacion(input, previewId) {
         }
         reader.readAsDataURL(file);
         
-        // Actualizar barra de progreso
         actualizarBarraProgresoTamaño();
         actualizarContadorImagenes();
     } else {
@@ -3903,14 +3881,12 @@ function handleImagenesAdicionalesVariacion(event, valorKey) {
     const maxFiles = 7;
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     
-    // Inicializar el array para esta variación si no existe
     if (!imagenesVariacion[valorKey]) {
         imagenesVariacion[valorKey] = {
             imagenes: []
         };
     }
     
-    // Validar límite
     if (imagenesVariacion[valorKey].imagenes.length + files.length > maxFiles) {
         Swal.fire({
             icon: 'warning',
@@ -3921,10 +3897,8 @@ function handleImagenesAdicionalesVariacion(event, valorKey) {
         return;
     }
     
-    // Calcular tamaño actual
     const tamanioActual = calcularTamañoTotal();
     
-    // Verificar si con estos archivos nuevos se excede el límite
     let nuevoTamanio = tamanioActual;
     files.forEach(file => {
         nuevoTamanio += file.size;
@@ -3947,7 +3921,6 @@ function handleImagenesAdicionalesVariacion(event, valorKey) {
         return;
     }
     
-    // Procesar cada archivo
     files.forEach(file => {
         if (!validTypes.includes(file.type)) {
             Swal.fire({
@@ -3967,7 +3940,6 @@ function handleImagenesAdicionalesVariacion(event, valorKey) {
             return;
         }
         
-        // Crear objeto de imagen
         const imageId = 'var_img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         const preview = URL.createObjectURL(file);
         
@@ -3980,17 +3952,13 @@ function handleImagenesAdicionalesVariacion(event, valorKey) {
         });
     });
     
-    // Renderizar las imágenes
     renderImagenesAdicionalesVariacion(valorKey);
     
-    // Actualizar contador
     countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
     
-    // Actualizar barra de progreso y contador total
     actualizarBarraProgresoTamaño();
     actualizarContadorImagenes();
     
-    // Limpiar el input para permitir seleccionar los mismos archivos nuevamente
     input.value = '';
 }
 
@@ -4058,14 +4026,12 @@ function eliminarImagenAdicionalVariacion(valorKey, imageId) {
             countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
         }
         
-        // Actualizar barra de progreso y contador total
         actualizarBarraProgresoTamaño();
         actualizarContadorImagenes();
     }
 }
 
 // ============ FUNCIONES PARA MODALES Y CREACIÓN RÁPIDA ============
-
 function abrirModalCategoria() {
     document.getElementById('vNombre_categoria_modal').value = '';
     document.getElementById('vSlug_categoria_modal').value = '';
@@ -4329,9 +4295,13 @@ function agregarValorAlAtributo(valor) {
 }
 
 function initQuickForms() {
+    console.log('Inicializando formularios rápidos...');
+    
     const categoriaForm = document.getElementById('categoriaQuickForm');
     if (categoriaForm) {
-        categoriaForm.addEventListener('submit', function(e) {
+        categoriaForm.removeEventListener('submit', window.categoriaSubmitHandler);
+        
+        window.categoriaSubmitHandler = function(e) {
             e.preventDefault();
             
             const formData = new FormData(this);
@@ -4350,10 +4320,16 @@ function initQuickForms() {
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
+                return response.json();
+            })
             .then(data => {
                 Swal.close();
                 
@@ -4382,18 +4358,24 @@ function initQuickForms() {
             })
             .catch(error => {
                 Swal.close();
+                console.error('Error:', error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'Error de conexión al servidor'
+                    text: error.message || 'Error de conexión al servidor'
                 });
             });
-        });
+        };
+        
+        categoriaForm.addEventListener('submit', window.categoriaSubmitHandler);
+        console.log('✓ Formulario de categoría inicializado');
     }
     
     const marcaForm = document.getElementById('marcaQuickForm');
     if (marcaForm) {
-        marcaForm.addEventListener('submit', function(e) {
+        marcaForm.removeEventListener('submit', window.marcaSubmitHandler);
+        
+        window.marcaSubmitHandler = function(e) {
             e.preventDefault();
             
             const formData = new FormData(this);
@@ -4409,10 +4391,16 @@ function initQuickForms() {
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
+                return response.json();
+            })
             .then(data => {
                 Swal.close();
                 
@@ -4447,18 +4435,24 @@ function initQuickForms() {
             })
             .catch(error => {
                 Swal.close();
+                console.error('Error:', error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'Error de conexión al servidor'
+                    text: error.message || 'Error de conexión al servidor'
                 });
             });
-        });
+        };
+        
+        marcaForm.addEventListener('submit', window.marcaSubmitHandler);
+        console.log('✓ Formulario de marca inicializado');
     }
     
     const etiquetaForm = document.getElementById('etiquetaQuickForm');
     if (etiquetaForm) {
-        etiquetaForm.addEventListener('submit', function(e) {
+        etiquetaForm.removeEventListener('submit', window.etiquetaSubmitHandler);
+        
+        window.etiquetaSubmitHandler = function(e) {
             e.preventDefault();
             
             const formData = new FormData(this);
@@ -4474,10 +4468,16 @@ function initQuickForms() {
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
+                return response.json();
+            })
             .then(data => {
                 Swal.close();
                 
@@ -4506,18 +4506,24 @@ function initQuickForms() {
             })
             .catch(error => {
                 Swal.close();
+                console.error('Error:', error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'Error de conexión al servidor'
+                    text: error.message || 'Error de conexión al servidor'
                 });
             });
-        });
+        };
+        
+        etiquetaForm.addEventListener('submit', window.etiquetaSubmitHandler);
+        console.log('✓ Formulario de etiqueta inicializado');
     }
     
     const atributoForm = document.getElementById('atributoQuickForm');
     if (atributoForm) {
-        atributoForm.addEventListener('submit', function(e) {
+        atributoForm.removeEventListener('submit', window.atributoSubmitHandler);
+        
+        window.atributoSubmitHandler = function(e) {
             e.preventDefault();
             
             const formData = new FormData(this);
@@ -4533,10 +4539,16 @@ function initQuickForms() {
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
+                return response.json();
+            })
             .then(data => {
                 Swal.close();
                 
@@ -4568,18 +4580,24 @@ function initQuickForms() {
             })
             .catch(error => {
                 Swal.close();
+                console.error('Error:', error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'Error de conexión al servidor'
+                    text: error.message || 'Error de conexión al servidor'
                 });
             });
-        });
+        };
+        
+        atributoForm.addEventListener('submit', window.atributoSubmitHandler);
+        console.log('✓ Formulario de atributo inicializado');
     }
     
     const impuestoForm = document.getElementById('impuestoQuickForm');
     if (impuestoForm) {
-        impuestoForm.addEventListener('submit', function(e) {
+        impuestoForm.removeEventListener('submit', window.impuestoSubmitHandler);
+        
+        window.impuestoSubmitHandler = function(e) {
             e.preventDefault();
             
             const formData = new FormData(this);
@@ -4595,10 +4613,16 @@ function initQuickForms() {
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
+                return response.json();
+            })
             .then(data => {
                 Swal.close();
                 
@@ -4636,13 +4660,17 @@ function initQuickForms() {
             })
             .catch(error => {
                 Swal.close();
+                console.error('Error:', error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'Error de conexión al servidor'
+                    text: error.message || 'Error de conexión al servidor'
                 });
             });
-        });
+        };
+        
+        impuestoForm.addEventListener('submit', window.impuestoSubmitHandler);
+        console.log('✓ Formulario de impuesto inicializado');
     }
 }
 
@@ -5322,8 +5350,81 @@ function quickActualizarSlug(nombre, slugId) {
     quickGenerarSlug(nombre, slugId);
 }
 
-// ============ EVENT LISTENERS ADICIONALES ============
+// ============ INICIALIZACIÓN PRINCIPAL ============
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Inicializando aplicación...');
+    
+    try {
+        modalCategoria = new bootstrap.Modal(document.getElementById('modalCategoria'));
+        modalMarca = new bootstrap.Modal(document.getElementById('modalMarca'));
+        modalEtiqueta = new bootstrap.Modal(document.getElementById('modalEtiqueta'));
+        modalAtributo = new bootstrap.Modal(document.getElementById('modalAtributo'));
+        modalImpuesto = new bootstrap.Modal(document.getElementById('modalImpuesto'));
+        valorModal = new bootstrap.Modal(document.getElementById('crearValorModal'));
+        console.log('✓ Modales inicializados');
+    } catch (e) {
+        console.error('Error al inicializar modales:', e);
+    }
 
+    initQuickForms();
+    
+    const nombreInput = document.getElementById('vNombre');
+    if (nombreInput) {
+        nombreInput.addEventListener('input', function() { verificarNombreProductoLocal(this); });
+        nombreInput.addEventListener('blur', function() { verificarNombreProductoLocal(this); });
+        console.log('✓ Eventos de nombre asignados');
+    }
+    
+    const skuInput = document.getElementById('vCodigo_barras');
+    if (skuInput) {
+        skuInput.addEventListener('input', function() { 
+            validarSKU(this);
+            verificarSKUProductoLocal(this);
+        });
+        skuInput.addEventListener('blur', function() { 
+            verificarSKUProductoLocal(this);
+        });
+        console.log('✓ Eventos de SKU asignados');
+    }
+    
+    document.addEventListener('input', function(e) {
+        if (e.target.id && e.target.id.startsWith('sku-')) {
+            const valorKey = e.target.id.replace('sku-', '');
+            validarSKU(e.target);
+            verificarSKUVariacionLocal(e.target, valorKey);
+        }
+    });
+    
+    document.addEventListener('blur', function(e) {
+        if (e.target.id && e.target.id.startsWith('sku-')) {
+            const valorKey = e.target.id.replace('sku-', '');
+            if (e.target.value.trim() !== '') {
+                verificarSKUVariacionLocal(e.target, valorKey);
+            }
+        }
+    });
+    
+    actualizarResumenAtributos();
+    actualizarPestanasValores();
+    
+    const tieneDescuentoCheckbox = document.getElementById('bTiene_descuento');
+    if (tieneDescuentoCheckbox && tieneDescuentoCheckbox.checked) {
+        setTimeout(() => {
+            validarPrecioDescuentoProducto();
+            validarFechasDescuento();
+        }, 100);
+    }
+    
+    setTimeout(() => {
+        document.querySelectorAll('.valor-checkbox:checked').forEach(cb => {
+            cb.dispatchEvent(new Event('change'));
+        });
+    }, 500);
+    
+    console.log('✓ Inicialización completa');
+});
+
+// ============ EVENT LISTENERS ADICIONALES PARA ATRIBUTOS ============
 document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
     checkbox.addEventListener('change', function() {
         const atributoId = this.dataset.atributoId;
@@ -5462,12 +5563,6 @@ document.querySelectorAll('.valor-checkbox').forEach(checkbox => {
         actualizarPestanasValores();
         actualizarResumenAtributos();
     });
-});
-
-// Inicializar resumen y pestañas
-document.addEventListener('DOMContentLoaded', function() {
-    actualizarResumenAtributos();
-    actualizarPestanasValores();
 });
 </script>
 @endpush

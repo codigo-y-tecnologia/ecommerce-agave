@@ -39,17 +39,17 @@
                                     <input type="text" name="vSKU" id="vSKU" 
                                            class="form-control @error('vSKU') is-invalid @enderror"
                                            value="{{ old('vSKU') }}" 
-                                           maxlength="25" 
+                                           maxlength="22" 
                                            required
                                            oninput="validarSKU(this)"
                                            pattern="[A-Za-z0-9\-]+"
-                                           title="Solo letras, números y guiones (máximo 25 caracteres)"
+                                           title="Solo letras, números y guiones (máximo 22 caracteres)"
                                            autocomplete="off">
                                     @error('vSKU')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                     <small class="form-text text-muted">
-                                        Ej: AGAVE001-ROJO, MEZCAL2024-VERDE (máximo 35 caracteres, solo letras, números y guiones)
+                                        Ej: AGAVE001-ROJO, MEZCAL2024-VERDE (máximo 22 caracteres, solo letras, números y guiones)
                                     </small>
                                 </div>
                             </div>

@@ -280,158 +280,6 @@ class ProductoVariacion extends Model
         return $this->impuesto ? $this->impuesto->vNombre : 'Sin impuesto';
     }
 
-    // ============ ACCESORES PARA IMÁGENES ============
-
-    /**
-     * Obtener la URL de la imagen principal
-     */
-    public function getImagenPrincipalAttribute()
-    {
-        $imagenPrincipal = $this->imagenesRegistradas()
-            ->where('eTipo', 'principal')
-            ->where('bActivo', true)
-            ->first();
-            
-        if ($imagenPrincipal) {
-            return $imagenPrincipal->url;
-        }
-        
-        if ($this->vImagen && Storage::disk('public')->exists($this->vImagen)) {
-            $this->migrarImagenALaTabla($this->vImagen, 'principal');
-            return Storage::url($this->vImagen);
-        }
-        
-        $carpeta = 'variaciones/' . $this->id_variacion;
-        if (Storage::disk('public')->exists($carpeta)) {
-            $archivos = Storage::disk('public')->files($carpeta);
-            sort($archivos);
-            
-            foreach ($archivos as $archivo) {
-                if (strpos($archivo, 'principal_') !== false) {
-                    $this->migrarImagenALaTabla($archivo, 'principal');
-                    return Storage::url($archivo);
-                }
-            }
-        }
-        
-        return null;
-    }
-
-    /**
-     * Obtener la URL del GIF
-     */
-    public function getGifUrlAttribute()
-    {
-        $gif = $this->imagenesRegistradas()
-            ->where('eTipo', 'gif')
-            ->where('bActivo', true)
-            ->first();
-            
-        if ($gif) {
-            return $gif->url;
-        }
-        
-        $carpeta = 'variaciones/' . $this->id_variacion;
-        if (Storage::disk('public')->exists($carpeta)) {
-            $archivos = Storage::disk('public')->files($carpeta);
-            
-            foreach ($archivos as $archivo) {
-                if (strpos($archivo, 'gif_') !== false) {
-                    $this->migrarImagenALaTabla($archivo, 'gif');
-                    return Storage::url($archivo);
-                }
-            }
-        }
-        
-        return null;
-    }
-
-    /**
-     * Obtener todas las imágenes adicionales
-     */
-    public function getImagenesAdicionalesAttribute()
-    {
-        $imagenes = [];
-        
-        $imagenesAdicionales = $this->imagenesRegistradas()
-            ->where('eTipo', 'adicional')
-            ->where('bActivo', true)
-            ->orderBy('iOrden')
-            ->get();
-            
-        foreach ($imagenesAdicionales as $img) {
-            $imagenes[] = $img->url;
-        }
-        
-        if (!empty($imagenes)) {
-            return $imagenes;
-        }
-        
-        $carpetaAdicionales = 'variaciones/' . $this->id_variacion . '/adicionales';
-        if (Storage::disk('public')->exists($carpetaAdicionales)) {
-            $archivos = Storage::disk('public')->files($carpetaAdicionales);
-            sort($archivos);
-            
-            $orden = 0;
-            foreach ($archivos as $archivo) {
-                if (preg_match('/\.(jpg|jpeg|png|webp)$/i', $archivo)) {
-                    $this->migrarImagenALaTabla($archivo, 'adicional', $orden);
-                    $imagenes[] = Storage::url($archivo);
-                    $orden++;
-                }
-            }
-        }
-        
-        return $imagenes;
-    }
-
-    /**
-     * Método PRINCIPAL - TODAS LAS IMÁGENES
-     */
-    public function getImagenesAttribute()
-    {
-        $imagenes = [];
-        
-        $imgPrincipal = $this->imagen_principal;
-        if ($imgPrincipal) {
-            $imagenes[] = $imgPrincipal;
-        }
-        
-        $gif = $this->gif_url;
-        if ($gif) {
-            $imagenes[] = $gif;
-        }
-        
-        $adicionales = $this->imagenes_adicionales;
-        foreach ($adicionales as $url) {
-            $imagenes[] = $url;
-        }
-        
-        return array_values(array_unique($imagenes));
-    }
-
-    /**
-     * Migrar imagen legacy a la nueva tabla
-     */
-    private function migrarImagenALaTabla($ruta, $tipo, $orden = 0)
-    {
-        if (!$this->id_variacion) return;
-        
-        $existe = VariacionImagen::where('id_variacion', $this->id_variacion)
-            ->where('vRuta', $ruta)
-            ->exists();
-            
-        if (!$existe) {
-            VariacionImagen::create([
-                'id_variacion' => $this->id_variacion,
-                'vRuta' => $ruta,
-                'eTipo' => $tipo,
-                'iOrden' => $orden,
-                'bActivo' => true
-            ]);
-        }
-    }
-
     // ============ MÉTODOS PARA GUARDAR Y ELIMINAR IMÁGENES ============
 
     /**
@@ -455,6 +303,7 @@ class ProductoVariacion extends Model
         $nombreArchivo = 'principal_' . time() . '_' . uniqid() . '.' . $extension;
         $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
         
+        // Guardar en la tabla de imágenes
         $imagenRegistrada = VariacionImagen::create([
             'id_variacion' => $this->id_variacion,
             'vRuta' => $ruta,
@@ -463,6 +312,7 @@ class ProductoVariacion extends Model
             'bActivo' => true
         ]);
         
+        // Actualizar el campo vImagen para compatibilidad
         $this->vImagen = $ruta;
         $this->saveQuietly();
         
@@ -635,6 +485,153 @@ class ProductoVariacion extends Model
             ->toArray();
     }
 
+    // ============ ACCESORES PARA IMÁGENES ============
+
+    /**
+     * Obtener la URL de la imagen principal
+     */
+    public function getImagenPrincipalAttribute()
+    {
+        $imagenPrincipal = $this->imagenesRegistradas()
+            ->where('eTipo', 'principal')
+            ->where('bActivo', true)
+            ->first();
+            
+        if ($imagenPrincipal) {
+            return $imagenPrincipal->url;
+        }
+        
+        // Compatibilidad con datos antiguos
+        if ($this->vImagen && Storage::disk('public')->exists($this->vImagen)) {
+            // Migrar a la nueva estructura
+            $this->migrarImagenALaTabla($this->vImagen, 'principal', 0);
+            return Storage::url($this->vImagen);
+        }
+        
+        return null;
+    }
+
+    /**
+     * Obtener la URL del GIF
+     */
+    public function getGifUrlAttribute()
+    {
+        $gif = $this->imagenesRegistradas()
+            ->where('eTipo', 'gif')
+            ->where('bActivo', true)
+            ->first();
+            
+        if ($gif) {
+            return $gif->url;
+        }
+        
+        // Buscar en estructura antigua
+        $carpeta = 'variaciones/' . $this->id_variacion;
+        if (Storage::disk('public')->exists($carpeta)) {
+            $archivos = Storage::disk('public')->files($carpeta);
+            foreach ($archivos as $archivo) {
+                if (strpos($archivo, 'gif_') !== false) {
+                    $this->migrarImagenALaTabla($archivo, 'gif', 1);
+                    return Storage::url($archivo);
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Obtener todas las imágenes adicionales
+     */
+    public function getImagenesAdicionalesAttribute()
+    {
+        $imagenes = [];
+        
+        $imagenesAdicionales = $this->imagenesRegistradas()
+            ->where('eTipo', 'adicional')
+            ->where('bActivo', true)
+            ->orderBy('iOrden')
+            ->get();
+            
+        foreach ($imagenesAdicionales as $img) {
+            $imagenes[] = $img->url;
+        }
+        
+        // Si no hay imágenes en la tabla, buscar en la estructura antigua
+        if (empty($imagenes)) {
+            $carpetaAdicionales = 'variaciones/' . $this->id_variacion . '/adicionales';
+            if (Storage::disk('public')->exists($carpetaAdicionales)) {
+                $archivos = Storage::disk('public')->files($carpetaAdicionales);
+                sort($archivos);
+                
+                foreach ($archivos as $archivo) {
+                    if (preg_match('/\.(jpg|jpeg|png|webp)$/i', $archivo)) {
+                        $this->migrarImagenALaTabla($archivo, 'adicional', count($imagenes));
+                        $imagenes[] = Storage::url($archivo);
+                    }
+                }
+            }
+        }
+        
+        return $imagenes;
+    }
+
+    /**
+     * Método PRINCIPAL - TODAS LAS IMÁGENES
+     */
+    public function getImagenesAttribute()
+    {
+        $imagenes = [];
+        
+        $imgPrincipal = $this->imagen_principal;
+        if ($imgPrincipal) {
+            $imagenes[] = $imgPrincipal;
+        }
+        
+        $gif = $this->gif_url;
+        if ($gif) {
+            $imagenes[] = $gif;
+        }
+        
+        $adicionales = $this->imagenes_adicionales;
+        foreach ($adicionales as $url) {
+            if (!in_array($url, $imagenes)) {
+                $imagenes[] = $url;
+            }
+        }
+        
+        return array_values($imagenes);
+    }
+
+    /**
+     * Migrar imagen legacy a la nueva tabla
+     */
+    private function migrarImagenALaTabla($ruta, $tipo, $orden = 0)
+    {
+        if (!$this->id_variacion || !$ruta) return null;
+        
+        $existe = VariacionImagen::where('id_variacion', $this->id_variacion)
+            ->where('vRuta', $ruta)
+            ->exists();
+            
+        if (!$existe) {
+            try {
+                $imagen = VariacionImagen::create([
+                    'id_variacion' => $this->id_variacion,
+                    'vRuta' => $ruta,
+                    'eTipo' => $tipo,
+                    'iOrden' => $orden,
+                    'bActivo' => true
+                ]);
+                return $imagen;
+            } catch (\Exception $e) {
+                \Log::error('Error al migrar imagen: ' . $e->getMessage());
+            }
+        }
+        
+        return null;
+    }
+
     /**
      * Número total de imágenes
      */
@@ -645,6 +642,9 @@ class ProductoVariacion extends Model
             ->count();
     }
 
+    /**
+     * Verificar si puede agregar más imágenes
+     */
     public function puedeAgregarMasImagenes()
     {
         return $this->numero_imagenes < 9;

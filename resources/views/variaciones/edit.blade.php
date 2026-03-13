@@ -43,18 +43,18 @@
                                            id="vSKU" 
                                            class="form-control @error('vSKU') is-invalid @enderror"
                                            value="{{ old('vSKU', $variacion->vSKU) }}" 
-                                           maxlength="25" 
+                                           maxlength="22" 
                                            required
-                                           oninput="validarSKU(this, '{{ $variacion->vSKU }}')"
+                                           oninput="validarSKU(this)"
                                            pattern="[A-Za-z0-9\-]+"
-                                           title="Solo letras, números y guiones (máximo 25 caracteres)"
+                                           title="Solo letras, números y guiones (máximo 22 caracteres)"
                                            autocomplete="off"
                                            data-original-sku="{{ $variacion->vSKU }}">
                                     @error('vSKU')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                     <small class="form-text text-muted">
-                                        Ej: AGAVE001-ROJO, MEZCAL2024-VERDE (máximo 25 caracteres, solo letras, números y guiones)
+                                        Ej: AGAVE001-ROJO, MEZCAL2024-VERDE (máximo 22 caracteres, solo letras, números y guiones)
                                     </small>
                                 </div>
                             </div>
@@ -922,12 +922,7 @@ let imagenesAEliminar = [];
 
 // ==================== VALIDACIONES ====================
 
-/**
- * Función mejorada para validar SKU en edición
- * @param {HTMLInputElement} input - El campo de entrada
- * @param {string} originalSku - El SKU original de la variación
- */
-function validarSKU(input, originalSku) {
+function validarSKU(input) {
     // Guardar posición del cursor
     const cursorPos = input.selectionStart;
     
@@ -951,39 +946,25 @@ function validarSKU(input, originalSku) {
         }, 0);
     }
     
-    // Si el SKU no ha cambiado, quitar cualquier error
-    if (input.value === originalSku) {
-        input.classList.remove('is-invalid');
-        
-        // Eliminar mensaje de error si existe
-        const errorDiv = document.getElementById('error-sku-duplicado');
-        if (errorDiv) {
-            errorDiv.remove();
-        }
-        return;
-    }
-    
-    // Si cambió, verificar que no esté vacío
+    // Validar que no esté vacío
     if (input.value.trim() === '') {
         input.classList.add('is-invalid');
         
         // Crear o actualizar mensaje de error
-        let errorDiv = document.getElementById('error-sku-duplicado');
+        let errorDiv = document.getElementById('error-sku-vacio');
         if (!errorDiv) {
             errorDiv = document.createElement('div');
             errorDiv.className = 'invalid-feedback d-block';
-            errorDiv.id = 'error-sku-duplicado';
+            errorDiv.id = 'error-sku-vacio';
             input.parentNode.appendChild(errorDiv);
         }
         errorDiv.textContent = 'El SKU no puede estar vacío';
-        return;
-    }
-    
-    // Si todo está bien, quitar error
-    input.classList.remove('is-invalid');
-    const errorDiv = document.getElementById('error-sku-duplicado');
-    if (errorDiv) {
-        errorDiv.remove();
+    } else {
+        input.classList.remove('is-invalid');
+        const errorDiv = document.getElementById('error-sku-vacio');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
     }
 }
 
