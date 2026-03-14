@@ -613,6 +613,13 @@ class ProductoController extends Controller
         ->where('bActivo', true)
         ->findOrFail($id);
         
+        // Forzar carga de atributos de variaciones si no se cargaron correctamente
+        foreach ($producto->variaciones as $variacion) {
+            if (!$variacion->relationLoaded('atributos')) {
+                $variacion->load('atributos.valor', 'atributos.atributo');
+            }
+        }
+        
         return view('productos.show-public', compact('producto'));
     }
 

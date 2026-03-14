@@ -8,58 +8,42 @@ use App\Models\Producto;
 use App\Models\ProductoVariacion;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class FavoritoController extends Controller
 {
     /**
-     * Mostrar lista de favoritos del usuario
+     * Mostrar favoritos del usuario autenticado
      */
     public function index()
     {
-        if (!Auth::check()) {
-            return view('favoritos.no-autenticado');
-        }
-
         try {
-            // Cargar favoritos con relaciones específicas según el tipo
-            $favoritos = Favorito::with([
-                    'producto' => function($query) {
-                        $query->with(['categoria', 'marca', 'etiquetas']);
-                    },
-                    'variacion' => function($query) {
-                        $query->with(['atributos.valor', 'atributos.atributo', 'producto']);
-                    }
-                ])
-                ->where('id_usuario', Auth::id())
+            $usuarioId = Auth::id();
+            
+            $favoritos = Favorito::with(['producto', 'variacion'])
+                ->where('id_usuario', $usuarioId)
                 ->orderBy('tFecha_agregado', 'desc')
                 ->get();
-
-            return view('favoritos.index', compact('favoritos'));
-        } catch (\Exception $e) {
-            \Log::error('Error cargando favoritos: ' . $e->getMessage());
             
-            $favoritos = collect();
-            return view('favoritos.index', compact('favoritos'))
-                ->with('error', 'Error al cargar tus favoritos. Por favor intenta más tarde.');
+            return view('favoritos.index', compact('favoritos'));
+            
+        } catch (\Exception $e) {
+            Log::error('Error cargando favoritos: ' . $e->getMessage());
+            return view('favoritos.index', ['favoritos' => collect([])])
+                ->with('error', 'Error al cargar tus favoritos');
         }
     }
 
     /**
-     * Toggle favorito para PRODUCTOS (sin variación)
+     * Toggle favorito para producto (sin variación)
      */
     public function toggleProducto($idProducto)
     {
-        if (!Auth::check()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Debes iniciar sesión para gestionar favoritos',
-                'redirect' => true
-            ], 401);
-        }
-
         try {
             DB::beginTransaction();
-
+            
+            $usuarioId = Auth::id();
+            
             // Verificar que el producto existe
             $producto = Producto::where('id_producto', $idProducto)
                 ->where('bActivo', true)
@@ -72,75 +56,61 @@ class FavoritoController extends Controller
                 ], 404);
             }
 
-            // Buscar favorito existente para este producto (SIN variación)
-            $favorito = Favorito::where('id_usuario', Auth::id())
+            // Verificar si ya está en favoritos
+            $favorito = Favorito::where('id_usuario', $usuarioId)
                 ->where('id_producto', $idProducto)
                 ->whereNull('id_variacion')
                 ->first();
 
             if ($favorito) {
-                // Eliminar favorito de producto
+                // Eliminar
                 $favorito->delete();
-                
                 DB::commit();
                 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Producto eliminado de tu lista de deseos',
+                    'message' => 'Producto eliminado de favoritos',
                     'action' => 'removed',
-                    'tipo' => 'producto',
-                    'producto_id' => $idProducto,
-                    'variacion_id' => null
+                    'tipo' => 'producto'
                 ]);
             } else {
-                // Crear favorito para producto
-                Favorito::create([
-                    'id_usuario' => Auth::id(),
+                // Agregar
+                $nuevo = Favorito::create([
+                    'id_usuario' => $usuarioId,
                     'id_producto' => $idProducto,
                     'id_variacion' => null,
-                    'bNotificado_stock' => false,
-                    'bNotificado_descuento' => false,
                     'tFecha_agregado' => now()
                 ]);
-
                 DB::commit();
-
+                
                 return response()->json([
                     'success' => true,
-                    'message' => 'Producto agregado a tu lista de deseos',
+                    'message' => 'Producto agregado a favoritos',
                     'action' => 'added',
-                    'tipo' => 'producto',
-                    'producto_id' => $idProducto,
-                    'variacion_id' => null
+                    'tipo' => 'producto'
                 ]);
             }
+            
         } catch (\Exception $e) {
             DB::rollBack();
-            
-            \Log::error('Error en toggle producto favorito: ' . $e->getMessage());
+            Log::error('Error en toggleProducto: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
-                'message' => 'Error al gestionar favoritos. Por favor intenta nuevamente.'
+                'message' => 'Error al gestionar favoritos'
             ], 500);
         }
     }
 
     /**
-     * Toggle favorito para VARIACIONES
+     * Toggle favorito para variación
      */
     public function toggleVariacion($idVariacion)
     {
-        if (!Auth::check()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Debes iniciar sesión para gestionar favoritos',
-                'redirect' => true
-            ], 401);
-        }
-
         try {
             DB::beginTransaction();
+            
+            $usuarioId = Auth::id();
 
             // Verificar que la variación existe
             $variacion = ProductoVariacion::where('id_variacion', $idVariacion)
@@ -157,183 +127,153 @@ class FavoritoController extends Controller
                 ], 404);
             }
 
-            // Buscar favorito existente para esta variación (CON id_variacion)
-            $favorito = Favorito::where('id_usuario', Auth::id())
+            // Verificar si ya está en favoritos
+            $favorito = Favorito::where('id_usuario', $usuarioId)
+                ->where('id_producto', $variacion->id_producto)
                 ->where('id_variacion', $idVariacion)
                 ->first();
 
             if ($favorito) {
-                // Eliminar favorito de variación
+                // Eliminar
                 $favorito->delete();
-                
                 DB::commit();
                 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Variación eliminada de tu lista de deseos',
+                    'message' => 'Variación eliminada de favoritos',
                     'action' => 'removed',
-                    'tipo' => 'variacion',
-                    'producto_id' => $variacion->id_producto,
-                    'variacion_id' => $idVariacion
+                    'tipo' => 'variacion'
                 ]);
             } else {
-                // Crear favorito para variación
-                Favorito::create([
-                    'id_usuario' => Auth::id(),
+                // Agregar
+                $nuevo = Favorito::create([
+                    'id_usuario' => $usuarioId,
                     'id_producto' => $variacion->id_producto,
                     'id_variacion' => $idVariacion,
-                    'bNotificado_stock' => false,
-                    'bNotificado_descuento' => false,
                     'tFecha_agregado' => now()
                 ]);
-
                 DB::commit();
-
+                
                 return response()->json([
                     'success' => true,
-                    'message' => 'Variación agregada a tu lista de deseos',
+                    'message' => 'Variación agregada a favoritos',
                     'action' => 'added',
-                    'tipo' => 'variacion',
-                    'producto_id' => $variacion->id_producto,
-                    'variacion_id' => $idVariacion
+                    'tipo' => 'variacion'
                 ]);
             }
+            
         } catch (\Exception $e) {
             DB::rollBack();
-            
-            \Log::error('Error en toggle variación favorito: ' . $e->getMessage());
+            Log::error('Error en toggleVariacion: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
-                'message' => 'Error al gestionar favoritos. Por favor intenta nuevamente.'
+                'message' => 'Error al gestionar favoritos'
             ], 500);
         }
     }
 
     /**
-     * Eliminar favorito (puede ser producto o variación)
+     * Eliminar favorito
      */
-    public function destroy(Request $request, $id)
+    public function destroy($id)
     {
-        if (!Auth::check()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Debes iniciar sesión para gestionar favoritos'
-            ], 401);
-        }
-
         try {
-            DB::beginTransaction();
-
-            $idVariacion = $request->input('id_variacion');
-
-            if ($idVariacion) {
-                // Eliminar favorito de variación específica
-                $favorito = Favorito::where('id_usuario', Auth::id())
-                    ->where('id_variacion', $idVariacion)
-                    ->first();
-
-                if (!$favorito) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'La variación no está en tu lista de deseos'
-                    ], 404);
-                }
-
-                $productoId = $favorito->id_producto;
-                $favorito->delete();
-
-                DB::commit();
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Variación eliminada de tu lista de deseos',
-                    'action' => 'removed',
-                    'tipo' => 'variacion',
-                    'producto_id' => $productoId,
-                    'variacion_id' => $idVariacion
-                ]);
-            } else {
-                // Eliminar favorito de producto (sin variación)
-                $favorito = Favorito::where('id_usuario', Auth::id())
-                    ->where('id_producto', $id)
-                    ->whereNull('id_variacion')
-                    ->first();
-
-                if (!$favorito) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'El producto no está en tu lista de deseos'
-                    ], 404);
-                }
-
-                $favorito->delete();
-
-                DB::commit();
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Producto eliminado de tu lista de deseos',
-                    'action' => 'removed',
-                    'tipo' => 'producto',
-                    'producto_id' => $id,
-                    'variacion_id' => null
-                ]);
-            }
-        } catch (\Exception $e) {
-            DB::rollBack();
+            $usuarioId = Auth::id();
             
-            \Log::error('Error eliminando favorito: ' . $e->getMessage());
+            $favorito = Favorito::where('id_favorito', $id)
+                ->where('id_usuario', $usuarioId)
+                ->first();
+
+            if (!$favorito) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Favorito no encontrado'
+                ], 404);
+            }
+
+            $tipo = $favorito->id_variacion ? 'variacion' : 'producto';
+            $favorito->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => ucfirst($tipo) . ' eliminado de favoritos',
+                'action' => 'removed',
+                'tipo' => $tipo
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en destroy: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
-                'message' => 'Error al eliminar el producto de favoritos'
+                'message' => 'Error al eliminar favorito'
             ], 500);
         }
     }
 
     /**
-     * Verificar si un producto está en favoritos
+     * Verificar si un producto es favorito
      */
     public function checkProducto($idProducto)
     {
-        if (!Auth::check()) {
+        try {
+            $usuarioId = Auth::id();
+            
+            $esFavorito = Favorito::where('id_usuario', $usuarioId)
+                ->where('id_producto', $idProducto)
+                ->whereNull('id_variacion')
+                ->exists();
+            
+            return response()->json([
+                'success' => true,
+                'is_favorite' => $esFavorito
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en checkProducto: ' . $e->getMessage());
+            
             return response()->json([
                 'success' => false,
                 'is_favorite' => false
-            ]);
+            ], 500);
         }
-
-        $isFavorite = Favorito::where('id_usuario', Auth::id())
-            ->where('id_producto', $idProducto)
-            ->whereNull('id_variacion')
-            ->exists();
-
-        return response()->json([
-            'success' => true,
-            'is_favorite' => $isFavorite
-        ]);
     }
 
     /**
-     * Verificar si una variación está en favoritos
+     * Verificar si una variación es favorita
      */
     public function checkVariacion($idVariacion)
     {
-        if (!Auth::check()) {
+        try {
+            $usuarioId = Auth::id();
+            
+            $variacion = ProductoVariacion::find($idVariacion);
+            
+            if (!$variacion) {
+                return response()->json([
+                    'success' => false,
+                    'is_favorite' => false
+                ], 404);
+            }
+            
+            $esFavorito = Favorito::where('id_usuario', $usuarioId)
+                ->where('id_producto', $variacion->id_producto)
+                ->where('id_variacion', $idVariacion)
+                ->exists();
+            
+            return response()->json([
+                'success' => true,
+                'is_favorite' => $esFavorito
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en checkVariacion: ' . $e->getMessage());
+            
             return response()->json([
                 'success' => false,
                 'is_favorite' => false
-            ]);
+            ], 500);
         }
-
-        $isFavorite = Favorito::where('id_usuario', Auth::id())
-            ->where('id_variacion', $idVariacion)
-            ->exists();
-
-        return response()->json([
-            'success' => true,
-            'is_favorite' => $isFavorite
-        ]);
     }
 }

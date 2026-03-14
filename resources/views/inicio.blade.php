@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Ecommerce Agave - Inicio</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
         * {
             margin: 0;
@@ -21,8 +22,9 @@
         }
 
         header {
-            background-color: #f8f9fa;
-            padding: 15px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
             text-align: center;
             border-bottom: 1px solid #dee2e6;
         }
@@ -35,7 +37,7 @@
         header p {
             font-size: clamp(0.9rem, 3vw, 1rem);
             padding: 0 15px;
-            color: #666;
+            opacity: 0.9;
         }
 
         .user-welcome {
@@ -58,6 +60,7 @@
         .navbar {
             background-color: #e9ecef;
             padding: 10px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
         .nav-container {
@@ -86,9 +89,11 @@
             font-weight: bold;
             font-size: clamp(0.85rem, 2.5vw, 1rem);
             white-space: nowrap;
+            transition: color 0.3s ease;
         }
 
         .nav-links li a:hover {
+            color: #667eea;
             text-decoration: underline;
         }
 
@@ -101,7 +106,23 @@
             font-weight: bold;
         }
 
-        /* Barra de búsqueda única */
+        .btn-invitado {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white !important;
+            padding: 8px 15px;
+            border-radius: 25px;
+            font-weight: bold;
+            display: inline-block;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .btn-invitado:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.4);
+            text-decoration: none !important;
+        }
+
+        /* Barra de búsqueda */
         .barra-busqueda-principal {
             text-align: center;
             margin: 15px 0;
@@ -118,28 +139,32 @@
         .barra-busqueda-principal input[type="text"] {
             flex: 1;
             padding: 12px 20px;
-            border: 2px solid #007bff;
+            border: 2px solid #667eea;
             border-radius: 25px 0 0 25px;
             font-size: 16px;
             outline: none;
             min-width: 0;
+            transition: border-color 0.3s ease;
+        }
+
+        .barra-busqueda-principal input[type="text"]:focus {
+            border-color: #764ba2;
         }
 
         .barra-busqueda-principal button {
             padding: 12px 25px;
-            background: #007bff;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
-            border: 2px solid #007bff;
+            border: none;
             border-radius: 0 25px 25px 0;
             font-size: 16px;
             cursor: pointer;
             white-space: nowrap;
-            transition: all 0.3s ease;
+            transition: transform 0.3s ease;
         }
 
         .barra-busqueda-principal button:hover {
-            background: #0056b3;
-            border-color: #0056b3;
+            transform: translateY(-2px);
         }
 
         .productos-grid {
@@ -171,7 +196,7 @@
             margin-bottom: 15px;
         }
 
-        /* Estilos de tarjetas de producto - ESTILO MERCADO LIBRE */
+        /* Estilos de tarjetas de producto */
         .producto-card {
             background: #fff;
             border-radius: 12px;
@@ -252,7 +277,7 @@
             word-break: break-word;
         }
 
-        /* PRECIOS ESTILO MERCADO LIBRE */
+        /* PRECIOS */
         .precio-container {
             margin-bottom: 8px;
         }
@@ -312,10 +337,6 @@
             font-weight: 600;
         }
 
-        .envio-pago i {
-            font-size: 16px;
-        }
-
         .stock-info {
             font-size: clamp(0.8rem, 2.5vw, 0.9rem);
             margin-bottom: 10px;
@@ -366,7 +387,6 @@
             z-index: 99;
         }
 
-        /* BADGE DE VARIACIÓN */
         .badge-variacion {
             position: absolute;
             bottom: 10px;
@@ -384,17 +404,6 @@
             white-space: nowrap;
         }
 
-        .badge-etiqueta {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            font-weight: bold;
-            margin: 2px;
-            color: white;
-        }
-
-        /* BADGE DE RECOMENDADO */
         .badge-recomendado {
             position: absolute;
             top: 15px;
@@ -430,7 +439,7 @@
         .btn {
             display: inline-block;
             padding: 12px 25px;
-            background: #007bff;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
             text-decoration: none;
             border-radius: 25px;
@@ -438,15 +447,14 @@
             cursor: pointer;
             font-size: clamp(0.9rem, 3vw, 1rem);
             font-weight: bold;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 5px rgba(0,123,255,0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 2px 5px rgba(102,126,234,0.3);
             margin: 0 15px;
         }
 
         .btn:hover {
-            background: #0056b3;
             transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0,123,255,0.4);
+            box-shadow: 0 4px 10px rgba(102,126,234,0.4);
         }
 
         .btn:active {
@@ -467,7 +475,7 @@
             top: 10px;
             right: 10px;
             z-index: 100;
-            background: rgba(255, 255, 255, 0.95);
+            background: white;
             border-radius: 50%;
             width: 40px;
             height: 40px;
@@ -483,7 +491,6 @@
         }
 
         .corazon-favorito:hover {
-            background: rgba(255, 255, 255, 1);
             transform: scale(1.1);
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
         }
@@ -494,12 +501,40 @@
 
         .corazon-favorito.activo {
             color: #ff4757;
-            background: rgba(255, 71, 87, 0.1);
+            background: #fff0f0;
             border-color: #ff4757;
         }
 
         .corazon-favorito.inactivo {
-            color: rgba(0, 0, 0, 0.25);
+            color: #ccc;
+        }
+
+        .corazon-favorito.loading {
+            opacity: 0.7;
+            pointer-events: none;
+            position: relative;
+            animation: pulse 1.5s infinite;
+        }
+
+        .corazon-favorito.loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #ff4757;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(0.95); }
         }
 
         /* NOTIFICACIÓN ÚNICA */
@@ -507,7 +542,6 @@
             position: fixed;
             top: 20px;
             right: 20px;
-            left: 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 15px 20px;
@@ -522,18 +556,41 @@
             gap: 12px;
             max-width: 350px;
             margin: 0 auto;
-            transform: translateY(-120%);
+            transform: translateX(120%);
             opacity: 0;
+            border-left: 5px solid transparent;
         }
 
         .toast-single.show {
-            transform: translateY(0);
+            transform: translateX(0);
             opacity: 1;
         }
 
-        /* Banner de bienvenida estilo ML */
+        .toast-single.error {
+            background: linear-gradient(135deg, #f56565, #e53e3e);
+        }
+
+        .toast-single.success {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+        }
+
+        .toast-single.info {
+            background: linear-gradient(135deg, #4299e1, #3182ce);
+        }
+
+        .toast-icon {
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .toast-message {
+            flex: 1;
+            line-height: 1.4;
+        }
+
+        /* Banner de bienvenida */
         .banner-inicio {
-            background: linear-gradient(135deg, #3483fa 0%, #1e4d8c 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             text-align: center;
             padding: 40px 20px;
@@ -555,7 +612,7 @@
 
         .btn-banner {
             background: white;
-            color: #3483fa;
+            color: #667eea;
             padding: 12px 30px;
             border-radius: 25px;
             text-decoration: none;
@@ -586,7 +643,7 @@
             background: #008f45;
         }
 
-        /* Sección de productos */
+        /* Secciones */
         .seccion-destacados {
             max-width: 1200px;
             margin: 0 auto 30px;
@@ -607,8 +664,9 @@
             display: block;
             width: 60px;
             height: 3px;
-            background: #3483fa;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             margin: 10px auto 0;
+            border-radius: 3px;
         }
 
         .titulo-seccion.descuento {
@@ -641,7 +699,7 @@
             border: 1px solid #bee5eb;
         }
 
-        /* PAGINACIÓN */
+        /* Paginación */
         .paginacion {
             display: flex;
             justify-content: center;
@@ -660,10 +718,6 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             flex-wrap: wrap;
             justify-content: center;
-        }
-
-        .pagination li {
-            display: inline-flex;
         }
 
         .pagination li a,
@@ -687,36 +741,18 @@
         .pagination li a:hover {
             background-color: #e9ecef;
             border-color: #dee2e6;
-            color: #007bff;
+            color: #667eea;
         }
 
         .pagination li.active span {
-            background: #3483fa;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
             font-weight: 600;
-        }
-
-        .pagination li:first-child a::before {
-            content: "←";
-            font-size: 18px;
-        }
-
-        .pagination li:last-child a::before {
-            content: "→";
-            font-size: 18px;
         }
 
         .pagination li.disabled span {
             color: #adb5bd;
             cursor: not-allowed;
-            background-color: transparent;
-        }
-
-        .etiquetas-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin-top: 8px;
         }
 
         /* Media Queries */
@@ -827,11 +863,6 @@
                 height: 28px;
                 font-size: 11px;
             }
-            
-            .badge-variacion {
-                font-size: 9px;
-                padding: 2px 5px;
-            }
         }
     </style>
 </head>
@@ -852,14 +883,16 @@
     <nav class="navbar">
         <div class="nav-container">
             <ul class="nav-links">
-                <li><a href="{{ route('inicio') }}">Inicio</a></li>
+                <li><a href="{{ route('inicio.real') }}">Inicio</a></li>
                 <li><a href="{{ route('busqueda.resultados') }}">Todos los Productos</a></li>
                 <li><a href="{{ route('busqueda.resultados', ['en_descuento' => '1']) }}" style="color: #dc3545; font-weight: bold;" id="link-descuento">🔥 En Descuento</a></li>
                 <li>
                     @auth
                         <a href="{{ route('favoritos.index') }}" style="color: #495057; font-weight: bold;">❤️ Mis Favoritos</a>
                     @else
-                        <a href="{{ route('login') }}" style="color: #495057; font-weight: bold;">❤️ Mis Favoritos</a>
+                        <a href="{{ route('favoritos.invitado.index') }}" class="btn-invitado">
+                            <i class="fas fa-user me-1"></i> Mis Favoritos
+                        </a>
                     @endauth
                 </li>
                 @auth
@@ -887,7 +920,7 @@
         </div>
     </nav>
 
-    <!-- Mostrar mensajes de éxito -->
+    <!-- Mostrar mensajes -->
     @if(session('success'))
         <div class="alert alert-success">
             {{ session('success') }}
@@ -900,7 +933,7 @@
         </div>
     @endif
 
-    <!-- Banner de bienvenida estilo ML -->
+    <!-- Banner de bienvenida -->
     <div class="banner-inicio">
         <h2>¡Bienvenido a Ecommerce Agave!</h2>
         <p>Descubre nuestra exclusiva selección de productos de agave y mezcal</p>
@@ -910,9 +943,7 @@
         </div>
     </div>
 
-    <!-- ===================================================================== -->
     <!-- SECCIÓN 1: PRODUCTOS EN DESCUENTO -->
-    <!-- ===================================================================== -->
     @if(isset($productosDescuento) && $productosDescuento->count() > 0)
     <div class="seccion-destacados" style="margin-top: 30px;">
         <h2 class="titulo-seccion descuento">
@@ -925,33 +956,37 @@
                     $esVariacion = isset($item->id_variacion);
                     
                     if ($esVariacion) {
-                        // Es una variación
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio;
                         $precioDescuento = $item->dPrecio_oferta;
                         $stock = $item->iStock;
-                        $nombreProducto = $item->productoPadre->vNombre . ' - ' . $item->getAtributosTexto();
-                        $imagenes = $item->imagenes;
+                        $nombreProducto = $item->productoPadre->vNombre;
+                        $nombreCompleto = $nombreProducto . ' - ' . $item->getAtributosTexto();
+                        $imagen = $item->primera_imagen;
                         $url = route('productos.show.public', [$item->productoPadre->id_producto, 'variacion' => $item->id_variacion]);
                         $productoId = $item->productoPadre->id_producto;
                         $variacionId = $item->id_variacion;
                         $esFavorito = $item->esFavorito();
                         $atributosTexto = $item->getAtributosTexto();
+                        $atributosCompletos = $item->getAtributosCompletosTexto();
                         $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
+                        $sku = $item->vSKU;
                     } else {
-                        // Es un producto
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio_venta;
                         $precioDescuento = $item->dPrecio_oferta;
                         $stock = $item->iStock;
                         $nombreProducto = $item->vNombre;
-                        $imagenes = $item->imagenes;
+                        $nombreCompleto = $nombreProducto;
+                        $imagen = $item->primera_imagen;
                         $url = route('productos.show.public', $item->id_producto);
                         $productoId = $item->id_producto;
                         $variacionId = null;
                         $esFavorito = $item->esFavorito();
                         $atributosTexto = '';
+                        $atributosCompletos = '';
                         $marca = $item->marca->vNombre ?? 'Marca genérica';
+                        $sku = $item->vCodigo_barras;
                     }
                     
                     $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
@@ -975,7 +1010,6 @@
                             {{ $esFavorito ? '❤️' : '🤍' }}
                         </button>
 
-                        <!-- Badge de descuento -->
                         @if($tieneDescuento)
                             <div class="badge-descuento">
                                 -{{ $porcentajeDescuento }}% OFF
@@ -986,15 +1020,14 @@
                             </div>
                         @endif
 
-                        <!-- Badge de variación (si es variación) -->
                         @if($esVariacion && !empty($atributosTexto))
-                            <div class="badge-variacion" title="{{ $atributosTexto }}">
+                            <div class="badge-variacion" title="{{ $atributosCompletos }}">
                                 {{ $atributosTexto }}
                             </div>
                         @endif
 
-                        @if(count($imagenes) > 0)
-                            <img src="{{ $imagenes[0] }}" alt="{{ $nombreProducto }}" class="producto-imagen">
+                        @if($imagen)
+                            <img src="{{ $imagen }}" alt="{{ $nombreProducto }}" class="producto-imagen" loading="lazy">
                         @else
                             <div class="no-imagen">
                                 <span>🛒 Sin imagen</span>
@@ -1003,9 +1036,8 @@
                     </div>
                     
                     <div class="producto-info">
-                        <h3>{{ $nombreProducto }}</h3>
+                        <h3 title="{{ $nombreCompleto }}">{{ Str::limit($nombreCompleto, 50) }}</h3>
 
-                        <!-- PRECIOS -->
                         <div class="precio-container">
                             @if($tieneDescuento)
                                 <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
@@ -1018,7 +1050,6 @@
                             @endif
                         </div>
 
-                        <!-- ENVÍO -->
                         <div class="envio-info">
                             @if($envioGratis)
                                 <span class="envio-gratis">
@@ -1031,7 +1062,6 @@
                             @endif
                         </div>
 
-                        <!-- Stock -->
                         <div class="stock-info {{ $stock > 10 ? 'stock-bueno' : ($stock > 0 ? 'stock-bajo' : 'sin-stock') }}">
                             @if($stock > 10)
                                 ✅ En stock ({{ $stock }} disponibles)
@@ -1042,9 +1072,8 @@
                             @endif
                         </div>
 
-                        <!-- Marca -->
                         <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
-                            {{ $marca }}
+                            {{ $marca }} | SKU: {{ $sku }}
                         </p>
 
                         <div class="ver-detalle">
@@ -1061,9 +1090,7 @@
     </div>
     @endif
 
-    <!-- ===================================================================== -->
-    <!-- SECCIÓN 2: PRODUCTOS DESTACADOS (RECIENTES) -->
-    <!-- ===================================================================== -->
+    <!-- SECCIÓN 2: PRODUCTOS DESTACADOS -->
     <div class="seccion-destacados">
         <h2 class="titulo-seccion">Productos Destacados</h2>
         
@@ -1074,33 +1101,37 @@
                         $esVariacion = isset($item->id_variacion);
                         
                         if ($esVariacion) {
-                            // Es una variación
                             $tieneDescuento = $item->tieneDescuentoActivo();
                             $precioOriginal = $item->dPrecio;
                             $precioDescuento = $item->dPrecio_oferta;
                             $stock = $item->iStock;
-                            $nombreProducto = $item->productoPadre->vNombre . ' - ' . $item->getAtributosTexto();
-                            $imagenes = $item->imagenes;
+                            $nombreProducto = $item->productoPadre->vNombre;
+                            $nombreCompleto = $nombreProducto . ' - ' . $item->getAtributosTexto();
+                            $imagen = $item->primera_imagen;
                             $url = route('productos.show.public', [$item->productoPadre->id_producto, 'variacion' => $item->id_variacion]);
                             $productoId = $item->productoPadre->id_producto;
                             $variacionId = $item->id_variacion;
                             $esFavorito = $item->esFavorito();
                             $atributosTexto = $item->getAtributosTexto();
+                            $atributosCompletos = $item->getAtributosCompletosTexto();
                             $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
+                            $sku = $item->vSKU;
                         } else {
-                            // Es un producto
                             $tieneDescuento = $item->tieneDescuentoActivo();
                             $precioOriginal = $item->dPrecio_venta;
                             $precioDescuento = $item->dPrecio_oferta;
                             $stock = $item->iStock;
                             $nombreProducto = $item->vNombre;
-                            $imagenes = $item->imagenes;
+                            $nombreCompleto = $nombreProducto;
+                            $imagen = $item->primera_imagen;
                             $url = route('productos.show.public', $item->id_producto);
                             $productoId = $item->id_producto;
                             $variacionId = null;
                             $esFavorito = $item->esFavorito();
                             $atributosTexto = '';
+                            $atributosCompletos = '';
                             $marca = $item->marca->vNombre ?? 'Marca genérica';
+                            $sku = $item->vCodigo_barras;
                         }
                         
                         $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
@@ -1114,7 +1145,6 @@
                     
                     <div class="producto-card" onclick="window.location.href='{{ $url }}'">
                         <div class="producto-imagen-container">
-                            <!-- Botón de corazón para favoritos -->
                             <button class="corazon-favorito {{ $esFavorito ? 'activo' : 'inactivo' }}" 
                                     data-producto="{{ $productoId }}"
                                     data-variacion="{{ $variacionId ?? '' }}"
@@ -1134,15 +1164,14 @@
                                 </div>
                             @endif
 
-                            <!-- Badge de variación (si es variación) -->
                             @if($esVariacion && !empty($atributosTexto))
-                                <div class="badge-variacion" title="{{ $atributosTexto }}">
+                                <div class="badge-variacion" title="{{ $atributosCompletos }}">
                                     {{ $atributosTexto }}
                                 </div>
                             @endif
 
-                            @if(count($imagenes) > 0)
-                                <img src="{{ $imagenes[0] }}" alt="{{ $nombreProducto }}" class="producto-imagen">
+                            @if($imagen)
+                                <img src="{{ $imagen }}" alt="{{ $nombreProducto }}" class="producto-imagen" loading="lazy">
                             @else
                                 <div class="no-imagen">
                                     <span>🛒 Sin imagen</span>
@@ -1151,9 +1180,8 @@
                         </div>
                         
                         <div class="producto-info">
-                            <h3>{{ $nombreProducto }}</h3>
+                            <h3 title="{{ $nombreCompleto }}">{{ Str::limit($nombreCompleto, 50) }}</h3>
 
-                            <!-- PRECIOS -->
                             <div class="precio-container">
                                 @if($tieneDescuento)
                                     <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
@@ -1166,7 +1194,6 @@
                                 @endif
                             </div>
 
-                            <!-- ENVÍO -->
                             <div class="envio-info">
                                 @if($envioGratis)
                                     <span class="envio-gratis">
@@ -1179,7 +1206,6 @@
                                 @endif
                             </div>
 
-                            <!-- Stock -->
                             <div class="stock-info {{ $stock > 10 ? 'stock-bueno' : ($stock > 0 ? 'stock-bajo' : 'sin-stock') }}">
                                 @if($stock > 10)
                                     ✅ En stock ({{ $stock }} disponibles)
@@ -1190,9 +1216,8 @@
                                 @endif
                             </div>
 
-                            <!-- Marca -->
                             <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
-                                {{ $marca }}
+                                {{ $marca }} | SKU: {{ $sku }}
                             </p>
 
                             <div class="ver-detalle">
@@ -1204,9 +1229,7 @@
             </div>
         @endif
 
-        <!-- ===================================================================== -->
-        <!-- SECCIÓN 3: PRODUCTOS RECOMENDADOS (cambiado de "Productos más vendidos") -->
-        <!-- ===================================================================== -->
+        <!-- SECCIÓN 3: PRODUCTOS RECOMENDADOS -->
         @if(isset($productosRecomendados) && $productosRecomendados->count() > 0)
         <h2 class="titulo-seccion" style="margin-top: 40px;">✨ Productos Recomendados</h2>
         
@@ -1216,33 +1239,37 @@
                     $esVariacion = isset($item->id_variacion);
                     
                     if ($esVariacion) {
-                        // Es una variación
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio;
                         $precioDescuento = $item->dPrecio_oferta;
                         $stock = $item->iStock;
-                        $nombreProducto = $item->productoPadre->vNombre . ' - ' . $item->getAtributosTexto();
-                        $imagenes = $item->imagenes;
+                        $nombreProducto = $item->productoPadre->vNombre;
+                        $nombreCompleto = $nombreProducto . ' - ' . $item->getAtributosTexto();
+                        $imagen = $item->primera_imagen;
                         $url = route('productos.show.public', [$item->productoPadre->id_producto, 'variacion' => $item->id_variacion]);
                         $productoId = $item->productoPadre->id_producto;
                         $variacionId = $item->id_variacion;
                         $esFavorito = $item->esFavorito();
                         $atributosTexto = $item->getAtributosTexto();
+                        $atributosCompletos = $item->getAtributosCompletosTexto();
                         $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
+                        $sku = $item->vSKU;
                     } else {
-                        // Es un producto
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio_venta;
                         $precioDescuento = $item->dPrecio_oferta;
                         $stock = $item->iStock;
                         $nombreProducto = $item->vNombre;
-                        $imagenes = $item->imagenes;
+                        $nombreCompleto = $nombreProducto;
+                        $imagen = $item->primera_imagen;
                         $url = route('productos.show.public', $item->id_producto);
                         $productoId = $item->id_producto;
                         $variacionId = null;
                         $esFavorito = $item->esFavorito();
                         $atributosTexto = '';
+                        $atributosCompletos = '';
                         $marca = $item->marca->vNombre ?? 'Marca genérica';
+                        $sku = $item->vCodigo_barras;
                     }
                     
                     $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
@@ -1254,7 +1281,6 @@
                 
                 <div class="producto-card" onclick="window.location.href='{{ $url }}'">
                     <div class="producto-imagen-container">
-                        <!-- Badge de recomendado -->
                         <div class="badge-recomendado">
                             ✨ Recomendado
                         </div>
@@ -1275,13 +1301,13 @@
                         @endif
 
                         @if($esVariacion && !empty($atributosTexto))
-                            <div class="badge-variacion" title="{{ $atributosTexto }}">
+                            <div class="badge-variacion" title="{{ $atributosCompletos }}">
                                 {{ $atributosTexto }}
                             </div>
                         @endif
 
-                        @if(count($imagenes) > 0)
-                            <img src="{{ $imagenes[0] }}" alt="{{ $nombreProducto }}" class="producto-imagen">
+                        @if($imagen)
+                            <img src="{{ $imagen }}" alt="{{ $nombreProducto }}" class="producto-imagen" loading="lazy">
                         @else
                             <div class="no-imagen">
                                 <span>🛒 Sin imagen</span>
@@ -1290,7 +1316,7 @@
                     </div>
                     
                     <div class="producto-info">
-                        <h3>{{ $nombreProducto }}</h3>
+                        <h3 title="{{ $nombreCompleto }}">{{ Str::limit($nombreCompleto, 50) }}</h3>
 
                         <div class="precio-container">
                             @if($tieneDescuento)
@@ -1320,6 +1346,10 @@
                             @endif
                         </div>
 
+                        <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
+                            {{ $marca }} | SKU: {{ $sku }}
+                        </p>
+
                         <div class="ver-detalle">
                             <a href="{{ $url }}" onclick="event.stopPropagation();">Ver más</a>
                         </div>
@@ -1329,45 +1359,47 @@
         </div>
         @endif
 
-        <!-- ===================================================================== -->
-        <!-- SECCIÓN 4: TODOS LOS PRODUCTOS CON PAGINACIÓN (NUEVA) -->
-        <!-- ===================================================================== -->
-        @if(isset($todosLosProductos) && $todosLosProductos->count() > 0)
+        <!-- SECCIÓN 4: TODOS LOS PRODUCTOS Y VARIACIONES -->
+        @if(isset($todosLosItems) && $todosLosItems->count() > 0)
         <h2 class="titulo-seccion" style="margin-top: 40px;">📦 Todos Nuestros Productos</h2>
         
         <div class="productos-grid">
-            @foreach($todosLosProductos as $item)
+            @foreach($todosLosItems as $item)
                 @php
                     $esVariacion = isset($item->id_variacion);
                     
                     if ($esVariacion) {
-                        // Es una variación
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio;
                         $precioDescuento = $item->dPrecio_oferta;
                         $stock = $item->iStock;
-                        $nombreProducto = $item->productoPadre->vNombre . ' - ' . $item->getAtributosTexto();
-                        $imagenes = $item->imagenes;
+                        $nombreProducto = $item->productoPadre->vNombre;
+                        $nombreCompleto = $nombreProducto . ' - ' . $item->getAtributosTexto();
+                        $imagen = $item->primera_imagen;
                         $url = route('productos.show.public', [$item->productoPadre->id_producto, 'variacion' => $item->id_variacion]);
                         $productoId = $item->productoPadre->id_producto;
                         $variacionId = $item->id_variacion;
                         $esFavorito = $item->esFavorito();
                         $atributosTexto = $item->getAtributosTexto();
+                        $atributosCompletos = $item->getAtributosCompletosTexto();
                         $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
+                        $sku = $item->vSKU;
                     } else {
-                        // Es un producto
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio_venta;
                         $precioDescuento = $item->dPrecio_oferta;
                         $stock = $item->iStock;
                         $nombreProducto = $item->vNombre;
-                        $imagenes = $item->imagenes;
+                        $nombreCompleto = $nombreProducto;
+                        $imagen = $item->primera_imagen;
                         $url = route('productos.show.public', $item->id_producto);
                         $productoId = $item->id_producto;
                         $variacionId = null;
                         $esFavorito = $item->esFavorito();
                         $atributosTexto = '';
+                        $atributosCompletos = '';
                         $marca = $item->marca->vNombre ?? 'Marca genérica';
+                        $sku = $item->vCodigo_barras;
                     }
                     
                     $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
@@ -1381,7 +1413,6 @@
                 
                 <div class="producto-card" onclick="window.location.href='{{ $url }}'">
                     <div class="producto-imagen-container">
-                        <!-- Botón de corazón para favoritos -->
                         <button class="corazon-favorito {{ $esFavorito ? 'activo' : 'inactivo' }}" 
                                 data-producto="{{ $productoId }}"
                                 data-variacion="{{ $variacionId ?? '' }}"
@@ -1401,15 +1432,14 @@
                             </div>
                         @endif
 
-                        <!-- Badge de variación (si es variación) -->
                         @if($esVariacion && !empty($atributosTexto))
-                            <div class="badge-variacion" title="{{ $atributosTexto }}">
+                            <div class="badge-variacion" title="{{ $atributosCompletos }}">
                                 {{ $atributosTexto }}
                             </div>
                         @endif
 
-                        @if(count($imagenes) > 0)
-                            <img src="{{ $imagenes[0] }}" alt="{{ $nombreProducto }}" class="producto-imagen">
+                        @if($imagen)
+                            <img src="{{ $imagen }}" alt="{{ $nombreProducto }}" class="producto-imagen" loading="lazy">
                         @else
                             <div class="no-imagen">
                                 <span>🛒 Sin imagen</span>
@@ -1418,9 +1448,8 @@
                     </div>
                     
                     <div class="producto-info">
-                        <h3>{{ $nombreProducto }}</h3>
+                        <h3 title="{{ $nombreCompleto }}">{{ Str::limit($nombreCompleto, 50) }}</h3>
 
-                        <!-- PRECIOS -->
                         <div class="precio-container">
                             @if($tieneDescuento)
                                 <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
@@ -1433,7 +1462,6 @@
                             @endif
                         </div>
 
-                        <!-- ENVÍO -->
                         <div class="envio-info">
                             @if($envioGratis)
                                 <span class="envio-gratis">
@@ -1446,7 +1474,6 @@
                             @endif
                         </div>
 
-                        <!-- Stock -->
                         <div class="stock-info {{ $stock > 10 ? 'stock-bueno' : ($stock > 0 ? 'stock-bajo' : 'sin-stock') }}">
                             @if($stock > 10)
                                 ✅ En stock ({{ $stock }} disponibles)
@@ -1457,9 +1484,8 @@
                             @endif
                         </div>
 
-                        <!-- Marca -->
                         <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
-                            {{ $marca }}
+                            {{ $marca }} | SKU: {{ $sku }}
                         </p>
 
                         <div class="ver-detalle">
@@ -1470,9 +1496,9 @@
             @endforeach
         </div>
 
-        <!-- PAGINACIÓN PARA TODOS LOS PRODUCTOS -->
+        <!-- PAGINACIÓN -->
         <div class="paginacion">
-            {{ $todosLosProductos->links() }}
+            {{ $todosLosItems->links() }}
         </div>
 
         <div style="text-align: center; margin-top: 20px; margin-bottom: 20px;">
@@ -1482,51 +1508,110 @@
     </div>
 
     <script>
-        // VARIABLE GLOBAL para controlar UNA sola notificación
-        let singleToast = null;
-        let singleToastTimeout = null;
+        // Configurar CSRF token para todas las peticiones fetch
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        
+        let currentToast = null;
+        let toastTimeout = null;
 
-        // Función para toggle favoritos en productos y variaciones
+        function removeNotification() {
+            if (currentToast) {
+                currentToast.classList.remove('show');
+                setTimeout(() => {
+                    if (currentToast && currentToast.parentNode) {
+                        currentToast.parentNode.removeChild(currentToast);
+                    }
+                    currentToast = null;
+                }, 300);
+            }
+            if (toastTimeout) {
+                clearTimeout(toastTimeout);
+                toastTimeout = null;
+            }
+        }
+
+        function showNotification(message, type = 'success') {
+            removeNotification();
+            
+            const toast = document.createElement('div');
+            toast.className = `toast-single ${type}`;
+            
+            let icon = '✅';
+            if (type === 'error') icon = '❌';
+            if (type === 'info') icon = 'ℹ️';
+            
+            const cleanMessage = message.replace('✅', '').replace('❌', '').trim();
+            
+            toast.innerHTML = `
+                <span class="toast-icon">${icon}</span>
+                <span class="toast-message">${cleanMessage}</span>
+            `;
+            
+            document.body.appendChild(toast);
+            currentToast = toast;
+            
+            setTimeout(() => toast.classList.add('show'), 10);
+            
+            toastTimeout = setTimeout(() => {
+                if (toast.classList.contains('show')) {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.parentNode.removeChild(toast);
+                        }
+                        if (currentToast === toast) {
+                            currentToast = null;
+                        }
+                        toastTimeout = null;
+                    }, 400);
+                }
+            }, 3000);
+        }
+
         function toggleFavorito(button, productoId, variacionId = null) {
             if (button.disabled) return;
+            
+            const estabaActivo = button.classList.contains('activo');
+            
             button.disabled = true;
+            button.classList.add('loading');
+            button.innerHTML = '⏳';
+            
+            @auth
+                // Usuario autenticado
+                const url = variacionId 
+                    ? `/favoritos/toggle-variacion/${variacionId}`
+                    : `/favoritos/toggle-producto/${productoId}`;
+            @else
+                // Invitado
+                const url = variacionId 
+                    ? `/favoritos-invitado/toggle-variacion/${variacionId}`
+                    : `/favoritos-invitado/toggle-producto/${productoId}`;
+            @endauth
 
-            // Verificar si el usuario está autenticado
-            @if(!Auth::check())
-                window.location.href = '{{ route("login") }}?from_favoritos=true&redirect=' + encodeURIComponent(window.location.href);
-                return;
-            @endif
-
-            const esFavorito = button.classList.contains('activo');
-            const tipo = variacionId ? 'variación' : 'producto';
-            
-            // Animación simple
-            button.style.transform = 'scale(0.9)';
-            
-            // Eliminar notificación anterior
-            removeSingleToast();
-            
-            // Construir URL según el tipo
-            let url;
-            if (variacionId) {
-                url = `/favoritos/toggle-variacion/${variacionId}`;
-            } else {
-                url = `/favoritos/toggle-producto/${productoId}`;
-            }
-            
             fetch(url, {
                 method: 'POST',
                 headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'X-CSRF-TOKEN': csrfToken,
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
-                },
-                cache: 'no-store'
+                }
             })
-            .then(response => {
-                if (response.status === 401) {
-                    window.location.href = '{{ route("login") }}?from_favoritos=true&redirect=' + encodeURIComponent(window.location.href);
-                    return null;
+            .then(async response => {
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        // Redirigir al login si no está autenticado
+                        const redirectUrl = new URL('{{ route("login") }}');
+                        redirectUrl.searchParams.set('from_favoritos', 'true');
+                        redirectUrl.searchParams.set('redirect', window.location.href);
+                        redirectUrl.searchParams.set('producto', productoId);
+                        if (variacionId) {
+                            redirectUrl.searchParams.set('variacion', variacionId);
+                        }
+                        window.location.href = redirectUrl.toString();
+                        return null;
+                    }
+                    throw new Error(`HTTP ${response.status}`);
                 }
                 return response.json();
             })
@@ -1535,135 +1620,108 @@
                 
                 if (data.success) {
                     if (data.action === 'added') {
-                        // Cambiar a estado activo
                         button.classList.remove('inactivo');
                         button.classList.add('activo');
                         button.innerHTML = '❤️';
+                        button.setAttribute('title', 'Quitar de favoritos');
                         
-                        // Mensaje específico según el tipo
-                        const mensaje = data.tipo === 'variacion' 
-                            ? '✅ Variación agregada a favoritos' 
-                            : '✅ Producto agregado a favoritos';
+                        let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
+                        showNotification(`✅ ${tipoTexto} agregado a favoritos`, 'success');
                         
-                        showSingleNotification(mensaje, 3000);
-                        
+                        // Guardar en localStorage para persistencia
                         localStorage.setItem('last_favorito_action', 'added');
-                        localStorage.setItem('last_favorito_id', data.tipo === 'variacion' ? variacionId : productoId);
+                        localStorage.setItem('last_favorito_id', variacionId || productoId);
                         localStorage.setItem('last_favorito_tipo', data.tipo);
                         localStorage.setItem('last_favorito_time', Date.now());
-                        
                     } else {
-                        // Cambiar a estado inactivo
                         button.classList.remove('activo');
                         button.classList.add('inactivo');
                         button.innerHTML = '🤍';
+                        button.setAttribute('title', 'Agregar a favoritos');
                         
-                        // Mensaje específico según el tipo
-                        const mensaje = data.tipo === 'variacion' 
-                            ? '❌ Variación eliminada de favoritos' 
-                            : '❌ Producto eliminado de favoritos';
-                        
-                        showSingleNotification(mensaje, 3000);
+                        let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
+                        showNotification(`❌ ${tipoTexto} eliminado de favoritos`, 'error');
                         
                         localStorage.setItem('last_favorito_action', 'removed');
-                        localStorage.setItem('last_favorito_id', data.tipo === 'variacion' ? variacionId : productoId);
+                        localStorage.setItem('last_favorito_id', variacionId || productoId);
                         localStorage.setItem('last_favorito_tipo', data.tipo);
                         localStorage.setItem('last_favorito_time', Date.now());
                     }
                 } else {
-                    showSingleNotification('❌ Error al gestionar favoritos', 3000);
+                    // Revertir cambios si hubo error
+                    if (estabaActivo) {
+                        button.classList.add('activo');
+                        button.classList.remove('inactivo');
+                        button.innerHTML = '❤️';
+                    } else {
+                        button.classList.remove('activo');
+                        button.classList.add('inactivo');
+                        button.innerHTML = '🤍';
+                    }
+                    showNotification('❌ ' + (data.message || 'Error al gestionar favoritos'), 'error');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                showSingleNotification('❌ Error de conexión', 3000);
+                // Revertir cambios
+                if (estabaActivo) {
+                    button.classList.add('activo');
+                    button.classList.remove('inactivo');
+                    button.innerHTML = '❤️';
+                } else {
+                    button.classList.remove('activo');
+                    button.classList.add('inactivo');
+                    button.innerHTML = '🤍';
+                }
+                showNotification('❌ Error de conexión. Intenta nuevamente.', 'error');
             })
             .finally(() => {
                 setTimeout(() => {
                     button.disabled = false;
-                    button.style.transform = '';
+                    button.classList.remove('loading');
                 }, 500);
             });
         }
 
-        // FUNCIÓN PARA ELIMINAR NOTIFICACIÓN ANTERIOR
-        function removeSingleToast() {
-            if (singleToast) {
-                singleToast.classList.remove('show');
-                setTimeout(() => {
-                    if (singleToast && singleToast.parentNode) {
-                        singleToast.parentNode.removeChild(singleToast);
-                    }
-                    singleToast = null;
-                }, 300);
-            }
-            
-            if (singleToastTimeout) {
-                clearTimeout(singleToastTimeout);
-                singleToastTimeout = null;
-            }
-            
-            // Eliminar cualquier otro toast
-            const allToasts = document.querySelectorAll('.toast-single');
-            allToasts.forEach(toast => {
-                toast.classList.remove('show');
-                setTimeout(() => {
-                    if (toast.parentNode) {
-                        toast.parentNode.removeChild(toast);
-                    }
-                }, 300);
-            });
-        }
-
-        // FUNCIÓN PARA MOSTRAR UNA SOLA NOTIFICACIÓN
-        function showSingleNotification(message, duration = 3000) {
-            // 1. Eliminar notificación anterior
-            removeSingleToast();
-            
-            // 2. Crear nueva notificación
-            const toast = document.createElement('div');
-            toast.className = 'toast-single';
-            
-            // Determinar emoji basado en el mensaje
-            const emoji = message.includes('✅') ? '✅' : message.includes('❌') ? '❌' : 'ℹ️';
-            const cleanMessage = message.replace('✅', '').replace('❌', '').trim();
-            
-            toast.innerHTML = `
-                <span style="font-size: 20px;">${emoji}</span>
-                <span>${cleanMessage}</span>
-            `;
-            
-            document.body.appendChild(toast);
-            singleToast = toast;
-            
-            // 3. Mostrar con animación
-            setTimeout(() => {
-                toast.classList.add('show');
-            }, 10);
-            
-            // 4. Configurar para eliminar después del tiempo especificado
-            singleToastTimeout = setTimeout(() => {
-                if (toast.classList.contains('show')) {
-                    toast.classList.remove('show');
-                    setTimeout(() => {
-                        if (toast.parentNode) {
-                            toast.parentNode.removeChild(toast);
-                        }
-                        singleToast = null;
-                        singleToastTimeout = null;
-                    }, 400);
-                }
-            }, duration);
-        }
-
-        // Verificar acciones recientes al cargar
         document.addEventListener('DOMContentLoaded', function() {
+            // Prevenir propagación en botones
+            const buttons = document.querySelectorAll('.producto-card button, .producto-card a');
+            buttons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
+            });
+
+            // Links de descuento
+            const linkDescuento = document.getElementById('link-descuento');
+            if (linkDescuento) {
+                linkDescuento.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    window.location.href = this.href;
+                });
+            }
+
+            const bannerDescuento = document.getElementById('banner-descuento');
+            if (bannerDescuento) {
+                bannerDescuento.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    window.location.href = this.href;
+                });
+            }
+
+            // Auto-focus en búsqueda para desktop
+            if (window.innerWidth > 768) {
+                const searchInput = document.querySelector('.barra-busqueda-principal input[type="text"]');
+                if (searchInput) searchInput.focus();
+            }
+
+            // Verificar acciones recientes de localStorage
             const lastAction = localStorage.getItem('last_favorito_action');
             const lastId = localStorage.getItem('last_favorito_id');
             const lastTipo = localStorage.getItem('last_favorito_tipo');
             const lastTime = localStorage.getItem('last_favorito_time');
             
-            if (lastAction && (Date.now() - lastTime) < 5000) {
+            if (lastAction && lastId && lastTime && (Date.now() - lastTime) < 5000) {
                 // Buscar el botón correspondiente
                 let selector;
                 if (lastTipo === 'variacion') {
@@ -1678,65 +1736,23 @@
                         button.classList.remove('activo');
                         button.classList.add('inactivo');
                         button.innerHTML = '🤍';
+                        button.setAttribute('title', 'Agregar a favoritos');
                     } else if (lastAction === 'added') {
                         button.classList.remove('inactivo');
                         button.classList.add('activo');
                         button.innerHTML = '❤️';
+                        button.setAttribute('title', 'Quitar de favoritos');
                     }
                 }
             }
             
-            // Limpiar después de 5 segundos
+            // Limpiar localStorage después de 5 segundos
             setTimeout(() => {
                 localStorage.removeItem('last_favorito_action');
                 localStorage.removeItem('last_favorito_id');
                 localStorage.removeItem('last_favorito_tipo');
                 localStorage.removeItem('last_favorito_time');
             }, 5000);
-
-            // Auto-focus en la barra de búsqueda (solo en desktop)
-            if (window.innerWidth > 768) {
-                const searchInput = document.querySelector('.barra-busqueda-principal input[type="text"]');
-                if (searchInput) {
-                    searchInput.focus();
-                }
-            }
-
-            // Prevenir zoom en inputs para móviles
-            const inputs = document.querySelectorAll('input[type="text"], input[type="number"], select');
-            inputs.forEach(input => {
-                input.addEventListener('touchstart', function() {
-                    this.style.fontSize = '16px';
-                });
-            });
-            
-            // Prevenir propagación en botones
-            const buttons = document.querySelectorAll('.producto-card button, .producto-card a');
-            buttons.forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                });
-            });
-            
-            // Agregar event listener al link de descuento
-            const linkDescuento = document.getElementById('link-descuento');
-            if (linkDescuento) {
-                linkDescuento.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const url = new URL(this.href);
-                    window.location.href = url.toString();
-                });
-            }
-            
-            // Agregar event listener al banner de descuento
-            const bannerDescuento = document.getElementById('banner-descuento');
-            if (bannerDescuento) {
-                bannerDescuento.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const url = new URL(this.href);
-                    window.location.href = url.toString();
-                });
-            }
         });
     </script>
 </body>

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $producto->vNombre }} | Ecommerce Agave</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -98,6 +99,23 @@
 
         .ml-nav a:hover {
             color: #007bff;
+        }
+
+        .btn-invitado {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white !important;
+            padding: 8px 15px;
+            border-radius: 25px;
+            font-weight: bold;
+            display: inline-block;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .btn-invitado:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.4);
+            color: white !important;
+            text-decoration: none;
         }
 
         .user-welcome {
@@ -632,6 +650,28 @@
             color: white;
         }
 
+        .ml-btn-favorite.loading {
+            position: relative;
+            color: transparent;
+            pointer-events: none;
+        }
+
+        .ml-btn-favorite.loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #dc3545;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         .ml-btn-buy {
             flex: 2;
             background: #28a745;
@@ -802,6 +842,9 @@
                         </button>
                     </form>
                 @else
+                    <a href="{{ route('favoritos.invitado.index') }}" class="btn-invitado">
+                        <i class="fas fa-user"></i> Invitado
+                    </a>
                     <a href="{{ route('login') }}">Ingresar</a>
                     <a href="{{ route('usuarios.create') }}">Registrarse</a>
                 @endauth
@@ -825,7 +868,7 @@
             $tieneVariaciones = $producto->tieneVariaciones();
             
             // Calcular si el producto padre tiene oferta vigente
-            $productoTieneOferta = $producto->tieneDescuentoActivo(); // CORREGIDO
+            $productoTieneOferta = $producto->tieneDescuentoActivo();
             $precioBaseProducto = $productoTieneOferta ? $producto->dPrecio_oferta : $producto->dPrecio_venta;
             
             // Calcular impuestos del producto padre
@@ -966,7 +1009,7 @@
                 }
                 
                 // Calcular si la variación tiene oferta vigente
-                $variacionTieneOferta = $var->tieneDescuentoActivo(); // CORREGIDO
+                $variacionTieneOferta = $var->tieneDescuentoActivo();
                 $precioBaseVariacion = $variacionTieneOferta ? $var->dPrecio_oferta : $var->dPrecio;
                 
                 $impuestoVariacion = $var->impuesto ?? $producto->impuestos->first();
@@ -1054,7 +1097,7 @@
                 <div class="position-relative mb-3" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e0e0e0; overflow: hidden;">
                     <!-- Contenedor del zoom -->
                     <div id="zoom-container" class="zoom-container" style="position: relative; width: 100%; height: 400px; overflow: hidden; cursor: crosshair;">
-                        <!-- Imagen principal - Se carga según la variación seleccionada -->
+                        <!-- Imagen principal -->
                         <img id="mainImage" 
                              src="{{ $variacionInicial ? ($variacionInicial['imagenes'][0] ?? $imagenesProducto[0] ?? 'https://via.placeholder.com/400x400?text=Sin+Imagen') : ($imagenesProducto[0] ?? 'https://via.placeholder.com/400x400?text=Sin+Imagen') }}" 
                              class="img-fluid zoom-image" 
@@ -1078,7 +1121,7 @@
                     </div>
                 </div>
 
-                <!-- Miniaturas - Se cargan según la variación seleccionada -->
+                <!-- Miniaturas -->
                 <div id="miniaturas-container" class="d-flex flex-wrap justify-content-center gap-2 mt-2" style="padding-bottom: 5px; max-height: 170px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 10px;">
                     @php
                         $imagenesAMostrar = $variacionInicial ? ($variacionInicial['imagenes'] ?? $imagenesProducto) : $imagenesProducto;
@@ -1112,14 +1155,14 @@
                     @endif
                 </div>
 
-                <!-- NOMBRE DEL PRODUCTO - NO CAMBIA NUNCA -->
+                <!-- NOMBRE DEL PRODUCTO -->
                 <h1 class="ml-title" id="producto-nombre">{{ $producto->vNombre }}</h1>
 
                 <div class="ml-sku">
                     <span id="producto-sku">{{ $datosIniciales['sku'] }}</span>
                 </div>
 
-                <!-- Precios - Se cargan según la variación seleccionada -->
+                <!-- Precios -->
                 <div class="ml-price-container" id="precio-container">
                     @if($mostrarProductoInicial)
                         <div id="producto-precio-info" style="display: block;">
@@ -1331,8 +1374,9 @@
         let variacionSeleccionadaId = {{ $variacionInicial ? $variacionInicial['id'] : 'null' }};
         let atributosSeleccionados = {};
 
-        // Guardar el nombre original del producto (NO CAMBIA)
+        // Guardar el nombre original del producto
         const nombreOriginalProducto = "{{ $producto->vNombre }}";
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
         // Inicializar atributos seleccionados si hay una variación en la URL
         @if($variacionInicial)
@@ -1582,7 +1626,7 @@
             currentImageIndex = 0;
             actualizarImagenPrincipal();
 
-            // SKU (SÍ cambia)
+            // SKU
             document.getElementById('producto-sku').textContent = variacion.sku;
 
             // NOMBRE DEL PRODUCTO - NO CAMBIA
@@ -1801,25 +1845,35 @@
         // Favoritos
         function toggleFavorito(button, productoId) {
             if (button.disabled) return;
+            
+            const estabaActivo = button.classList.contains('active');
+            
             button.disabled = true;
-
+            button.classList.add('loading');
+            
             @if(!Auth::check())
-                window.location.href = '{{ route("login") }}?from_favoritos=true&redirect=' + encodeURIComponent(window.location.href);
+                // Invitado - redirigir a favoritos de invitado
+                window.location.href = '{{ route("favoritos.invitado.index") }}?from_favoritos=true&producto=' + productoId;
+                button.disabled = false;
+                button.classList.remove('loading');
                 return;
             @endif
 
-            fetch(`/favoritos/toggle/${productoId}`, {
+            fetch(`/favoritos/toggle-producto/${productoId}`, {
                 method: 'POST',
                 headers: { 
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}', 
+                    'X-CSRF-TOKEN': csrfToken, 
                     'Content-Type': 'application/json', 
                     'Accept': 'application/json' 
                 }
             })
-            .then(response => {
-                if (response.status === 401) {
-                    window.location.href = '{{ route("login") }}?from_favoritos=true&redirect=' + encodeURIComponent(window.location.href);
-                    return null;
+            .then(async response => {
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        window.location.href = '{{ route("login") }}?from_favoritos=true&redirect=' + encodeURIComponent(window.location.href);
+                        return null;
+                    }
+                    throw new Error(`HTTP ${response.status}`);
                 }
                 return response.json();
             })
@@ -1830,19 +1884,48 @@
                         button.classList.add('active');
                         button.querySelector('.btn-text').textContent = 'En favoritos';
                         showNotification('Producto agregado a favoritos', 'success');
+                        
+                        localStorage.setItem('last_favorito_action', 'added');
+                        localStorage.setItem('last_favorito_id', productoId);
+                        localStorage.setItem('last_favorito_tipo', 'producto');
+                        localStorage.setItem('last_favorito_time', Date.now());
                     } else {
                         button.classList.remove('active');
                         button.querySelector('.btn-text').textContent = 'Favorito';
                         showNotification('Producto eliminado de favoritos', 'info');
+                        
+                        localStorage.setItem('last_favorito_action', 'removed');
+                        localStorage.setItem('last_favorito_id', productoId);
+                        localStorage.setItem('last_favorito_tipo', 'producto');
+                        localStorage.setItem('last_favorito_time', Date.now());
                     }
+                } else {
+                    if (estabaActivo) {
+                        button.classList.add('active');
+                        button.querySelector('.btn-text').textContent = 'En favoritos';
+                    } else {
+                        button.classList.remove('active');
+                        button.querySelector('.btn-text').textContent = 'Favorito';
+                    }
+                    showNotification(data.message || 'Error al gestionar favoritos', 'error');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
+                if (estabaActivo) {
+                    button.classList.add('active');
+                    button.querySelector('.btn-text').textContent = 'En favoritos';
+                } else {
+                    button.classList.remove('active');
+                    button.querySelector('.btn-text').textContent = 'Favorito';
+                }
                 showNotification('Error de conexión', 'error');
             })
             .finally(() => {
-                setTimeout(() => { button.disabled = false; }, 300);
+                setTimeout(() => { 
+                    button.disabled = false;
+                    button.classList.remove('loading');
+                }, 500);
             });
         }
 
@@ -1874,6 +1957,32 @@
             console.log('Producto data:', productoData);
             console.log('Variaciones data:', variacionesData);
             console.log('Variación seleccionada:', variacionSeleccionadaId);
+
+            // Verificar acciones recientes de localStorage
+            const lastAction = localStorage.getItem('last_favorito_action');
+            const lastId = localStorage.getItem('last_favorito_id');
+            const lastTipo = localStorage.getItem('last_favorito_tipo');
+            const lastTime = localStorage.getItem('last_favorito_time');
+            
+            if (lastAction && lastId && lastTime && (Date.now() - lastTime) < 5000 && lastTipo === 'producto') {
+                const button = document.getElementById(`btn-favorito-${lastId}`);
+                if (button) {
+                    if (lastAction === 'removed') {
+                        button.classList.remove('active');
+                        button.querySelector('.btn-text').textContent = 'Favorito';
+                    } else if (lastAction === 'added') {
+                        button.classList.add('active');
+                        button.querySelector('.btn-text').textContent = 'En favoritos';
+                    }
+                }
+            }
+            
+            setTimeout(() => {
+                localStorage.removeItem('last_favorito_action');
+                localStorage.removeItem('last_favorito_id');
+                localStorage.removeItem('last_favorito_tipo');
+                localStorage.removeItem('last_favorito_time');
+            }, 5000);
         });
     </script>
 

@@ -11,6 +11,7 @@ use App\Http\Controllers\FavoritoController;
 use App\Http\Controllers\AtributoController;
 use App\Http\Controllers\VariacionController;
 use App\Http\Controllers\ImpuestoController;
+use App\Http\Controllers\FavoritoInvitadoController;
 
 
 // RUTA PRINCIPAL - redirige a la página de inicio real
@@ -53,9 +54,9 @@ Route::get('/busqueda-rapida', [BusquedaController::class, 'busquedaRapida'])->n
 Route::get('/buscar-productos', [BusquedaController::class, 'buscarProductos'])->name('busqueda.productos');
 
 // =====================================================================
-// RUTAS PARA FAVORITOS
+// RUTAS PARA FAVORITOS - CORREGIDAS
 // =====================================================================
-// Rutas para favoritos
+// Rutas para usuarios autenticados
 Route::prefix('favoritos')->middleware(['auth'])->group(function () {
     Route::get('/', [FavoritoController::class, 'index'])->name('favoritos.index');
     Route::post('/toggle-producto/{id}', [FavoritoController::class, 'toggleProducto'])->name('favoritos.toggle.producto');
@@ -63,6 +64,16 @@ Route::prefix('favoritos')->middleware(['auth'])->group(function () {
     Route::delete('/{id}', [FavoritoController::class, 'destroy'])->name('favoritos.destroy');
     Route::get('/check-producto/{id}', [FavoritoController::class, 'checkProducto'])->name('favoritos.check.producto');
     Route::get('/check-variacion/{id}', [FavoritoController::class, 'checkVariacion'])->name('favoritos.check.variacion');
+});
+
+// Rutas para invitados
+Route::prefix('favoritos-invitado')->name('favoritos.invitado.')->group(function () {
+    Route::get('/', [FavoritoInvitadoController::class, 'index'])->name('index');
+    Route::post('/toggle-producto/{id}', [FavoritoInvitadoController::class, 'toggleProducto'])->name('toggle.producto');
+    Route::post('/toggle-variacion/{id}', [FavoritoInvitadoController::class, 'toggleVariacion'])->name('toggle.variacion');
+    Route::delete('/', [FavoritoInvitadoController::class, 'destroy'])->name('destroy');
+    Route::get('/check/{idProducto}/{idVariacion?}', [FavoritoInvitadoController::class, 'check'])->name('check');
+    Route::post('/migrar', [FavoritoInvitadoController::class, 'migrarAUsuario'])->name('migrar');
 });
 
 // =====================================================================
@@ -193,3 +204,13 @@ Route::fallback(function () {
 Route::get('/productos/verificar-nombre', [ProductoController::class, 'verificarNombre'])->name('productos.verificar-nombre');
 Route::get('/productos/verificar-sku', [ProductoController::class, 'verificarSKU'])->name('productos.verificar-sku');
 Route::get('/variaciones/verificar-sku', [VariacionController::class, 'verificarSKU'])->name('variaciones.verificar-sku');
+
+// routes/web.php - Agrega estas rutas
+Route::prefix('favoritos-invitado')->name('favoritos.invitado.')->group(function () {
+    Route::get('/', [FavoritoInvitadoController::class, 'index'])->name('index');
+    Route::post('/toggle-producto/{id}', [FavoritoInvitadoController::class, 'toggleProducto'])->name('toggle.producto');
+    Route::post('/toggle-variacion/{id}', [FavoritoInvitadoController::class, 'toggleVariacion'])->name('toggle.variacion');
+    Route::delete('/', [FavoritoInvitadoController::class, 'destroy'])->name('destroy');
+    Route::get('/check/{idProducto}/{idVariacion?}', [FavoritoInvitadoController::class, 'check'])->name('check');
+    Route::post('/migrar', [FavoritoInvitadoController::class, 'migrarAUsuario'])->name('migrar');
+});

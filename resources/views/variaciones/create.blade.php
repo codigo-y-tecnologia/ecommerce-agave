@@ -125,12 +125,12 @@
                             </div>
                         </div>
 
-                        <!-- CAMPOS DE OFERTA -->
+                        <!-- CAMPOS DE Descuento -->
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group mb-3">
                                     <label class="form-label fw-bold">
-                                        <i class="fas fa-percentage me-1"></i>Oferta Especial
+                                        <i class="fas fa-percentage me-1"></i>Descuento Especial
                                     </label>
                                     <div class="form-check form-switch">
                                         <input type="checkbox" name="bTiene_oferta" id="bTiene_oferta" 
@@ -138,11 +138,11 @@
                                                {{ old('bTiene_oferta') ? 'checked' : '' }}
                                                onchange="toggleOfertaFields()">
                                         <label class="form-check-label" for="bTiene_oferta">
-                                            Activar Oferta para esta variación
+                                            Activar Descuento para esta variación
                                         </label>
                                     </div>
                                     <small class="form-text text-muted">
-                                        Permite establecer un precio de oferta por tiempo limitado
+                                        Permite establecer un precio de Descuento por tiempo limitado
                                     </small>
                                 </div>
                             </div>
@@ -154,7 +154,7 @@
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
                                         <label for="dPrecio_oferta" class="form-label fw-bold">
-                                            Precio de Oferta <span class="text-danger">*</span>
+                                            Precio de Descuento <span class="text-danger">*</span>
                                         </label>
                                         <div class="input-group">
                                             <span class="input-group-text">$</span>

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Resultados de Búsqueda - Ecommerce Agave</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
         * {
             margin: 0;
@@ -18,10 +19,22 @@
         }
 
         header {
-            background-color: #f8f9fa;
-            padding: 15px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
             text-align: center;
             border-bottom: 1px solid #dee2e6;
+        }
+
+        header h1 {
+            font-size: clamp(1.5rem, 5vw, 2rem);
+            padding: 0 15px;
+        }
+
+        header p {
+            font-size: clamp(0.9rem, 3vw, 1rem);
+            padding: 0 15px;
+            opacity: 0.9;
         }
 
         .user-welcome {
@@ -35,11 +48,14 @@
             margin: 0;
             font-weight: bold;
             color: #1976d2;
+            font-size: clamp(0.85rem, 3vw, 1rem);
+            padding: 0 15px;
         }
 
         nav.navbar {
             background-color: #e9ecef;
             padding: 10px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
         nav.navbar ul {
@@ -60,47 +76,81 @@
             color: #495057;
             text-decoration: none;
             font-weight: bold;
+            font-size: clamp(0.85rem, 2.5vw, 1rem);
+            transition: color 0.3s ease;
         }
 
         nav.navbar ul li a:hover {
+            color: #667eea;
             text-decoration: underline;
+        }
+
+        nav.navbar ul li button {
+            font-size: clamp(0.85rem, 2.5vw, 1rem);
+            background: none;
+            border: none;
+            color: #495057;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-invitado {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white !important;
+            padding: 8px 15px;
+            border-radius: 25px;
+            font-weight: bold;
+            display: inline-block;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .btn-invitado:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.4);
+            text-decoration: none !important;
         }
 
         .barra-busqueda-principal {
             text-align: center;
-            margin: 20px 0;
+            margin: 15px 0;
             padding: 0 20px;
         }
 
         .barra-busqueda-principal form {
-            display: inline-block;
+            display: flex;
             max-width: 600px;
             width: 100%;
+            margin: 0 auto;
         }
 
         .barra-busqueda-principal input[type="text"] {
+            flex: 1;
             padding: 12px 20px;
-            width: 70%;
-            border: 2px solid #007bff;
+            border: 2px solid #667eea;
             border-radius: 25px 0 0 25px;
             font-size: 16px;
             outline: none;
+            min-width: 0;
+        }
+
+        .barra-busqueda-principal input[type="text"]:focus {
+            border-color: #764ba2;
         }
 
         .barra-busqueda-principal button {
             padding: 12px 25px;
-            background: #007bff;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
-            border: 2px solid #007bff;
+            border: none;
             border-radius: 0 25px 25px 0;
             font-size: 16px;
             cursor: pointer;
-            margin-left: -5px;
+            white-space: nowrap;
+            transition: transform 0.3s ease;
         }
 
         .barra-busqueda-principal button:hover {
-            background: #0056b3;
-            border-color: #0056b3;
+            transform: translateY(-2px);
         }
 
         .busqueda-container {
@@ -211,7 +261,6 @@
             margin-bottom: 30px;
         }
         
-        /* PAGINACIÓN PERSONALIZADA */
         .paginacion {
             display: flex;
             justify-content: center;
@@ -222,14 +271,13 @@
             display: flex;
             list-style: none;
             gap: 8px;
-            padding: 0;
+            padding: 5px;
             margin: 0;
+            background: white;
+            border-radius: 40px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             flex-wrap: wrap;
             justify-content: center;
-        }
-
-        .pagination li {
-            display: inline-flex;
         }
 
         .pagination li a,
@@ -240,26 +288,26 @@
             min-width: 40px;
             height: 40px;
             padding: 0 8px;
-            border-radius: 8px;
+            border-radius: 50%;
             text-decoration: none;
             color: #495057;
             font-size: 14px;
             font-weight: 500;
             transition: all 0.2s ease;
-            background-color: white;
-            border: 1px solid #dee2e6;
+            background-color: transparent;
+            border: 1px solid transparent;
         }
 
         .pagination li a:hover {
             background-color: #e9ecef;
-            border-color: #adb5bd;
-            color: #007bff;
+            border-color: #dee2e6;
+            color: #667eea;
         }
 
         .pagination li.active span {
-            background: #007bff;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
-            border-color: #007bff;
+            font-weight: 600;
         }
 
         .pagination li:first-child a::before {
@@ -279,8 +327,6 @@
 
         .pagination li.disabled span {
             color: #adb5bd;
-            background-color: #f8f9fa;
-            border-color: #dee2e6;
             cursor: not-allowed;
         }
         
@@ -329,19 +375,26 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            aspect-ratio: 1 / 1;
         }
 
         .producto-imagen {
             width: 100%;
-            height: 200px;
+            height: 100%;
+            max-height: 200px;
             object-fit: contain;
             border-radius: 8px;
             transition: transform 0.3s ease;
         }
 
+        .producto-card:hover .producto-imagen {
+            transform: scale(1.05);
+        }
+
         .no-imagen {
             width: 100%;
-            height: 200px;
+            height: 100%;
+            min-height: 200px;
             background-color: #f8f9fa;
             display: flex;
             align-items: center;
@@ -353,6 +406,8 @@
         .producto-info {
             padding: 15px;
             flex: 1;
+            display: flex;
+            flex-direction: column;
         }
 
         .producto-card h3 {
@@ -366,9 +421,10 @@
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
+            word-break: break-word;
         }
 
-        /* ESTILOS DE PRECIOS */
+        /* PRECIOS */
         .producto-precio {
             margin-bottom: 5px;
         }
@@ -431,26 +487,44 @@
             position: absolute;
             top: 15px;
             left: 15px;
-            background: #dc3545;
+            background: #00a650;
             color: white;
-            padding: 4px 8px;
+            padding: 5px 10px;
             border-radius: 4px;
             font-size: 12px;
             font-weight: bold;
             z-index: 99;
+            box-shadow: 0 2px 5px rgba(0,166,80,0.3);
         }
 
         .badge-stock-bajo {
             position: absolute;
             top: 15px;
             left: 15px;
-            background: #ffc107;
-            color: #000;
-            padding: 4px 8px;
+            background: #ff6b00;
+            color: white;
+            padding: 5px 10px;
             border-radius: 4px;
             font-size: 12px;
             font-weight: bold;
             z-index: 99;
+        }
+
+        .badge-variacion {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            z-index: 99;
+            max-width: 90%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .ver-detalle {
@@ -463,6 +537,8 @@
             text-decoration: none;
             font-weight: bold;
             font-size: 14px;
+            display: inline-block;
+            padding: 8px 0;
         }
 
         .ver-detalle a:hover {
@@ -471,27 +547,31 @@
 
         .btn {
             display: inline-block;
-            padding: 10px 20px;
-            background: #007bff;
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
             text-decoration: none;
-            border-radius: 6px;
+            border-radius: 25px;
             border: none;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: bold;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 2px 5px rgba(102,126,234,0.3);
         }
 
         .btn:hover {
-            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(102,126,234,0.4);
         }
 
         .btn-secondary {
             background: #6c757d;
+            box-shadow: 0 2px 5px rgba(108,117,125,0.3);
         }
 
         .btn-secondary:hover {
-            background: #545b62;
+            background: #5a6268;
         }
 
         /* Corazón de favoritos */
@@ -500,7 +580,7 @@
             top: 15px;
             right: 15px;
             z-index: 100;
-            background: rgba(255, 255, 255, 0.95);
+            background: white;
             border-radius: 50%;
             width: 40px;
             height: 40px;
@@ -511,31 +591,55 @@
             border: 1px solid rgba(0, 0, 0, 0.1);
             font-size: 20px;
             transition: all 0.3s ease;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            -webkit-tap-highlight-color: transparent;
         }
 
         .corazon-favorito:hover {
-            background: rgba(255, 255, 255, 1);
-            transform: scale(1.15);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+        }
+
+        .corazon-favorito:active {
+            transform: scale(0.95);
         }
 
         .corazon-favorito.activo {
             color: #ff4757;
-            background: rgba(255, 71, 87, 0.1);
+            background: #fff0f0;
             border-color: #ff4757;
         }
 
         .corazon-favorito.inactivo {
-            color: rgba(0, 0, 0, 0.25);
+            color: #ccc;
         }
 
-        .corazon-favorito.activo::before {
-            content: '❤️';
+        .corazon-favorito.loading {
+            opacity: 0.7;
+            pointer-events: none;
+            position: relative;
+            animation: pulse 1.5s infinite;
         }
 
-        .corazon-favorito.inactivo::before {
-            content: '🤍';
+        .corazon-favorito.loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #ff4757;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(0.95); }
         }
 
         /* Toast notifications */
@@ -545,22 +649,47 @@
             right: 30px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 18px 25px;
+            padding: 15px 25px;
             border-radius: 10px;
             z-index: 10000;
             font-size: 15px;
             font-weight: 600;
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-            transition: all 0.4s ease;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             display: flex;
             align-items: center;
             gap: 12px;
             max-width: 350px;
             transform: translateX(120%);
+            opacity: 0;
+            border-left: 5px solid transparent;
         }
 
         .toast.show {
             transform: translateX(0);
+            opacity: 1;
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, #f56565, #e53e3e);
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+        }
+
+        .toast.info {
+            background: linear-gradient(135deg, #4299e1, #3182ce);
+        }
+
+        .toast-icon {
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .toast-message {
+            flex: 1;
+            line-height: 1.4;
         }
 
         .etiquetas-container {
@@ -578,24 +707,6 @@
             font-weight: bold;
             margin: 2px;
             color: white;
-        }
-
-        /* Badge de variación */
-        .variacion-badge {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: bold;
-            z-index: 99;
-            max-width: 90%;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
         }
 
         /* Responsive */
@@ -618,7 +729,13 @@
             }
 
             .barra-busqueda-principal input[type="text"] {
-                width: 60%;
+                font-size: 14px;
+                padding: 10px 15px;
+            }
+
+            .barra-busqueda-principal button {
+                padding: 10px 18px;
+                font-size: 14px;
             }
 
             .pagination {
@@ -639,21 +756,20 @@
         }
 
         @media (max-width: 480px) {
+            .barra-busqueda-principal form {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
             .barra-busqueda-principal input[type="text"] {
                 width: 100%;
                 border-radius: 25px;
-                margin-bottom: 10px;
             }
             
             .barra-busqueda-principal button {
                 width: 100%;
                 border-radius: 25px;
                 margin-left: 0;
-            }
-            
-            .barra-busqueda-principal form {
-                display: flex;
-                flex-direction: column;
             }
             
             .productos-grid {
@@ -683,9 +799,15 @@
                 padding: 5px;
             }
             
-            .variacion-badge {
+            .badge-variacion {
                 font-size: 9px;
                 padding: 2px 6px;
+            }
+
+            .corazon-favorito {
+                width: 32px;
+                height: 32px;
+                font-size: 16px;
             }
         }
     </style>
@@ -705,14 +827,16 @@
 
     <nav class="navbar">
         <ul>
-            <li><a href="{{ route('inicio') }}">Inicio</a></li>
+            <li><a href="{{ route('inicio.real') }}">Inicio</a></li>
             <li><a href="{{ route('busqueda.resultados') }}">Todos los Productos</a></li>
             <li><a href="{{ route('busqueda.resultados', ['en_descuento' => '1']) }}" style="color: #dc3545; font-weight: bold;" id="link-descuento">🔥 En Descuento</a></li>
             <li>
                 @auth
                     <a href="{{ route('favoritos.index') }}" style="color: #dc3545; font-weight: bold;">❤️ Mis Favoritos</a>
                 @else
-                    <a href="{{ route('login') }}" style="color: #dc3545; font-weight: bold;">❤️ Mis Favoritos</a>
+                    <a href="{{ route('favoritos.invitado.index') }}" style="color: #dc3545; font-weight: bold;" class="btn-invitado">
+                        <i class="fas fa-user me-1"></i> Mis Favoritos
+                    </a>
                 @endauth
             </li>
             @auth
@@ -729,10 +853,10 @@
             @endauth
         </ul>
 
-        <!-- SOLO UNA BARRA DE BÚSQUEDA -->
+        <!-- Barra de búsqueda -->
         <div class="barra-busqueda-principal">
             <form action="{{ route('busqueda.resultados') }}" method="GET" id="form-busqueda">
-                <input type="text" name="q" placeholder="Buscar productos" 
+                <input type="text" name="q" placeholder="Buscar productos (agave, mezcal, espadín...)" 
                        value="{{ request('q') }}" autocomplete="off">
                 <button type="submit">Buscar</button>
             </form>
@@ -854,21 +978,18 @@
                         <input type="hidden" name="con_stock" value="{{ request('con_stock') }}">
                         <input type="hidden" name="en_descuento" value="{{ request('en_descuento') }}">
                         
-                        <!-- Pasar todas las categorías seleccionadas -->
                         @if(is_array(request('categorias')))
                             @foreach(request('categorias') as $categoria_id)
                                 <input type="hidden" name="categorias[]" value="{{ $categoria_id }}">
                             @endforeach
                         @endif
                         
-                        <!-- Pasar todas las marcas seleccionadas -->
                         @if(is_array(request('marcas')))
                             @foreach(request('marcas') as $marca_id)
                                 <input type="hidden" name="marcas[]" value="{{ $marca_id }}">
                             @endforeach
                         @endif
                         
-                        <!-- Pasar todas las etiquetas seleccionadas -->
                         @if(is_array(request('etiquetas')))
                             @foreach(request('etiquetas') as $etiqueta_id)
                                 <input type="hidden" name="etiquetas[]" value="{{ $etiqueta_id }}">
@@ -894,31 +1015,33 @@
                             // Verificar si es un producto padre o una variación
                             $esVariacion = isset($producto->id_variacion);
                             
-                            // Determinar si tiene descuento activo (cada uno con su propia lógica)
+                            // Determinar si tiene descuento activo
                             if ($esVariacion) {
                                 $tieneDescuento = $producto->tieneDescuentoActivo();
                                 $precioOriginal = $producto->dPrecio;
                                 $precioOferta = $producto->dPrecio_oferta;
                                 $stock = $producto->iStock;
-                                $nombreProducto = $producto->productoPadre->vNombre . ' - ' . $producto->getAtributosTexto();
-                                $imagenes = $producto->imagenes;
+                                $nombreProducto = $producto->productoPadre->vNombre;
+                                $nombreCompleto = $nombreProducto . ' - ' . $producto->getAtributosTexto();
+                                $imagen = $producto->primera_imagen;
                                 $categoria = $producto->productoPadre->categoria->vNombre ?? 'N/A';
                                 $marca = $producto->productoPadre->marca->vNombre ?? 'N/A';
                                 $etiquetas = $producto->productoPadre->etiquetas;
                                 $url = route('productos.show.public', [$producto->productoPadre->id_producto, 'variacion' => $producto->id_variacion]);
                                 $sku = $producto->vSKU;
-                                // Usar esFavorito() de la variación
                                 $esFavorito = $producto->esFavorito();
                                 $productoId = $producto->productoPadre->id_producto;
                                 $variacionId = $producto->id_variacion;
                                 $atributosTexto = $producto->getAtributosCompletosTexto();
+                                $atributosCorto = $producto->getAtributosTexto();
                             } else {
                                 $tieneDescuento = $producto->tieneDescuentoActivo();
                                 $precioOriginal = $producto->dPrecio_venta;
                                 $precioOferta = $producto->dPrecio_oferta;
                                 $stock = $producto->iStock;
                                 $nombreProducto = $producto->vNombre;
-                                $imagenes = $producto->imagenes;
+                                $nombreCompleto = $nombreProducto;
+                                $imagen = $producto->primera_imagen;
                                 $categoria = $producto->categoria->vNombre ?? 'N/A';
                                 $marca = $producto->marca->vNombre ?? 'N/A';
                                 $etiquetas = $producto->etiquetas;
@@ -928,6 +1051,7 @@
                                 $productoId = $producto->id_producto;
                                 $variacionId = null;
                                 $atributosTexto = '';
+                                $atributosCorto = '';
                             }
                             
                             $precioActual = $tieneDescuento ? $precioOferta : $precioOriginal;
@@ -942,16 +1066,17 @@
                         
                         <div class="producto-card" onclick="window.location.href='{{ $url }}'">
                             <div class="producto-imagen-container">
-                                <!-- BOTÓN DEL CORAZÓN - CORREGIDO PARA VARIACIONES -->
+                                <!-- BOTÓN DEL CORAZÓN - CORREGIDO -->
                                 <button class="corazon-favorito {{ $esFavorito ? 'activo' : 'inactivo' }}" 
                                         data-producto="{{ $productoId }}"
                                         data-variacion="{{ $variacionId ?? '' }}"
                                         data-tipo="{{ $esVariacion ? 'variacion' : 'producto' }}"
                                         onclick="event.stopPropagation(); toggleFavorito(this, {{ $productoId }}, {{ $variacionId ?? 'null' }})"
                                         title="{{ $esFavorito ? 'Quitar de favoritos' : 'Agregar a favoritos' }}">
+                                    {{ $esFavorito ? '❤️' : '🤍' }}
                                 </button>
 
-                                <!-- Badge de descuento - AHORA SE MUESTRA PARA VARIACIONES TAMBIÉN -->
+                                <!-- Badge de descuento -->
                                 @if($tieneDescuento)
                                     <div class="badge-oferta">
                                         -{{ $porcentajeDescuento }}%
@@ -963,14 +1088,14 @@
                                 @endif
 
                                 <!-- Badge de variación (solo si es variación) -->
-                                @if($esVariacion && !empty($atributosTexto))
-                                    <div class="variacion-badge" title="{{ $atributosTexto }}">
-                                        {{ $atributosTexto }}
+                                @if($esVariacion && !empty($atributosCorto))
+                                    <div class="badge-variacion" title="{{ $atributosTexto }}">
+                                        {{ $atributosCorto }}
                                     </div>
                                 @endif
 
-                                @if(count($imagenes) > 0)
-                                    <img src="{{ $imagenes[0] }}" alt="{{ $nombreProducto }}" class="producto-imagen">
+                                @if($imagen)
+                                    <img src="{{ $imagen }}" alt="{{ $nombreProducto }}" class="producto-imagen" loading="lazy">
                                 @else
                                     <div class="no-imagen">
                                         <span>🛒 Sin imagen</span>
@@ -979,9 +1104,9 @@
                             </div>
                             
                             <div class="producto-info">
-                                <h3>{{ $nombreProducto }}</h3>
+                                <h3 title="{{ $nombreCompleto }}">{{ Str::limit($nombreCompleto, 50) }}</h3>
                                 
-                                <!-- Precio con descuento - AHORA SE MUESTRA PARA VARIACIONES TAMBIÉN -->
+                                <!-- Precio con descuento -->
                                 <div class="producto-precio">
                                     @if($tieneDescuento)
                                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap;">
@@ -1047,14 +1172,14 @@
                                 @endif
                                 
                                 <div class="ver-detalle">
-                                    <a href="{{ $url }}" onclick="event.stopPropagation();">Ver detalle</a>
+                                    <a href="{{ $url }}" onclick="event.stopPropagation();">Ver más</a>
                                 </div>
                             </div>
                         </div>
                     @endforeach
                 </div>
 
-                <!-- PAGINACIÓN PERSONALIZADA -->
+                <!-- PAGINACIÓN -->
                 <div class="paginacion">
                     @if ($productos->hasPages())
                         <ul class="pagination">
@@ -1102,6 +1227,8 @@
     </div>
 
     <script>
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
         function limpiarFiltros() {
             const url = new URL(window.location.href);
             const searchTerm = url.searchParams.get('q');
@@ -1134,42 +1261,50 @@
             window.location.href = url.toString();
         }
 
-        // Función para toggle favoritos en productos y variaciones - CORREGIDA
         function toggleFavorito(button, productoId, variacionId = null) {
             if (button.disabled) return;
+            
+            const estabaActivo = button.classList.contains('activo');
+            
             button.disabled = true;
+            button.classList.add('loading');
+            button.innerHTML = '⏳';
+            
+            @auth
+                // Usuario autenticado
+                const url = variacionId 
+                    ? `/favoritos/toggle-variacion/${variacionId}`
+                    : `/favoritos/toggle-producto/${productoId}`;
+            @else
+                // Invitado
+                const url = variacionId 
+                    ? `/favoritos-invitado/toggle-variacion/${variacionId}`
+                    : `/favoritos-invitado/toggle-producto/${productoId}`;
+            @endauth
 
-            @if(!Auth::check())
-                window.location.href = '{{ route("login") }}?from_favoritos=true&redirect=' + encodeURIComponent(window.location.href);
-                return;
-            @endif
-
-            const esFavorito = button.classList.contains('activo');
-            const tipo = variacionId ? 'variación' : 'producto';
-            
-            button.style.transform = 'scale(0.9)';
-            
-            // Construir URL según el tipo
-            let url;
-            if (variacionId) {
-                url = `/favoritos/toggle-variacion/${variacionId}`;
-            } else {
-                url = `/favoritos/toggle-producto/${productoId}`;
-            }
-            
             fetch(url, {
                 method: 'POST',
                 headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'X-CSRF-TOKEN': csrfToken,
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
-                },
-                cache: 'no-store'
+                }
             })
-            .then(response => {
-                if (response.status === 401) {
-                    window.location.href = '{{ route("login") }}?from_favoritos=true&redirect=' + encodeURIComponent(window.location.href);
-                    return null;
+            .then(async response => {
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        // Redirigir al login si no está autenticado
+                        const redirectUrl = new URL('{{ route("login") }}');
+                        redirectUrl.searchParams.set('from_favoritos', 'true');
+                        redirectUrl.searchParams.set('redirect', window.location.href);
+                        redirectUrl.searchParams.set('producto', productoId);
+                        if (variacionId) {
+                            redirectUrl.searchParams.set('variacion', variacionId);
+                        }
+                        window.location.href = redirectUrl.toString();
+                        return null;
+                    }
+                    throw new Error(`HTTP ${response.status}`);
                 }
                 return response.json();
             })
@@ -1180,77 +1315,132 @@
                     if (data.action === 'added') {
                         button.classList.remove('inactivo');
                         button.classList.add('activo');
-                        showNotification('✅ ' + (data.tipo === 'variacion' ? 'Variación' : 'Producto') + ' agregado a favoritos!', 'success');
+                        button.innerHTML = '❤️';
+                        button.setAttribute('title', 'Quitar de favoritos');
                         
+                        let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
+                        
+                        // Crear y mostrar notificación
+                        let toast = document.createElement('div');
+                        toast.className = 'toast success';
+                        toast.innerHTML = `<span class="toast-icon">✅</span><span class="toast-message">${tipoTexto} agregado a favoritos</span>`;
+                        document.body.appendChild(toast);
+                        setTimeout(() => toast.classList.add('show'), 10);
+                        setTimeout(() => {
+                            toast.classList.remove('show');
+                            setTimeout(() => toast.remove(), 300);
+                        }, 3000);
+                        
+                        // Guardar en localStorage para persistencia
                         localStorage.setItem('last_favorito_action', 'added');
-                        localStorage.setItem('last_favorito_id', data.tipo === 'variacion' ? variacionId : productoId);
+                        localStorage.setItem('last_favorito_id', variacionId || productoId);
                         localStorage.setItem('last_favorito_tipo', data.tipo);
                         localStorage.setItem('last_favorito_time', Date.now());
                     } else {
                         button.classList.remove('activo');
                         button.classList.add('inactivo');
-                        showNotification('❌ ' + (data.tipo === 'variacion' ? 'Variación' : 'Producto') + ' eliminado de favoritos', 'error');
+                        button.innerHTML = '🤍';
+                        button.setAttribute('title', 'Agregar a favoritos');
+                        
+                        let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
+                        
+                        let toast = document.createElement('div');
+                        toast.className = 'toast error';
+                        toast.innerHTML = `<span class="toast-icon">❌</span><span class="toast-message">${tipoTexto} eliminado de favoritos</span>`;
+                        document.body.appendChild(toast);
+                        setTimeout(() => toast.classList.add('show'), 10);
+                        setTimeout(() => {
+                            toast.classList.remove('show');
+                            setTimeout(() => toast.remove(), 300);
+                        }, 3000);
                         
                         localStorage.setItem('last_favorito_action', 'removed');
-                        localStorage.setItem('last_favorito_id', data.tipo === 'variacion' ? variacionId : productoId);
+                        localStorage.setItem('last_favorito_id', variacionId || productoId);
                         localStorage.setItem('last_favorito_tipo', data.tipo);
                         localStorage.setItem('last_favorito_time', Date.now());
                     }
                 } else {
-                    showNotification(data.message || 'Error al gestionar favoritos', 'error');
+                    // Revertir cambios si hubo error
+                    if (estabaActivo) {
+                        button.classList.add('activo');
+                        button.classList.remove('inactivo');
+                        button.innerHTML = '❤️';
+                    } else {
+                        button.classList.remove('activo');
+                        button.classList.add('inactivo');
+                        button.innerHTML = '🤍';
+                    }
+                    
+                    let toast = document.createElement('div');
+                    toast.className = 'toast error';
+                    toast.innerHTML = `<span class="toast-icon">❌</span><span class="toast-message">${data.message || 'Error al gestionar favoritos'}</span>`;
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.classList.add('show'), 10);
+                    setTimeout(() => {
+                        toast.classList.remove('show');
+                        setTimeout(() => toast.remove(), 300);
+                    }, 3000);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                showNotification('Error de conexión. Intenta nuevamente.', 'error');
+                // Revertir cambios
+                if (estabaActivo) {
+                    button.classList.add('activo');
+                    button.classList.remove('inactivo');
+                    button.innerHTML = '❤️';
+                } else {
+                    button.classList.remove('activo');
+                    button.classList.add('inactivo');
+                    button.innerHTML = '🤍';
+                }
+                
+                let toast = document.createElement('div');
+                toast.className = 'toast error';
+                toast.innerHTML = `<span class="toast-icon">❌</span><span class="toast-message">Error de conexión</span>`;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.classList.add('show'), 10);
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
             })
             .finally(() => {
                 setTimeout(() => {
                     button.disabled = false;
-                    button.style.transform = '';
+                    button.classList.remove('loading');
                 }, 500);
             });
         }
 
-        // Función mejorada para mostrar notificaciones
-        function showNotification(message, type = 'success') {
-            const existingToasts = document.querySelectorAll('.toast');
-            existingToasts.forEach(toast => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 300);
+        document.addEventListener('DOMContentLoaded', function() {
+            const buttons = document.querySelectorAll('.producto-card button, .producto-card a');
+            buttons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
             });
 
-            const notification = document.createElement('div');
-            notification.className = `toast ${type}`;
-            notification.innerHTML = `
-                <span class="toast-icon">${type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️'}</span>
-                <span class="toast-message">${message}</span>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.classList.add('show');
-            }, 10);
+            const linkDescuento = document.getElementById('link-descuento');
+            if (linkDescuento) {
+                linkDescuento.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    window.location.href = this.href;
+                });
+            }
 
-            setTimeout(() => {
-                notification.classList.remove('show');
-                setTimeout(() => {
-                    if (document.body.contains(notification)) {
-                        document.body.removeChild(notification);
-                    }
-                }, 400);
-            }, 3500);
-        }
+            if (window.innerWidth > 768) {
+                const searchInput = document.querySelector('.barra-busqueda-principal input[type="text"]');
+                if (searchInput) searchInput.focus();
+            }
 
-        // Verificar acciones recientes al cargar
-        document.addEventListener('DOMContentLoaded', function() {
+            // Verificar acciones recientes de localStorage
             const lastAction = localStorage.getItem('last_favorito_action');
             const lastId = localStorage.getItem('last_favorito_id');
             const lastTipo = localStorage.getItem('last_favorito_tipo');
             const lastTime = localStorage.getItem('last_favorito_time');
             
-            if (lastAction && (Date.now() - lastTime) < 5000) {
+            if (lastAction && lastId && lastTime && (Date.now() - lastTime) < 5000) {
                 // Buscar el botón correspondiente
                 let selector;
                 if (lastTipo === 'variacion') {
@@ -1264,14 +1454,18 @@
                     if (lastAction === 'removed') {
                         button.classList.remove('activo');
                         button.classList.add('inactivo');
+                        button.innerHTML = '🤍';
+                        button.setAttribute('title', 'Agregar a favoritos');
                     } else if (lastAction === 'added') {
                         button.classList.remove('inactivo');
                         button.classList.add('activo');
+                        button.innerHTML = '❤️';
+                        button.setAttribute('title', 'Quitar de favoritos');
                     }
                 }
             }
             
-            // Limpiar después de 5 segundos
+            // Limpiar localStorage después de 5 segundos
             setTimeout(() => {
                 localStorage.removeItem('last_favorito_action');
                 localStorage.removeItem('last_favorito_id');
@@ -1279,12 +1473,7 @@
                 localStorage.removeItem('last_favorito_time');
             }, 5000);
 
-            const searchInput = document.querySelector('.barra-busqueda-principal input[type="text"]');
-            if (searchInput) {
-                searchInput.focus();
-                searchInput.select();
-            }
-
+            // Debounce para cambios en checkboxes
             let timeoutId;
             document.querySelectorAll('#filtrosForm input[type="checkbox"]').forEach(input => {
                 input.addEventListener('change', function() {
@@ -1305,21 +1494,6 @@
                 if (e.key === 'Enter') {
                     aplicarFiltroPrecio();
                 }
-            });
-
-            // Agregar event listener al link de descuento
-            document.getElementById('link-descuento').addEventListener('click', function(e) {
-                e.preventDefault();
-                const url = new URL(this.href);
-                window.location.href = url.toString();
-            });
-            
-            // Prevenir propagación en botones
-            const buttons = document.querySelectorAll('.producto-card button, .producto-card a');
-            buttons.forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                });
             });
         });
     </script>
