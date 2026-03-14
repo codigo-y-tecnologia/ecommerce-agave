@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Notifications\VerifyEmailNotification;
 use App\Mail\CuentaCreadaAutomaticamente;
 use Illuminate\Auth\Events\Verified;
+use App\Services\System\SecurityLoggerService;
 
 class AuthController extends Controller
 {
@@ -63,6 +64,8 @@ class AuthController extends Controller
 
             $user = Auth::user();
 
+            SecurityLoggerService::loginSuccess($user->id_usuario, $user->vEmail);
+
             // Verificar si el email está verificado
             if (!$user->hasVerifiedEmail()) {
                 Auth::logout();
@@ -77,6 +80,8 @@ class AuthController extends Controller
             // Redirigir al dashboard según rol
             //return $this->redirectToDashboard($user);
         }
+
+        SecurityLoggerService::loginFailed($request->vEmail);
 
         return back()->withErrors([
             'vEmail' => 'Credenciales incorrectas.',
@@ -230,6 +235,11 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+
+        if (Auth::check()) {
+            SecurityLoggerService::logout(Auth::user()->vEmail);
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -261,6 +271,9 @@ class AuthController extends Controller
             'is_verified' => 1,
             'email_verification_token' => null,
         ]);
+
+        // Registrar cambio de contraseña
+        SecurityLoggerService::passwordChanged($usuario->id_usuario, $usuario->vEmail);
 
         Auth::login($usuario);
 
@@ -295,6 +308,14 @@ class AuthController extends Controller
 
         Mail::to($usuario->vEmail)->send(
             new CuentaCreadaAutomaticamente($usuario, $token)
+        );
+
+        // Registrar solicitud de configuración de contraseña
+        SecurityLoggerService::passwordResetRequested($usuario->vEmail);
+
+        SecurityLoggerService::passwordSetupEmailSent(
+            $usuario->id_usuario,
+            $usuario->vEmail
         );
 
         return back()->with('success', 'Te enviamos nuevamente el correo para establecer tu contraseña.');

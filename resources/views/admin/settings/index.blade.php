@@ -96,51 +96,133 @@
         </div>
     </div>
 
-    {{-- 🚚 Configuración de envíos --}}
+    {{-- 🏪 Configuración de tienda y envíos --}}
 <div class="card mb-4 shadow-sm">
+
     <div class="card-header">
-        <h5 class="mb-0">🚚 Configuración de envíos</h5>
+        <h5 class="mb-0">🏪 Configuración general de la tienda</h5>
     </div>
 
     <div class="card-body">
 
-        <form method="POST" action="{{ route('admin.settings.shipping') }}">
-            @csrf
+        <form method="POST" action="{{ route('admin.settings.config') }}">
+        @csrf
 
-            <div class="mb-3">
+        <div class="row g-4">
+
+        {{-- CONFIG TIENDA --}}
+        <div class="col-md-6">
+        <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white">
+        Configuración de tienda
+        </div>
+
+        <div class="card-body">
+
+        <div class="mb-3">
+<label>Nombre de tienda</label>
+<input type="text" name="nombre_tienda" class="form-control @error('nombre_tienda') is-invalid @enderror"
+value="{{ old('nombre_tienda', config('tienda.nombre_tienda') ?? '') }}" required>
+
+@error('nombre_tienda')
+<div class="invalid-feedback">
+    {{ $message }}
+</div>
+@enderror
+</div>
+
+        <div class="mb-3">
+<label>Email soporte</label>
+<input type="email" name="email_soporte" class="form-control @error('email_soporte') is-invalid @enderror"
+value="{{ old('email_soporte', config('tienda.email_soporte') ?? '') }}" required>
+
+@error('email_soporte')
+<div class="invalid-feedback">
+    {{ $message }}
+</div>
+@enderror
+</div>
+
+        <div class="mb-3">
+<label>Teléfono</label>
+<input type="text" name="telefono" class="form-control @error('telefono') is-invalid @enderror"
+value="{{ old('telefono', config('tienda.telefono') ?? '') }}" required>
+
+@error('telefono')
+<div class="invalid-feedback">
+    {{ $message }}
+</div>
+@enderror
+</div>
+
+        <div class="mb-3">
+<label>Moneda</label>
+<input type="text" name="moneda" class="form-control @error('moneda') is-invalid @enderror"
+value="{{ old('moneda', config('tienda.moneda') ?? 'MXN') }}" required>
+
+@error('moneda')
+<div class="invalid-feedback">
+    {{ $message }}
+</div>
+@enderror
+</div>
+
+        </div>
+        </div>
+        </div>
+
+        {{-- CONFIG ENVÍOS --}}
+        <div class="col-md-6">
+        <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+        Configuración de envíos
+        </div>
+
+        <div class="card-body">
+
+        <div class="mb-3">
                 <label class="form-label">Costo envío estándar</label>
 
                 <input type="number"
-                       name="envio_estandar"
-                       class="form-control @error('envio_estandar') is-invalid @enderror"
+                       name="costo_de_envio"
+                       class="form-control @error('costo_de_envio') is-invalid @enderror"
                        step="0.01"
                        min="0"
                        value="{{ config('tienda.costo_de_envio') }}" required>
 
-                       @error('envio_estandar') <div class="invalid-feedback"> {{ $message }} </div> @enderror
+                       @error('costo_de_envio') <div class="invalid-feedback"> {{ $message }} </div> @enderror
             </div>
 
-            <div class="mb-3">
+        <div class="mb-3">
                 <label class="form-label">Envío gratis desde</label>
 
                 <input type="number"
-                       name="envio_gratis"
-                       class="form-control @error('envio_gratis') is-invalid @enderror"
+                       name="envio_gratis_desde"
+                       class="form-control @error('envio_gratis_desde') is-invalid @enderror"
                        step="0.01"
                        min="0"
                        value="{{ config('tienda.envio_gratis_desde') }}" required>
 
-                       @error('envio_gratis') <div class="invalid-feedback"> {{ $message }} </div> @enderror
+                       @error('envio_gratis_desde') <div class="invalid-feedback"> {{ $message }} </div> @enderror
                        
             </div>
 
-            <button class="btn btn-primary">
+        </div>
+        </div>
+        </div>
+
+        </div>
+
+        <div class="mt-4">
+            <button class="btn btn-success">
                 Guardar configuración
             </button>
+        </div>
 
         </form>
 
     </div>
+
 </div>
 </div>
 @endsection

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use App\Traits\InputSanitizer;
+use App\Services\System\SecurityLoggerService;
 
 class ResetPasswordController extends Controller
 {
@@ -46,6 +47,12 @@ class ResetPasswordController extends Controller
                 $user->forceFill([
                     'vPassword' => Hash::make($password)
                 ])->save();
+
+                // Registrar cambio de contraseña por reset
+                SecurityLoggerService::passwordChanged(
+                    $user->id_usuario,
+                    $user->vEmail
+                );
             }
         );
 

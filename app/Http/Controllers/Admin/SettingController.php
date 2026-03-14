@@ -40,22 +40,27 @@ class SettingController extends Controller
         );
     }
 
-    public function updateShipping(Request $request)
+    public function updateStore(Request $request)
     {
         $request->validate([
-            'envio_estandar' => 'required|numeric|min:0',
-            'envio_gratis' => 'required|numeric|min:0',
+            'nombre_tienda' => 'required|string|max:255',
+            'email_soporte' => 'required|email|max:255',
+            'telefono' => 'required|string|max:20',
+            'moneda' => 'required|string|max:10',
+            'costo_de_envio' => 'required|numeric|min:0',
+            'envio_gratis_desde' => 'required|numeric|min:0',
+        ], [
+            'email' => 'Debe ser un email válido',
+            'numeric' => 'Debe ser un número'
         ]);
 
-        Configuracion::updateOrCreate(
-            ['clave' => 'costo_de_envio'],
-            ['valor' => $request->envio_estandar]
-        );
+        foreach ($request->except('_token') as $clave => $valor) {
 
-        Configuracion::updateOrCreate(
-            ['clave' => 'envio_gratis_desde'],
-            ['valor' => $request->envio_gratis]
-        );
+            Configuracion::updateOrCreate(
+                ['clave' => $clave],
+                ['valor' => $valor]
+            );
+        }
 
         Cache::forget('configuraciones_sistema');
 

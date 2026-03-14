@@ -20,14 +20,9 @@ class ConfiguracionController extends Controller
     {
 
         $request->validate([
-            'nombre_tienda' => 'required|string|max:255',
-            'email_soporte' => 'required|email|max:255',
-            'telefono' => 'required|string|max:20',
-            'moneda' => 'required|string|max:10',
             'modo_mantenimiento' => 'required'
         ], [
             'required' => 'Este campo es obligatorio',
-            'email' => 'Debe ser un email válido'
         ]);
 
         foreach ($request->except('_token') as $clave => $valor) {

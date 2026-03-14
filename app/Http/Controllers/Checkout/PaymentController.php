@@ -7,14 +7,12 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Exception;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use App\Helpers\CarritoHelper;
-use App\Services\Stock\{ReservarStockService, ConsumirReservaService, LiberarReservaPorCarritoService, LiberarReservaService};
+use App\Services\Stock\{ConsumirReservaService, LiberarReservaPorCarritoService};
 use App\Services\Checkout\CrearPagoDesdeCarritoService;
 use App\Exceptions\StockException;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 use App\Models\{
@@ -24,13 +22,10 @@ use App\Models\{
     PedidoDetalle,
     Direccion,
     DireccionGuest,
-    Cupon,
-    CuponUso,
     Pago,
     Venta,
     DetalleVenta,
     Envio,
-    Producto,
     StockReserva,
     Setting,
     CheckoutSnapshot,
@@ -1061,7 +1056,7 @@ class PaymentController extends Controller
         }
 
         // Switch apagado → no registrar
-        if (!Setting::getValue('auto_register_guest_after_purchase')) {
+        if (!setting('auto_register_guest_after_purchase')) {
             return null;
         }
 

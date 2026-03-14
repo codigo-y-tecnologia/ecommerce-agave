@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use App\Traits\InputSanitizer;
+use App\Services\System\SecurityLoggerService;
 
 class ForgotPasswordController extends Controller
 {
@@ -31,6 +32,14 @@ class ForgotPasswordController extends Controller
         $response = Password::broker('users')->sendResetLink(
             $request->only('vEmail')
         );
+
+        // Registrar solicitud SOLO si el enlace se envió
+        if ($response == Password::RESET_LINK_SENT) {
+
+            SecurityLoggerService::passwordResetRequested(
+                $request->vEmail
+            );
+        }
 
         return $response == Password::RESET_LINK_SENT
             ? back()->with(['status' => __($response)])

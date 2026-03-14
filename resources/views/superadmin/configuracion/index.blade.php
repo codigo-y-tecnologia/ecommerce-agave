@@ -19,67 +19,6 @@
 
 <div class="row g-4">
 
-{{-- CONFIG TIENDA --}}
-<div class="col-md-6">
-<div class="card shadow-sm">
-<div class="card-header bg-dark text-white">
-Configuración de tienda
-</div>
-
-<div class="card-body">
-
-<div class="mb-3">
-<label>Nombre de tienda</label>
-<input type="text" name="nombre_tienda" class="form-control @error('nombre_tienda') is-invalid @enderror"
-value="{{ old('nombre_tienda', $configs['nombre_tienda'] ?? '') }}" required>
-
-@error('nombre_tienda')
-<div class="invalid-feedback">
-    {{ $message }}
-</div>
-@enderror
-</div>
-
-<div class="mb-3">
-<label>Email soporte</label>
-<input type="email" name="email_soporte" class="form-control @error('email_soporte') is-invalid @enderror"
-value="{{ old('email_soporte', $configs['email_soporte'] ?? '') }}" required>
-
-@error('email_soporte')
-<div class="invalid-feedback">
-    {{ $message }}
-</div>
-@enderror
-</div>
-
-<div class="mb-3">
-<label>Teléfono</label>
-<input type="text" name="telefono" class="form-control @error('telefono') is-invalid @enderror"
-value="{{ old('telefono', $configs['telefono'] ?? '') }}" required>
-
-@error('telefono')
-<div class="invalid-feedback">
-    {{ $message }}
-</div>
-@enderror
-</div>
-
-<div class="mb-3">
-<label>Moneda</label>
-<input type="text" name="moneda" class="form-control @error('moneda') is-invalid @enderror"
-value="{{ old('moneda', $configs['moneda'] ?? 'MXN') }}" required>
-
-@error('moneda')
-<div class="invalid-feedback">
-    {{ $message }}
-</div>
-@enderror
-</div>
-
-</div>
-</div>
-</div>
-
 {{-- CONFIG SISTEMA --}}
 <div class="col-md-6">
 <div class="card shadow-sm">

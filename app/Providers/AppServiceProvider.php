@@ -32,12 +32,12 @@ class AppServiceProvider extends ServiceProvider
 
         View::share(
             'allowOrderReturns',
-            Setting::getValue('allow_order_returns', false)
+            setting('allow_order_returns', 0)
         );
 
         View::share(
             'allowClaimeOrders',
-            Setting::getValue('auto_register_guest_after_purchase', false)
+            setting('auto_register_guest_after_purchase', 0)
         );
 
         Schema::defaultStringLength(191);

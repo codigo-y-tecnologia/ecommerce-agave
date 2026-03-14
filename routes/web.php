@@ -394,8 +394,8 @@ Route::middleware(['auth', 'permission:gestionar_tienda'])->group(function () {
     Route::get('/admin/settings', [SettingController::class, 'index'])->name('admin.settings.index');
     Route::post('/admin/settings/auto-register', [SettingController::class, 'updateAutoRegister'])->name('admin.settings.auto-register');
     Route::post('/admin/settings/allow-returns', [SettingController::class, 'updateAllowReturns'])->name('admin.settings.allow-returns');
-    Route::post('/admin/settings/shipping', [SettingController::class, 'updateShipping'])
-        ->name('admin.settings.shipping');
+    Route::post('/admin/settings/configurar-tienda', [SettingController::class, 'updateStore'])
+        ->name('admin.settings.config');
 
     Route::resource('impuestos', ImpuestosController::class);
 
