@@ -50,6 +50,7 @@ use App\Http\Controllers\Superadmin\SpatieRolePermissionController;
 use App\Http\Controllers\Superadmin\UsuarioRolController;
 use App\Http\Controllers\Superadmin\SuperadminPerfilController;
 use App\Http\Controllers\Superadmin\CambiarEmailController;
+use App\Http\Controllers\Superadmin\SecurityLogController;
 use App\Http\Controllers\Pedidos\ConsultaPedidoController;
 use App\Http\Controllers\Superadmin\ConfiguracionController;
 use App\Http\Controllers\DetalleVentaController;
@@ -504,6 +505,13 @@ Route::middleware([
 
         Route::post('/configuracion', [ConfiguracionController::class, 'update'])
             ->name('configuracion.update');
+
+        Route::prefix('seguridad')->name('security.')->group(function () {
+            Route::get('/',                      [SecurityLogController::class, 'index'])->name('index');
+            Route::get('/export-pdf',            [SecurityLogController::class, 'exportPdf'])->name('export.pdf');
+            Route::get('/{log}',                 [SecurityLogController::class, 'show'])->name('show');
+            Route::patch('/{log}/resolve',       [SecurityLogController::class, 'resolve'])->name('resolve');
+        });
     });
 
 Route::middleware(['auth', 'permission:gestionar_permisos'])->group(function () {

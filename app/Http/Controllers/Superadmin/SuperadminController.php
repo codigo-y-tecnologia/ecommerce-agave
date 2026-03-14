@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use App\Traits\InputSanitizer;
+use App\Services\System\SecurityLoggerService;
 
 class SuperadminController extends Controller
 {
@@ -83,7 +84,10 @@ class SuperadminController extends Controller
         }
 
         $nombre = $user->vNombre;
+        $email = $user->vEmail;
         $user->delete();
+
+        SecurityLoggerService::adminDeleted($nombre, $email);
 
         return back()->with('success', "El usuario {$nombre} fue eliminado.");
     }
@@ -146,6 +150,8 @@ class SuperadminController extends Controller
             // Puedes registrar el error en logs
             Log::error('No se pudo enviar el correo al nuevo admin: ' . $e->getMessage());
         }
+
+        SecurityLoggerService::adminCreated($admin->vNombre, $admin->vEmail);
 
         return redirect()->route('superadmin.admins.index')
             ->with('success', "Administrador {$admin->vNombre} creado correctamente. Se le envió su contraseña al correo.");

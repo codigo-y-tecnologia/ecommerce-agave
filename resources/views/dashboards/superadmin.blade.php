@@ -51,7 +51,7 @@
             <div class="card-body text-center">
                 <h5>🛡️ Seguridad</h5>
                 <p>Revisa los logs de seguridad y actividad sospechosa.</p>
-                <a href="#" class="btn btn-warning w-100">Ver logs de seguridad</a>
+                <a href="{{ route('superadmin.security.index') }}" class="btn btn-warning w-100">Ver logs de seguridad</a>
             </div>
         </div>
     </div>

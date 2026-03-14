@@ -69,18 +69,6 @@ class SecurityLoggerService
         );
     }
 
-    public static function passwordChanged(int $userId, string $email): void
-    {
-        self::log(
-            'password_changed',
-            'warning',
-            'auth',
-            "Contraseña cambiada para: {$email}",
-            ['email' => $email],
-            $userId
-        );
-    }
-
     public static function passwordSetupEmailSent(int $userId, string $email): void
     {
         self::log(
@@ -108,6 +96,73 @@ class SecurityLoggerService
         );
     }
 
+    public static function passwordChanged(int $userId, string $email): void
+    {
+        self::log(
+            'password_changed',
+            'warning',
+            'auth',
+            "Contraseña cambiada para: {$email}",
+            ['email' => $email],
+            $userId
+        );
+    }
+
+    public static function emailChangeCompleted(int $userId, string $oldEmail, string $newEmail): void
+    {
+        self::log(
+            'email_change_completed',
+            'warning',
+            'auth',
+            "Cambio de correo electrónico confirmado: {$oldEmail} → {$newEmail}",
+            [
+                'old_email' => $oldEmail,
+                'new_email' => $newEmail
+            ],
+            $userId
+        );
+    }
+
+    public static function emailChangeFailed(string $token): void
+    {
+        self::log(
+            'email_change_failed',
+            'warning',
+            'auth',
+            "Intento de verificación de cambio de email con token inválido",
+            [
+                'token' => $token
+            ]
+        );
+    }
+
+    public static function emailVerified(int $userId, string $email): void
+    {
+        self::log(
+            'email_verified',
+            'info',
+            'auth',
+            "Correo electrónico verificado: {$email}",
+            [
+                'email' => $email
+            ],
+            $userId
+        );
+    }
+
+    public static function emailVerificationFailed(string $token): void
+    {
+        self::log(
+            'email_verification_failed',
+            'warning',
+            'auth',
+            "Intento de verificación con token inválido",
+            [
+                'token' => $token
+            ]
+        );
+    }
+
     public static function bruteForceDetected(string $email, int $attempts): void
     {
         self::log(
@@ -116,6 +171,20 @@ class SecurityLoggerService
             'auth',
             "Posible fuerza bruta detectada en: {$email} ({$attempts} intentos)",
             ['email' => $email, 'attempts' => $attempts]
+        );
+    }
+
+    public static function bruteForceIpDetected(string $ip, int $attempts): void
+    {
+        self::log(
+            'brute_force_ip_detected',
+            'critical',
+            'auth',
+            "Posible ataque de fuerza bruta desde IP: {$ip} ({$attempts} intentos)",
+            [
+                'ip' => $ip,
+                'attempts' => $attempts
+            ]
         );
     }
 

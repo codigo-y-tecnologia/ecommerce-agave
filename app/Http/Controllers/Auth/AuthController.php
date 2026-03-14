@@ -14,6 +14,7 @@ use App\Notifications\VerifyEmailNotification;
 use App\Mail\CuentaCreadaAutomaticamente;
 use Illuminate\Auth\Events\Verified;
 use App\Services\System\SecurityLoggerService;
+use App\Models\SecurityLog;
 
 class AuthController extends Controller
 {
@@ -82,6 +83,33 @@ class AuthController extends Controller
         }
 
         SecurityLoggerService::loginFailed($request->vEmail);
+
+        $ip = $request->ip();
+
+        // Contar intentos fallidos recientes por Email
+        $emailAttempts = SecurityLog::where('event_type', 'login_failed')
+            ->where('metadata->email', $request->vEmail)
+            ->where('created_at', '>=', now()->subMinutes(5))
+            ->count();
+
+        if ($emailAttempts >= 5) {
+            SecurityLoggerService::bruteForceDetected($request->vEmail, $emailAttempts);
+        }
+
+        // Contar intentos fallidos recientes por IP
+        $ipAttempts = SecurityLog::where('event_type', 'login_failed')
+            ->where('ip_address', $ip)
+            ->where('created_at', '>=', now()->subMinutes(5))
+            ->count();
+
+        if ($ipAttempts >= 10) {
+            SecurityLoggerService::bruteForceIpDetected($ip, $ipAttempts);
+        }
+
+        // Bloqueo temporal de IP
+        if ($ipAttempts >= 15) {
+            abort(429, 'Demasiados intentos desde tu dirección IP. Intenta nuevamente en unos minutos.');
+        }
 
         return back()->withErrors([
             'vEmail' => 'Credenciales incorrectas.',
@@ -311,8 +339,6 @@ class AuthController extends Controller
         );
 
         // Registrar solicitud de configuración de contraseña
-        SecurityLoggerService::passwordResetRequested($usuario->vEmail);
-
         SecurityLoggerService::passwordSetupEmailSent(
             $usuario->id_usuario,
             $usuario->vEmail

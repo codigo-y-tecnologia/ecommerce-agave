@@ -86,7 +86,7 @@
                                         <li><a class="dropdown-item" href="#">Monitoreo del sistema</a></li>
                                     @endcan
                                     @can('ver_logs_seguridad')
-                                        <li><a class="dropdown-item" href="#">Logs de seguridad</a></li>
+                                        <li><a class="dropdown-item" href="{{ route('superadmin.security.index') }}">Logs de seguridad</a></li>
                                     @endcan
                                     @can('configurar_sistema')
                                         <li><a class="dropdown-item" href="{{ route('superadmin.configuracion.index') }}">Configuración global</a></li>
