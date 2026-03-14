@@ -4,9 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\{Setting, Configuracion};
+use App\Models\Configuracion;
 use Illuminate\Support\Facades\Cache;
 use App\Services\System\SettingsService;
+use App\Services\System\SecurityLoggerService;
 
 class SettingController extends Controller
 {
@@ -56,6 +57,10 @@ class SettingController extends Controller
 
         foreach ($request->except('_token') as $clave => $valor) {
 
+            $config = Configuracion::where('clave', $clave)->first();
+
+            $oldValue = $config?->valor;
+
             Configuracion::updateOrCreate(
                 ['clave' => $clave],
                 ['valor' => $valor]
@@ -64,6 +69,14 @@ class SettingController extends Controller
 
         Cache::forget('configuraciones_sistema');
 
-        return back()->with('success', 'Configuración de envíos actualizada');
+        if ($oldValue != $valor) {
+            SecurityLoggerService::configChanged(
+                $clave,
+                $oldValue,
+                $valor
+            );
+        }
+
+        return back()->with('success', 'Configuración actualizada');
     }
 }

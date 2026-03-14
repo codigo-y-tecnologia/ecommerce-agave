@@ -28,7 +28,7 @@
             <label class="form-label">Tipo (eTipo)</label>
             <select name="eTipo" class="form-select" required>
                 <option value="">-- Selecciona --</option>
-                @foreach (['IVA','IEPS','OTRO'] as $opt)
+                @foreach (['IVA','IEPS'] as $opt)
                     <option value="{{ $opt }}" @selected(old('eTipo')===$opt)>{{ $opt }}</option>
                 @endforeach
             </select>

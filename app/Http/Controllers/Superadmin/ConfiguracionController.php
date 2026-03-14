@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Configuracion;
 use Illuminate\Support\Facades\Cache;
+use App\Services\System\SecurityLoggerService;
 
 class ConfiguracionController extends Controller
 {
@@ -27,6 +28,10 @@ class ConfiguracionController extends Controller
 
         foreach ($request->except('_token') as $clave => $valor) {
 
+            $config = Configuracion::where('clave', $clave)->first();
+
+            $oldValue = $config?->valor;
+
             Configuracion::updateOrCreate(
                 ['clave' => $clave],
                 ['valor' => $valor]
@@ -34,6 +39,14 @@ class ConfiguracionController extends Controller
         }
 
         Cache::forget('configuraciones_sistema');
+
+        if ($oldValue != $valor) {
+            SecurityLoggerService::configChanged(
+                $clave,
+                $oldValue,
+                $valor
+            );
+        }
 
         return back()->with('success', 'Configuración actualizada correctamente');
     }

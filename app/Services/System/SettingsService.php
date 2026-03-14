@@ -4,6 +4,7 @@ namespace App\Services\System;
 
 use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
+use App\Services\System\SecurityLoggerService;
 
 class SettingsService
 {
@@ -23,11 +24,25 @@ class SettingsService
 
     public function set($key, $value)
     {
+
+        $setting = Setting::where('key', $key)->first();
+
+        $oldValue = $setting?->value;
+
         Setting::updateOrCreate(
             ['key' => $key],
             ['value' => $value]
         );
 
         Cache::forget('system_settings');
+
+        // Registrar cambio si realmente cambió
+        if ($oldValue != $value) {
+            SecurityLoggerService::configChanged(
+                $key,
+                $oldValue,
+                $value
+            );
+        }
     }
 }
