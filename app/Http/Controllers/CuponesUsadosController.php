@@ -10,24 +10,24 @@ class CuponesUsadosController extends Controller
     public function index(Request $request)
     {
         $cuponesUsados = DB::table('tbl_cupon_usos as cu')
-            ->leftJoin('tbl_cupones as c',  'cu.id_cupon',   '=', 'c.id_cupon')
-            ->leftJoin('tbl_usuarios as u', 'cu.id_usuario', '=', 'u.id_usuario')
-            ->leftJoin('tbl_ventas as v',   'cu.id_venta',   '=', 'v.id_venta')
+            ->leftJoin('tbl_cupones as c',   'cu.id_cupon',  '=', 'c.id_cupon')
+            ->leftJoin('tbl_usuarios as u',  'cu.id_usuario','=', 'u.id_usuario')
+            ->leftJoin('tbl_ventas as v',    'cu.id_venta',  '=', 'v.id_venta')
+            ->leftJoin('tbl_pedidos as p',   'v.id_pedido',  '=', 'p.id_pedido')
             ->select(
                 'cu.id_cupon',
                 'cu.id_venta',
                 'cu.id_usuario',
                 'cu.guest_token',
                 'cu.tFecha_uso',
-                // ✅ FIX: Sin espacios en los alias — antes fallaban silenciosamente
                 'c.vCodigo_cupon as codigo_cupon',
                 'c.eTipo as tipo_cupon',
                 'c.dDescuento as descuento_cupon',
-                // ✅ FIX: Se usa dDescuento como dDescuento_aplicado (no existe columna separada)
                 'c.dDescuento as dDescuento_aplicado',
-                'u.vNombre as usuario_nombre',
-                'u.vApaterno as usuario_apellido1',
-                'u.vEmail as usuario_email'
+                // Si es usuario registrado usa sus datos, si es invitado usa los del pedido
+                DB::raw('COALESCE(u.vNombre,   p.vNombre)   as usuario_nombre'),
+                DB::raw('COALESCE(u.vApaterno, p.vApaterno) as usuario_apellido1'),
+                DB::raw('COALESCE(u.vEmail,    p.vEmail)    as usuario_email')
             )
             ->orderByDesc('cu.tFecha_uso')
             ->get();
@@ -73,6 +73,8 @@ class CuponesUsadosController extends Controller
         $cuponUsado = DB::table('tbl_cupon_usos as cu')
             ->leftJoin('tbl_cupones as c',  'cu.id_cupon',   '=', 'c.id_cupon')
             ->leftJoin('tbl_usuarios as u', 'cu.id_usuario', '=', 'u.id_usuario')
+            ->leftJoin('tbl_ventas as v',   'cu.id_venta',   '=', 'v.id_venta')
+            ->leftJoin('tbl_pedidos as p',  'v.id_pedido',   '=', 'p.id_pedido')
             ->select(
                 'cu.id_cupon', 'cu.id_venta', 'cu.id_usuario',
                 'cu.guest_token', 'cu.tFecha_uso',
@@ -80,9 +82,9 @@ class CuponesUsadosController extends Controller
                 'c.eTipo as tipo_descuento',
                 'c.dDescuento as valor_descuento',
                 'c.dValido_hasta as fecha_expiracion',
-                'u.vNombre as usuario_nombre',
-                'u.vApaterno as usuario_apellido1',
-                'u.vEmail as usuario_email'
+                DB::raw('COALESCE(u.vNombre,   p.vNombre)   as usuario_nombre'),
+                DB::raw('COALESCE(u.vApaterno, p.vApaterno) as usuario_apellido1'),
+                DB::raw('COALESCE(u.vEmail,    p.vEmail)    as usuario_email')
             )
             ->where('cu.id_cupon', $idCupon)
             ->where('cu.id_venta',  $idVenta)

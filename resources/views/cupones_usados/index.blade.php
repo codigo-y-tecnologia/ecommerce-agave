@@ -39,6 +39,155 @@
         </div>
     </div>
 
+    <!-- Tarjetas de Gráficas — mismo tamaño que stat-cards, abren modal con gráfica -->
+    <style>
+        .grafica-stat-card {
+            border-radius: 12px;
+            padding: 22px 24px;
+            color: white;
+            cursor: pointer;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            transition: transform 0.2s, box-shadow 0.2s;
+            min-height: 110px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .grafica-stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        .grafica-stat-card .ext-icon {
+            position: absolute;
+            top: 14px; right: 14px;
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+        .grafica-stat-card .card-label {
+            font-size: 0.9rem;
+            opacity: 0.92;
+            font-weight: 500;
+        }
+        .grafica-stat-card .card-icon {
+            font-size: 1.8rem;
+            margin-top: 10px;
+            opacity: 0.95;
+        }
+        /* Modales de gráficas */
+        .modal-grafica { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center; }
+        .modal-grafica.show { display:flex; }
+        .modal-grafica-content {
+            background: white;
+            border-radius: 14px;
+            width: 90%;
+            max-width: 750px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .modal-grafica-header {
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .modal-grafica-header h2 { margin:0; font-size:1.15rem; color:#2d3748; font-weight:700; }
+        .modal-grafica-header .close-btn {
+            background: none; border: none; font-size: 1.4rem;
+            color: #94a3b8; cursor: pointer; line-height: 1;
+        }
+        .modal-grafica-header .close-btn:hover { color: #e53e3e; }
+        .modal-grafica-body { padding: 24px; }
+    </style>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+
+        <!-- Cupones Más Usados -->
+        <div class="grafica-stat-card" style="background: linear-gradient(135deg, #667eea, #764ba2);" onclick="openGraficaModal('grafica-cupones')">
+            <i class="fas fa-external-link-alt ext-icon"></i>
+            <div class="card-label">Cupones Más Usados</div>
+            <div class="card-icon"><i class="fas fa-ticket-alt"></i></div>
+        </div>
+
+        <!-- Descuento Total por Cupón -->
+        <div class="grafica-stat-card" style="background: linear-gradient(135deg, #11998e, #38ef7d);" onclick="openGraficaModal('grafica-descuento')">
+            <i class="fas fa-external-link-alt ext-icon"></i>
+            <div class="card-label">Descuento Total por Cupón</div>
+            <div class="card-icon"><i class="fas fa-dollar-sign"></i></div>
+        </div>
+
+        <!-- Usos por Mes -->
+        <div class="grafica-stat-card" style="background: linear-gradient(135deg, #8b5cf6, #a78bfa);" onclick="openGraficaModal('grafica-meses')">
+            <i class="fas fa-external-link-alt ext-icon"></i>
+            <div class="card-label">Usos por Mes</div>
+            <div class="card-icon"><i class="fas fa-calendar-alt"></i></div>
+        </div>
+
+        <!-- Top Usuarios -->
+        <div class="grafica-stat-card" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);" onclick="openGraficaModal('grafica-usuarios')">
+            <i class="fas fa-external-link-alt ext-icon"></i>
+            <div class="card-label">Top Usuarios por Uso de Cupones</div>
+            <div class="card-icon"><i class="fas fa-users"></i></div>
+        </div>
+
+    </div>
+
+    <!-- Modal: Gráfica Cupones -->
+    <div id="grafica-cupones" class="modal-grafica" onclick="closeGraficaModal('grafica-cupones', event)">
+        <div class="modal-grafica-content">
+            <div class="modal-grafica-header">
+                <h2><i class="fas fa-ticket-alt" style="color:#667eea; margin-right:8px;"></i> Cupones Más Usados</h2>
+                <button class="close-btn" onclick="closeGraficaModal('grafica-cupones')">×</button>
+            </div>
+            <div class="modal-grafica-body">
+                <canvas id="cuponesChart" style="max-height:420px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Gráfica Descuento -->
+    <div id="grafica-descuento" class="modal-grafica" onclick="closeGraficaModal('grafica-descuento', event)">
+        <div class="modal-grafica-content">
+            <div class="modal-grafica-header">
+                <h2><i class="fas fa-dollar-sign" style="color:#11998e; margin-right:8px;"></i> Descuento Total por Cupón</h2>
+                <button class="close-btn" onclick="closeGraficaModal('grafica-descuento')">×</button>
+            </div>
+            <div class="modal-grafica-body">
+                <canvas id="descuentoChart" style="max-height:420px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Gráfica Meses -->
+    <div id="grafica-meses" class="modal-grafica" onclick="closeGraficaModal('grafica-meses', event)">
+        <div class="modal-grafica-content">
+            <div class="modal-grafica-header">
+                <h2><i class="fas fa-calendar-alt" style="color:#8b5cf6; margin-right:8px;"></i> Usos por Mes</h2>
+                <button class="close-btn" onclick="closeGraficaModal('grafica-meses')">×</button>
+            </div>
+            <div class="modal-grafica-body">
+                <canvas id="mesesChart" style="max-height:420px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Gráfica Usuarios -->
+    <div id="grafica-usuarios" class="modal-grafica" onclick="closeGraficaModal('grafica-usuarios', event)">
+        <div class="modal-grafica-content">
+            <div class="modal-grafica-header">
+                <h2><i class="fas fa-users" style="color:#f59e0b; margin-right:8px;"></i> Top Usuarios por Uso de Cupones</h2>
+                <button class="close-btn" onclick="closeGraficaModal('grafica-usuarios')">×</button>
+            </div>
+            <div class="modal-grafica-body">
+                <canvas id="usuariosChart" style="max-height:420px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+
+
     @php
         // Agrupar por cupón
         $cuponesAgrupados = $cuponesUsados->groupBy('codigo_cupon')->map(function($grupo) {
@@ -80,74 +229,6 @@
         })->sortBy('sort_key')->values();
     @endphp
 
-    <!-- Gráficas -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; align-items: start;">
-        <!-- Cupones más usados -->
-        <div class="chart-container" id="cuponesChartContainer">
-            <div class="chart-title">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-ticket-alt" style="color: #667eea;"></i>
-                    <span>Cupones Más Usados</span>
-                </div>
-                <button class="collapse-btn" onclick="toggleChart('cupones')">
-                    <i class="fas fa-chevron-down"></i>
-                </button>
-            </div>
-            <div class="chart-content" id="cuponesChartContent">
-                <canvas id="cuponesChart" style="max-height: 400px;"></canvas>
-            </div>
-        </div>
-
-        <!-- Descuento por cupón -->
-        <div class="chart-container" id="descuentoChartContainer">
-            <div class="chart-title">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-dollar-sign" style="color: #48bb78;"></i>
-                    <span>Descuento Total por Cupón</span>
-                </div>
-                <button class="collapse-btn" onclick="toggleChart('descuento')">
-                    <i class="fas fa-chevron-down"></i>
-                </button>
-            </div>
-            <div class="chart-content" id="descuentoChartContent">
-                <canvas id="descuentoChart" style="max-height: 400px;"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; align-items: start;">
-        <!-- Usos por mes -->
-        <div class="chart-container" id="mesesChartContainer">
-            <div class="chart-title">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-calendar-alt" style="color: #8b5cf6;"></i>
-                    <span>Usos por Mes</span>
-                </div>
-                <button class="collapse-btn" onclick="toggleChart('meses')">
-                    <i class="fas fa-chevron-down"></i>
-                </button>
-            </div>
-            <div class="chart-content" id="mesesChartContent">
-                <canvas id="mesesChart" style="max-height: 400px;"></canvas>
-            </div>
-        </div>
-
-        <!-- Top usuarios -->
-        <div class="chart-container" id="usuariosChartContainer">
-            <div class="chart-title">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-users" style="color: #f59e0b;"></i>
-                    <span>Top Usuarios por Uso de Cupones</span>
-                </div>
-                <button class="collapse-btn" onclick="toggleChart('usuarios')">
-                    <i class="fas fa-chevron-down"></i>
-                </button>
-            </div>
-            <div class="chart-content" id="usuariosChartContent">
-                <canvas id="usuariosChart" style="max-height: 400px;"></canvas>
-            </div>
-        </div>
-    </div>
 
     <!-- Estilos tabla estilo referencia -->
     <style>
@@ -300,7 +381,6 @@
                     <th>ID</th>
                     <th>Código Cupón</th>
                     <th>Tipo</th>
-                    <th>Descuento</th>
                     <th>Usuario</th>
                     <th>Email</th>
                     <th>ID Venta</th>
@@ -314,7 +394,6 @@
                     <th><input type="text" class="column-filter" placeholder="ID" /></th>
                     <th><input type="text" class="column-filter" placeholder="Código Cupón" /></th>
                     <th><input type="text" class="column-filter" placeholder="Tipo" /></th>
-                    <th></th>
                     <th><input type="text" class="column-filter" placeholder="Usuario" /></th>
                     <th><input type="text" class="column-filter" placeholder="Email" /></th>
                     <th><input type="text" class="column-filter" placeholder="ID Venta" /></th>
@@ -340,41 +419,27 @@
                     <td><span class="badge-codigo-cupon">{{ $cupon->codigo_cupon ?? 'N/A' }}</span></td>
                     {{-- Columna 3: Tipo --}}
                     <td><span class="badge-tipo {{ $tipoClass }}">{{ ucfirst($cupon->tipo_cupon ?? 'N/A') }}</span></td>
-                    {{-- Columna 4: Descuento base --}}
-                    <td><span class="monto-base">${{ number_format($cupon->descuento_cupon ?? 0, 2) }}</span></td>
-                    {{-- Columna 5: Usuario --}}
+                    {{-- Columna 4: Usuario --}}
                     <td><strong style="color:#1e293b;">{{ $cupon->usuario_nombre ?? 'Invitado' }} {{ $cupon->usuario_apellido1 ?? '' }}</strong></td>
-                    {{-- Columna 6: Email --}}
+                    {{-- Columna 5: Email --}}
                     <td><small style="color:#6b7280;">{{ $cupon->usuario_email ?? 'N/A' }}</small></td>
-                    {{-- Columna 7: ID Venta --}}
+                    {{-- Columna 6: ID Venta --}}
                     <td><span class="badge-venta">#{{ $cupon->id_venta }}</span></td>
-                    {{-- Columna 8: Descuento aplicado --}}
+                    {{-- Columna 7: Desc. Aplicado --}}
                     <td style="text-align: right;">
                         <span class="monto-descuento">${{ number_format($cupon->dDescuento_aplicado ?? 0, 2) }}</span>
                     </td>
-                    {{-- Columna 9: Fecha de uso --}}
+                    {{-- Columna 8: Fecha de uso --}}
                     <td data-order="{{ \Carbon\Carbon::parse($cupon->tFecha_uso)->format('Y-m-d H:i:s') }}">
                         <small style="color: #666;">{{ \Carbon\Carbon::parse($cupon->tFecha_uso)->format('d/m/Y H:i') }}</small>
                     </td>
-                    {{-- Columna 10: Acciones --}}
+                    {{-- Columna 9: Acciones --}}
                     <td style="text-align: center;">
                         <div class="d-flex gap-1 justify-content-center">
                             <a href="{{ route('cupones_usados.show', ['id' => $cupon->id_cupon . '-' . $cupon->id_venta]) }}" 
                                class="btn btn-sm btn-info" title="Ver detalle">
                                 <i class="fas fa-eye"></i>
                             </a>
-                            <a href="{{ route('cupones_usados.edit', ['id' => $cupon->id_cupon . '-' . $cupon->id_venta]) }}" 
-                               class="btn btn-sm btn-warning" title="Editar">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <form action="{{ route('cupones_usados.destroy', ['id' => $cupon->id_cupon . '-' . $cupon->id_venta]) }}" 
-                                  method="POST" class="form-delete" style="display:inline;">
-                                @csrf
-                                @method('DELETE')
-                                <button type="button" class="btn btn-sm btn-danger btn-eliminar" title="Eliminar">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
                         </div>
                     </td>
                 </tr>
@@ -742,8 +807,8 @@ $(document).ready(function() {
             { extend: 'print', text: '<i class="fas fa-print"></i> Imprimir', className: 'dt-button', exportOptions: { columns: ':not(:last-child)' } }
         ],
         columnDefs: [
-            { targets: [7], className: 'dt-right' },
-            { targets: [9], orderable: false }
+            { targets: [6], className: 'dt-right' },
+            { targets: [8], orderable: false }
         ]
     });
 
@@ -777,30 +842,32 @@ $(document).ready(function() {
 });
 
 // Toggle gráficas
-function toggleChart(chartType) {
-    const container = document.getElementById(chartType + 'ChartContainer');
-    const content   = document.getElementById(chartType + 'ChartContent');
-    const button    = container.querySelector('.collapse-btn i');
-    const isHidden  = content.style.display === 'none';
-
-    if (isHidden) {
-        // Abrir — mostrar contenido y expandir contenedor
-        content.style.display = 'block';
-        container.style.minHeight = '';
-        container.style.paddingBottom = '';
-        button.className = 'fas fa-chevron-down';
+// Modales de gráficas
+function openGraficaModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+        // Redibuja la gráfica correspondiente
+        const chartMap = {
+            'grafica-cupones':   'cupones',
+            'grafica-descuento': 'descuento',
+            'grafica-meses':     'meses',
+            'grafica-usuarios':  'usuarios'
+        };
         setTimeout(() => {
-            const chart = window.charts?.[chartType];
+            const chart = window.charts?.[chartMap[id]];
             if (chart) { chart.resize(); chart.update(); }
         }, 50);
-    } else {
-        // Cerrar — ocultar contenido y encoger contenedor al mínimo (solo título)
-        content.style.display = 'none';
-        container.style.minHeight = '0';
-        container.style.paddingBottom = '0';
-        button.className = 'fas fa-chevron-up';
     }
 }
+function closeGraficaModal(id, event) {
+    if (event && event.target !== document.getElementById(id)) return;
+    const modal = document.getElementById(id);
+    if (modal) { modal.classList.remove('show'); document.body.style.overflow = 'auto'; }
+}
+
+
 
 // Modales de detalle
 function openDetailModal(type) {

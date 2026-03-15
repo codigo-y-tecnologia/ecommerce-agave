@@ -11,10 +11,6 @@
                         <a href="{{ route('cupones_usados.index') }}" class="btn btn-secondary btn-sm">
                             <i class="fas fa-arrow-left"></i> Volver
                         </a>
-                        <a href="{{ route('cupones_usados.edit', ['id' => $cuponUsado->id_cupon . '-' . $cuponUsado->id_venta]) }}"
-                           class="btn btn-warning btn-sm">
-                            <i class="fas fa-edit"></i> Editar
-                        </a>
                     </div>
                 </div>
                 <div class="card-body">
@@ -29,10 +25,6 @@
                                 <li class="list-group-item d-flex justify-content-between">
                                     <strong>Código:</strong>
                                     <span class="badge bg-primary fs-6">{{ $cuponUsado->codigo_cupon ?? 'N/A' }}</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between">
-                                    <strong>Nombre:</strong>
-                                    <span>{{ $cuponUsado->codigo_cupon ?? 'N/A' }}</span>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between">
                                     <strong>Tipo de Descuento:</strong>
@@ -78,12 +70,6 @@
                                 <li class="list-group-item d-flex justify-content-between">
                                     <strong>Email:</strong>
                                     <span>{{ $cuponUsado->usuario_email ?? 'N/A' }}</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between">
-                                    <strong>Guest Token:</strong>
-                                    <span class="text-muted" style="font-size:0.85rem;">
-                                        {{ $cuponUsado->guest_token ?? '—' }}
-                                    </span>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between">
                                     <strong>Fecha de Uso:</strong>
