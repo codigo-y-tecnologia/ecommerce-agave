@@ -8,20 +8,70 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Log;
 use App\Models\Producto;
 use App\Models\ProductoVariacion;
+use App\Models\UsuarioTemporal;
 
 class FavoritoInvitadoController extends Controller
 {
+    /**
+     * Obtener o crear usuario temporal para la sesión actual
+     */
+    private function obtenerUsuarioTemporal()
+    {
+        try {
+            $sessionId = Session::getId();
+            
+            // Verificar si la tabla existe
+            $tablaExiste = DB::select("SHOW TABLES LIKE 'tbl_usuarios_temporales'");
+            if (empty($tablaExiste)) {
+                // Crear la tabla si no existe
+                DB::statement("
+                    CREATE TABLE IF NOT EXISTS `tbl_usuarios_temporales` (
+                        `id_temp_usuario` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+                        `session_id` varchar(255) NOT NULL,
+                        `vToken` varchar(100) DEFAULT NULL,
+                        `tFecha_creacion` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+                        `tFecha_expiracion` timestamp NULL DEFAULT NULL,
+                        PRIMARY KEY (`id_temp_usuario`),
+                        UNIQUE KEY `vToken` (`vToken`),
+                        KEY `idx_session_id` (`session_id`(250)),
+                        KEY `idx_expiracion` (`tFecha_expiracion`)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+                ");
+            }
+            
+            $usuarioTemporal = UsuarioTemporal::where('session_id', $sessionId)->first();
+            
+            if (!$usuarioTemporal) {
+                $usuarioTemporal = UsuarioTemporal::create([
+                    'session_id' => $sessionId,
+                    'vToken' => UsuarioTemporal::generarToken(),
+                    'tFecha_expiracion' => now()->addDays(30)
+                ]);
+            }
+            
+            return $usuarioTemporal;
+            
+        } catch (\Exception $e) {
+            Log::error('Error en obtenerUsuarioTemporal: ' . $e->getMessage());
+            
+            // Si falla, devolver un objeto con session_id
+            return (object)[
+                'session_id' => Session::getId()
+            ];
+        }
+    }
+
     /**
      * Mostrar favoritos de invitado
      */
     public function index()
     {
         try {
-            $sessionId = Session::getId();
+            $usuarioTemporal = $this->obtenerUsuarioTemporal();
             
             $favoritos = DB::table('tbl_favoritos_temporales')
-                ->where('session_id', $sessionId)
-                ->orderBy('tFecha_agregado', 'desc')
+                ->where('session_id', $usuarioTemporal->session_id)
+                ->orderBy('tFecha_agregado', 'desc') // Cambiado de tFecha_creacion a tFecha_agregado
                 ->get();
             
             // Cargar datos de productos y variaciones
@@ -86,12 +136,12 @@ class FavoritoInvitadoController extends Controller
                     'message' => 'Producto eliminado de favoritos'
                 ]);
             } else {
-                // Agregar
+                // Agregar usando tFecha_agregado (el nombre correcto en la BD)
                 DB::table('tbl_favoritos_temporales')->insert([
                     'session_id' => $sessionId,
                     'id_producto' => $idProducto,
                     'id_variacion' => null,
-                    'tFecha_agregado' => now()
+                    'tFecha_agregado' => DB::raw('NOW()') // Cambiado de tFecha_creacion a tFecha_agregado
                 ]);
                 
                 return response()->json([
@@ -107,7 +157,7 @@ class FavoritoInvitadoController extends Controller
             
             return response()->json([
                 'success' => false,
-                'message' => 'Error al gestionar favoritos'
+                'message' => 'Error: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -119,7 +169,7 @@ class FavoritoInvitadoController extends Controller
     {
         try {
             // Verificar que la variación existe
-            $variacion = ProductoVariacion::where('id_variacion', $idVariacion)
+            $variacion = ProductoVariacion::with('productoPadre')->where('id_variacion', $idVariacion)
                 ->first();
 
             if (!$variacion) {
@@ -153,12 +203,12 @@ class FavoritoInvitadoController extends Controller
                     'message' => 'Variación eliminada de favoritos'
                 ]);
             } else {
-                // Agregar
+                // Agregar usando tFecha_agregado (el nombre correcto en la BD)
                 DB::table('tbl_favoritos_temporales')->insert([
                     'session_id' => $sessionId,
                     'id_producto' => $variacion->id_producto,
                     'id_variacion' => $idVariacion,
-                    'tFecha_agregado' => now()
+                    'tFecha_agregado' => DB::raw('NOW()') // Cambiado de tFecha_creacion a tFecha_agregado
                 ]);
                 
                 return response()->json([
@@ -171,10 +221,11 @@ class FavoritoInvitadoController extends Controller
             
         } catch (\Exception $e) {
             Log::error('Error en toggleVariacion invitado: ' . $e->getMessage());
+            Log::error('Trace: ' . $e->getTraceAsString());
             
             return response()->json([
                 'success' => false,
-                'message' => 'Error al gestionar favoritos'
+                'message' => 'Error: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -253,7 +304,7 @@ class FavoritoInvitadoController extends Controller
             
             $esFavorito = $query->exists();
             
-            return response->json([
+            return response()->json([
                 'success' => true,
                 'is_favorite' => $esFavorito
             ]);
@@ -262,7 +313,8 @@ class FavoritoInvitadoController extends Controller
             Log::error('Error en check favorito: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'is_favorite' => false
+                'is_favorite' => false,
+                'message' => $e->getMessage()
             ], 500);
         }
     }
@@ -302,7 +354,7 @@ class FavoritoInvitadoController extends Controller
                         'id_usuario' => $userId,
                         'id_producto' => $temp->id_producto,
                         'id_variacion' => $temp->id_variacion,
-                        'tFecha_agregado' => $temp->tFecha_agregado ?? now(),
+                        'tFecha_agregado' => $temp->tFecha_agregado, // Ahora coincide el nombre
                         'bNotificado_stock' => 0,
                         'bNotificado_descuento' => 0
                     ]);
@@ -326,7 +378,7 @@ class FavoritoInvitadoController extends Controller
             
             return response()->json([
                 'success' => false,
-                'message' => 'Error al migrar favoritos'
+                'message' => 'Error al migrar favoritos: ' . $e->getMessage()
             ], 500);
         }
     }

@@ -1,5 +1,4 @@
 <?php
-// app/Models/FavoritoTemporal.php
 
 namespace App\Models;
 

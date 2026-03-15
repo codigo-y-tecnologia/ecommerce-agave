@@ -398,6 +398,26 @@
             border-top: 1px dashed #dee2e6;
         }
 
+        .ml-discount-motivo {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+            padding: 8px;
+            background: #fff3cd;
+            border-radius: 4px;
+            border-left: 3px solid #ffc107;
+        }
+
+        .ml-discount-periodo {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+            padding: 5px 8px;
+            background: #e7f1ff;
+            border-radius: 4px;
+            border-left: 3px solid #007bff;
+        }
+
         /* Stock */
         .ml-stock {
             margin: 20px 0;
@@ -474,6 +494,28 @@
             background: #007bff;
             border-color: #007bff;
             color: white;
+        }
+
+        .ml-variation-btn.has-discount {
+            border-color: #dc3545;
+            position: relative;
+        }
+
+        .ml-variation-btn.has-discount::after {
+            content: '%';
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #dc3545;
+            color: white;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
         }
 
         /* Características */
@@ -868,8 +910,8 @@
             $tieneVariaciones = $producto->tieneVariaciones();
             
             // Calcular si el producto padre tiene oferta vigente
-            $productoTieneOferta = $producto->tieneDescuentoActivo();
-            $precioBaseProducto = $productoTieneOferta ? $producto->dPrecio_oferta : $producto->dPrecio_venta;
+            $productoTieneDescuento = $producto->tieneDescuentoActivo();
+            $precioBaseProducto = $productoTieneDescuento ? $producto->dPrecio_oferta : $producto->dPrecio_venta;
             
             // Calcular impuestos del producto padre
             $totalImpuestosProducto = 0;
@@ -953,7 +995,7 @@
                 'nombre' => $producto->vNombre,
                 'precio_original' => (float)$producto->dPrecio_venta,
                 'precio_oferta' => (float)($producto->dPrecio_oferta ?? 0),
-                'tiene_oferta' => $productoTieneOferta,
+                'tiene_oferta' => $productoTieneDescuento,
                 'precio_base' => (float)$precioBaseProducto,
                 'total_impuestos' => (float)$totalImpuestosProducto,
                 'precio_final' => (float)($precioBaseProducto + $totalImpuestosProducto),
@@ -1008,9 +1050,10 @@
                     }
                 }
                 
-                // Calcular si la variación tiene oferta vigente
-                $variacionTieneOferta = $var->tieneDescuentoActivo();
-                $precioBaseVariacion = $variacionTieneOferta ? $var->dPrecio_oferta : $var->dPrecio;
+                // Calcular si la variación tiene descuento vigente
+                $variacionTieneDescuento = $var->tieneDescuentoActivo();
+                $precioBaseVariacion = $variacionTieneDescuento ? $var->dPrecio_oferta : $var->dPrecio;
+                $porcentajeDescuento = $var->porcentaje_descuento;
                 
                 $impuestoVariacion = $var->impuesto ?? $producto->impuestos->first();
                 $totalImpuestosVariacion = 0;
@@ -1051,7 +1094,7 @@
                     'sku' => $var->vSKU,
                     'precio_original' => (float)$var->dPrecio,
                     'precio_oferta' => (float)($var->dPrecio_oferta ?? 0),
-                    'tiene_oferta' => $variacionTieneOferta,
+                    'tiene_oferta' => $variacionTieneDescuento,
                     'precio_base' => (float)$precioBaseVariacion,
                     'total_impuestos' => (float)$totalImpuestosVariacion,
                     'precio_final' => (float)($precioBaseVariacion + $totalImpuestosVariacion),
@@ -1062,6 +1105,10 @@
                     'imagenes' => $var->imagenes ?? [],
                     'descripcion' => $var->tDescripcion ?? '',
                     'caracteristicas' => $caracteristicasVariacion,
+                    'motivo_oferta' => $var->vMotivo_oferta ?? '',
+                    'fecha_inicio_oferta' => $var->dFecha_inicio_oferta,
+                    'fecha_fin_oferta' => $var->dFecha_fin_oferta,
+                    'porcentaje_descuento' => $porcentajeDescuento
                 ];
                 
                 // Si hay una variación en la URL y coincide con esta, guardarla como inicial
@@ -1108,6 +1155,16 @@
                         
                         <!-- Lupa -->
                         <div id="zoom-lens" class="zoom-lens" style="display: none; position: absolute; width: 150px; height: 150px; border: 2px solid #007bff; background-color: rgba(255,255,255,0.3); pointer-events: none; z-index: 10; border-radius: 4px;"></div>
+
+                        @if($variacionInicial && $variacionInicial['tiene_oferta'])
+                            <span class="position-absolute top-0 end-0 badge bg-danger mt-2 me-2 px-3 py-2" style="z-index: 15; font-size: 14px;">
+                                <i class="fas fa-tag me-1"></i>-{{ $variacionInicial['porcentaje_descuento'] }}%
+                            </span>
+                        @elseif($productoTieneDescuento && !$variacionInicial)
+                            <span class="position-absolute top-0 end-0 badge bg-danger mt-2 me-2 px-3 py-2" style="z-index: 15; font-size: 14px;">
+                                <i class="fas fa-tag me-1"></i>-{{ $producto->porcentaje_descuento }}%
+                            </span>
+                        @endif
 
                         <!-- Controles de navegación -->
                         <div id="imageControls" class="position-absolute w-100 d-flex justify-content-between px-2" style="top: 50%; transform: translateY(-50%); z-index: 15;">
@@ -1166,12 +1223,24 @@
                 <div class="ml-price-container" id="precio-container">
                     @if($mostrarProductoInicial)
                         <div id="producto-precio-info" style="display: block;">
-                            @if($productoTieneOferta)
+                            @if($productoTieneDescuento)
                                 <span class="ml-price-original" id="producto-precio-original">${{ number_format($producto->dPrecio_venta, 2) }}</span>
                                 <div class="ml-price-current">
                                     ${{ number_format($producto->dPrecio_oferta, 2) }}
-                                    <span class="ml-discount" id="producto-descuento-badge">-{{ $producto->porcentajeDescuento }}%</span>
+                                    <span class="ml-discount" id="producto-descuento-badge">-{{ $producto->porcentaje_descuento }}%</span>
                                 </div>
+                                @if($producto->vMotivo_oferta)
+                                    <div class="ml-discount-motivo">
+                                        <i class="fas fa-comment me-1"></i> {{ $producto->vMotivo_oferta }}
+                                    </div>
+                                @endif
+                                @if($producto->dFecha_inicio_oferta && $producto->dFecha_fin_oferta)
+                                    <div class="ml-discount-periodo">
+                                        <i class="fas fa-calendar-alt me-1"></i> 
+                                        Válido del {{ \Carbon\Carbon::parse($producto->dFecha_inicio_oferta)->format('d/m/Y') }} 
+                                        al {{ \Carbon\Carbon::parse($producto->dFecha_fin_oferta)->format('d/m/Y') }}
+                                    </div>
+                                @endif
                             @else
                                 <div class="ml-price-current" id="producto-precio-actual">
                                     ${{ number_format($producto->dPrecio_venta, 2) }}
@@ -1184,23 +1253,41 @@
                                 <span id="variacion-precio-actual"></span>
                                 <span class="ml-discount" id="variacion-descuento-badge" style="display: none;"></span>
                             </div>
+                            <div id="variacion-motivo-descuento" class="ml-discount-motivo" style="display: none;"></div>
+                            <div id="variacion-periodo-descuento" class="ml-discount-periodo" style="display: none;"></div>
                         </div>
                     @else
                         <div id="producto-precio-info" style="display: none;"></div>
                         <div id="variacion-precio-info" style="display: block;">
-                            <span class="ml-price-original" id="variacion-precio-original" {{ $variacionInicial['tiene_oferta'] ? '' : 'style=display:none;' }}>
-                                ${{ number_format($variacionInicial['precio_original'], 2) }}
-                            </span>
-                            <div class="ml-price-current">
-                                <span id="variacion-precio-actual">
-                                    ${{ number_format($variacionInicial['tiene_oferta'] ? $variacionInicial['precio_oferta'] : $variacionInicial['precio_original'], 2) }}
+                            @if($variacionInicial['tiene_oferta'])
+                                <span class="ml-price-original" id="variacion-precio-original">
+                                    ${{ number_format($variacionInicial['precio_original'], 2) }}
                                 </span>
-                                @if($variacionInicial['tiene_oferta'])
-                                    <span class="ml-discount" id="variacion-descuento-badge">
-                                        -{{ round((($variacionInicial['precio_original'] - $variacionInicial['precio_oferta']) / $variacionInicial['precio_original']) * 100) }}%
+                                <div class="ml-price-current">
+                                    <span id="variacion-precio-actual">
+                                        ${{ number_format($variacionInicial['precio_oferta'], 2) }}
                                     </span>
+                                    <span class="ml-discount" id="variacion-descuento-badge">
+                                        -{{ $variacionInicial['porcentaje_descuento'] }}%
+                                    </span>
+                                </div>
+                                @if($variacionInicial['motivo_oferta'])
+                                    <div class="ml-discount-motivo" id="variacion-motivo-descuento">
+                                        <i class="fas fa-comment me-1"></i> {{ $variacionInicial['motivo_oferta'] }}
+                                    </div>
                                 @endif
-                            </div>
+                                @if($variacionInicial['fecha_inicio_oferta'] && $variacionInicial['fecha_fin_oferta'])
+                                    <div class="ml-discount-periodo" id="variacion-periodo-descuento">
+                                        <i class="fas fa-calendar-alt me-1"></i> 
+                                        Válido del {{ \Carbon\Carbon::parse($variacionInicial['fecha_inicio_oferta'])->format('d/m/Y') }} 
+                                        al {{ \Carbon\Carbon::parse($variacionInicial['fecha_fin_oferta'])->format('d/m/Y') }}
+                                    </div>
+                                @endif
+                            @else
+                                <div class="ml-price-current" id="variacion-precio-actual">
+                                    ${{ number_format($variacionInicial['precio_original'], 2) }}
+                                </div>
+                            @endif
                         </div>
                     @endif
 
@@ -1244,6 +1331,7 @@
                                     @foreach($atributo['valores'] as $idValor => $valor)
                                         @php
                                             $activo = false;
+                                            $tieneDescuentoValor = false;
                                             if ($variacionInicial) {
                                                 foreach ($variacionInicial['atributos_mapa'] as $atribId => $valId) {
                                                     if ($atribId == $idAtributo && $valId == $idValor) {
@@ -1252,9 +1340,17 @@
                                                     }
                                                 }
                                             }
+                                            
+                                            // Verificar si esta combinación de valor tiene descuento
+                                            foreach ($variacionesData as $var) {
+                                                if (isset($var['atributos_mapa'][$idAtributo]) && $var['atributos_mapa'][$idAtributo] == $idValor && $var['tiene_oferta']) {
+                                                    $tieneDescuentoValor = true;
+                                                    break;
+                                                }
+                                            }
                                         @endphp
                                         <button type="button"
-                                                class="ml-variation-btn {{ $activo ? 'active' : '' }}"
+                                                class="ml-variation-btn {{ $activo ? 'active' : '' }} {{ $tieneDescuentoValor ? 'has-discount' : '' }}"
                                                 data-atributo-id="{{ $idAtributo }}"
                                                 data-valor-id="{{ $idValor }}"
                                                 data-valor-nombre="{{ $valor }}"
@@ -1614,7 +1710,7 @@
         }
 
         function aplicarDatosVariacion(variacion) {
-            console.log('Aplicando variación:', variacion);
+            console.log('Aplicando variación con descuento:', variacion);
             
             // Imágenes
             if (variacion.imagenes && variacion.imagenes.length > 0) {
@@ -1640,23 +1736,50 @@
             const descuentoBadge = document.getElementById('variacion-descuento-badge');
             const precioActualSpan = document.getElementById('variacion-precio-actual');
             
-            const tieneOfertaVigente = variacion.tiene_oferta === true && 
-                                       variacion.precio_oferta > 0 && 
-                                       variacion.precio_oferta < variacion.precio_original;
+            const tieneDescuentoVigente = variacion.tiene_oferta === true && 
+                                           variacion.precio_oferta > 0 && 
+                                           variacion.precio_oferta < variacion.precio_original;
             
-            if (tieneOfertaVigente) {
+            if (tieneDescuentoVigente) {
                 precioOriginalSpan.style.display = 'inline';
                 precioOriginalSpan.textContent = '$' + formatNumber(variacion.precio_original);
                 descuentoBadge.style.display = 'inline-block';
                 
                 const porcentaje = Math.round(((variacion.precio_original - variacion.precio_oferta) / variacion.precio_original) * 100);
                 descuentoBadge.textContent = '-' + porcentaje + '%';
+                descuentoBadge.className = 'ml-discount bg-danger';
                 
                 precioActualSpan.textContent = '$' + formatNumber(variacion.precio_oferta);
+                
+                // Mostrar información adicional del descuento si existe
+                const motivoElement = document.getElementById('variacion-motivo-descuento');
+                const periodoElement = document.getElementById('variacion-periodo-descuento');
+                
+                if (variacion.motivo_oferta) {
+                    motivoElement.innerHTML = `<i class="fas fa-comment me-1"></i>${variacion.motivo_oferta}`;
+                    motivoElement.style.display = 'block';
+                } else {
+                    motivoElement.style.display = 'none';
+                }
+                
+                if (variacion.fecha_inicio_oferta && variacion.fecha_fin_oferta) {
+                    const fechaInicio = new Date(variacion.fecha_inicio_oferta).toLocaleDateString('es-MX');
+                    const fechaFin = new Date(variacion.fecha_fin_oferta).toLocaleDateString('es-MX');
+                    periodoElement.innerHTML = `<i class="fas fa-calendar-alt me-1"></i>Válido del ${fechaInicio} al ${fechaFin}`;
+                    periodoElement.style.display = 'block';
+                } else {
+                    periodoElement.style.display = 'none';
+                }
             } else {
                 precioOriginalSpan.style.display = 'none';
                 descuentoBadge.style.display = 'none';
                 precioActualSpan.textContent = '$' + formatNumber(variacion.precio_original);
+                
+                const motivoElement = document.getElementById('variacion-motivo-descuento');
+                if (motivoElement) motivoElement.style.display = 'none';
+                
+                const periodoElement = document.getElementById('variacion-periodo-descuento');
+                if (periodoElement) periodoElement.style.display = 'none';
             }
 
             // Impuestos

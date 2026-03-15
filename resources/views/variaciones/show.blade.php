@@ -55,6 +55,11 @@
     @php
         // Calcular stock total
         $stockTotal = $producto->variaciones->sum('iStock');
+        
+        // Contar variaciones con descuento
+        $variacionesConDescuento = $producto->variaciones->filter(function($v) {
+            return $v->tieneDescuentoActivo() && $v->dPrecio_oferta < $v->dPrecio;
+        })->count();
     @endphp
 
     <!-- SOLO LA TABLA DE VARIACIONES -->
@@ -68,6 +73,11 @@
                     </h5>
                     <div class="d-flex gap-2">
                         <span class="badge bg-primary p-2">{{ $producto->variaciones->count() }} variaciones</span>
+                        @if($variacionesConDescuento > 0)
+                            <span class="badge bg-danger p-2">
+                                <i class="fas fa-tag me-1"></i>{{ $variacionesConDescuento }} con descuento
+                            </span>
+                        @endif
                         <span class="badge bg-success p-2">Stock: {{ number_format($stockTotal) }}</span>
                     </div>
                 </div>
@@ -91,9 +101,10 @@
                             <tbody>
                                 @forelse($producto->variaciones as $variacion)
                                     @php
-                                        // Verificar si tiene oferta activa
-                                        $tieneOferta = $variacion->tieneDescuentoActivo();
-                                        $precioBase = $tieneOferta ? $variacion->dPrecio_oferta : $variacion->dPrecio;
+                                        // Verificar si tiene descuento activo
+                                        $tieneDescuento = $variacion->tieneDescuentoActivo();
+                                        $precioBase = $tieneDescuento ? $variacion->dPrecio_oferta : $variacion->dPrecio;
+                                        $porcentajeDescuento = $variacion->porcentaje_descuento;
                                         
                                         // Obtener imágenes
                                         $imagenes = $variacion->imagenes ?? [];
@@ -154,6 +165,9 @@
                                         // Stock class
                                         $stockValue = intval($variacion->iStock);
                                         $stockClass = $stockValue > 50 ? 'success' : ($stockValue > 10 ? 'warning' : 'danger');
+                                        
+                                        // Calcular ahorro para mostrar tooltip
+                                        $ahorro = $tieneDescuento ? ($variacion->dPrecio - $variacion->dPrecio_oferta) : 0;
                                     @endphp
                                     <tr>
                                         <td class="px-4">
@@ -170,12 +184,23 @@
                                                             +{{ count($imagenes)-1 }}
                                                         </span>
                                                     @endif
+                                                    
+                                                    @if($tieneDescuento && $variacion->dPrecio_oferta < $variacion->dPrecio)
+                                                        <span class="position-absolute top-0 start-0 badge bg-danger" style="z-index: 10; font-size: 10px;">
+                                                            -{{ $porcentajeDescuento }}%
+                                                        </span>
+                                                    @endif
                                                 </div>
                                             @else
-                                                <div class="bg-light rounded-3 d-flex align-items-center justify-content-center" 
+                                                <div class="bg-light rounded-3 d-flex align-items-center justify-content-center position-relative" 
                                                      style="width: 60px; height: 60px; cursor: pointer;"
                                                      onclick="verImagenesVariacion({{ $variacion->id_variacion }}, '{{ $variacion->vSKU }}', [])">
                                                     <i class="fas fa-image text-muted fa-2x"></i>
+                                                    @if($tieneDescuento && $variacion->dPrecio_oferta < $variacion->dPrecio)
+                                                        <span class="position-absolute top-0 start-0 badge bg-danger" style="z-index: 10; font-size: 10px;">
+                                                            -{{ $porcentajeDescuento }}%
+                                                        </span>
+                                                    @endif
                                                 </div>
                                             @endif
                                         </td>
@@ -198,35 +223,52 @@
                                         </td>
                                         <td>
                                             <div class="vstack gap-1">
-                                                <div>
+                                                <div class="d-flex align-items-center flex-wrap gap-1">
                                                     <span class="fw-bold">${{ number_format($variacion->dPrecio, 2) }}</span>
-                                                    @if($tieneOferta && $variacion->dPrecio_oferta < $variacion->dPrecio)
-                                                        <span class="badge bg-danger ms-1">-{{ round((($variacion->dPrecio - $variacion->dPrecio_oferta) / $variacion->dPrecio) * 100) }}%</span>
+                                                    @if($tieneDescuento && $variacion->dPrecio_oferta < $variacion->dPrecio)
+                                                        <span class="badge bg-danger">
+                                                            -{{ $porcentajeDescuento }}%
+                                                        </span>
                                                     @endif
                                                 </div>
-                                                @if($tieneOferta && $variacion->dPrecio_oferta < $variacion->dPrecio)
-                                                    <small class="text-success">
-                                                        <i class="fas fa-tag me-1"></i>Oferta: ${{ number_format($variacion->dPrecio_oferta, 2) }}
-                                                    </small>
+                                                
+                                                @if($tieneDescuento && $variacion->dPrecio_oferta < $variacion->dPrecio)
+                                                    <div class="text-success small">
+                                                        <i class="fas fa-tag me-1"></i>
+                                                        <span class="fw-bold">Con descuento:</span> 
+                                                        <span class="text-danger">${{ number_format($variacion->dPrecio_oferta, 2) }}</span>
+                                                    </div>
+                                                    
                                                     @if($variacion->vMotivo_oferta)
                                                         <small class="text-muted" title="{{ $variacion->vMotivo_oferta }}">
-                                                            <i class="fas fa-comment me-1"></i>{{ Str::limit($variacion->vMotivo_oferta, 20) }}
+                                                            <i class="fas fa-comment me-1"></i>{{ Str::limit($variacion->vMotivo_oferta, 15) }}
+                                                        </small>
+                                                    @endif
+                                                    
+                                                    @if($variacion->dFecha_inicio_oferta && $variacion->dFecha_fin_oferta)
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-calendar-alt me-1"></i>
+                                                            {{ \Carbon\Carbon::parse($variacion->dFecha_inicio_oferta)->format('d/m') }} - 
+                                                            {{ \Carbon\Carbon::parse($variacion->dFecha_fin_oferta)->format('d/m') }}
                                                         </small>
                                                     @endif
                                                 @endif
+                                                
                                                 @if($impuestoVariacion)
                                                     <small class="text-muted">
                                                         <i class="fas fa-file-invoice-dollar me-1"></i>
                                                         {{ $impuestoVariacion->vNombre }} ({{ $impuestoVariacion->dPorcentaje }}%)
                                                     </small>
                                                 @endif
+                                                
                                                 <small class="text-primary fw-bold">
                                                     Total: ${{ number_format($precioFinal, 2) }}
                                                 </small>
                                             </div>
                                         </td>
                                         <td>
-                                            <span class="badge bg-{{ $stockClass }} p-2" style="font-size: 14px;">
+                                            <span class="badge bg-{{ $stockClass }} p-2" style="font-size: 14px;" 
+                                                  title="{{ $stockValue }} unidades disponibles">
                                                 <i class="fas fa-boxes me-1"></i>{{ number_format($stockValue) }}
                                             </span>
                                         </td>

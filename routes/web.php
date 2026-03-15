@@ -214,3 +214,13 @@ Route::prefix('favoritos-invitado')->name('favoritos.invitado.')->group(function
     Route::get('/check/{idProducto}/{idVariacion?}', [FavoritoInvitadoController::class, 'check'])->name('check');
     Route::post('/migrar', [FavoritoInvitadoController::class, 'migrarAUsuario'])->name('migrar');
 });
+
+Route::get('/debug-favoritos', function() {
+    return [
+        'session_id' => Session::getId(),
+        'tabla_favoritos_temporales_existe' => DB::select("SHOW TABLES LIKE 'tbl_favoritos_temporales'") ? 'Sí' : 'No',
+        'tabla_usuarios_temporales_existe' => DB::select("SHOW TABLES LIKE 'tbl_usuarios_temporales'") ? 'Sí' : 'No',
+        'favoritos_temporales' => DB::table('tbl_favoritos_temporales')->where('session_id', Session::getId())->get(),
+        'usuario_temporal' => DB::table('tbl_usuarios_temporales')->where('session_id', Session::getId())->first(),
+    ];
+});

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class ProductoVariacion extends Model
 {
@@ -19,7 +20,6 @@ class ProductoVariacion extends Model
     protected $fillable = [
         'id_producto',
         'vSKU',
-        'vCodigo_barras',
         'vNombre_variacion',
         'dPrecio',
         'dPrecio_oferta',
@@ -88,13 +88,6 @@ class ProductoVariacion extends Model
             if (empty($variacion->tFecha_registro)) {
                 $variacion->tFecha_registro = now();
             }
-            
-            if (empty($variacion->vSKU)) {
-                $producto = $variacion->producto;
-                if ($producto) {
-                    $variacion->vSKU = $producto->vCodigo_barras . '-VAR-' . uniqid();
-                }
-            }
         });
 
         static::updating(function ($variacion) {
@@ -106,38 +99,6 @@ class ProductoVariacion extends Model
             $variacion->atributos()->delete();
             $variacion->favoritos()->delete();
         });
-    }
-
-    // ============ RELACIONES ============
-
-    public function producto()
-    {
-        return $this->belongsTo(Producto::class, 'id_producto');
-    }
-
-    public function productoPadre()
-    {
-        return $this->belongsTo(Producto::class, 'id_producto');
-    }
-
-    public function atributos()
-    {
-        return $this->hasMany(VariacionAtributo::class, 'id_variacion');
-    }
-
-    public function impuesto()
-    {
-        return $this->belongsTo(Impuesto::class, 'id_impuesto');
-    }
-
-    public function imagenesRegistradas()
-    {
-        return $this->hasMany(VariacionImagen::class, 'id_variacion')->orderBy('iOrden');
-    }
-
-    public function favoritos()
-    {
-        return $this->hasMany(Favorito::class, 'id_variacion');
     }
 
     // ============ MÉTODOS DE DESCUENTO ============
@@ -191,6 +152,38 @@ class ProductoVariacion extends Model
     public function tieneDescuento()
     {
         return $this->tieneDescuentoActivo();
+    }
+
+    // ============ RELACIONES ============
+
+    public function producto()
+    {
+        return $this->belongsTo(Producto::class, 'id_producto');
+    }
+
+    public function productoPadre()
+    {
+        return $this->belongsTo(Producto::class, 'id_producto');
+    }
+
+    public function atributos()
+    {
+        return $this->hasMany(VariacionAtributo::class, 'id_variacion');
+    }
+
+    public function impuesto()
+    {
+        return $this->belongsTo(Impuesto::class, 'id_impuesto');
+    }
+
+    public function imagenesRegistradas()
+    {
+        return $this->hasMany(VariacionImagen::class, 'id_variacion')->orderBy('iOrden');
+    }
+
+    public function favoritos()
+    {
+        return $this->hasMany(Favorito::class, 'id_variacion');
     }
 
     // ============ MÉTODOS DE ATRIBUTOS ============
@@ -251,6 +244,9 @@ class ProductoVariacion extends Model
 
     // ============ MÉTODOS PARA GUARDAR Y ELIMINAR IMÁGENES ============
 
+    /**
+     * Guardar imagen principal de la variación
+     */
     public function guardarImagenPrincipal($imagen)
     {
         if (!$this->id_variacion) {
@@ -280,11 +276,14 @@ class ProductoVariacion extends Model
         $this->vImagen = $ruta;
         $this->saveQuietly();
         
-        \Log::info('Imagen principal de variación guardada: ' . $ruta);
+        Log::info('Imagen principal de variación guardada: ' . $ruta . ' para variación ID: ' . $this->id_variacion);
         
         return $imagenRegistrada->url;
     }
 
+    /**
+     * Guardar GIF de la variación
+     */
     public function guardarGif($gif)
     {
         if (!$this->id_variacion) {
@@ -311,48 +310,79 @@ class ProductoVariacion extends Model
             'bActivo' => true
         ]);
         
-        \Log::info('GIF de variación guardado: ' . $ruta);
+        Log::info('GIF de variación guardado: ' . $ruta . ' para variación ID: ' . $this->id_variacion);
         
         return $imagenRegistrada->url;
     }
 
+    /**
+     * Guardar múltiples imágenes adicionales para la variación
+     *
+     * @param array $imagenes Array de objetos UploadedFile
+     * @return array URLs de las imágenes guardadas
+     */
     public function guardarImagenesAdicionales($imagenes)
     {
-        if (!$this->id_variacion) {
-            throw new \Exception('No se puede guardar imágenes sin ID de variación');
+    if (!$this->id_variacion) {
+        throw new \Exception('No se puede guardar imágenes sin ID de variación');
+    }
+    
+    // Validar que sea un array, si no lo es, convertirlo
+    if (!is_array($imagenes)) {
+        $imagenes = [$imagenes];
+    }
+    
+    // Si no hay imágenes, retornar vacío
+    if (empty($imagenes)) {
+        \Log::warning('No hay imágenes para guardar en variación ID: ' . $this->id_variacion);
+        return [];
+    }
+
+    $carpetaBase = 'variaciones/' . $this->id_variacion;
+    $carpetaAdicionales = $carpetaBase . '/adicionales';
+    
+    // Crear la carpeta si no existe
+    if (!Storage::disk('public')->exists($carpetaAdicionales)) {
+        Storage::disk('public')->makeDirectory($carpetaAdicionales);
+        \Log::info('Carpeta creada: ' . $carpetaAdicionales);
+    }
+    
+    // Obtener el último orden de las imágenes adicionales existentes
+    $ultimoOrden = VariacionImagen::where('id_variacion', $this->id_variacion)
+        ->where('eTipo', 'adicional')
+        ->max('iOrden') ?? 0;
+    
+    $orden = $ultimoOrden + 1;
+    $maxImagenes = 7;
+    
+    // Contar cuántas imágenes adicionales ya tiene la variación
+    $totalActual = VariacionImagen::where('id_variacion', $this->id_variacion)
+        ->where('eTipo', 'adicional')
+        ->count();
+    
+    \Log::info('Estado actual - Total imágenes: ' . $totalActual . ', Último orden: ' . $ultimoOrden . ', Nuevas imágenes: ' . count($imagenes));
+    
+    $imagenesGuardadas = [];
+    
+    foreach ($imagenes as $index => $imagen) {
+        // Verificar que el objeto sea válido
+        if (!$imagen || !$imagen->isValid()) {
+            \Log::warning('Archivo de imagen inválido en posición ' . $index . ' para variación ID: ' . $this->id_variacion);
+            continue;
         }
         
-        $carpeta = 'variaciones/' . $this->id_variacion . '/adicionales';
-        
-        if (!Storage::disk('public')->exists($carpeta)) {
-            Storage::disk('public')->makeDirectory($carpeta);
+        // Verificar límite de imágenes
+        if ($totalActual >= $maxImagenes) {
+            \Log::warning('Se alcanzó el límite máximo de ' . $maxImagenes . ' imágenes adicionales para la variación ID: ' . $this->id_variacion);
+            break;
         }
         
-        $ultimoOrden = VariacionImagen::where('id_variacion', $this->id_variacion)
-            ->where('eTipo', 'adicional')
-            ->max('iOrden') ?? 0;
-        
-        $orden = $ultimoOrden + 1;
-        $maxImagenes = 7;
-        
-        $totalActual = VariacionImagen::where('id_variacion', $this->id_variacion)
-            ->where('eTipo', 'adicional')
-            ->count();
-        
-        $imagenesGuardadas = [];
-        
-        if (!is_array($imagenes)) {
-            $imagenes = [$imagenes];
-        }
-        
-        foreach ($imagenes as $imagen) {
-            if ($totalActual >= $maxImagenes) {
-                break;
-            }
-            
+        try {
             $extension = $imagen->getClientOriginalExtension();
             $nombreArchivo = 'imagen_' . $orden . '_' . time() . '_' . uniqid() . '.' . $extension;
-            $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
+            $ruta = $imagen->storeAs($carpetaAdicionales, $nombreArchivo, 'public');
+            
+            \Log::info('Archivo guardado en: ' . $ruta);
             
             $imagenRegistrada = VariacionImagen::create([
                 'id_variacion' => $this->id_variacion,
@@ -365,13 +395,22 @@ class ProductoVariacion extends Model
             $imagenesGuardadas[] = $imagenRegistrada->url;
             $orden++;
             $totalActual++;
+            
+            \Log::info('Imagen adicional guardada: ' . $ruta . ' para variación ID: ' . $this->id_variacion);
+        } catch (\Exception $e) {
+            \Log::error('Error al guardar imagen adicional individual: ' . $e->getMessage() . ' para variación ID: ' . $this->id_variacion);
+            // Continuar con la siguiente imagen
         }
-        
-        \Log::info('Imágenes adicionales de variación guardadas: ' . count($imagenesGuardadas));
-        
-        return $imagenesGuardadas;
     }
+    
+    \Log::info('Proceso completado. Se guardaron ' . count($imagenesGuardadas) . ' de ' . count($imagenes) . ' imágenes para variación ID: ' . $this->id_variacion);
+    
+    return $imagenesGuardadas;
+}
 
+    /**
+     * Eliminar imagen principal de la variación
+     */
     public function eliminarImagenPrincipal()
     {
         $imagenes = VariacionImagen::where('id_variacion', $this->id_variacion)
@@ -388,6 +427,9 @@ class ProductoVariacion extends Model
         }
     }
 
+    /**
+     * Eliminar GIF de la variación
+     */
     public function eliminarGif()
     {
         VariacionImagen::where('id_variacion', $this->id_variacion)
@@ -395,15 +437,43 @@ class ProductoVariacion extends Model
             ->delete();
     }
 
-    public function eliminarImagenesAdicionalesEspecificas($nombresArchivos)
+    /**
+     * Eliminar imágenes adicionales específicas
+     */
+    public function eliminarImagenesAdicionalesEspecificas($imagenesAEliminar)
     {
-        foreach ($nombresArchivos as $nombreArchivo) {
-            VariacionImagen::where('id_variacion', $this->id_variacion)
-                ->where('vRuta', 'like', '%' . $nombreArchivo)
-                ->delete();
+        if (empty($imagenesAEliminar)) {
+            return;
+        }
+
+        // Si es un string JSON, decodificarlo
+        if (is_string($imagenesAEliminar)) {
+            $imagenesAEliminar = json_decode($imagenesAEliminar, true);
+        }
+
+        foreach ($imagenesAEliminar as $item) {
+            // Si tenemos ID de imagen, eliminar por ID
+            if (isset($item['id'])) {
+                $imagen = VariacionImagen::find($item['id']);
+                if ($imagen) {
+                    $imagen->delete();
+                }
+            } 
+            // Si solo tenemos nombre de archivo, buscar por ruta
+            elseif (isset($item['filename'])) {
+                $imagen = VariacionImagen::where('id_variacion', $this->id_variacion)
+                    ->where('vRuta', 'like', '%' . $item['filename'])
+                    ->first();
+                if ($imagen) {
+                    $imagen->delete();
+                }
+            }
         }
     }
 
+    /**
+     * Eliminar todas las imágenes de la variación
+     */
     public function eliminarTodasLasImagenes()
     {
         VariacionImagen::where('id_variacion', $this->id_variacion)->delete();
@@ -415,17 +485,6 @@ class ProductoVariacion extends Model
         
         $this->vImagen = null;
         $this->saveQuietly();
-    }
-
-    public function getNombresArchivosImagenesAdicionales()
-    {
-        return VariacionImagen::where('id_variacion', $this->id_variacion)
-            ->where('eTipo', 'adicional')
-            ->get()
-            ->map(function($img) {
-                return basename($img->vRuta);
-            })
-            ->toArray();
     }
 
     // ============ ACCESORES PARA IMÁGENES ============
@@ -498,6 +557,7 @@ class ProductoVariacion extends Model
     {
         $imagenes = [];
         
+        // Obtener de la relación
         $imagenesAdicionales = $this->imagenesRegistradas()
             ->where('eTipo', 'adicional')
             ->where('bActivo', true)
@@ -508,6 +568,7 @@ class ProductoVariacion extends Model
             $imagenes[] = $img->url;
         }
         
+        // Si no hay en la relación, buscar en la carpeta
         if (empty($imagenes)) {
             $carpetaAdicionales = 'variaciones/' . $this->id_variacion . '/adicionales';
             if (Storage::disk('public')->exists($carpetaAdicionales)) {
@@ -551,19 +612,16 @@ class ProductoVariacion extends Model
 
     public function getPrimeraImagenAttribute()
     {
-        // Primero buscar imagen principal de variación
         $imagenPrincipal = $this->imagen_principal_url;
         if ($imagenPrincipal) {
             return $imagenPrincipal;
         }
         
-        // Si no hay, buscar en imágenes adicionales
         $adicionales = $this->imagenes_adicionales_urls;
         if (!empty($adicionales)) {
             return $adicionales[0];
         }
         
-        // Si no hay, usar imagen del producto padre
         if ($this->productoPadre) {
             return $this->productoPadre->primera_imagen;
         }
@@ -580,7 +638,7 @@ class ProductoVariacion extends Model
 
     public function puedeAgregarMasImagenes()
     {
-        return $this->numero_imagenes < 9;
+        return $this->numero_imagenes < 9; // 1 principal + 1 gif + 7 adicionales = 9 máximo
     }
 
     // ============ MÉTODOS DE FAVORITOS ============

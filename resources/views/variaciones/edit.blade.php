@@ -19,6 +19,12 @@
         </div>
     </div>
 
+    @php
+        // Verificar si la variación tiene descuento activo para mostrar información
+        $tieneDescuentoActivo = $variacion->tieneDescuentoActivo();
+        $porcentajeDescuento = $variacion->porcentaje_descuento;
+    @endphp
+
     <form action="{{ route('variaciones.update', ['producto_id' => $producto->id_producto, 'variacion_id' => $variacion->id_variacion]) }}" 
           method="POST" enctype="multipart/form-data" id="variacionForm">
         @csrf
@@ -32,6 +38,19 @@
                         <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información Básica de la Variación</h5>
                     </div>
                     <div class="card-body">
+                        @if($tieneDescuentoActivo)
+                            <div class="alert alert-success mb-3">
+                                <i class="fas fa-tag me-2"></i>
+                                <strong>¡Esta variación tiene un descuento activo del {{ $porcentajeDescuento }}%!</strong>
+                                @if($variacion->vMotivo_oferta)
+                                    <br><small>Motivo: {{ $variacion->vMotivo_oferta }}</small>
+                                @endif
+                                @if($variacion->dFecha_inicio_oferta && $variacion->dFecha_fin_oferta)
+                                    <br><small>Período: {{ \Carbon\Carbon::parse($variacion->dFecha_inicio_oferta)->format('d/m/Y') }} - {{ \Carbon\Carbon::parse($variacion->dFecha_fin_oferta)->format('d/m/Y') }}</small>
+                                @endif
+                            </div>
+                        @endif
+
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
@@ -43,18 +62,18 @@
                                            id="vSKU" 
                                            class="form-control @error('vSKU') is-invalid @enderror"
                                            value="{{ old('vSKU', $variacion->vSKU) }}" 
-                                           maxlength="22" 
+                                           maxlength="50" 
                                            required
                                            oninput="validarSKU(this)"
                                            pattern="[A-Za-z0-9\-]+"
-                                           title="Solo letras, números y guiones (máximo 22 caracteres)"
+                                           title="Solo letras, números y guiones (máximo 50 caracteres)"
                                            autocomplete="off"
                                            data-original-sku="{{ $variacion->vSKU }}">
                                     @error('vSKU')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                     <small class="form-text text-muted">
-                                        Ej: AGAVE001-ROJO, MEZCAL2024-VERDE (máximo 22 caracteres, solo letras, números y guiones)
+                                        Ej: AGAVE001-ROJO, MEZCAL2024-VERDE (máximo 50 caracteres, solo letras, números y guiones)
                                     </small>
                                 </div>
                             </div>
@@ -72,7 +91,7 @@
                                                name="dPrecio" 
                                                id="dPrecio" 
                                                class="form-control @error('dPrecio') is-invalid @enderror"
-                                               value="{{ old('dPrecio', $variacion->dPrecio) }}" 
+                                               value="{{ old('dPrecio', number_format($variacion->dPrecio, 2, '.', '')) }}" 
                                                required 
                                                oninput="validarPrecio(this); actualizarPrecioFinal();"
                                                placeholder="0.00"
@@ -130,12 +149,12 @@
                             </div>
                         </div>
 
-                        <!-- CAMPOS DE OFERTA -->
+                        <!-- CAMPOS DE OFERTA/DESCUENTO -->
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group mb-3">
                                     <label class="form-label fw-bold">
-                                        <i class="fas fa-percentage me-1"></i>Oferta Especial
+                                        <i class="fas fa-percentage me-1"></i>Oferta/Descuento Especial
                                     </label>
                                     <div class="form-check form-switch">
                                         <input type="checkbox" name="bTiene_oferta" id="bTiene_oferta" 
@@ -143,23 +162,23 @@
                                                {{ old('bTiene_oferta', $variacion->bTiene_oferta) ? 'checked' : '' }}
                                                onchange="toggleOfertaFields()">
                                         <label class="form-check-label" for="bTiene_oferta">
-                                            Activar Oferta para esta variación
+                                            Activar descuento para esta variación
                                         </label>
                                     </div>
                                     <small class="form-text text-muted">
-                                        Permite establecer un precio de oferta por tiempo limitado
+                                        Permite establecer un precio de descuento por tiempo limitado
                                     </small>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- CAMPOS DE OFERTA -->
+                        <!-- CAMPOS DE OFERTA/DESCUENTO (SIEMPRE VISIBLES SEGÚN EL ESTADO GUARDADO) -->
                         <div id="ofertaFields" style="display: {{ old('bTiene_oferta', $variacion->bTiene_oferta) ? 'block' : 'none' }};">
                             <div class="row">
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
                                         <label for="dPrecio_oferta" class="form-label fw-bold">
-                                            Precio de Oferta <span class="text-danger">*</span>
+                                            Precio de descuento <span class="text-danger">*</span>
                                         </label>
                                         <div class="input-group">
                                             <span class="input-group-text">$</span>
@@ -167,7 +186,7 @@
                                                    name="dPrecio_oferta" 
                                                    id="dPrecio_oferta" 
                                                    class="form-control @error('dPrecio_oferta') is-invalid @enderror"
-                                                   value="{{ old('dPrecio_oferta', $variacion->dPrecio_oferta) }}" 
+                                                   value="{{ old('dPrecio_oferta', $variacion->dPrecio_oferta ? number_format($variacion->dPrecio_oferta, 2, '.', '') : '') }}" 
                                                    oninput="validarPrecio(this); validarPrecioOfertaInstantaneo(this); actualizarPrecioFinal();"
                                                    onblur="validarPrecioOferta()"
                                                    placeholder="0.00"
@@ -223,7 +242,7 @@
                                 <div class="col-md-12">
                                     <div class="form-group mb-3">
                                         <label for="vMotivo_oferta" class="form-label fw-bold">
-                                            Motivo de la oferta
+                                            Motivo del descuento
                                         </label>
                                         <input type="text" 
                                                name="vMotivo_oferta" 
@@ -236,6 +255,7 @@
                                         @error('vMotivo_oferta')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
+                                        <small class="form-text text-muted">Opcional: Razón del descuento</small>
                                     </div>
                                 </div>
                             </div>
@@ -438,8 +458,14 @@
                             <div class="col-md-4">
                                 <div class="bg-light p-3 rounded text-center">
                                     <small class="text-muted d-block">Precio con impuesto</small>
-                                    <h5 class="fw-bold mb-0" id="precio-final-display">$0.00</h5>
-                                    <small class="text-muted" id="detalle-impuesto-display"></small>
+                                    <h5 class="fw-bold mb-0" id="precio-final-display">${{ number_format($variacion->precio_final, 2) }}</h5>
+                                    <small class="text-muted" id="detalle-impuesto-display">
+                                        @if($variacion->impuesto)
+                                            {{ $variacion->impuesto->vNombre }}: {{ $variacion->impuesto->dPorcentaje }}%
+                                        @else
+                                            Sin impuesto
+                                        @endif
+                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -456,9 +482,17 @@
                             <div class="col-md-4">
                                 <div class="card bg-white text-dark">
                                     <div class="card-body text-center">
-                                        <h6 class="text-muted">Precio base (con oferta aplicada)</h6>
-                                        <h3 class="fw-bold" id="precio-base-display">$0.00</h3>
-                                        <small class="text-muted" id="precio-original-display" style="display: none;"></small>
+                                        <h6 class="text-muted">Precio base (con descuento aplicado)</h6>
+                                        <h3 class="fw-bold" id="precio-base-display">
+                                            ${{ number_format($variacion->precio_actual, 2) }}
+                                        </h3>
+                                        @if($tieneDescuentoActivo)
+                                            <small class="text-muted" id="precio-original-display">
+                                                Precio original: ${{ number_format($variacion->dPrecio, 2) }}
+                                            </small>
+                                        @else
+                                            <small class="text-muted" id="precio-original-display" style="display: none;"></small>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -466,8 +500,12 @@
                                 <div class="card bg-white text-dark">
                                     <div class="card-body text-center">
                                         <h6 class="text-muted">Impuesto</h6>
-                                        <h3 class="fw-bold" id="total-impuestos-display">$0.00</h3>
-                                        <small id="porcentaje-impuestos-display">0%</small>
+                                        <h3 class="fw-bold" id="total-impuestos-display">
+                                            ${{ number_format($variacion->total_impuesto, 2) }}
+                                        </h3>
+                                        <small id="porcentaje-impuestos-display">
+                                            {{ $variacion->porcentaje_impuesto }}%
+                                        </small>
                                     </div>
                                 </div>
                             </div>
@@ -475,7 +513,9 @@
                                 <div class="card bg-success text-white">
                                     <div class="card-body text-center">
                                         <h6>Precio final (con impuesto)</h6>
-                                        <h2 class="fw-bold" id="precio-final-total-display">$0.00</h2>
+                                        <h2 class="fw-bold" id="precio-final-total-display">
+                                            ${{ number_format($variacion->precio_final, 2) }}
+                                        </h2>
                                         <small>Este es el precio que verá el cliente</small>
                                     </div>
                                 </div>
@@ -511,6 +551,9 @@
                                     <label class="fw-bold mb-2">{{ $nombreAtributo }} <span class="text-danger">*</span></label>
                                     <div class="form-group">
                                         @foreach($valores as $valor)
+                                            @php
+                                                $selected = old('atributos.' . $valor->atributo->id_atributo, $valoresSeleccionados[$valor->atributo->id_atributo] ?? '') == $valor->id_atributo_valor;
+                                            @endphp
                                             <div class="form-check mb-2">
                                                 <input type="radio" 
                                                        name="atributos[{{ $valor->atributo->id_atributo }}]" 
@@ -518,7 +561,7 @@
                                                        value="{{ $valor->id_atributo_valor }}"
                                                        class="form-check-input atributo-radio"
                                                        data-atributo-id="{{ $valor->atributo->id_atributo }}"
-                                                       {{ old('atributos.' . $valor->atributo->id_atributo, $valoresSeleccionados[$valor->atributo->id_atributo] ?? '') == $valor->id_atributo_valor ? 'checked' : '' }}
+                                                       {{ $selected ? 'checked' : '' }}
                                                        required
                                                        autocomplete="off">
                                                 <label class="form-check-label" for="atributo_{{ $valor->atributo->id_atributo }}_{{ $valor->id_atributo_valor }}">
@@ -562,7 +605,7 @@
                             
                             <!-- Imagen actual si existe -->
                             @php
-                                $imagenPrincipalActual = $variacion->imagen_principal;
+                                $imagenPrincipalActual = $variacion->imagen_principal_url;
                             @endphp
                             
                             @if($imagenPrincipalActual)
@@ -680,29 +723,34 @@
                             
                             <!-- Mostrar imágenes adicionales existentes -->
                             @php
-                                $imagenesAdicionales = $variacion->imagenes_adicionales ?? [];
+                                $imagenesAdicionales = $variacion->imagenesRegistradas()
+                                    ->where('eTipo', 'adicional')
+                                    ->orderBy('iOrden')
+                                    ->get();
+                                $totalImagenesActuales = $imagenesAdicionales->count();
                             @endphp
                             
-                            @if(!empty($imagenesAdicionales))
+                            @if($imagenesAdicionales && $imagenesAdicionales->count() > 0)
                                 <div id="existing-images-container" class="mb-3">
-                                    <label class="form-label small text-muted">Imágenes actuales:</label>
-                                    <div class="row g-2">
-                                        @foreach($imagenesAdicionales as $index => $imgUrl)
+                                    <label class="form-label small text-muted">Imágenes actuales ({{ $totalImagenesActuales }}):</label>
+                                    <div class="row g-2" id="existing-images-grid">
+                                        @foreach($imagenesAdicionales as $index => $imagen)
                                             @php
-                                                $nombreArchivo = basename($imgUrl);
+                                                $nombreArchivo = basename($imagen->vRuta);
                                             @endphp
-                                            <div class="col-6 col-md-4 mb-2 existing-image-item" data-index="{{ $index }}" data-filename="{{ $nombreArchivo }}">
+                                            <div class="col-6 col-md-4 mb-2 existing-image-item" data-id="{{ $imagen->id_variacion_imagen }}" data-filename="{{ $nombreArchivo }}">
                                                 <div class="card border position-relative">
                                                     <button type="button" 
                                                             class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1"
                                                             style="width: 24px; height: 24px; padding: 0; border-radius: 50%; z-index: 10;"
-                                                            onclick="marcarImagenParaEliminar(this, '{{ $nombreArchivo }}')">
+                                                            onclick="marcarImagenParaEliminar(this, '{{ $imagen->id_variacion_imagen }}', '{{ $nombreArchivo }}')">
                                                         <i class="fas fa-times"></i>
                                                     </button>
-                                                    <img src="{{ $imgUrl }}" 
+                                                    <img src="{{ $imagen->url }}" 
                                                          class="card-img-top" 
                                                          style="height: 80px; object-fit: contain; background: #f8f9fa; padding: 4px;"
-                                                         alt="Imagen adicional {{ $index + 1 }}">
+                                                         alt="Imagen adicional {{ $index + 1 }}"
+                                                         onerror="this.onerror=null; this.src='https://via.placeholder.com/80x80?text=Error';">
                                                     <div class="card-body p-1 text-center">
                                                         <small class="text-muted d-block" style="font-size: 10px;">Imagen {{ $index + 1 }}</small>
                                                     </div>
@@ -711,7 +759,6 @@
                                         @endforeach
                                     </div>
                                 </div>
-                                <input type="hidden" name="imagenes_a_eliminar" id="imagenes_a_eliminar" value="">
                             @endif
                             
                             <input type="file" name="imagenes_adicionales[]" id="imagenes_adicionales" 
@@ -725,9 +772,17 @@
                                 Formatos: JPG, JPEG, PNG, WEBP. Máximo 5MB por imagen.
                                 Puedes seleccionar hasta 7 imágenes adicionales.
                             </small>
-                            <div class="mt-2">
-                                <span class="badge bg-info" id="selected-images-count">0 archivos nuevos</span>
+                            <div class="mt-2 d-flex justify-content-between align-items-center">
+                                <span class="badge bg-info" id="selected-images-count">
+                                    {{ $totalImagenesActuales }} imágenes actuales + <span id="new-images-count">0</span> nuevas
+                                </span>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="limpiarTodasLasImagenes()" id="btn-limpiar-imagenes" style="display: none;">
+                                    <i class="fas fa-trash me-1"></i>Limpiar nuevas
+                                </button>
                             </div>
+                            
+                            <!-- Input oculto para almacenar los IDs de imágenes a eliminar -->
+                            <input type="hidden" name="imagenes_a_eliminar" id="imagenes_a_eliminar" value="">
                         </div>
                         
                         <!-- Galería de nuevas imágenes adicionales seleccionadas -->
@@ -918,7 +973,7 @@ let imagenPrincipalFile = null;
 let gifFile = null;
 let selectedImages = [];
 let imageCounter = 0;
-let imagenesAEliminar = [];
+let imagenesAEliminar = []; // Array para almacenar objetos con id y filename a eliminar
 
 // ==================== VALIDACIONES ====================
 
@@ -1081,7 +1136,7 @@ function validarPrecioOfertaInstantaneo(input) {
     if (precioOferta >= precioVenta && precioOferta > 0 && input.value !== '') {
         input.classList.add('is-invalid');
         errorDiv.style.display = 'block';
-        errorDiv.textContent = 'El precio de oferta debe ser menor que el precio de venta';
+        errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
         return false;
     } else {
         input.classList.remove('is-invalid');
@@ -1102,7 +1157,7 @@ function validarPrecioOferta() {
     if (precioOferta >= precioVenta && precioOferta > 0) {
         input.classList.add('is-invalid');
         errorDiv.style.display = 'block';
-        errorDiv.textContent = 'El precio de oferta debe ser menor que el precio de venta';
+        errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
         return false;
     } else {
         input.classList.remove('is-invalid');
@@ -1423,7 +1478,7 @@ function permitirBorrado(e) {
     return false;
 }
 
-// ==================== FUNCIONES PARA OFERTA ====================
+// ==================== FUNCIONES PARA OFERTA/DESCUENTO ====================
 
 function toggleOfertaFields() {
     const ofertaFields = document.getElementById('ofertaFields');
@@ -1467,7 +1522,7 @@ function actualizarPrecioFinal() {
     
     if (!precioInput) return;
     
-    // Determinar qué precio usar (original o con oferta)
+    // Determinar qué precio usar (original o con descuento)
     let precioBase = parseFloat(precioInput.value) || 0;
     let precioOriginal = precioBase;
     
@@ -1481,7 +1536,7 @@ function actualizarPrecioFinal() {
     // Mostrar precio base
     document.getElementById('precio-base-display').textContent = '$' + precioBase.toFixed(2);
     
-    // Mostrar precio original si hay oferta
+    // Mostrar precio original si hay descuento
     const precioOriginalDisplay = document.getElementById('precio-original-display');
     if (tieneOferta && precioBase < precioOriginal) {
         precioOriginalDisplay.style.display = 'block';
@@ -1676,33 +1731,63 @@ function eliminarGif() {
     });
 }
 
-function marcarImagenParaEliminar(btn, nombreArchivo) {
+function marcarImagenParaEliminar(btn, imagenId, nombreArchivo) {
     const container = btn.closest('.existing-image-item');
     
     if (container.classList.contains('marcado-eliminar')) {
         // Desmarcar
         container.classList.remove('marcado-eliminar');
-        const idx = imagenesAEliminar.indexOf(nombreArchivo);
-        if (idx > -1) {
-            imagenesAEliminar.splice(idx, 1);
+        
+        // Eliminar de imagenesAEliminar
+        if (imagenId) {
+            const idx = imagenesAEliminar.findIndex(item => item.id === imagenId);
+            if (idx > -1) {
+                imagenesAEliminar.splice(idx, 1);
+            }
+        } else if (nombreArchivo) {
+            const idx = imagenesAEliminar.findIndex(item => item.filename === nombreArchivo);
+            if (idx > -1) {
+                imagenesAEliminar.splice(idx, 1);
+            }
         }
     } else {
         // Marcar
         container.classList.add('marcado-eliminar');
-        if (!imagenesAEliminar.includes(nombreArchivo)) {
-            imagenesAEliminar.push(nombreArchivo);
+        
+        // Agregar a imagenesAEliminar
+        if (imagenId) {
+            if (!imagenesAEliminar.some(item => item.id === imagenId)) {
+                imagenesAEliminar.push({ id: imagenId, filename: nombreArchivo });
+            }
+        } else if (nombreArchivo) {
+            if (!imagenesAEliminar.some(item => item.filename === nombreArchivo)) {
+                imagenesAEliminar.push({ filename: nombreArchivo });
+            }
         }
     }
     
+    // Actualizar el input oculto con los datos a eliminar
     document.getElementById('imagenes_a_eliminar').value = JSON.stringify(imagenesAEliminar);
+    
+    console.log('Imágenes marcadas para eliminar:', imagenesAEliminar);
 }
 
 function handleImageSelection(event) {
     const files = event.target.files;
+    
+    // Si no hay archivos seleccionados (usuario canceló), NO hacer nada
+    if (!files || files.length === 0) {
+        console.log('Usuario canceló la selección de imágenes - no se realizan cambios');
+        // Limpiar el input para que no quede con referencia a archivos no seleccionados
+        event.target.value = '';
+        return;
+    }
+    
     const maxFiles = 7;
     const currentCount = selectedImages.length;
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     
+    // Verificar límite total
     if (currentCount + files.length > maxFiles) {
         Swal.fire({
             icon: 'warning',
@@ -1714,47 +1799,71 @@ function handleImageSelection(event) {
     }
     
     let archivosAgregados = 0;
+    let archivosRechazados = [];
+    
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         
+        // Validar formato
         if (!validTypes.includes(file.type)) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Formato no válido',
-                text: `El archivo "${file.name}" no es un formato válido. Formatos aceptados: JPG, JPEG, PNG, WEBP.`
-            });
+            archivosRechazados.push(`"${file.name}" (formato no válido)`);
             continue;
         }
         
+        // Validar tamaño
         if (file.size > 5 * 1024 * 1024) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Archivo demasiado grande',
-                text: `La imagen "${file.name}" excede el límite de 5MB.`
-            });
+            archivosRechazados.push(`"${file.name}" (excede 5MB)`);
             continue;
         }
         
-        if (!isImageDuplicate(file)) {
-            const imageId = 'img_' + Date.now() + '_' + imageCounter++;
-            const preview = URL.createObjectURL(file);
-            
-            selectedImages.push({
-                id: imageId,
-                file: file,
-                preview: preview,
-                name: file.name,
-                size: file.size
-            });
-            archivosAgregados++;
+        // Verificar duplicados
+        if (isImageDuplicate(file)) {
+            archivosRechazados.push(`"${file.name}" (archivo duplicado)`);
+            continue;
         }
+        
+        // Si pasa todas las validaciones, agregarlo
+        const imageId = 'img_' + Date.now() + '_' + imageCounter++;
+        const preview = URL.createObjectURL(file);
+        
+        selectedImages.push({
+            id: imageId,
+            file: file,
+            preview: preview,
+            name: file.name,
+            size: file.size
+        });
+        archivosAgregados++;
     }
     
+    // Mostrar mensaje de archivos rechazados si los hay
+    if (archivosRechazados.length > 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Algunos archivos no se pudieron agregar',
+            html: `<ul style="text-align: left;">${archivosRechazados.map(msg => `<li>${msg}</li>`).join('')}</ul>`,
+            confirmButtonText: 'Entendido'
+        });
+    }
+    
+    // Si se agregaron archivos, actualizar la interfaz
     if (archivosAgregados > 0) {
-        document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos nuevos';
+        const totalImagenesActuales = {{ $totalImagenesActuales ?? 0 }};
+        document.getElementById('new-images-count').textContent = selectedImages.length;
+        document.getElementById('selected-images-count').innerHTML = 
+            `${totalImagenesActuales} imágenes actuales + <span id="new-images-count">${selectedImages.length}</span> nuevas`;
         renderSelectedImages();
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Imágenes agregadas',
+            text: `Se agregaron ${archivosAgregados} imagen(es) correctamente. Total nuevas: ${selectedImages.length}`,
+            timer: 2000,
+            showConfirmButton: false
+        });
     }
     
+    // IMPORTANTE: Limpiar el input para permitir seleccionar los mismos archivos nuevamente si es necesario
     event.target.value = '';
 }
 
@@ -1767,30 +1876,65 @@ function isImageDuplicate(newFile) {
 }
 
 function removeSelectedImage(imageId) {
-    const image = selectedImages.find(img => img.id === imageId);
-    if (image && image.preview) {
-        URL.revokeObjectURL(image.preview);
-    }
-    selectedImages = selectedImages.filter(img => img.id !== imageId);
-    
-    document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos nuevos';
-    renderSelectedImages();
+    // Mostrar confirmación antes de eliminar
+    Swal.fire({
+        title: '¿Eliminar imagen?',
+        text: 'Esta acción eliminará la imagen de la selección actual.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const image = selectedImages.find(img => img.id === imageId);
+            if (image && image.preview) {
+                URL.revokeObjectURL(image.preview);
+            }
+            selectedImages = selectedImages.filter(img => img.id !== imageId);
+            
+            const totalImagenesActuales = {{ $totalImagenesActuales ?? 0 }};
+            document.getElementById('new-images-count').textContent = selectedImages.length;
+            document.getElementById('selected-images-count').innerHTML = 
+                `${totalImagenesActuales} imágenes actuales + <span id="new-images-count">${selectedImages.length}</span> nuevas`;
+            renderSelectedImages();
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Imagen eliminada',
+                text: 'La imagen se ha eliminado de la selección.',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        }
+    });
 }
 
 function renderSelectedImages() {
     const container = document.getElementById('selected-images-container');
     const noMsg = document.getElementById('no-imagenes-msg');
+    const btnLimpiar = document.getElementById('btn-limpiar-imagenes');
     
     if (!container) return;
     
     container.innerHTML = '';
     
     if (selectedImages.length === 0) {
-        if (noMsg) noMsg.style.display = 'block';
+        if (noMsg) {
+            noMsg.style.display = 'block';
+            noMsg.innerHTML = '<i class="fas fa-info-circle me-1"></i><small>No hay nuevas imágenes seleccionadas</small>';
+        }
+        if (btnLimpiar) {
+            btnLimpiar.style.display = 'none';
+        }
         return;
     }
     
     if (noMsg) noMsg.style.display = 'none';
+    if (btnLimpiar) {
+        btnLimpiar.style.display = 'inline-block';
+    }
     
     selectedImages.forEach((image, index) => {
         const col = document.createElement('div');
@@ -1805,6 +1949,7 @@ function renderSelectedImages() {
         btn.style.cssText = 'width: 24px; height: 24px; padding: 0; border-radius: 50%; z-index: 10;';
         btn.onclick = function(e) { 
             e.preventDefault();
+            e.stopPropagation();
             removeSelectedImage(image.id); 
         };
         
@@ -1851,6 +1996,121 @@ function renderSelectedImages() {
     });
 }
 
+// Función para limpiar todas las imágenes seleccionadas
+function limpiarTodasLasImagenes() {
+    if (selectedImages.length === 0) return;
+    
+    Swal.fire({
+        title: '¿Limpiar todas las imágenes nuevas?',
+        text: 'Esta acción eliminará todas las imágenes adicionales recién seleccionadas.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, limpiar todo',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Liberar objetos URL
+            selectedImages.forEach(img => {
+                if (img.preview) URL.revokeObjectURL(img.preview);
+            });
+            
+            selectedImages = [];
+            const totalImagenesActuales = {{ $totalImagenesActuales ?? 0 }};
+            document.getElementById('new-images-count').textContent = '0';
+            document.getElementById('selected-images-count').innerHTML = 
+                `${totalImagenesActuales} imágenes actuales + <span id="new-images-count">0</span> nuevas`;
+            renderSelectedImages();
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Imágenes limpiadas',
+                text: 'Todas las imágenes nuevas han sido eliminadas.',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        }
+    });
+}
+
+// ============ NUEVA FUNCIÓN PARA PREPARAR EL FORMULARIO ANTES DE ENVIAR ============
+
+function prepararFormularioParaEnvio(event) {
+    event.preventDefault();
+    
+    const form = document.getElementById('variacionForm');
+    const formData = new FormData(form);
+    
+    // Agregar método PUT para Laravel
+    formData.append('_method', 'PUT');
+    
+    // Limpiar cualquier campo de archivo existente para evitar duplicados
+    const fileInputs = form.querySelectorAll('input[type="file"][name^="imagenes_adicionales"]');
+    fileInputs.forEach(input => {
+        formData.delete(input.name);
+    });
+    
+    // Agregar las imágenes adicionales seleccionadas al FormData
+    selectedImages.forEach((image, index) => {
+        formData.append(`imagenes_adicionales[${index}]`, image.file);
+    });
+    
+    // También asegurar que la imagen principal y GIF se envíen
+    if (imagenPrincipalFile) {
+        formData.set('imagen_principal', imagenPrincipalFile);
+    }
+    
+    if (gifFile) {
+        formData.set('gif', gifFile);
+    }
+    
+    // Agregar las imágenes a eliminar
+    if (imagenesAEliminar.length > 0) {
+        formData.set('imagenes_a_eliminar', JSON.stringify(imagenesAEliminar));
+    }
+    
+    // Verificar qué se está enviando (para depuración)
+    console.log('Enviando formulario con:');
+    console.log('- Imagen principal:', imagenPrincipalFile ? imagenPrincipalFile.name : 'ninguna');
+    console.log('- GIF:', gifFile ? gifFile.name : 'ninguno');
+    console.log('- Imágenes adicionales nuevas:', selectedImages.length);
+    console.log('- Imágenes a eliminar:', imagenesAEliminar.length);
+    
+    // Enviar el formulario con fetch
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+        }
+    })
+    .then(response => {
+        if (response.redirected) {
+            window.location.href = response.url;
+        } else if (response.ok) {
+            return response.text();
+        } else {
+            throw new Error('Error en la respuesta del servidor');
+        }
+    })
+    .then(data => {
+        if (data && data.includes('variaciones.show')) {
+            window.location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Hubo un problema al enviar el formulario. Por favor intenta de nuevo.'
+        });
+    });
+    
+    return false;
+}
+
 // ==================== VALIDACIÓN DEL FORMULARIO ====================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -1868,6 +2128,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Event listeners para calcular precio final cuando cambian los valores
     document.getElementById('dPrecio').addEventListener('input', actualizarPrecioFinal);
+    document.getElementById('dPrecio_oferta').addEventListener('input', actualizarPrecioFinal);
     document.getElementById('id_impuesto').addEventListener('change', actualizarPrecioFinal);
     
     // Validación en tiempo real de atributos
@@ -1889,7 +2150,7 @@ document.addEventListener('DOMContentLoaded', function() {
         element.setAttribute('autocomplete', 'off');
     });
     
-    // Validación del formulario al enviar
+    // Reemplazar el envío normal del formulario con nuestra función personalizada
     const form = document.getElementById('variacionForm');
     if (form) {
         form.addEventListener('submit', function(e) {
@@ -1970,7 +2231,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 return false;
             }
             
-            return true;
+            // Si no hay errores, usar nuestra función personalizada para enviar
+            e.preventDefault();
+            prepararFormularioParaEnvio(e);
+            
+            return false;
         });
     }
 });

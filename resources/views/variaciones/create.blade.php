@@ -623,8 +623,11 @@
                                 Formatos: JPG, JPEG, PNG, WEBP. Máximo 5MB por imagen.
                                 Puedes seleccionar hasta 7 imágenes adicionales.
                             </small>
-                            <div class="mt-2">
+                            <div class="mt-2 d-flex justify-content-between align-items-center">
                                 <span class="badge bg-info" id="selected-images-count">0 archivos</span>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="limpiarTodasLasImagenes()" id="btn-limpiar-imagenes" style="display: none;">
+                                    <i class="fas fa-trash me-1"></i>Limpiar todas
+                                </button>
                             </div>
                         </div>
                         
@@ -1425,9 +1428,6 @@ function previewImagenPrincipal(input) {
         }
         
         reader.readAsDataURL(input.files[0]);
-    } else {
-        previewContainer.style.display = 'none';
-        imagenPrincipalFile = null;
     }
 }
 
@@ -1491,12 +1491,24 @@ function cancelarGif() {
     gifFile = null;
 }
 
+// ============ FUNCIÓN PARA MANEJO DE IMÁGENES ADICIONALES ============
+
 function handleImageSelection(event) {
     const files = event.target.files;
+    
+    // Si no hay archivos seleccionados (usuario canceló), NO hacer nada
+    if (!files || files.length === 0) {
+        console.log('Usuario canceló la selección de imágenes - no se realizan cambios');
+        // Limpiar el input para que no quede con referencia a archivos no seleccionados
+        event.target.value = '';
+        return;
+    }
+    
     const maxFiles = 7;
     const currentCount = selectedImages.length;
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     
+    // Verificar límite total
     if (currentCount + files.length > maxFiles) {
         Swal.fire({
             icon: 'warning',
@@ -1508,47 +1520,68 @@ function handleImageSelection(event) {
     }
     
     let archivosAgregados = 0;
+    let archivosRechazados = [];
+    
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         
+        // Validar formato
         if (!validTypes.includes(file.type)) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Formato no válido',
-                text: `El archivo "${file.name}" no es un formato válido. Formatos aceptados: JPG, JPEG, PNG, WEBP.`
-            });
+            archivosRechazados.push(`"${file.name}" (formato no válido)`);
             continue;
         }
         
+        // Validar tamaño
         if (file.size > 5 * 1024 * 1024) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Archivo demasiado grande',
-                text: `La imagen "${file.name}" excede el límite de 5MB.`
-            });
+            archivosRechazados.push(`"${file.name}" (excede 5MB)`);
             continue;
         }
         
-        if (!isImageDuplicate(file)) {
-            const imageId = 'img_' + Date.now() + '_' + imageCounter++;
-            const preview = URL.createObjectURL(file);
-            
-            selectedImages.push({
-                id: imageId,
-                file: file,
-                preview: preview,
-                name: file.name,
-                size: file.size
-            });
-            archivosAgregados++;
+        // Verificar duplicados
+        if (isImageDuplicate(file)) {
+            archivosRechazados.push(`"${file.name}" (archivo duplicado)`);
+            continue;
         }
+        
+        // Si pasa todas las validaciones, agregarlo
+        const imageId = 'img_' + Date.now() + '_' + imageCounter++;
+        const preview = URL.createObjectURL(file);
+        
+        selectedImages.push({
+            id: imageId,
+            file: file,
+            preview: preview,
+            name: file.name,
+            size: file.size
+        });
+        archivosAgregados++;
     }
     
+    // Mostrar mensaje de archivos rechazados si los hay
+    if (archivosRechazados.length > 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Algunos archivos no se pudieron agregar',
+            html: `<ul style="text-align: left;">${archivosRechazados.map(msg => `<li>${msg}</li>`).join('')}</ul>`,
+            confirmButtonText: 'Entendido'
+        });
+    }
+    
+    // Si se agregaron archivos, actualizar la interfaz
     if (archivosAgregados > 0) {
         document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
         renderSelectedImages();
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Imágenes agregadas',
+            text: `Se agregaron ${archivosAgregados} imagen(es) correctamente. Total: ${selectedImages.length}`,
+            timer: 2000,
+            showConfirmButton: false
+        });
     }
     
+    // IMPORTANTE: Limpiar el input para permitir seleccionar los mismos archivos nuevamente si es necesario
     event.target.value = '';
 }
 
@@ -1561,30 +1594,63 @@ function isImageDuplicate(newFile) {
 }
 
 function removeSelectedImage(imageId) {
-    const image = selectedImages.find(img => img.id === imageId);
-    if (image && image.preview) {
-        URL.revokeObjectURL(image.preview);
-    }
-    selectedImages = selectedImages.filter(img => img.id !== imageId);
-    
-    document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
-    renderSelectedImages();
+    // Mostrar confirmación antes de eliminar
+    Swal.fire({
+        title: '¿Eliminar imagen?',
+        text: 'Esta acción eliminará la imagen de la selección actual.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const image = selectedImages.find(img => img.id === imageId);
+            if (image && image.preview) {
+                URL.revokeObjectURL(image.preview);
+            }
+            selectedImages = selectedImages.filter(img => img.id !== imageId);
+            
+            const count = selectedImages.length;
+            document.getElementById('selected-images-count').textContent = count + ' archivos';
+            renderSelectedImages();
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Imagen eliminada',
+                text: 'La imagen se ha eliminado de la selección.',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        }
+    });
 }
 
 function renderSelectedImages() {
     const container = document.getElementById('selected-images-container');
     const noMsg = document.getElementById('no-imagenes-msg');
+    const btnLimpiar = document.getElementById('btn-limpiar-imagenes');
     
     if (!container) return;
     
     container.innerHTML = '';
     
     if (selectedImages.length === 0) {
-        if (noMsg) noMsg.style.display = 'block';
+        if (noMsg) {
+            noMsg.style.display = 'block';
+            noMsg.innerHTML = '<i class="fas fa-info-circle me-1"></i><small>No hay imágenes adicionales seleccionadas</small>';
+        }
+        if (btnLimpiar) {
+            btnLimpiar.style.display = 'none';
+        }
         return;
     }
     
     if (noMsg) noMsg.style.display = 'none';
+    if (btnLimpiar) {
+        btnLimpiar.style.display = 'inline-block';
+    }
     
     selectedImages.forEach((image, index) => {
         const col = document.createElement('div');
@@ -1599,6 +1665,7 @@ function renderSelectedImages() {
         btn.style.cssText = 'width: 24px; height: 24px; padding: 0; border-radius: 50%; z-index: 10;';
         btn.onclick = function(e) { 
             e.preventDefault();
+            e.stopPropagation();
             removeSelectedImage(image.id); 
         };
         
@@ -1645,6 +1712,109 @@ function renderSelectedImages() {
     });
 }
 
+// Función para limpiar todas las imágenes seleccionadas
+function limpiarTodasLasImagenes() {
+    if (selectedImages.length === 0) return;
+    
+    Swal.fire({
+        title: '¿Limpiar todas las imágenes?',
+        text: 'Esta acción eliminará todas las imágenes adicionales seleccionadas.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, limpiar todo',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Liberar objetos URL
+            selectedImages.forEach(img => {
+                if (img.preview) URL.revokeObjectURL(img.preview);
+            });
+            
+            selectedImages = [];
+            document.getElementById('selected-images-count').textContent = '0 archivos';
+            renderSelectedImages();
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Imágenes limpiadas',
+                text: 'Todas las imágenes adicionales han sido eliminadas.',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        }
+    });
+}
+
+// ============ NUEVA FUNCIÓN PARA PREPARAR EL FORMULARIO ANTES DE ENVIAR ============
+
+function prepararFormularioParaEnvio(event) {
+    event.preventDefault();
+    
+    const form = document.getElementById('variacionForm');
+    const formData = new FormData(form);
+    
+    // Limpiar cualquier campo de archivo existente para evitar duplicados
+    const fileInputs = form.querySelectorAll('input[type="file"][name^="imagenes_adicionales"]');
+    fileInputs.forEach(input => {
+        formData.delete(input.name);
+    });
+    
+    // Agregar las imágenes adicionales seleccionadas al FormData
+    selectedImages.forEach((image, index) => {
+        formData.append(`imagenes_adicionales[${index}]`, image.file);
+    });
+    
+    // También asegurar que la imagen principal y GIF se envíen
+    if (imagenPrincipalFile) {
+        formData.set('imagen_principal', imagenPrincipalFile);
+    }
+    
+    if (gifFile) {
+        formData.set('gif', gifFile);
+    }
+    
+    // Verificar qué se está enviando (para depuración)
+    console.log('Enviando formulario con:');
+    console.log('- Imagen principal:', imagenPrincipalFile ? imagenPrincipalFile.name : 'ninguna');
+    console.log('- GIF:', gifFile ? gifFile.name : 'ninguno');
+    console.log('- Imágenes adicionales:', selectedImages.length);
+    
+    // Enviar el formulario con fetch
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+        }
+    })
+    .then(response => {
+        if (response.redirected) {
+            window.location.href = response.url;
+        } else if (response.ok) {
+            return response.text();
+        } else {
+            throw new Error('Error en la respuesta del servidor');
+        }
+    })
+    .then(data => {
+        if (data && data.includes('variaciones.show')) {
+            window.location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Hubo un problema al enviar el formulario. Por favor intenta de nuevo.'
+        });
+    });
+    
+    return false;
+}
+
 // ==================== VALIDACIÓN DEL FORMULARIO ====================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -1679,7 +1849,7 @@ document.addEventListener('DOMContentLoaded', function() {
         element.setAttribute('autocomplete', 'off');
     });
     
-    // Validación del formulario al enviar
+    // Reemplazar el envío normal del formulario con nuestra función personalizada
     const form = document.getElementById('variacionForm');
     if (form) {
         form.addEventListener('submit', function(e) {
@@ -1755,7 +1925,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 return false;
             }
             
-            return true;
+            // Si no hay errores, usar nuestra función personalizada para enviar
+            e.preventDefault();
+            prepararFormularioParaEnvio(e);
+            
+            return false;
         });
     }
 });

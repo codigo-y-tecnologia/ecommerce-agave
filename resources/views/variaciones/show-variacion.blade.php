@@ -66,19 +66,29 @@
         // --- DATOS DE LA VARIACIÓN ---
         $imagenesVariacion = $variacion->imagenes ?? [];
         
-        // Calcular si la variación tiene oferta vigente
-        $variacionTieneOferta = $variacion->ofertaVigente();
-        $precioBaseVariacion = $variacionTieneOferta ? $variacion->dPrecio_oferta : $variacion->dPrecio;
+        // Calcular si la variación tiene descuento activo
+        $variacionTieneDescuento = $variacion->tieneDescuentoActivo();
+        $precioBaseVariacion = $variacionTieneDescuento ? $variacion->dPrecio_oferta : $variacion->dPrecio;
+        $porcentajeDescuento = $variacion->porcentaje_descuento;
         
         // Calcular impuestos de la variación
         $impuestoVariacion = $variacion->impuesto ?? $producto->impuestos->first();
         $totalImpuestosVariacion = 0;
         $detalleImpuestosVariacion = [];
+        $montoImpuesto = 0;
         
         if ($impuestoVariacion) {
             $montoImpuesto = $precioBaseVariacion * ($impuestoVariacion->dPorcentaje / 100);
             $totalImpuestosVariacion = $montoImpuesto;
             $detalleImpuestosVariacion[] = $impuestoVariacion->vNombre . ': $' . number_format($montoImpuesto, 2);
+        }
+
+        // Calcular ahorro total si hay descuento
+        $ahorroTotal = 0;
+        if ($variacionTieneDescuento && $variacion->dPrecio_oferta < $variacion->dPrecio) {
+            $precioOriginalConImpuestos = $variacion->dPrecio + ($impuestoVariacion ? $variacion->dPrecio * ($impuestoVariacion->dPorcentaje / 100) : 0);
+            $precioActualConImpuestos = $precioBaseVariacion + $totalImpuestosVariacion;
+            $ahorroTotal = $precioOriginalConImpuestos - $precioActualConImpuestos;
         }
 
         // Atributos de la variación
@@ -141,6 +151,13 @@
                             @if($variacion->bActivo)
                                 <span class="position-absolute top-0 start-0 badge bg-success mt-2 ms-2 px-3 py-2" style="z-index: 15;">
                                     <i class="fas fa-check-circle me-1"></i>Activo
+                                </span>
+                            @endif
+
+                            <!-- Badge de descuento en la imagen -->
+                            @if($variacionTieneDescuento && $variacion->dPrecio_oferta < $variacion->dPrecio)
+                                <span class="position-absolute top-0 end-0 badge bg-danger mt-2 me-2 px-3 py-2" style="z-index: 15; font-size: 14px;">
+                                    <i class="fas fa-tag me-1"></i>-{{ $porcentajeDescuento }}%
                                 </span>
                             @endif
 
@@ -231,6 +248,30 @@
                             </div>
                         </div>
                     @endif
+                    
+                    <!-- Resumen rápido del descuento -->
+                    @if($variacionTieneDescuento && $variacion->dPrecio_oferta < $variacion->dPrecio)
+                        <div class="mt-3 pt-3 border-top">
+                            <div class="alert alert-success mb-0">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <i class="fas fa-tag fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <strong class="text-success">¡DESCUENTO ACTIVO!</strong>
+                                        <div class="d-flex align-items-center gap-2 mt-1">
+                                            <span class="text-decoration-line-through text-muted">${{ number_format($variacion->dPrecio, 2) }}</span>
+                                            <span class="fw-bold text-danger fs-5">${{ number_format($variacion->dPrecio_oferta, 2) }}</span>
+                                            <span class="badge bg-danger">-{{ $porcentajeDescuento }}%</span>
+                                        </div>
+                                        @if($variacion->vMotivo_oferta)
+                                            <small class="d-block mt-1"><i class="fas fa-comment me-1"></i>{{ $variacion->vMotivo_oferta }}</small>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -259,23 +300,27 @@
                                 <tr>
                                     <td class="py-3 px-3">
                                         <strong>Precio de venta</strong>
-                                        @if($variacionTieneOferta)
-                                            <span class="badge bg-danger ms-2">Oferta activa</span>
+                                        @if($variacionTieneDescuento)
+                                            <span class="badge bg-danger ms-2">
+                                                <i class="fas fa-tag me-1"></i>{{ $porcentajeDescuento }}% DESCUENTO
+                                            </span>
                                         @endif
                                     </td>
                                     <td class="py-3 px-3">
-                                        @if($variacionTieneOferta && $variacion->dPrecio_oferta < $variacion->dPrecio)
-                                            <span class="text-decoration-line-through text-muted me-2">
-                                                ${{ number_format($variacion->dPrecio, 2) }}
-                                            </span>
-                                            <span class="fw-bold text-danger">
-                                                ${{ number_format($variacion->dPrecio_oferta, 2) }}
-                                            </span>
-                                            <span class="badge bg-danger ms-2">
-                                                -{{ round((($variacion->dPrecio - $variacion->dPrecio_oferta) / $variacion->dPrecio) * 100) }}%
-                                            </span>
+                                        @if($variacionTieneDescuento && $variacion->dPrecio_oferta < $variacion->dPrecio)
+                                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                                <span class="text-decoration-line-through text-muted">
+                                                    ${{ number_format($variacion->dPrecio, 2) }}
+                                                </span>
+                                                <span class="fw-bold text-danger fs-5">
+                                                    ${{ number_format($variacion->dPrecio_oferta, 2) }}
+                                                </span>
+                                                <span class="badge bg-danger">
+                                                    -{{ $porcentajeDescuento }}%
+                                                </span>
+                                            </div>
                                         @else
-                                            <span class="fw-bold">${{ number_format($variacion->dPrecio, 2) }}</span>
+                                            <span class="fw-bold fs-5">${{ number_format($variacion->dPrecio, 2) }}</span>
                                         @endif
                                     </td>
                                     <td class="py-3 px-3">
@@ -285,32 +330,40 @@
                                         @endif
                                     </td>
                                 </tr>
-                                @if($variacionTieneOferta && $variacion->vMotivo_oferta)
-                                <tr>
-                                    <td class="py-3 px-3" colspan="3">
-                                        <small class="text-muted">
-                                            <i class="fas fa-comment me-1"></i>Motivo de la oferta: {{ $variacion->vMotivo_oferta }}
-                                        </small>
-                                    </td>
-                                </tr>
+                                
+                                <!-- Información del descuento -->
+                                @if($variacionTieneDescuento)
+                                    @if($variacion->vMotivo_oferta)
+                                    <tr>
+                                        <td class="py-3 px-3" colspan="3">
+                                            <div class="alert alert-info mb-0 py-2">
+                                                <i class="fas fa-comment me-2"></i>
+                                                <strong>Motivo del descuento:</strong> {{ $variacion->vMotivo_oferta }}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    @endif
+                                    
+                                    @if($variacion->dFecha_inicio_oferta && $variacion->dFecha_fin_oferta)
+                                    <tr>
+                                        <td class="py-3 px-3" colspan="3">
+                                            <div class="alert alert-warning mb-0 py-2">
+                                                <i class="fas fa-calendar-alt me-2"></i>
+                                                <strong>Período de descuento:</strong> 
+                                                {{ \Carbon\Carbon::parse($variacion->dFecha_inicio_oferta)->format('d/m/Y') }} - 
+                                                {{ \Carbon\Carbon::parse($variacion->dFecha_fin_oferta)->format('d/m/Y') }}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    @endif
                                 @endif
-                                @if($variacionTieneOferta && $variacion->dFecha_inicio_oferta && $variacion->dFecha_fin_oferta)
-                                <tr>
-                                    <td class="py-3 px-3" colspan="3">
-                                        <small class="text-muted">
-                                            <i class="fas fa-calendar-alt me-1"></i>Periodo de oferta: 
-                                            {{ \Carbon\Carbon::parse($variacion->dFecha_inicio_oferta)->format('d/m/Y') }} - 
-                                            {{ \Carbon\Carbon::parse($variacion->dFecha_fin_oferta)->format('d/m/Y') }}
-                                        </small>
-                                    </td>
-                                </tr>
-                                @endif
+                                
                                 <tr class="bg-light">
                                     <td class="py-3 px-3 rounded-start">
                                         <strong class="text-primary">TOTAL (con impuestos)</strong>
                                     </td>
                                     <td class="py-3 px-3">
-                                        <span class="fw-bold text-primary fs-5">
+                                        <span class="fw-bold text-primary fs-4">
                                             ${{ number_format($precioBaseVariacion + $totalImpuestosVariacion, 2) }}
                                         </span>
                                     </td>
@@ -339,10 +392,38 @@
                             </div>
                             <span class="badge bg-primary fs-6">{{ $impuestoVariacion->dPorcentaje }}%</span>
                         </div>
+                        
+                        <!-- Resumen de ahorro si hay descuento -->
+                        @if($variacionTieneDescuento && $variacion->dPrecio_oferta < $variacion->dPrecio && $ahorroTotal > 0)
+                            <div class="alert alert-success mt-3 mb-0">
+                                <i class="fas fa-piggy-bank me-2"></i>
+                                <strong>¡Ahorras ${{ number_format($ahorroTotal, 2) }}!</strong>
+                                <small class="d-block mt-2">
+                                    Precio original con impuestos: 
+                                    ${{ number_format($variacion->dPrecio + ($impuestoVariacion ? $variacion->dPrecio * ($impuestoVariacion->dPorcentaje/100) : 0), 2) }}
+                                </small>
+                                <small class="d-block mt-1">
+                                    Precio actual con impuestos: 
+                                    ${{ number_format($precioBaseVariacion + $totalImpuestosVariacion, 2) }}
+                                </small>
+                            </div>
+                        @else
+                            <div class="alert alert-info mt-3 mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Precio final con impuestos:</strong>
+                                <span class="d-block fs-5 fw-bold mt-1">${{ number_format($precioBaseVariacion + $totalImpuestosVariacion, 2) }}</span>
+                            </div>
+                        @endif
                     @else
                         <div class="text-center py-5">
                             <i class="fas fa-file-invoice-dollar fa-3x text-muted mb-3"></i>
                             <p class="text-muted mb-0">Sin impuestos asignados</p>
+                            @if($variacionTieneDescuento && $variacion->dPrecio_oferta < $variacion->dPrecio)
+                                <div class="alert alert-success mt-3 mb-0">
+                                    <i class="fas fa-tag me-2"></i>
+                                    <strong>¡Ahorras ${{ number_format($variacion->dPrecio - $variacion->dPrecio_oferta, 2) }}!</strong>
+                                </div>
+                            @endif
                         </div>
                     @endif
                 </div>

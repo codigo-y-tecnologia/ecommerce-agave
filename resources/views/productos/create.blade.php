@@ -1887,8 +1887,18 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 // ============ PASAR DATOS DE LA BASE DE DATOS A JAVASCRIPT ============
-const productosExistentes = @json(\App\Models\Producto::select('vCodigo_barras as sku', 'vNombre as nombre')->get());
-const variacionesExistentes = @json(\App\Models\ProductoVariacion::select('vSKU as sku')->get());
+const productosExistentes = @json(\App\Models\Producto::select('vCodigo_barras', 'vNombre')->get()->map(function($producto) {
+    return [
+        'sku' => $producto->vCodigo_barras,
+        'nombre' => $producto->vNombre
+    ];
+})->values());
+
+const variacionesExistentes = @json(\App\Models\ProductoVariacion::select('vSKU')->get()->map(function($variacion) {
+    return [
+        'sku' => $variacion->vSKU
+    ];
+})->values());
 
 // Crear sets para búsqueda rápida
 const skusExistentes = new Set(productosExistentes.map(p => p.sku));

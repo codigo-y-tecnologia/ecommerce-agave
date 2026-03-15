@@ -51,13 +51,13 @@
                                    maxlength="15" 
                                    required
                                    oninput="validarSKU(this)"
-                                   pattern="[A-Za-z0-9]+"
-                                   title="Solo letras y números (máximo 15 caracteres)"
+                                   pattern="[A-Za-z0-9\-]+"
+                                   title="Solo letras, números y guiones (máximo 15 caracteres)"
                                    autocomplete="off">
                             @error('vCodigo_barras')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                            <small class="form-text text-muted">Ej: AGAVE001, MEZCAL2024 (15 caracteres máximo, solo letras y números)</small>
+                            <small class="form-text text-muted">Ej: AGAVE001, MEZCAL2024 (15 caracteres máximo, solo letras, números y guiones)</small>
                         </div>
                     </div>
                     
@@ -630,7 +630,7 @@
                             </small>
                             
                             <!-- Preview de imagen principal actual -->
-                            @if($producto->vImagen_principal)
+                            @if($producto->imagen_principal_url)
                                 <div id="current_principal_container" class="mt-2">
                                     <div class="border rounded p-2 text-center bg-light position-relative">
                                         <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
@@ -641,7 +641,28 @@
                                                 <i class="fas fa-times"></i>
                                             </button>
                                         </div>
-                                        <img src="{{ $producto->imagen_principal }}" 
+                                        <img src="{{ $producto->imagen_principal_url }}" 
+                                             class="img-thumbnail" 
+                                             style="max-width: 200px; max-height: 200px; object-fit: contain;"
+                                             alt="Imagen principal actual">
+                                        <div class="mt-2">
+                                            <small class="text-muted d-block">Imagen principal actual</small>
+                                            <input type="hidden" name="eliminar_imagen_principal" id="eliminar_imagen_principal" value="0">
+                                        </div>
+                                    </div>
+                                </div>
+                            @elseif($producto->vImagen_principal)
+                                <div id="current_principal_container" class="mt-2">
+                                    <div class="border rounded p-2 text-center bg-light position-relative">
+                                        <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
+                                            <button type="button" class="btn btn-sm btn-outline-danger rounded-circle" 
+                                                    onclick="eliminarImagenPrincipalExistente()"
+                                                    style="width: 30px; height: 30px;"
+                                                    title="Eliminar imagen principal">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                        <img src="{{ Storage::url($producto->vImagen_principal) }}" 
                                              class="img-thumbnail" 
                                              style="max-width: 200px; max-height: 200px; object-fit: contain;"
                                              alt="Imagen principal actual">
@@ -695,7 +716,7 @@
                             </small>
                             
                             <!-- Preview de GIF actual -->
-                            @if($producto->vGif)
+                            @if($producto->gif_url)
                                 <div id="current_gif_container" class="mt-2">
                                     <div class="border rounded p-2 text-center bg-light position-relative">
                                         <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
@@ -707,6 +728,27 @@
                                             </button>
                                         </div>
                                         <img src="{{ $producto->gif_url }}" 
+                                             class="img-thumbnail" 
+                                             style="max-width: 200px; max-height: 200px; object-fit: contain;"
+                                             alt="GIF actual">
+                                        <div class="mt-2">
+                                            <small class="text-muted d-block">GIF actual</small>
+                                            <input type="hidden" name="eliminar_gif" id="eliminar_gif" value="0">
+                                        </div>
+                                    </div>
+                                </div>
+                            @elseif($producto->vGif)
+                                <div id="current_gif_container" class="mt-2">
+                                    <div class="border rounded p-2 text-center bg-light position-relative">
+                                        <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
+                                            <button type="button" class="btn btn-sm btn-outline-danger rounded-circle" 
+                                                    onclick="eliminarGifExistente()"
+                                                    style="width: 30px; height: 30px;"
+                                                    title="Eliminar GIF">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                        <img src="{{ Storage::url($producto->vGif) }}" 
                                              class="img-thumbnail" 
                                              style="max-width: 200px; max-height: 200px; object-fit: contain;"
                                              alt="GIF actual">
@@ -4312,7 +4354,7 @@ function actualizarPestanasValores() {
                                         JPG, JPEG, PNG. Máx: 5MB. Dejar vacío para mantener la actual.
                                     </small>
                                     
-                                    ${variacionExistente && variacionExistente.vImagen ? `
+                                    ${variacionExistente && variacionExistente.imagen_principal_url ? `
                                     <div id="current_principal_var_${valorKey}" class="mt-2">
                                         <div class="border rounded p-2 text-center bg-light position-relative">
                                             <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
@@ -4322,7 +4364,26 @@ function actualizarPestanasValores() {
                                                     <i class="fas fa-times"></i>
                                                 </button>
                                             </div>
-                                            <img src="${variacionExistente.imagen_principal}" 
+                                            <img src="${variacionExistente.imagen_principal_url}" 
+                                                 class="img-thumbnail" 
+                                                 style="max-width: 150px; max-height: 150px; object-fit: contain;">
+                                            <div class="mt-2">
+                                                <small class="text-muted d-block">Imagen actual</small>
+                                                <input type="hidden" name="variaciones[${valorKey}][eliminar_imagen]" id="eliminar_img_${valorKey}" value="0">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    ` : variacionExistente && variacionExistente.vImagen ? `
+                                    <div id="current_principal_var_${valorKey}" class="mt-2">
+                                        <div class="border rounded p-2 text-center bg-light position-relative">
+                                            <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
+                                                <button type="button" class="btn btn-sm btn-outline-danger rounded-circle" 
+                                                        onclick="eliminarImagenPrincipalVariacionExistente('${valorKey}')"
+                                                        style="width: 30px; height: 30px;">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                            <img src="{{ Storage::url('${variacionExistente.vImagen}') }}" 
                                                  class="img-thumbnail" 
                                                  style="max-width: 150px; max-height: 150px; object-fit: contain;">
                                             <div class="mt-2">
@@ -4378,6 +4439,25 @@ function actualizarPestanasValores() {
                                                 </button>
                                             </div>
                                             <img src="${variacionExistente.gif_url}" 
+                                                 class="img-thumbnail" 
+                                                 style="max-width: 150px; max-height: 150px; object-fit: contain;">
+                                            <div class="mt-2">
+                                                <small class="text-muted d-block">GIF actual</small>
+                                                <input type="hidden" name="variaciones[${valorKey}][eliminar_gif]" id="eliminar_gif_${valorKey}" value="0">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    ` : variacionExistente && variacionExistente.vGif ? `
+                                    <div id="current_gif_var_${valorKey}" class="mt-2">
+                                        <div class="border rounded p-2 text-center bg-light position-relative">
+                                            <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
+                                                <button type="button" class="btn btn-sm btn-outline-danger rounded-circle" 
+                                                        onclick="eliminarGifVariacionExistente('${valorKey}')"
+                                                        style="width: 30px; height: 30px;">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                            <img src="{{ Storage::url('${variacionExistente.vGif}') }}" 
                                                  class="img-thumbnail" 
                                                  style="max-width: 150px; max-height: 150px; object-fit: contain;">
                                             <div class="mt-2">
@@ -4477,7 +4557,7 @@ function actualizarPestanasValores() {
                                        maxlength="50"
                                        required
                                        oninput="validarSKU(this)"
-                                       pattern="[A-Za-z0-9-]+"
+                                       pattern="[A-Za-z0-9\-]+"
                                        title="Solo letras, números y guiones"
                                        placeholder="Ej: ${skuSugerido}"
                                        data-atributo-id="${valor.atributoId}"

@@ -454,6 +454,29 @@
             font-weight: bold;
         }
 
+        .motivo-descuento {
+            font-size: 10px;
+            color: #666;
+            margin-top: 2px;
+            margin-bottom: 5px;
+        }
+
+        .motivo-descuento i {
+            margin-right: 3px;
+            color: #dc3545;
+        }
+
+        .periodo-descuento {
+            font-size: 9px;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .periodo-descuento i {
+            margin-right: 3px;
+            color: #007bff;
+        }
+
         .envio-info {
             font-size: 13px;
             margin-bottom: 8px;
@@ -525,6 +548,20 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+        }
+
+        .badge-descuento-imagen {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #dc3545;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 99;
+            box-shadow: 0 2px 5px rgba(220,53,69,0.3);
         }
 
         .ver-detalle {
@@ -1034,6 +1071,9 @@
                                 $variacionId = $producto->id_variacion;
                                 $atributosTexto = $producto->getAtributosCompletosTexto();
                                 $atributosCorto = $producto->getAtributosTexto();
+                                $motivoOferta = $producto->vMotivo_oferta ?? '';
+                                $fechaInicio = $producto->dFecha_inicio_oferta ? \Carbon\Carbon::parse($producto->dFecha_inicio_oferta)->format('d/m') : '';
+                                $fechaFin = $producto->dFecha_fin_oferta ? \Carbon\Carbon::parse($producto->dFecha_fin_oferta)->format('d/m') : '';
                             } else {
                                 $tieneDescuento = $producto->tieneDescuentoActivo();
                                 $precioOriginal = $producto->dPrecio_venta;
@@ -1052,6 +1092,9 @@
                                 $variacionId = null;
                                 $atributosTexto = '';
                                 $atributosCorto = '';
+                                $motivoOferta = $producto->vMotivo_oferta ?? '';
+                                $fechaInicio = $producto->dFecha_inicio_oferta ? \Carbon\Carbon::parse($producto->dFecha_inicio_oferta)->format('d/m') : '';
+                                $fechaFin = $producto->dFecha_fin_oferta ? \Carbon\Carbon::parse($producto->dFecha_fin_oferta)->format('d/m') : '';
                             }
                             
                             $precioActual = $tieneDescuento ? $precioOferta : $precioOriginal;
@@ -1066,7 +1109,7 @@
                         
                         <div class="producto-card" onclick="window.location.href='{{ $url }}'">
                             <div class="producto-imagen-container">
-                                <!-- BOTÓN DEL CORAZÓN - CORREGIDO -->
+                                <!-- BOTÓN DEL CORAZÓN -->
                                 <button class="corazon-favorito {{ $esFavorito ? 'activo' : 'inactivo' }}" 
                                         data-producto="{{ $productoId }}"
                                         data-variacion="{{ $variacionId ?? '' }}"
@@ -1076,9 +1119,8 @@
                                     {{ $esFavorito ? '❤️' : '🤍' }}
                                 </button>
 
-                                <!-- Badge de descuento -->
-                                @if($tieneDescuento)
-                                    <div class="badge-oferta">
+                                @if($tieneDescuento && $porcentajeDescuento > 0)
+                                    <div class="badge-descuento-imagen" title="{{ $motivoOferta ?: 'Descuento especial' }}">
                                         -{{ $porcentajeDescuento }}%
                                     </div>
                                 @elseif($estaBajoStock && !$tieneDescuento)
@@ -1108,7 +1150,7 @@
                                 
                                 <!-- Precio con descuento -->
                                 <div class="producto-precio">
-                                    @if($tieneDescuento)
+                                    @if($tieneDescuento && $porcentajeDescuento > 0)
                                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap;">
                                             <span class="precio-original">
                                                 ${{ number_format($precioOriginal, 2) }}
@@ -1120,6 +1162,18 @@
                                                 -{{ $porcentajeDescuento }}%
                                             </span>
                                         </div>
+                                        
+                                        @if($motivoOferta)
+                                            <div class="motivo-descuento" title="{{ $motivoOferta }}">
+                                                <i class="fas fa-comment"></i> {{ Str::limit($motivoOferta, 30) }}
+                                            </div>
+                                        @endif
+                                        
+                                        @if($fechaInicio && $fechaFin)
+                                            <div class="periodo-descuento">
+                                                <i class="fas fa-calendar-alt"></i> {{ $fechaInicio }} - {{ $fechaFin }}
+                                            </div>
+                                        @endif
                                     @else
                                         <span class="precio-actual">
                                             ${{ number_format($precioOriginal, 2) }}
@@ -1271,146 +1325,205 @@
             button.innerHTML = '⏳';
             
             @auth
-                // Usuario autenticado
+                // Usuario autenticado - ruta directa
                 const url = variacionId 
                     ? `/favoritos/toggle-variacion/${variacionId}`
                     : `/favoritos/toggle-producto/${productoId}`;
-            @else
-                // Invitado
-                const url = variacionId 
-                    ? `/favoritos-invitado/toggle-variacion/${variacionId}`
-                    : `/favoritos-invitado/toggle-producto/${productoId}`;
-            @endauth
-
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                }
-            })
-            .then(async response => {
-                if (!response.ok) {
-                    if (response.status === 401) {
-                        // Redirigir al login si no está autenticado
-                        const redirectUrl = new URL('{{ route("login") }}');
-                        redirectUrl.searchParams.set('from_favoritos', 'true');
-                        redirectUrl.searchParams.set('redirect', window.location.href);
-                        redirectUrl.searchParams.set('producto', productoId);
-                        if (variacionId) {
-                            redirectUrl.searchParams.set('variacion', variacionId);
-                        }
-                        window.location.href = redirectUrl.toString();
-                        return null;
-                    }
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (!data) return;
-                
-                if (data.success) {
-                    if (data.action === 'added') {
-                        button.classList.remove('inactivo');
-                        button.classList.add('activo');
-                        button.innerHTML = '❤️';
-                        button.setAttribute('title', 'Quitar de favoritos');
-                        
-                        let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
-                        
-                        // Crear y mostrar notificación
-                        let toast = document.createElement('div');
-                        toast.className = 'toast success';
-                        toast.innerHTML = `<span class="toast-icon">✅</span><span class="toast-message">${tipoTexto} agregado a favoritos</span>`;
-                        document.body.appendChild(toast);
-                        setTimeout(() => toast.classList.add('show'), 10);
-                        setTimeout(() => {
-                            toast.classList.remove('show');
-                            setTimeout(() => toast.remove(), 300);
-                        }, 3000);
-                        
-                        // Guardar en localStorage para persistencia
-                        localStorage.setItem('last_favorito_action', 'added');
-                        localStorage.setItem('last_favorito_id', variacionId || productoId);
-                        localStorage.setItem('last_favorito_tipo', data.tipo);
-                        localStorage.setItem('last_favorito_time', Date.now());
-                    } else {
-                        button.classList.remove('activo');
-                        button.classList.add('inactivo');
-                        button.innerHTML = '🤍';
-                        button.setAttribute('title', 'Agregar a favoritos');
-                        
-                        let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
-                        
-                        let toast = document.createElement('div');
-                        toast.className = 'toast error';
-                        toast.innerHTML = `<span class="toast-icon">❌</span><span class="toast-message">${tipoTexto} eliminado de favoritos</span>`;
-                        document.body.appendChild(toast);
-                        setTimeout(() => toast.classList.add('show'), 10);
-                        setTimeout(() => {
-                            toast.classList.remove('show');
-                            setTimeout(() => toast.remove(), 300);
-                        }, 3000);
-                        
-                        localStorage.setItem('last_favorito_action', 'removed');
-                        localStorage.setItem('last_favorito_id', variacionId || productoId);
-                        localStorage.setItem('last_favorito_tipo', data.tipo);
-                        localStorage.setItem('last_favorito_time', Date.now());
-                    }
-                } else {
-                    // Revertir cambios si hubo error
-                    if (estabaActivo) {
-                        button.classList.add('activo');
-                        button.classList.remove('inactivo');
-                        button.innerHTML = '❤️';
-                    } else {
-                        button.classList.remove('activo');
-                        button.classList.add('inactivo');
-                        button.innerHTML = '🤍';
-                    }
                     
-                    let toast = document.createElement('div');
-                    toast.className = 'toast error';
-                    toast.innerHTML = `<span class="toast-icon">❌</span><span class="toast-message">${data.message || 'Error al gestionar favoritos'}</span>`;
-                    document.body.appendChild(toast);
-                    setTimeout(() => toast.classList.add('show'), 10);
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(async response => {
+                    if (!response.ok) {
+                        if (response.status === 401) {
+                            const redirectUrl = new URL('{{ route("login") }}');
+                            redirectUrl.searchParams.set('from_favoritos', 'true');
+                            redirectUrl.searchParams.set('redirect', window.location.href);
+                            redirectUrl.searchParams.set('producto', productoId);
+                            if (variacionId) {
+                                redirectUrl.searchParams.set('variacion', variacionId);
+                            }
+                            window.location.href = redirectUrl.toString();
+                            return null;
+                        }
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data) return;
+                    
+                    if (data.success) {
+                        if (data.action === 'added') {
+                            button.classList.remove('inactivo');
+                            button.classList.add('activo');
+                            button.innerHTML = '❤️';
+                            button.setAttribute('title', 'Quitar de favoritos');
+                            
+                            let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
+                            
+                            mostrarToast('success', '✅', `${tipoTexto} agregado a favoritos`);
+                            
+                            localStorage.setItem('last_favorito_action', 'added');
+                            localStorage.setItem('last_favorito_id', variacionId || productoId);
+                            localStorage.setItem('last_favorito_tipo', data.tipo);
+                            localStorage.setItem('last_favorito_time', Date.now());
+                        } else {
+                            button.classList.remove('activo');
+                            button.classList.add('inactivo');
+                            button.innerHTML = '🤍';
+                            button.setAttribute('title', 'Agregar a favoritos');
+                            
+                            let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
+                            
+                            mostrarToast('error', '❌', `${tipoTexto} eliminado de favoritos`);
+                            
+                            localStorage.setItem('last_favorito_action', 'removed');
+                            localStorage.setItem('last_favorito_id', variacionId || productoId);
+                            localStorage.setItem('last_favorito_tipo', data.tipo);
+                            localStorage.setItem('last_favorito_time', Date.now());
+                        }
+                    } else {
+                        // Revertir cambios si hubo error
+                        revertirEstadoFavorito(button, estabaActivo);
+                        mostrarToast('error', '❌', data.message || 'Error al gestionar favoritos');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    revertirEstadoFavorito(button, estabaActivo);
+                    mostrarToast('error', '❌', 'Error de conexión');
+                })
+                .finally(() => {
                     setTimeout(() => {
-                        toast.classList.remove('show');
-                        setTimeout(() => toast.remove(), 300);
-                    }, 3000);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                // Revertir cambios
-                if (estabaActivo) {
-                    button.classList.add('activo');
-                    button.classList.remove('inactivo');
-                    button.innerHTML = '❤️';
-                } else {
-                    button.classList.remove('activo');
-                    button.classList.add('inactivo');
-                    button.innerHTML = '🤍';
-                }
+                        button.disabled = false;
+                        button.classList.remove('loading');
+                    }, 500);
+                });
+            @else
+                // Invitado - verificar estado actual primero
+                const checkUrl = variacionId 
+                    ? `/favoritos-invitado/check/${productoId}/${variacionId}`
+                    : `/favoritos-invitado/check/${productoId}`;
                 
-                let toast = document.createElement('div');
-                toast.className = 'toast error';
-                toast.innerHTML = `<span class="toast-icon">❌</span><span class="toast-message">Error de conexión</span>`;
-                document.body.appendChild(toast);
-                setTimeout(() => toast.classList.add('show'), 10);
-                setTimeout(() => {
-                    toast.classList.remove('show');
-                    setTimeout(() => toast.remove(), 300);
-                }, 3000);
-            })
-            .finally(() => {
-                setTimeout(() => {
-                    button.disabled = false;
-                    button.classList.remove('loading');
-                }, 500);
-            });
+                // Verificar estado actual
+                fetch(checkUrl, {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error al verificar estado');
+                    }
+                    return response.json();
+                })
+                .then(checkData => {
+                    if (checkData.success) {
+                        // Proceder con el toggle
+                        const toggleUrl = variacionId 
+                            ? `/favoritos-invitado/toggle-variacion/${variacionId}`
+                            : `/favoritos-invitado/toggle-producto/${productoId}`;
+                        
+                        return fetch(toggleUrl, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            }
+                        });
+                    } else {
+                        throw new Error('Error al verificar estado');
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        if (data.action === 'added') {
+                            button.classList.remove('inactivo');
+                            button.classList.add('activo');
+                            button.innerHTML = '❤️';
+                            button.setAttribute('title', 'Quitar de favoritos');
+                            
+                            let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
+                            
+                            mostrarToast('success', '✅', `${tipoTexto} agregado a favoritos`);
+                            
+                            localStorage.setItem('last_favorito_action', 'added');
+                            localStorage.setItem('last_favorito_id', variacionId || productoId);
+                            localStorage.setItem('last_favorito_tipo', data.tipo);
+                            localStorage.setItem('last_favorito_time', Date.now());
+                        } else {
+                            button.classList.remove('activo');
+                            button.classList.add('inactivo');
+                            button.innerHTML = '🤍';
+                            button.setAttribute('title', 'Agregar a favoritos');
+                            
+                            let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
+                            
+                            mostrarToast('error', '❌', `${tipoTexto} eliminado de favoritos`);
+                            
+                            localStorage.setItem('last_favorito_action', 'removed');
+                            localStorage.setItem('last_favorito_id', variacionId || productoId);
+                            localStorage.setItem('last_favorito_tipo', data.tipo);
+                            localStorage.setItem('last_favorito_time', Date.now());
+                        }
+                    } else {
+                        revertirEstadoFavorito(button, estabaActivo);
+                        mostrarToast('error', '❌', data.message || 'Error al gestionar favoritos');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    revertirEstadoFavorito(button, estabaActivo);
+                    mostrarToast('error', '❌', 'Error de conexión');
+                })
+                .finally(() => {
+                    setTimeout(() => {
+                        button.disabled = false;
+                        button.classList.remove('loading');
+                    }, 500);
+                });
+            @endauth
+        }
+
+        function revertirEstadoFavorito(button, estabaActivo) {
+            if (estabaActivo) {
+                button.classList.add('activo');
+                button.classList.remove('inactivo');
+                button.innerHTML = '❤️';
+            } else {
+                button.classList.remove('activo');
+                button.classList.add('inactivo');
+                button.innerHTML = '🤍';
+            }
+        }
+
+        function mostrarToast(tipo, icono, mensaje) {
+            let toast = document.createElement('div');
+            toast.className = `toast ${tipo}`;
+            toast.innerHTML = `<span class="toast-icon">${icono}</span><span class="toast-message">${mensaje}</span>`;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 10);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
         document.addEventListener('DOMContentLoaded', function() {

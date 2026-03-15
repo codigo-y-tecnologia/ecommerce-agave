@@ -30,30 +30,4 @@ class UsuarioTemporal extends Model
     {
         return Str::random(60);
     }
-
-    /**
-     * Crear o obtener usuario temporal basado en session_id
-     */
-    public static function obtenerOcrear($sessionId)
-    {
-        $usuarioTemporal = self::where('session_id', $sessionId)->first();
-        
-        if (!$usuarioTemporal) {
-            $usuarioTemporal = self::create([
-                'session_id' => $sessionId,
-                'vToken' => self::generarToken(),
-                'tFecha_expiracion' => now()->addDays(30)
-            ]);
-        }
-        
-        return $usuarioTemporal;
-    }
-
-    /**
-     * Relación con favoritos
-     */
-    public function favoritos()
-    {
-        return $this->hasMany(Favorito::class, 'id_usuario_temporal', 'id_temp_usuario');
-    }
 }

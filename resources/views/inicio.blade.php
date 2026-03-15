@@ -314,6 +314,29 @@
             display: inline-block;
         }
 
+        .motivo-descuento {
+            font-size: 10px;
+            color: #666;
+            margin-top: 2px;
+            margin-bottom: 2px;
+        }
+
+        .motivo-descuento i {
+            margin-right: 3px;
+            color: #dc3545;
+        }
+
+        .periodo-descuento {
+            font-size: 9px;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .periodo-descuento i {
+            margin-right: 3px;
+            color: #007bff;
+        }
+
         /* ENVÍO */
         .envio-info {
             font-size: 14px;
@@ -372,6 +395,20 @@
             font-weight: bold;
             z-index: 99;
             box-shadow: 0 2px 5px rgba(0,166,80,0.3);
+        }
+
+        .badge-descuento-rojo {
+            position: absolute;
+            top: 15px;
+            right: 60px;
+            background: #dc3545;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 99;
+            box-shadow: 0 2px 5px rgba(220,53,69,0.3);
         }
 
         .badge-stock-bajo {
@@ -815,7 +852,8 @@
                 font-size: 16px;
             }
 
-            .badge-descuento {
+            .badge-descuento,
+            .badge-descuento-rojo {
                 font-size: 10px;
                 padding: 4px 8px;
             }
@@ -971,6 +1009,9 @@
                         $atributosCompletos = $item->getAtributosCompletosTexto();
                         $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vSKU;
+                        $motivoOferta = $item->vMotivo_oferta ?? '';
+                        $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
+                        $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
                     } else {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio_venta;
@@ -987,6 +1028,9 @@
                         $atributosCompletos = '';
                         $marca = $item->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vCodigo_barras;
+                        $motivoOferta = $item->vMotivo_oferta ?? '';
+                        $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
+                        $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
                     }
                     
                     $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
@@ -1010,9 +1054,12 @@
                             {{ $esFavorito ? '❤️' : '🤍' }}
                         </button>
 
-                        @if($tieneDescuento)
-                            <div class="badge-descuento">
+                        @if($tieneDescuento && $porcentajeDescuento > 0)
+                            <div class="badge-descuento-rojo" title="{{ $motivoOferta ?: 'Descuento especial' }}">
                                 -{{ $porcentajeDescuento }}% OFF
+                                @if($motivoOferta)
+                                    <br><small style="font-size: 8px;">{{ Str::limit($motivoOferta, 15) }}</small>
+                                @endif
                             </div>
                         @elseif($estaBajoStock)
                             <div class="badge-stock-bajo">
@@ -1039,12 +1086,24 @@
                         <h3 title="{{ $nombreCompleto }}">{{ Str::limit($nombreCompleto, 50) }}</h3>
 
                         <div class="precio-container">
-                            @if($tieneDescuento)
+                            @if($tieneDescuento && $porcentajeDescuento > 0)
                                 <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
                                 <div style="display: flex; align-items: center; flex-wrap: wrap;">
                                     <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
                                     <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                 </div>
+                                
+                                @if($motivoOferta && $esVariacion)
+                                    <div class="motivo-descuento" title="{{ $motivoOferta }}">
+                                        <i class="fas fa-tag"></i> {{ Str::limit($motivoOferta, 25) }}
+                                    </div>
+                                @endif
+                                
+                                @if($fechaInicio && $fechaFin)
+                                    <div class="periodo-descuento">
+                                        <i class="fas fa-calendar-alt"></i> {{ $fechaInicio }} - {{ $fechaFin }}
+                                    </div>
+                                @endif
                             @else
                                 <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
                             @endif
@@ -1116,6 +1175,9 @@
                             $atributosCompletos = $item->getAtributosCompletosTexto();
                             $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
                             $sku = $item->vSKU;
+                            $motivoOferta = $item->vMotivo_oferta ?? '';
+                            $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
+                            $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
                         } else {
                             $tieneDescuento = $item->tieneDescuentoActivo();
                             $precioOriginal = $item->dPrecio_venta;
@@ -1132,6 +1194,9 @@
                             $atributosCompletos = '';
                             $marca = $item->marca->vNombre ?? 'Marca genérica';
                             $sku = $item->vCodigo_barras;
+                            $motivoOferta = $item->vMotivo_oferta ?? '';
+                            $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
+                            $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
                         }
                         
                         $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
@@ -1154,9 +1219,12 @@
                                 {{ $esFavorito ? '❤️' : '🤍' }}
                             </button>
 
-                            @if($tieneDescuento)
-                                <div class="badge-descuento">
+                            @if($tieneDescuento && $porcentajeDescuento > 0)
+                                <div class="badge-descuento-rojo" title="{{ $motivoOferta ?: 'Descuento especial' }}">
                                     -{{ $porcentajeDescuento }}%
+                                    @if($motivoOferta)
+                                        <br><small style="font-size: 8px;">{{ Str::limit($motivoOferta, 15) }}</small>
+                                    @endif
                                 </div>
                             @elseif($estaBajoStock)
                                 <div class="badge-stock-bajo">
@@ -1183,12 +1251,24 @@
                             <h3 title="{{ $nombreCompleto }}">{{ Str::limit($nombreCompleto, 50) }}</h3>
 
                             <div class="precio-container">
-                                @if($tieneDescuento)
+                                @if($tieneDescuento && $porcentajeDescuento > 0)
                                     <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
                                     <div style="display: flex; align-items: center; flex-wrap: wrap;">
                                         <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
                                         <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                     </div>
+                                    
+                                    @if($motivoOferta && $esVariacion)
+                                        <div class="motivo-descuento" title="{{ $motivoOferta }}">
+                                            <i class="fas fa-tag"></i> {{ Str::limit($motivoOferta, 25) }}
+                                        </div>
+                                    @endif
+                                    
+                                    @if($fechaInicio && $fechaFin)
+                                        <div class="periodo-descuento">
+                                            <i class="fas fa-calendar-alt"></i> {{ $fechaInicio }} - {{ $fechaFin }}
+                                        </div>
+                                    @endif
                                 @else
                                     <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
                                 @endif
@@ -1254,6 +1334,9 @@
                         $atributosCompletos = $item->getAtributosCompletosTexto();
                         $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vSKU;
+                        $motivoOferta = $item->vMotivo_oferta ?? '';
+                        $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
+                        $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
                     } else {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio_venta;
@@ -1270,6 +1353,9 @@
                         $atributosCompletos = '';
                         $marca = $item->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vCodigo_barras;
+                        $motivoOferta = $item->vMotivo_oferta ?? '';
+                        $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
+                        $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
                     }
                     
                     $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
@@ -1294,8 +1380,8 @@
                             {{ $esFavorito ? '❤️' : '🤍' }}
                         </button>
 
-                        @if($tieneDescuento)
-                            <div class="badge-descuento">
+                        @if($tieneDescuento && $porcentajeDescuento > 0)
+                            <div class="badge-descuento-rojo" title="{{ $motivoOferta ?: 'Descuento especial' }}">
                                 -{{ $porcentajeDescuento }}%
                             </div>
                         @endif
@@ -1319,12 +1405,24 @@
                         <h3 title="{{ $nombreCompleto }}">{{ Str::limit($nombreCompleto, 50) }}</h3>
 
                         <div class="precio-container">
-                            @if($tieneDescuento)
+                            @if($tieneDescuento && $porcentajeDescuento > 0)
                                 <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
                                 <div style="display: flex; align-items: center; flex-wrap: wrap;">
                                     <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
                                     <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                 </div>
+                                
+                                @if($motivoOferta && $esVariacion)
+                                    <div class="motivo-descuento" title="{{ $motivoOferta }}">
+                                        <i class="fas fa-tag"></i> {{ Str::limit($motivoOferta, 25) }}
+                                    </div>
+                                @endif
+                                
+                                @if($fechaInicio && $fechaFin)
+                                    <div class="periodo-descuento">
+                                        <i class="fas fa-calendar-alt"></i> {{ $fechaInicio }} - {{ $fechaFin }}
+                                    </div>
+                                @endif
                             @else
                                 <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
                             @endif
@@ -1384,6 +1482,9 @@
                         $atributosCompletos = $item->getAtributosCompletosTexto();
                         $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vSKU;
+                        $motivoOferta = $item->vMotivo_oferta ?? '';
+                        $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
+                        $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
                     } else {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio_venta;
@@ -1400,6 +1501,9 @@
                         $atributosCompletos = '';
                         $marca = $item->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vCodigo_barras;
+                        $motivoOferta = $item->vMotivo_oferta ?? '';
+                        $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
+                        $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
                     }
                     
                     $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
@@ -1422,9 +1526,12 @@
                             {{ $esFavorito ? '❤️' : '🤍' }}
                         </button>
 
-                        @if($tieneDescuento)
-                            <div class="badge-descuento">
+                        @if($tieneDescuento && $porcentajeDescuento > 0)
+                            <div class="badge-descuento-rojo" title="{{ $motivoOferta ?: 'Descuento especial' }}">
                                 -{{ $porcentajeDescuento }}% OFF
+                                @if($motivoOferta)
+                                    <br><small style="font-size: 8px;">{{ Str::limit($motivoOferta, 15) }}</small>
+                                @endif
                             </div>
                         @elseif($estaBajoStock)
                             <div class="badge-stock-bajo">
@@ -1451,12 +1558,24 @@
                         <h3 title="{{ $nombreCompleto }}">{{ Str::limit($nombreCompleto, 50) }}</h3>
 
                         <div class="precio-container">
-                            @if($tieneDescuento)
+                            @if($tieneDescuento && $porcentajeDescuento > 0)
                                 <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
                                 <div style="display: flex; align-items: center; flex-wrap: wrap;">
                                     <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
                                     <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                 </div>
+                                
+                                @if($motivoOferta && $esVariacion)
+                                    <div class="motivo-descuento" title="{{ $motivoOferta }}">
+                                        <i class="fas fa-tag"></i> {{ Str::limit($motivoOferta, 25) }}
+                                    </div>
+                                @endif
+                                
+                                @if($fechaInicio && $fechaFin)
+                                    <div class="periodo-descuento">
+                                        <i class="fas fa-calendar-alt"></i> {{ $fechaInicio }} - {{ $fechaFin }}
+                                    </div>
+                                @endif
                             @else
                                 <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
                             @endif
@@ -1578,109 +1697,188 @@
             button.innerHTML = '⏳';
             
             @auth
-                // Usuario autenticado
+                // Usuario autenticado - ruta directa
                 const url = variacionId 
                     ? `/favoritos/toggle-variacion/${variacionId}`
                     : `/favoritos/toggle-producto/${productoId}`;
-            @else
-                // Invitado
-                const url = variacionId 
-                    ? `/favoritos-invitado/toggle-variacion/${variacionId}`
-                    : `/favoritos-invitado/toggle-producto/${productoId}`;
-            @endauth
-
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                }
-            })
-            .then(async response => {
-                if (!response.ok) {
-                    if (response.status === 401) {
-                        // Redirigir al login si no está autenticado
-                        const redirectUrl = new URL('{{ route("login") }}');
-                        redirectUrl.searchParams.set('from_favoritos', 'true');
-                        redirectUrl.searchParams.set('redirect', window.location.href);
-                        redirectUrl.searchParams.set('producto', productoId);
-                        if (variacionId) {
-                            redirectUrl.searchParams.set('variacion', variacionId);
+                    
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(async response => {
+                    if (!response.ok) {
+                        if (response.status === 401) {
+                            const redirectUrl = new URL('{{ route("login") }}');
+                            redirectUrl.searchParams.set('from_favoritos', 'true');
+                            redirectUrl.searchParams.set('redirect', window.location.href);
+                            redirectUrl.searchParams.set('producto', productoId);
+                            if (variacionId) {
+                                redirectUrl.searchParams.set('variacion', variacionId);
+                            }
+                            window.location.href = redirectUrl.toString();
+                            return null;
                         }
-                        window.location.href = redirectUrl.toString();
-                        return null;
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.message || `HTTP ${response.status}`);
                     }
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (!data) return;
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data) return;
+                    
+                    if (data.success) {
+                        if (data.action === 'added') {
+                            button.classList.remove('inactivo');
+                            button.classList.add('activo');
+                            button.innerHTML = '❤️';
+                            button.setAttribute('title', 'Quitar de favoritos');
+                            
+                            let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
+                            showNotification(`✅ ${tipoTexto} agregado a favoritos`, 'success');
+                            
+                            localStorage.setItem('last_favorito_action', 'added');
+                            localStorage.setItem('last_favorito_id', variacionId || productoId);
+                            localStorage.setItem('last_favorito_tipo', data.tipo);
+                            localStorage.setItem('last_favorito_time', Date.now());
+                        } else {
+                            button.classList.remove('activo');
+                            button.classList.add('inactivo');
+                            button.innerHTML = '🤍';
+                            button.setAttribute('title', 'Agregar a favoritos');
+                            
+                            let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
+                            showNotification(`❌ ${tipoTexto} eliminado de favoritos`, 'error');
+                            
+                            localStorage.setItem('last_favorito_action', 'removed');
+                            localStorage.setItem('last_favorito_id', variacionId || productoId);
+                            localStorage.setItem('last_favorito_tipo', data.tipo);
+                            localStorage.setItem('last_favorito_time', Date.now());
+                        }
+                    } else {
+                        // Revertir cambios si hubo error
+                        revertirEstadoFavorito(button, estabaActivo);
+                        showNotification('❌ ' + (data.message || 'Error al gestionar favoritos'), 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    revertirEstadoFavorito(button, estabaActivo);
+                    showNotification('❌ ' + error.message, 'error');
+                })
+                .finally(() => {
+                    setTimeout(() => {
+                        button.disabled = false;
+                        button.classList.remove('loading');
+                    }, 500);
+                });
+            @else
+                // Invitado - verificar estado actual primero
+                const checkUrl = variacionId 
+                    ? `/favoritos-invitado/check/${productoId}/${variacionId}`
+                    : `/favoritos-invitado/check/${productoId}`;
                 
-                if (data.success) {
-                    if (data.action === 'added') {
-                        button.classList.remove('inactivo');
-                        button.classList.add('activo');
-                        button.innerHTML = '❤️';
-                        button.setAttribute('title', 'Quitar de favoritos');
-                        
-                        let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
-                        showNotification(`✅ ${tipoTexto} agregado a favoritos`, 'success');
-                        
-                        // Guardar en localStorage para persistencia
-                        localStorage.setItem('last_favorito_action', 'added');
-                        localStorage.setItem('last_favorito_id', variacionId || productoId);
-                        localStorage.setItem('last_favorito_tipo', data.tipo);
-                        localStorage.setItem('last_favorito_time', Date.now());
-                    } else {
-                        button.classList.remove('activo');
-                        button.classList.add('inactivo');
-                        button.innerHTML = '🤍';
-                        button.setAttribute('title', 'Agregar a favoritos');
-                        
-                        let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
-                        showNotification(`❌ ${tipoTexto} eliminado de favoritos`, 'error');
-                        
-                        localStorage.setItem('last_favorito_action', 'removed');
-                        localStorage.setItem('last_favorito_id', variacionId || productoId);
-                        localStorage.setItem('last_favorito_tipo', data.tipo);
-                        localStorage.setItem('last_favorito_time', Date.now());
+                // Verificar estado actual
+                fetch(checkUrl, {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
                     }
-                } else {
-                    // Revertir cambios si hubo error
-                    if (estabaActivo) {
-                        button.classList.add('activo');
-                        button.classList.remove('inactivo');
-                        button.innerHTML = '❤️';
-                    } else {
-                        button.classList.remove('activo');
-                        button.classList.add('inactivo');
-                        button.innerHTML = '🤍';
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error al verificar estado');
                     }
-                    showNotification('❌ ' + (data.message || 'Error al gestionar favoritos'), 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                // Revertir cambios
-                if (estabaActivo) {
-                    button.classList.add('activo');
-                    button.classList.remove('inactivo');
-                    button.innerHTML = '❤️';
-                } else {
-                    button.classList.remove('activo');
-                    button.classList.add('inactivo');
-                    button.innerHTML = '🤍';
-                }
-                showNotification('❌ Error de conexión. Intenta nuevamente.', 'error');
-            })
-            .finally(() => {
-                setTimeout(() => {
-                    button.disabled = false;
-                    button.classList.remove('loading');
-                }, 500);
-            });
+                    return response.json();
+                })
+                .then(checkData => {
+                    if (checkData.success) {
+                        // Proceder con el toggle
+                        const toggleUrl = variacionId 
+                            ? `/favoritos-invitado/toggle-variacion/${variacionId}`
+                            : `/favoritos-invitado/toggle-producto/${productoId}`;
+                        
+                        return fetch(toggleUrl, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            }
+                        });
+                    } else {
+                        throw new Error('Error al verificar estado');
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => { throw new Error(err.message || `HTTP ${response.status}`); });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        if (data.action === 'added') {
+                            button.classList.remove('inactivo');
+                            button.classList.add('activo');
+                            button.innerHTML = '❤️';
+                            button.setAttribute('title', 'Quitar de favoritos');
+                            
+                            let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
+                            showNotification(`✅ ${tipoTexto} agregado a favoritos`, 'success');
+                            
+                            localStorage.setItem('last_favorito_action', 'added');
+                            localStorage.setItem('last_favorito_id', variacionId || productoId);
+                            localStorage.setItem('last_favorito_tipo', data.tipo);
+                            localStorage.setItem('last_favorito_time', Date.now());
+                        } else {
+                            button.classList.remove('activo');
+                            button.classList.add('inactivo');
+                            button.innerHTML = '🤍';
+                            button.setAttribute('title', 'Agregar a favoritos');
+                            
+                            let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
+                            showNotification(`❌ ${tipoTexto} eliminado de favoritos`, 'error');
+                            
+                            localStorage.setItem('last_favorito_action', 'removed');
+                            localStorage.setItem('last_favorito_id', variacionId || productoId);
+                            localStorage.setItem('last_favorito_tipo', data.tipo);
+                            localStorage.setItem('last_favorito_time', Date.now());
+                        }
+                    } else {
+                        revertirEstadoFavorito(button, estabaActivo);
+                        showNotification('❌ ' + (data.message || 'Error al gestionar favoritos'), 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    revertirEstadoFavorito(button, estabaActivo);
+                    showNotification('❌ ' + error.message, 'error');
+                })
+                .finally(() => {
+                    setTimeout(() => {
+                        button.disabled = false;
+                        button.classList.remove('loading');
+                    }, 500);
+                });
+            @endauth
+        }
+
+        function revertirEstadoFavorito(button, estabaActivo) {
+            if (estabaActivo) {
+                button.classList.add('activo');
+                button.classList.remove('inactivo');
+                button.innerHTML = '❤️';
+            } else {
+                button.classList.remove('activo');
+                button.classList.add('inactivo');
+                button.innerHTML = '🤍';
+            }
         }
 
         document.addEventListener('DOMContentLoaded', function() {
