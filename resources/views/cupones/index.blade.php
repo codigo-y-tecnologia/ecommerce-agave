@@ -71,14 +71,15 @@
                             <th>Monto mínimo</th>
                             <th>Válido desde</th>
                             <th>Válido hasta</th>
-                            <th>Usos</th>
+                            <th>Usos maximo</th>
+                            <th>Usos p/usuario</th>
                             <th>Activo</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($cupones as $cupon)
-                        <tr data-fila="{{ $cupon->id_cupon }} {{ $cupon->vCodigo_cupon }} {{ $cupon->eTipo }} {{ $cupon->dDescuento }} {{ $cupon->dMonto_minimo }} {{ $cupon->dValido_desde }} {{ $cupon->dValido_hasta }} {{ $cupon->iUsos_actuales }}/{{ $cupon->iUso_maximo }} {{ $cupon->bActivo ? 'activo' : 'inactivo' }}">
+                        <tr data-fila="{{ $cupon->id_cupon }} {{ $cupon->vCodigo_cupon }} {{ $cupon->eTipo }} {{ $cupon->dDescuento }} {{ $cupon->dMonto_minimo }} {{ $cupon->dValido_desde }} {{ $cupon->dValido_hasta }} {{ $cupon->iUsos_actuales }}/{{ $cupon->iUso_maximo }} {{ $cupon->iUsos_por_usuario ?? 'sin limite' }} {{ $cupon->bActivo ? 'activo' : 'inactivo' }}">
                             <td class="text-muted">{{ $cupon->id_cupon }}</td>
                             <td>
                                 <span class="badge fs-6 px-3 py-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
@@ -111,6 +112,16 @@
                                     {{ $cupon->iUsos_actuales }} / {{ $cupon->iUso_maximo }}
                                 </small>
                             </td>
+                            {{--columna: Usos por usuario --}}
+                            <td>
+                                @if($cupon->iUsos_por_usuario)
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-user me-1"></i>{{ $cupon->iUsos_por_usuario }}
+                                    </span>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
+                            </td>
                             <td>
                                 @if($cupon->bActivo)
                                     <span class="badge bg-success"><i class="fas fa-check me-1"></i>Activo</span>
@@ -140,7 +151,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="10" class="text-center py-5 text-muted">
+                            <td colspan="11" class="text-center py-5 text-muted">
                                 <i class="fas fa-ticket-alt fa-3x mb-3 d-block opacity-25"></i>
                                 No hay cupones registrados.
                                 <a href="{{ route('cupones.create') }}">Crear el primero</a>
