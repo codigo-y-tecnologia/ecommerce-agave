@@ -137,7 +137,7 @@
     @endphp
 
     <!-- Gráficas -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; align-items: start;">
         <!-- Gráfica de Productos -->
         <div class="chart-container" id="productosChartContainer">
             <div class="chart-title">
@@ -149,8 +149,8 @@
                     <i class="fas fa-chevron-down"></i>
                 </button>
             </div>
-            <div class="chart-content" id="productosChartContent">
-                <canvas id="productosChart" style="max-height: 400px;"></canvas>
+            <div class="chart-content" id="productosChartContent" style="display:none;">
+                <canvas id="productosChart" style="max-height: 300px;"></canvas>
             </div>
         </div>
 
@@ -165,14 +165,14 @@
                     <i class="fas fa-chevron-down"></i>
                 </button>
             </div>
-            <div class="chart-content" id="ingresosChartContent">
-                <canvas id="ingresosChart" style="max-height: 400px;"></canvas>
+            <div class="chart-content" id="ingresosChartContent" style="display:none;">
+                <canvas id="ingresosChart" style="max-height: 300px;"></canvas>
             </div>
         </div>
     </div>
 
     <!-- Segunda fila de gráficas -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; align-items: start;">
         <!-- Gráfica de Ventas por Estado -->
         <div class="chart-container" id="estadosChartContainer">
             <div class="chart-title">
@@ -184,8 +184,8 @@
                     <i class="fas fa-chevron-down"></i>
                 </button>
             </div>
-            <div class="chart-content" id="estadosChartContent">
-                <canvas id="estadosChart" style="max-height: 400px;"></canvas>
+            <div class="chart-content" id="estadosChartContent" style="display:none;">
+                <canvas id="estadosChart" style="max-height: 300px;"></canvas>
             </div>
         </div>
 
@@ -200,8 +200,8 @@
                     <i class="fas fa-chevron-down"></i>
                 </button>
             </div>
-            <div class="chart-content" id="mesesChartContent">
-                <canvas id="mesesChart" style="max-height: 400px;"></canvas>
+            <div class="chart-content" id="mesesChartContent" style="display:none;">
+                <canvas id="mesesChart" style="max-height: 300px;"></canvas>
             </div>
         </div>
     </div>
@@ -689,25 +689,43 @@ $(document).ready(function() {
 });
 
 // Función para colapsar/expandir gráficas
+// Los contenidos inician con display:none en el HTML, data-open="false" por defecto
 function toggleChart(chartType) {
+    const content   = document.getElementById(chartType + 'ChartContent');
     const container = document.getElementById(chartType + 'ChartContainer');
-    const button = container.querySelector('.collapse-btn i');
-    
-    if (container.classList.contains('chart-collapsed')) {
-        container.classList.remove('chart-collapsed');
-        button.classList.remove('fa-chevron-up');
-        button.classList.add('fa-chevron-down');
+    const icon      = container.querySelector('.collapse-btn i');
+    const estaAbierto = container.getAttribute('data-open') === 'true';
+
+    if (estaAbierto) {
+        // CERRAR
+        content.style.display = 'none';
+        icon.className = 'fas fa-chevron-down';
+        container.setAttribute('data-open', 'false');
+    } else {
+        // ABRIR
+        content.style.display = 'block';
+        icon.className = 'fas fa-chevron-up';
+        container.setAttribute('data-open', 'true');
+        // Redibujar la gráfica porque estaba oculta cuando Chart.js la inicializó
         setTimeout(() => {
             if (window.charts && window.charts[chartType]) {
                 window.charts[chartType].resize();
             }
-        }, 300);
-    } else {
-        container.classList.add('chart-collapsed');
-        button.classList.remove('fa-chevron-down');
-        button.classList.add('fa-chevron-up');
+        }, 50);
     }
 }
+
+// Inicializar: todas las gráficas CERRADAS al cargar, el usuario las abre una por una
+document.addEventListener('DOMContentLoaded', function() {
+    ['productos', 'ingresos', 'estados', 'meses'].forEach(function(chartType) {
+        const content   = document.getElementById(chartType + 'ChartContent');
+        const container = document.getElementById(chartType + 'ChartContainer');
+        const icon      = container.querySelector('.collapse-btn i');
+        content.style.display = 'none';
+        icon.className = 'fas fa-chevron-down';
+        container.setAttribute('data-open', 'false');
+    });
+});
 
 // Configuración de colores
 const colorsOriginales = [
