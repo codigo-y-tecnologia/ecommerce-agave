@@ -22,6 +22,7 @@ class Cupones extends Model
         'dValido_desde',
         'dValido_hasta',
         'iUso_maximo',
+        'iUsos_por_usuario',
         'bActivo',
     ];
 }
