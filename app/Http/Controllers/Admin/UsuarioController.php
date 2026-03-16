@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use App\Traits\InputSanitizer;
 use Illuminate\Support\Facades\View;
+use App\Services\System\SecurityLoggerService;
 
 class UsuarioController extends Controller
 {
@@ -88,6 +89,11 @@ class UsuarioController extends Controller
         $usuario = Usuario::role('cliente')
             ->where('id_usuario', $id)
             ->firstOrFail();
+
+        SecurityLoggerService::accountDeleted(
+            $usuario->id_usuario,
+            $usuario->vEmail
+        );
 
         $usuario->delete();
 

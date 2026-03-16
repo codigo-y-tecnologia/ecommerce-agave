@@ -163,6 +163,11 @@ class AdminPerfilController extends Controller
             'remember_token' => Str::random(60),
         ]);
 
+        SecurityLoggerService::sessionsRevoked(
+            $user->id_usuario,
+            $user->vEmail
+        );
+
         // Mantiene la sesión actual
         $request->session()->regenerate();
 

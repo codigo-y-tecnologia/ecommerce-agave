@@ -163,6 +163,34 @@ class SecurityLoggerService
         );
     }
 
+    public static function sessionsRevoked(int $userId, string $email): void
+    {
+        self::log(
+            'sessions_revoked',
+            'warning',
+            'auth',
+            "Sesiones activas cerradas para: {$email}",
+            [
+                'email' => $email
+            ],
+            $userId
+        );
+    }
+
+    public static function accountDeleted(int $userId, string $email): void
+    {
+        self::log(
+            'account_deleted',
+            'critical',
+            'auth',
+            "Cuenta eliminada por el usuario: {$email}",
+            [
+                'email' => $email
+            ],
+            $userId
+        );
+    }
+
     public static function bruteForceDetected(string $email, int $attempts): void
     {
         self::log(
@@ -248,6 +276,20 @@ class SecurityLoggerService
             'admin',
             "Permisos modificados para: {$targetName}",
             ['user' => $targetName, 'changes' => $changes]
+        );
+    }
+
+    public static function customerDeletedByAdmin(int $adminId, string $customerEmail): void
+    {
+        self::log(
+            'customer_deleted_admin',
+            'critical',
+            'admin',
+            "Administrador eliminó cuenta de cliente: {$customerEmail}",
+            [
+                'customer_email' => $customerEmail
+            ],
+            $adminId
         );
     }
 

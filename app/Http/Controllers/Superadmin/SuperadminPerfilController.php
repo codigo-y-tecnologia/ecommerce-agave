@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Models\Usuario;
 use App\Mail\VerifyNewEmailSuperAdmin;
+use App\Services\System\SecurityLoggerService;
 
 class SuperadminPerfilController extends Controller
 {
@@ -69,11 +70,19 @@ class SuperadminPerfilController extends Controller
     {
         $user = Usuario::where('email_verification_token', $token)->firstOrFail();
 
+        $oldEmail = $user->vEmail;
+
         $user->update([
             'vEmail' => $user->email_pending,
             'email_pending' => null,
             'email_verification_token' => null,
         ]);
+
+        SecurityLoggerService::emailChangeCompleted(
+            $user->id_usuario,
+            $oldEmail,
+            $user->vEmail
+        );
 
         return redirect()
             ->route('superadmin.perfil.index')
@@ -105,6 +114,11 @@ class SuperadminPerfilController extends Controller
             'remember_token' => Str::random(60),
         ]);
 
+        SecurityLoggerService::passwordChanged(
+            $user->id_usuario,
+            $user->vEmail
+        );
+
         Auth::logout();
 
         return redirect()->route('login')
@@ -130,6 +144,11 @@ class SuperadminPerfilController extends Controller
         $user->update([
             'remember_token' => Str::random(60),
         ]);
+
+        SecurityLoggerService::sessionsRevoked(
+            $user->id_usuario,
+            $user->vEmail
+        );
 
         $request->session()->regenerate();
 

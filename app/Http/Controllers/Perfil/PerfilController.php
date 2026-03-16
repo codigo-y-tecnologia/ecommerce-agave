@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Models\Usuario;
 use App\Mail\VerifyNewEmailCliente;
+use App\Services\System\SecurityLoggerService;
 
 class PerfilController extends Controller
 {
@@ -107,6 +108,11 @@ class PerfilController extends Controller
             'remember_token' => Str::random(60),
         ]);
 
+        SecurityLoggerService::passwordChanged(
+            $usuario->id_usuario,
+            $usuario->vEmail
+        );
+
         Auth::logout();
 
         return redirect()->route('login')
@@ -134,6 +140,11 @@ class PerfilController extends Controller
             'remember_token' => Str::random(60),
         ]);
 
+        SecurityLoggerService::sessionsRevoked(
+            $user->id_usuario,
+            $user->vEmail
+        );
+
         $request->session()->regenerate();
 
         return back()->with('success', 'Otras sesiones cerradas correctamente.');
@@ -146,6 +157,8 @@ class PerfilController extends Controller
     {
         $user = Usuario::where('email_verification_token', $token)->first();
 
+        $oldEmail = $user->vEmail;
+
         if (!$user || !$user->email_pending) {
             return redirect('/login')
                 ->with('error', 'El enlace es inválido o ha expirado.');
@@ -156,6 +169,12 @@ class PerfilController extends Controller
         $user->email_pending = null;
         $user->email_verification_token = null;
         $user->save();
+
+        SecurityLoggerService::emailChangeCompleted(
+            $user->id_usuario,
+            $oldEmail,
+            $user->vEmail
+        );
 
         return redirect()->route('perfil.configuracion')
             ->with('success', 'Tu correo electrónico fue actualizado correctamente.');
@@ -178,6 +197,11 @@ class PerfilController extends Controller
                 'password' => 'La contraseña ingresada no es correcta.'
             ]);
         }
+
+        SecurityLoggerService::accountDeleted(
+            $usuario->id_usuario,
+            $usuario->vEmail
+        );
 
         Auth::logout();
 
