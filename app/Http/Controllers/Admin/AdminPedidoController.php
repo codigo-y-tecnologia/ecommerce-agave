@@ -14,44 +14,44 @@ use PayPalCheckoutSdk\Payments\CapturesRefundRequest;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
 use App\Mail\PedidoCanceladoCliente;
-
+use App\Services\System\SecurityLoggerService;
 
 class AdminPedidoController extends Controller
 {
     public function marcarEnviado(Pedido $pedido)
-{
-    abort_if(!$pedido->envio, 403);
+    {
+        abort_if(!$pedido->envio, 403);
 
-    $pedido->envio->update(['eEstado' => 'enviado']);
-    $pedido->update(['eEstado' => 'enviado']);
+        $pedido->envio->update(['eEstado' => 'enviado']);
+        $pedido->update(['eEstado' => 'enviado']);
 
-    return back()->with('success', 'Pedido marcado como enviado');
-}
+        return back()->with('success', 'Pedido marcado como enviado');
+    }
 
-public function marcarEntregado(Pedido $pedido)
-{
-    abort_if(!$pedido->envio || $pedido->envio->eEstado !== 'enviado', 403);
+    public function marcarEntregado(Pedido $pedido)
+    {
+        abort_if(!$pedido->envio || $pedido->envio->eEstado !== 'enviado', 403);
 
-    $pedido->envio->update(['eEstado' => 'entregado']);
-    $pedido->update(['eEstado' => 'entregado']);
+        $pedido->envio->update(['eEstado' => 'entregado']);
+        $pedido->update(['eEstado' => 'entregado']);
 
-    return back()->with('success', 'Pedido marcado como entregado');
-}
+        return back()->with('success', 'Pedido marcado como entregado');
+    }
 
-public function cancelar(Request $request, Pedido $pedido)
-{
+    public function cancelar(Request $request, Pedido $pedido)
+    {
 
-    $request->validate([
-        'motivo' => 'required|string|min:5|max:255',
-    ]);
+        $request->validate([
+            'motivo' => 'required|string|min:5|max:255',
+        ]);
 
-    $pedido->load([
-    'venta',
-    'envio',
-    'pago',
-    'usuario',
-    'detalles.producto'
-]);
+        $pedido->load([
+            'venta',
+            'envio',
+            'pago',
+            'usuario',
+            'detalles.producto'
+        ]);
 
         // ❌ Validaciones de seguridad
         abort_if(!$pedido->pago, 403, 'El pedido no tiene pago registrado');
@@ -68,53 +68,65 @@ public function cancelar(Request $request, Pedido $pedido)
 
         try {
 
-        // 1️⃣ Ejecutar reembolso según método de pago
-        if ($pago->eMetodo_pago === 'stripe') {
-            $this->reembolsarStripe($pago);
+            // 1️⃣ Ejecutar reembolso según método de pago
+            if ($pago->eMetodo_pago === 'stripe') {
+                $this->reembolsarStripe($pago);
+            }
+
+            if ($pago->eMetodo_pago === 'paypal') {
+                $this->reembolsarPaypal($pago);
+            }
+
+            // 2️⃣ Guardar reembolso
+            Reembolsos::create([
+                'id_venta'     => $venta->id_venta,
+                'dMonto'       => $pago->dMonto,
+                'vMotivo'      => $request->motivo,
+                'eMetodo_pago' => $pago->eMetodo_pago,
+                'eEstado'      => 'procesado',
+            ]);
+
+            // 3️⃣ Actualizar estados
+            $venta->update(['eEstado' => 'reembolsada']);
+            $pedido->update(['eEstado' => 'cancelado']);
+            $pago->update(['eEstado' => 'reembolsado']);
+
+            // 🛡 Cancelación manual del pedido
+            SecurityLoggerService::orderCancelledByAdmin(
+                $pedido->id_pedido,
+                $request->motivo
+            );
+
+            // 💰 Registro del reembolso financiero
+            SecurityLoggerService::orderRefunded(
+                $pedido->id_pedido,
+                $pago->dMonto,
+                $request->motivo
+            );
+
+            Mail::to($pedido->usuario->vEmail)
+                ->send(new PedidoCanceladoCliente($pedido, $request->motivo));
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pedido cancelado y reembolsado correctamente'
+            ]);
+        } catch (\Throwable $e) {
+
+            DB::rollBack();
+
+            report($e);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'El reembolsó se realizó, pero ocurrió un error al notificar al cliente ' . $e->getMessage()
+            ], 500);
         }
-
-        if ($pago->eMetodo_pago === 'paypal') {
-            $this->reembolsarPaypal($pago);
-        }
-
-        // 2️⃣ Guardar reembolso
-        Reembolsos::create([
-            'id_venta'     => $venta->id_venta,
-            'dMonto'       => $pago->dMonto,
-            'vMotivo'      => $request->motivo,
-            'eMetodo_pago' => $pago->eMetodo_pago,
-            'eEstado'      => 'procesado',
-        ]);
-
-        // 3️⃣ Actualizar estados
-        $venta->update(['eEstado' => 'reembolsada']);
-        $pedido->update(['eEstado' => 'cancelado']);
-        $pago->update(['eEstado' => 'reembolsado']);
-
-        Mail::to($pedido->usuario->vEmail)
-        ->send(new PedidoCanceladoCliente($pedido, $request->motivo));
-
-    DB::commit();
-
-        return response()->json([
-        'success' => true,
-        'message' => 'Pedido cancelado y reembolsado correctamente'
-    ]);
-
-    } catch (\Throwable $e) {
-
-        DB::rollBack();
-
-        report ($e);
-
-        return response()->json([
-            'success' => false,
-            'message' => 'El reembolsó se realizó, pero ocurrió un error al notificar al cliente ' . $e->getMessage()
-        ], 500);
     }
-}
 
-// Métodos privados para reembolsos
+    // Métodos privados para reembolsos
     private function reembolsarStripe($pago)
     {
         Stripe::setApiKey(config('services.stripe.secret'));
@@ -124,7 +136,7 @@ public function cancelar(Request $request, Pedido $pedido)
         ]);
     }
 
-        private function reembolsarPaypal($pago)
+    private function reembolsarPaypal($pago)
     {
         $environment = new SandboxEnvironment(
             config('services.paypal.client_id'),
@@ -143,5 +155,4 @@ public function cancelar(Request $request, Pedido $pedido)
 
         $client->execute($request);
     }
-
 }

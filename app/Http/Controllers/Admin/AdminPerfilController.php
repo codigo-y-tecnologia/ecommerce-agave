@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use App\Models\Usuario;
 use Illuminate\Support\Str;
+use App\Services\System\SecurityLoggerService;
 
 class AdminPerfilController extends Controller
 {
@@ -79,11 +80,19 @@ class AdminPerfilController extends Controller
     {
         $user = Usuario::where('email_verification_token', $token)->firstOrFail();
 
+        $oldEmail = $user->vEmail;
+
         $user->update([
             'vEmail' => $user->email_pending,
             'email_pending' => null,
             'email_verification_token' => null,
         ]);
+
+        SecurityLoggerService::emailChangeCompleted(
+            $user->id_usuario,
+            $oldEmail,
+            $user->vEmail
+        );
 
         return redirect()->route('admin.perfil.index')
             ->with('success', 'Correo electrónico actualizado correctamente.');
@@ -116,6 +125,11 @@ class AdminPerfilController extends Controller
             'vPassword' => Hash::make($request->password),
             'remember_token' => Str::random(60),
         ]);
+
+        SecurityLoggerService::passwordChanged(
+            $user->id_usuario,
+            $user->vEmail
+        );
 
         Auth::logout(); // cierra sesión actual
         $request->session()->invalidate();

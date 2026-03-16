@@ -13,6 +13,7 @@ use Stripe\Refund as StripeRefund;
 use PayPalCheckoutSdk\Core\PayPalHttpClient;
 use PayPalCheckoutSdk\Core\SandboxEnvironment;
 use PayPalCheckoutSdk\Payments\CapturesRefundRequest;
+use App\Services\System\SecurityLoggerService;
 
 class AdminPostventaController extends Controller
 {
@@ -120,6 +121,14 @@ class AdminPostventaController extends Controller
             $solicitud->update(['eEstado' => 'reembolsada']);
             $venta->update(['eEstado' => 'reembolsada']);
             $pago->update(['eEstado' => 'reembolsado']);
+
+
+            // 🛡 Registrar reembolso por postventa
+            SecurityLoggerService::orderRefunded(
+                $pedido->id_pedido,
+                $pago->dMonto,
+                $solicitud->vMotivo . " ({$solicitud->eTipo})"
+            );
 
             // 📧 Email
             Mail::to($pedido->usuario->vEmail)
