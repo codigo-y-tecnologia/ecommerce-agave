@@ -8,6 +8,7 @@ use Spatie\Permission\Models\Permission;
 use App\Http\Requests\StorePermissionRequest;
 use App\Http\Requests\UpdatePermissionRequest;
 use Spatie\Permission\Models\Role;
+use App\Services\System\SecurityLoggerService;
 
 class SpatiePermissionController extends Controller
 {
@@ -40,6 +41,14 @@ class SpatiePermissionController extends Controller
             'guard_name' => 'web'
         ]);
 
+        SecurityLoggerService::permissionChanged(
+            'system',
+            [
+                'action' => 'permission_created',
+                'permission' => $permission->name
+            ]
+        );
+
         // Asignar automáticamente al superadmin
         $superadmin = Role::where('name', 'superadmin')->first();
 
@@ -59,9 +68,21 @@ class SpatiePermissionController extends Controller
 
     public function update(UpdatePermissionRequest $request, Permission $permission)
     {
+        $oldName = $permission->name;
+
         $permission->update([
             'name' => strtolower(trim($request->name))
         ]);
+
+
+        SecurityLoggerService::permissionChanged(
+            'system',
+            [
+                'action' => 'permission_updated',
+                'old_permission' => $oldName,
+                'new_permission' => $permission->name
+            ]
+        );
 
         return redirect()
             ->route('permissions.index')
@@ -71,6 +92,8 @@ class SpatiePermissionController extends Controller
     public function destroy(Permission $permission)
     {
 
+        $permissionName = $permission->name;
+
         $critical = [
             'configurar_sistema',
             'gestionar_permisos',
@@ -78,7 +101,7 @@ class SpatiePermissionController extends Controller
         ];
 
         // Si el permiso es crítico
-        if (in_array($permission->name, $critical)) {
+        if (in_array($permissionName, $critical)) {
             return back()->with(
                 'error',
                 'Este permiso es crítico y no puede eliminarse.'
@@ -94,6 +117,14 @@ class SpatiePermissionController extends Controller
         }
 
         $permission->delete();
+
+        SecurityLoggerService::permissionChanged(
+            'system',
+            [
+                'action' => 'permission_deleted',
+                'permission' => $permissionName
+            ]
+        );
 
         return back()->with('success', 'Permiso eliminado correctamente');
     }

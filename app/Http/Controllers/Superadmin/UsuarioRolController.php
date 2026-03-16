@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
 use App\Models\Usuario;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use App\Services\System\SecurityLoggerService;
 
 class UsuarioRolController extends Controller
 {
@@ -53,8 +54,18 @@ class UsuarioRolController extends Controller
             'role' => 'required|exists:roles,name',
         ]);
 
+        // 📌 Obtener rol anterior
+        $oldRole = $usuario->roles->pluck('name')->first();
+
         // 🧹 Quitar roles anteriores y asignar el nuevo
         $usuario->syncRoles([$request->role]);
+
+        // 🛡 Registrar cambio de rol
+        SecurityLoggerService::roleChanged(
+            $usuario->vNombre,
+            $oldRole ?? 'none',
+            $request->role
+        );
 
         return redirect()
             ->route('usuarios.index')
