@@ -17,6 +17,7 @@ class Cupones extends Model
     protected $fillable = [
         'vCodigo_cupon',
         'dDescuento',
+        'dMonto_minimo',
         'eTipo',
         'dValido_desde',
         'dValido_hasta',

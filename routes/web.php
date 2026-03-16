@@ -23,11 +23,7 @@ Route::post('/usuarios', [AuthController::class, 'register'])->name('usuarios.st
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-
-
-Route::get('/cupones', [CuponesController::class, 'index'])->name('cupones.index');
-Route::get('/cupones/create', [CuponesController::class, 'create'])->name('cupones.create');
-Route::post('/cupones', [CuponesController::class, 'store'])->name('cupones.store');
-
+Route::resource('cupones', CuponesController::class);
+Route::post('cupones/{id}/toggle', [CuponesController::class, 'toggleActivo'])->name('cupones.toggleActivo'); // ← agregar esta
 Route::resource('impuestos', ImpuestosController::class);
 

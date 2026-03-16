@@ -6,9 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
+    
     public function up(): void
     {
         Schema::create('tbl_cupones', function (Blueprint $table) {
@@ -20,15 +18,16 @@ return new class extends Migration
             $table->date('dValido_hasta');
             $table->integer('iUso_maximo')->default(1);
             $table->boolean('bActivo')->default(true);
+            $table->decimal('dMonto_minimo', 8, 2)->nullable()->after('dDescuento');
             $table->timestamps(); 
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('tbl_cupones');
+  
+        Schema::table('tbl_cupones', function (Blueprint $table) {
+            $table->dropColumn('dMonto_minimo');
+        });
     }
 };
