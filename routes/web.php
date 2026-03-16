@@ -365,9 +365,8 @@ Route::middleware(['auth', 'permission:mi_perfil_admin'])->group(function () {
 Route::middleware(['auth', 'permission:gestionar_cupones'])->group(function () {
 
     // Gestión de cupones
-    Route::get('/cupones', [CuponesController::class, 'index'])->name('cupones.index');
-    Route::get('/cupones/create', [CuponesController::class, 'create'])->name('cupones.create');
-    Route::post('/cupones', [CuponesController::class, 'store'])->name('cupones.store');
+    Route::resource('cupones', CuponesController::class);
+    Route::post('cupones/{id}/toggle', [CuponesController::class, 'toggleActivo'])->name('cupones.toggleActivo');
     Route::resource('cupones_usados', CuponesUsadosController::class)
         ->parameters(['cupones_usados' => 'id']);
 });
