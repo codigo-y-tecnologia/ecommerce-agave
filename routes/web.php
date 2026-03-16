@@ -54,6 +54,7 @@ use App\Http\Controllers\Superadmin\SecurityLogController;
 use App\Http\Controllers\Pedidos\ConsultaPedidoController;
 use App\Http\Controllers\Superadmin\ConfiguracionController;
 use App\Http\Controllers\DetalleVentaController;
+use App\Http\Controllers\CuponesUsadosController;
 
 Route::get('/', [DashboardController::class, 'index'])->name('home');
 
@@ -367,6 +368,8 @@ Route::middleware(['auth', 'permission:gestionar_cupones'])->group(function () {
     Route::get('/cupones', [CuponesController::class, 'index'])->name('cupones.index');
     Route::get('/cupones/create', [CuponesController::class, 'create'])->name('cupones.create');
     Route::post('/cupones', [CuponesController::class, 'store'])->name('cupones.store');
+    Route::resource('cupones_usados', CuponesUsadosController::class)
+        ->parameters(['cupones_usados' => 'id']);
 });
 
 Route::middleware(['auth', 'permission:gestionar_productos'])->group(function () {

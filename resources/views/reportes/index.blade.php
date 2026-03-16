@@ -13,6 +13,9 @@
         <a href="{{ route('detalle_venta.index') }}" class="list-group-item list-group-item-action">
             🔍 Detalle de Ventas
         </a>
+        <a href="{{ route('cupones_usados.index') }}" class="list-group-item list-group-item-action">
+            🎟️ Uso de cupones
+        </a>
     </div>
 </div>
 @endsection

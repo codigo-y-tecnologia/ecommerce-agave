@@ -34,4 +34,16 @@ class CuponUso extends Model
     {
         return $this->belongsTo(Cupon::class, 'id_cupon', 'id_cupon');
     }
+
+    // Relación con el usuario
+    public function usuario()
+    {
+        return $this->belongsTo(User::class, 'id_usuario', 'id_usuario');
+    }
+
+    // Relación con la venta
+    public function venta()
+    {
+        return $this->belongsTo(Venta::class, 'id_venta', 'id_venta');
+    }
 }
