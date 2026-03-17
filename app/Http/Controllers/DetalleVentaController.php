@@ -22,11 +22,11 @@ class DetalleVentaController extends Controller
             SUM(tbl_detalle_ventas.iCantidad) as iCantidad,
             AVG(tbl_detalle_ventas.dPrecio_unitario) as dPrecio_unitario,
             SUM(tbl_detalle_ventas.dSubtotal) as dSubtotal,
-            COALESCE(tbl_usuarios.vNombre, "Sin usuario") as usuario_nombre,
-            COALESCE(tbl_usuarios.vApaterno, "") as usuario_apellido1,
-            COALESCE(tbl_usuarios.vAmaterno, "") as usuario_apellido2,
-            COALESCE(tbl_usuarios.vEmail, "No especificado") as usuario_email,
-            COALESCE(MIN(tbl_direcciones.vTelefono_contacto), "No registrado") as usuario_telefono,
+            COALESCE(tbl_usuarios.vNombre,   tbl_pedidos.vNombre,   "Sin usuario")     as usuario_nombre,
+            COALESCE(tbl_usuarios.vApaterno, tbl_pedidos.vApaterno, "")                as usuario_apellido1,
+            COALESCE(tbl_usuarios.vAmaterno, tbl_pedidos.vAmaterno, "")                as usuario_apellido2,
+            COALESCE(tbl_usuarios.vEmail,    tbl_pedidos.vEmail,    "No especificado") as usuario_email,
+            COALESCE(MIN(tbl_direcciones.vTelefono_contacto), tbl_pedidos.env_telefono_contacto, "No registrado") as usuario_telefono,
             COALESCE(MIN(tbl_direcciones.vCiudad), "No especificada") as vCiudad,
             COALESCE(MIN(tbl_direcciones.vEstado), "No especificado") as vEstado,
             COALESCE(tbl_ventas.dTotal, 0) as total_venta,
@@ -39,6 +39,7 @@ class DetalleVentaController extends Controller
         ')
         ->leftJoin('tbl_ventas', 'tbl_detalle_ventas.id_venta', '=', 'tbl_ventas.id_venta')
         ->leftJoin('tbl_usuarios', 'tbl_ventas.id_usuario', '=', 'tbl_usuarios.id_usuario')
+        ->leftJoin('tbl_pedidos', 'tbl_ventas.id_pedido', '=', 'tbl_pedidos.id_pedido')
         ->leftJoin('tbl_direcciones', function($join) {
             $join->on('tbl_usuarios.id_usuario', '=', 'tbl_direcciones.id_usuario');
         })
@@ -50,6 +51,11 @@ class DetalleVentaController extends Controller
             'tbl_usuarios.vApaterno',
             'tbl_usuarios.vAmaterno',
             'tbl_usuarios.vEmail',
+            'tbl_pedidos.vNombre',
+            'tbl_pedidos.vApaterno',
+            'tbl_pedidos.vAmaterno',
+            'tbl_pedidos.vEmail',
+            'tbl_pedidos.env_telefono_contacto',
             'tbl_ventas.dTotal',
             'tbl_ventas.tFecha_venta',
             'tbl_ventas.eEstado'
@@ -201,11 +207,11 @@ class DetalleVentaController extends Controller
             tbl_detalle_ventas.iCantidad,
             tbl_detalle_ventas.dPrecio_unitario,
             tbl_detalle_ventas.dSubtotal,
-            COALESCE(tbl_usuarios.vNombre, "Sin usuario") as usuario_nombre,
-            COALESCE(tbl_usuarios.vApaterno, "") as usuario_apellido1,
-            COALESCE(tbl_usuarios.vAmaterno, "") as usuario_apellido2,
-            COALESCE(tbl_usuarios.vEmail, "No especificado") as usuario_email,
-            COALESCE(tbl_direcciones.vTelefono_contacto, "No registrado") as usuario_telefono,
+            COALESCE(tbl_usuarios.vNombre,   tbl_pedidos.vNombre,   "Sin usuario")     as usuario_nombre,
+            COALESCE(tbl_usuarios.vApaterno, tbl_pedidos.vApaterno, "")                as usuario_apellido1,
+            COALESCE(tbl_usuarios.vAmaterno, tbl_pedidos.vAmaterno, "")                as usuario_apellido2,
+            COALESCE(tbl_usuarios.vEmail,    tbl_pedidos.vEmail,    "No especificado") as usuario_email,
+            COALESCE(tbl_direcciones.vTelefono_contacto, tbl_pedidos.env_telefono_contacto, "No registrado") as usuario_telefono,
             COALESCE(tbl_direcciones.vCalle, "") as vCalle,
             COALESCE(tbl_direcciones.vNumero_exterior, "") as vNumero_exterior,
             COALESCE(tbl_direcciones.vCiudad, "No especificada") as vCiudad,
@@ -222,6 +228,7 @@ class DetalleVentaController extends Controller
         ')
         ->leftJoin('tbl_ventas', 'tbl_detalle_ventas.id_venta', '=', 'tbl_ventas.id_venta')
         ->leftJoin('tbl_usuarios', 'tbl_ventas.id_usuario', '=', 'tbl_usuarios.id_usuario')
+        ->leftJoin('tbl_pedidos', 'tbl_ventas.id_pedido', '=', 'tbl_pedidos.id_pedido')
         ->leftJoin('tbl_direcciones', 'tbl_usuarios.id_usuario', '=', 'tbl_direcciones.id_usuario')
         ->leftJoin('tbl_productos', 'tbl_detalle_ventas.id_producto', '=', 'tbl_productos.id_producto')
         ->where('tbl_detalle_ventas.id_detalle_venta', $id)
