@@ -14,7 +14,7 @@
                         @csrf
                         @method('PUT')
                         <div class="mb-3">
-                            <label for="vNombre" class="form-label">Nombre de la Etiqueta</label>
+                            <label for="vNombre" class="form-label">Nombre de la Etiqueta *</label>
                             <input type="text" class="form-control @error('vNombre') is-invalid @enderror" 
                                    id="vNombre" name="vNombre" value="{{ old('vNombre', $etiqueta->vNombre) }}" 
                                    placeholder="Ej: Oferta, Nuevo, Popular..." required>

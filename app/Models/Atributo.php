@@ -11,38 +11,38 @@ class Atributo extends Model
 
     protected $table = 'tbl_atributos';
     protected $primaryKey = 'id_atributo';
-
+    
+    // DESACTIVA LOS TIMESTAMPS AUTOMÁTICOS
     public $timestamps = false;
-
+    
     protected $fillable = [
         'vNombre',
+        'vSlug',
         'tDescripcion',
-        'eTipo',
-        'vLabel',
-        'vPlaceholder',
-        'bRequerido',
-        'iOrden',
         'bActivo'
     ];
 
     protected $casts = [
-        'bRequerido' => 'boolean',
         'bActivo' => 'boolean'
     ];
 
-    public function opciones()
+    public function valores()
     {
-        return $this->hasMany(AtributoOpcion::class, 'id_atributo');
+        return $this->hasMany(AtributoValor::class, 'id_atributo');
     }
 
+    public function valoresActivos()
+    {
+        return $this->hasMany(AtributoValor::class, 'id_atributo')
+                    ->where('bActivo', true);
+    }
+
+    /**
+     * Relación con productos a través de la tabla pivote
+     */
     public function productos()
     {
         return $this->belongsToMany(Producto::class, 'tbl_producto_atributos', 'id_atributo', 'id_producto')
-                    ->withPivot('vValor', 'id_opcion');
-    }
-
-    public function opcionesActivas()
-    {
-        return $this->opciones()->orderBy('iOrden');
+                    ->withPivot('id_atributo_valor', 'dPrecio_extra');
     }
 }

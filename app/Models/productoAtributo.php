@@ -3,26 +3,21 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\Pivot;
+use Illuminate\Database\Eloquent\Model;
 
-class ProductoAtributo extends Pivot
+class ProductoAtributo extends Model
 {
     use HasFactory;
 
     protected $table = 'tbl_producto_atributos';
-    
-    // Indicar que no hay clave primaria autoincremental
-    protected $primaryKey = null;
-    public $incrementing = false;
+    protected $primaryKey = 'id_producto_atributo';
 
     protected $fillable = [
         'id_producto',
         'id_atributo',
-        'vValor',
-        'id_opcion'
+        'id_atributo_valor',
+        'dPrecio_extra'
     ];
-
-    public $timestamps = false;
 
     public function producto()
     {
@@ -34,8 +29,8 @@ class ProductoAtributo extends Pivot
         return $this->belongsTo(Atributo::class, 'id_atributo');
     }
 
-    public function opcion()
+    public function valor()
     {
-        return $this->belongsTo(AtributoOpcion::class, 'id_opcion');
+        return $this->belongsTo(AtributoValor::class, 'id_atributo_valor');
     }
 }

@@ -152,7 +152,7 @@
             margin-bottom: 40px;
         }
 
-        /* Tarjeta de favorito */
+        /* Tarjeta de favorito - SOLO CORREGIDO EL ZOOM */
         .favorito-card {
             background: white;
             border-radius: 12px;
@@ -172,17 +172,24 @@
             height: 200px;
             overflow: hidden;
             background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
+        /* SOLO CAMBIÉ ESTO - de 'cover' a 'contain' para eliminar el zoom */
         .favorito-imagen {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain; /* Cambiado de 'cover' a 'contain' */
             transition: transform 0.5s ease;
+            background-color: #f8f9fa;
+            padding: 10px; /* Añadí padding para mejor presentación */
         }
 
+        /* Reduje el zoom al mínimo */
         .favorito-card:hover .favorito-imagen {
-            transform: scale(1.05);
+            transform: scale(1.02); /* Zoom mínimo en lugar de 1.05 */
         }
 
         /* Botón de eliminar favorito */
@@ -210,22 +217,8 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
 
-        .eliminar-favorito-btn i {
-            font-size: 20px;
-            color: #ff4757;
-        }
-
         .favorito-info {
             padding: 20px;
-        }
-
-        .favorito-categoria {
-            color: #667eea;
-            font-size: 14px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
         }
 
         .favorito-nombre {
@@ -311,6 +304,51 @@
             background: #ff2e43;
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(255, 71, 87, 0.4);
+        }
+
+        /* Badge de oferta/descuento */
+        .badge-oferta {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: #00a650;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 99;
+            box-shadow: 0 2px 5px rgba(0,166,80,0.3);
+        }
+
+        /* Corazón de favoritos */
+        .corazon-favorito {
+            position: absolute;
+            top: 15px;
+            right: 60px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 2;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            font-size: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
+        .corazon-favorito:hover {
+            background: white;
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .corazon-favorito.activo {
+            color: #ff4757;
         }
 
         /* Estado vacío */
@@ -515,21 +553,96 @@
             <div class="favoritos-grid">
                 @foreach($favoritos as $favorito)
                     @php
-                        $producto = $favorito->producto;
+                        // Determinar si es producto o variación
+                        $esVariacion = !is_null($favorito->id_variacion) && $favorito->variacion;
+                        
+                        if ($esVariacion) {
+                            // Es una variación
+                            $item = $favorito->variacion;
+                            $producto = $item->producto;
+                            
+                            // Obtener texto de atributos (guardado pero no mostrado)
+                            $atributosTexto = [];
+                            foreach($item->atributos as $atributoRel) {
+                                if($atributoRel->atributo && $atributoRel->valor) {
+                                    $atributosTexto[] = $atributoRel->valor->vValor;
+                                }
+                            }
+                            $atributosTexto = implode(' - ', $atributosTexto);
+                            
+                            // NOMBRE SIMPLE: solo el nombre del producto + atributos separados por guiones
+                            $nombreCompleto = $producto->vNombre . ' - ' . $atributosTexto;
+                            
+                            $precioActual = $item->tieneDescuentoActivo() ? $item->dPrecio_oferta : $item->dPrecio;
+                            $precioOriginal = $item->dPrecio;
+                            $tieneDescuento = $item->tieneDescuentoActivo();
+                            $porcentajeDescuento = $item->porcentaje_descuento;
+                            $stock = $item->iStock;
+                            $imagenes = $item->imagenes;
+                            $url = route('productos.show.public', [$producto->id_producto, 'variacion' => $item->id_variacion]);
+                            $productoPadreId = $producto->id_producto;
+                            $tipo = 'variacion';
+                            $id = $item->id_variacion;
+                        } else {
+                            // Es un producto
+                            $item = $favorito->producto;
+                            
+                            // NOMBRE SIMPLE: solo el nombre del producto
+                            $nombreCompleto = $item->vNombre;
+                            
+                            $precioActual = $item->tieneDescuentoActivo() ? $item->dPrecio_oferta : $item->dPrecio_venta;
+                            $precioOriginal = $item->dPrecio_venta;
+                            $tieneDescuento = $item->tieneDescuentoActivo();
+                            $porcentajeDescuento = $item->porcentaje_descuento;
+                            $stock = $item->iStock;
+                            $imagenes = $item->imagenes;
+                            $url = route('productos.show.public', $item->id_producto);
+                            $productoPadreId = $item->id_producto;
+                            $tipo = 'producto';
+                            $id = $item->id_producto;
+                        }
+                        
+                        // Determinar clase de stock
+                        $stockClass = $stock > 10 ? 'stock-disponible' : ($stock > 0 ? 'stock-bajo' : 'sin-stock');
+                        
+                        // Mensaje de stock
+                        $stockMessage = $stock > 10 
+                            ? '✅ En stock (' . $stock . ' unidades)' 
+                            : ($stock > 0 
+                                ? '⚠️ Solo ' . $stock . ' disponibles' 
+                                : '❌ Agotado');
+                        
+                        // Generar ID único para la card
+                        $cardId = $esVariacion 
+                            ? 'favorito-var-' . $id . '-prod-' . $productoPadreId
+                            : 'favorito-prod-' . $id;
                     @endphp
                     
-                    <div class="favorito-card" id="favorito-{{ $producto->id_producto }}">
-                        <!-- Imagen del producto -->
+                    <div class="favorito-card" id="{{ $cardId }}" data-tipo="{{ $tipo }}" data-id="{{ $id }}" data-producto-padre="{{ $productoPadreId }}">
+                        <!-- Imagen del producto/variación -->
                         <div class="favorito-img-container">
-                            <!-- Botón para eliminar de favoritos -->
+                            <!-- Botón de corazón para quitar de favoritos -->
+                            <button class="corazon-favorito activo" 
+                                    onclick="event.stopPropagation(); eliminarFavorito({{ $productoPadreId }}, '{{ $tipo }}', {{ $id }})"
+                                    title="Quitar de favoritos">
+                                ❤️
+                            </button>
+
+                            <!-- Botón X para eliminar de favoritos -->
                             <button class="eliminar-favorito-btn" 
-                                    onclick="eliminarFavorito({{ $producto->id_producto }})"
+                                    onclick="event.stopPropagation(); eliminarFavorito({{ $productoPadreId }}, '{{ $tipo }}', {{ $id }})"
                                     title="Eliminar de favoritos">
                                 ❌
                             </button>
 
-                            @if(count($producto->imagenes) > 0)
-                                <img src="{{ $producto->imagenes[0] }}" alt="{{ $producto->vNombre }}" class="favorito-imagen">
+                            @if($tieneDescuento)
+                                <div class="badge-oferta">
+                                    -{{ $porcentajeDescuento }}%
+                                </div>
+                            @endif
+
+                            @if(count($imagenes) > 0)
+                                <img src="{{ $imagenes[0] }}" alt="{{ $nombreCompleto }}" class="favorito-imagen">
                             @else
                                 <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: linear-gradient(45deg, #f8f9fa, #e9ecef);">
                                     <span style="font-size: 48px; color: #adb5bd;">🛒</span>
@@ -537,35 +650,30 @@
                             @endif
                         </div>
 
-                        <!-- Información del producto -->
+                        <!-- Información del producto/variación -->
                         <div class="favorito-info">
-                            <div class="favorito-categoria">
-                                {{ $producto->categoria->vNombre ?? 'Sin categoría' }}
-                            </div>
-                            
-                            <h3 class="favorito-nombre" onclick="window.location.href='{{ route('productos.show.public', $producto->id_producto) }}'">
-                                {{ $producto->vNombre }}
+                            <h3 class="favorito-nombre" onclick="window.location.href='{{ $url }}'">
+                                {{ $nombreCompleto }}
                             </h3>
                             
                             <div class="favorito-precio">
-                                ${{ number_format($producto->dPrecio_venta, 2) }}
+                                @if($tieneDescuento)
+                                    <span style="text-decoration: line-through; color: #999; font-size: 16px; margin-right: 8px;">
+                                        ${{ number_format($precioOriginal, 2) }}
+                                    </span>
+                                @endif
+                                ${{ number_format($precioActual, 2) }}
                             </div>
 
-                            <div class="favorito-stock {{ $producto->iStock > 10 ? 'stock-disponible' : ($producto->iStock > 0 ? 'stock-bajo' : 'sin-stock') }}">
-                                @if($producto->iStock > 10)
-                                    ✅ En stock ({{ $producto->iStock }} unidades)
-                                @elseif($producto->iStock > 0)
-                                    ⚠️ Solo {{ $producto->iStock }} disponibles
-                                @else
-                                    ❌ Agotado
-                                @endif
+                            <div class="favorito-stock {{ $stockClass }}">
+                                {!! $stockMessage !!}
                             </div>
 
                             <div class="favorito-actions">
-                                <a href="{{ route('productos.show.public', $producto->id_producto) }}" class="btn btn-primary">
+                                <a href="{{ $url }}" class="btn btn-primary">
                                     <span>👁️</span> Ver Producto
                                 </a>
-                                <button class="btn btn-danger" onclick="eliminarFavorito({{ $producto->id_producto }})">
+                                <button class="btn btn-danger" onclick="eliminarFavorito({{ $productoPadreId }}, '{{ $tipo }}', {{ $id }})">
                                     <span>🗑️</span> Eliminar
                                 </button>
                             </div>
@@ -588,25 +696,47 @@
     </div>
 
     <script>
-        // VARIABLES GLOBALES para controlar UNA sola notificación
+        // VARIABLES GLOBALES
         let currentNotification = null;
         let notificationTimeout = null;
 
-        // Función para eliminar favoritos
-        function eliminarFavorito(productoId) {
-            if (!confirm('¿Eliminar de favoritos?')) {
+        // Función para eliminar favorito
+        function eliminarFavorito(productoId, tipo, id) {
+            const variacionId = tipo === 'variacion' ? id : null;
+            
+            // Encontrar la card específica
+            let selector = '';
+            if (tipo === 'variacion' && id) {
+                selector = `[id="favorito-var-${id}-prod-${productoId}"]`;
+            } else {
+                selector = `[id="favorito-prod-${productoId}"]`;
+            }
+            
+            const cards = document.querySelectorAll(selector);
+            
+            if (cards.length === 0) {
+                showNotification('Error: No se encontró el producto ❌');
                 return;
             }
 
-            const card = document.getElementById(`favorito-${productoId}`);
-            if (card) {
-                card.style.opacity = '0.5';
+            cards.forEach(card => {
+                if (card) {
+                    card.style.opacity = '0.5';
+                    card.style.transform = 'scale(0.95)';
+                    card.style.transition = 'all 0.3s ease';
+                }
+            });
+
+            // Eliminar notificación anterior
+            removeNotification();
+
+            // Construir URL con parámetros
+            let url = `/favoritos/${productoId}`;
+            if (variacionId) {
+                url += `?id_variacion=${variacionId}`;
             }
 
-            // 1. ELIMINAR NOTIFICACIÓN ANTERIOR
-            removeExistingNotification();
-
-            fetch(`/favoritos/${productoId}`, {
+            fetch(url, {
                 method: 'DELETE',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -614,40 +744,68 @@
                     'Accept': 'application/json'
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error en la respuesta del servidor');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
-                    if (card) {
-                        card.remove();
-                        updateFavoritosCount();
-                        
-                        // 2. MOSTRAR SOLO UNA NOTIFICACIÓN
-                        showSingleNotification('Producto eliminado de favoritos ✅');
-                        
-                        // Si no quedan favoritos, mostrar estado vacío
-                        const remainingCards = document.querySelectorAll('.favorito-card');
-                        if (remainingCards.length === 0) {
-                            showEmptyState();
+                    // Eliminar las cards del DOM
+                    let eliminadas = 0;
+                    cards.forEach(card => {
+                        if (card && card.parentNode) {
+                            // Animación de salida
+                            card.style.transform = 'scale(0.8)';
+                            card.style.opacity = '0';
+                            
+                            setTimeout(() => {
+                                if (card && card.parentNode) {
+                                    card.remove();
+                                    eliminadas++;
+                                    
+                                    if (eliminadas === cards.length) {
+                                        updateFavoritosCount();
+                                        
+                                        setTimeout(() => {
+                                            const remainingCards = document.querySelectorAll('.favorito-card');
+                                            if (remainingCards.length === 0) {
+                                                showEmptyState();
+                                            }
+                                        }, 100);
+                                    }
+                                }
+                            }, 300);
                         }
-                    }
+                    });
+                    
+                    const mensaje = 'Producto eliminado de favoritos ✅';
+                    showNotification(mensaje);
                 } else {
-                    showSingleNotification('Error al eliminar ❌');
-                    if (card) {
-                        card.style.opacity = '1';
-                    }
+                    showNotification('Error al eliminar ❌');
+                    cards.forEach(card => {
+                        if (card) {
+                            card.style.opacity = '1';
+                            card.style.transform = 'scale(1)';
+                        }
+                    });
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                showSingleNotification('Error de conexión ❌');
-                if (card) {
-                    card.style.opacity = '1';
-                }
+                showNotification('Error de conexión ❌');
+                cards.forEach(card => {
+                    if (card) {
+                        card.style.opacity = '1';
+                        card.style.transform = 'scale(1)';
+                    }
+                });
             });
         }
 
         // Función para eliminar notificación existente
-        function removeExistingNotification() {
+        function removeNotification() {
             if (currentNotification) {
                 currentNotification.classList.remove('show');
                 setTimeout(() => {
@@ -675,23 +833,19 @@
             });
         }
 
-        // Función para mostrar UNA sola notificación
-        function showSingleNotification(message) {
-            // 1. Eliminar notificación anterior
-            removeExistingNotification();
+        // Función para mostrar una sola notificación
+        function showNotification(message) {
+            removeNotification();
             
-            // 2. Crear nueva notificación
             const notification = document.createElement('div');
             notification.className = 'single-notification';
             
-            // Determinar si es éxito o error
             if (message.includes('✅')) {
                 notification.className = 'single-notification';
             } else {
                 notification.className = 'single-notification error';
             }
             
-            // Limpiar mensaje
             const cleanMessage = message.replace('✅', '').replace('❌', '').trim();
             
             notification.innerHTML = `
@@ -702,12 +856,10 @@
             document.body.appendChild(notification);
             currentNotification = notification;
             
-            // 3. Mostrar con animación
             setTimeout(() => {
                 notification.classList.add('show');
             }, 10);
             
-            // 4. Configurar para eliminar después de 3 segundos
             notificationTimeout = setTimeout(() => {
                 if (notification.classList.contains('show')) {
                     notification.classList.remove('show');
@@ -729,6 +881,11 @@
             if (countElement) {
                 countElement.textContent = remainingCards;
             }
+            
+            const countContainer = document.querySelector('.favoritos-count-container p');
+            if (countContainer) {
+                countContainer.innerHTML = `Tienes <span class="favoritos-count">${remainingCards}</span> producto(s) en tu lista de deseos`;
+            }
         }
 
         // Función para mostrar estado vacío
@@ -739,25 +896,39 @@
                 const countContainer = document.querySelector('.favoritos-count-container');
                 const pageHeader = document.querySelector('.page-header');
                 
-                if (favoritosGrid) favoritosGrid.style.display = 'none';
-                if (countContainer) countContainer.style.display = 'none';
-                if (pageHeader) pageHeader.style.display = 'none';
+                if (favoritosGrid) {
+                    favoritosGrid.style.display = 'none';
+                    favoritosGrid.remove();
+                }
+                if (countContainer) {
+                    countContainer.style.display = 'none';
+                    countContainer.remove();
+                }
+                if (pageHeader) {
+                    pageHeader.style.display = 'none';
+                    pageHeader.remove();
+                }
                 
-                mainContainer.innerHTML += `
-                    <div class="empty-state" id="empty-state-dynamic">
-                        <div class="empty-icon">
-                            ❤️
+                if (!document.getElementById('empty-state-dynamic')) {
+                    const emptyStateHTML = `
+                        <div class="empty-state" id="empty-state-dynamic">
+                            <div class="empty-icon">
+                                ❤️
+                            </div>
+                            <h3>Tu lista de deseos está vacía</h3>
+                            <p>Añade productos que te gusten para verlos aquí y recibir notificaciones cuando bajen de precio o se estén agotando.</p>
+                            <a href="{{ route('busqueda.resultados') }}" class="btn btn-primary" style="display: inline-flex; width: auto; padding: 15px 40px;">
+                                <span>🛍️</span> Explorar Productos
+                            </a>
                         </div>
-                        <h3>Tu lista de deseos está vacía</h3>
-                        <p>Añade productos que te gusten para verlos aquí y recibir notificaciones cuando bajen de precio o se estén agotando.</p>
-                        <a href="{{ route('busqueda.resultados') }}" class="btn btn-primary" style="display: inline-flex; width: auto; padding: 15px 40px;">
-                            <span>🛍️</span> Explorar Productos
-                        </a>
-                    </div>
-                `;
+                    `;
+                    
+                    mainContainer.innerHTML = emptyStateHTML;
+                }
             }
         }
 
+        // Prevenir que el clic en los botones se propague a la card
         document.addEventListener('DOMContentLoaded', function() {
             // Limpiar localStorage
             localStorage.removeItem('favorito_removed');
@@ -768,6 +939,14 @@
             if (searchInput) {
                 searchInput.focus();
             }
+            
+            // Prevenir propagación en todos los botones dentro de las cards
+            const buttons = document.querySelectorAll('.favorito-card button, .favorito-card a');
+            buttons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
+            });
         });
     </script>
 </body>

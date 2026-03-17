@@ -1,235 +1,175 @@
-@extends('admin.productos.administrar-productos')
+@extends('layouts.app')
 
-@section('title', 'Atributos del Producto - ' . $producto->vNombre)
-
+@section('title', 'Atributos y Variaciones - ' . $producto->vNombre)
 @section('content')
 <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1><i class="fas fa-wine-bottle me-2"></i>{{ $producto->vNombre }}</h1>
+            <p class="text-muted">Gestionar atributos y variaciones del producto</p>
+        </div>
+        <div>
+            <a href="{{ route('productos.edit', $producto) }}" class="btn btn-outline-primary">
+                <i class="fas fa-edit me-1"></i> Editar Producto
+            </a>
+            <a href="{{ route('productos.index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Volver
+            </a>
+        </div>
+    </div>
+
     <div class="row">
+        <!-- Sección de atributos (simplificada) -->
         <div class="col-md-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="card-title">
-                        <i class="fas fa-tags me-2"></i>Atributos del Producto: {{ $producto->vNombre }}
-                    </h3>
-                    <div>
-                        <a href="{{ route('productos.edit', $producto) }}" class="btn btn-secondary me-2">
-                            <i class="fas fa-edit me-1"></i> Editar Producto
-                        </a>
-                        <a href="{{ route('productos.index') }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-arrow-left me-1"></i> Volver
-                        </a>
-                    </div>
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Atributos Asignados al Producto</h5>
                 </div>
                 <div class="card-body">
-                    <!-- Formulario para agregar nuevo atributo -->
-                    <div class="row mb-4">
-                        <div class="col-md-12">
-                            <div class="card">
-                                <div class="card-header bg-light">
-                                    <h5 class="card-title mb-0">
-                                        <i class="fas fa-plus me-2"></i>Agregar Nuevo Atributo
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <form action="{{ route('productos.atributos.store', $producto) }}" method="POST" id="atributoForm">
-                                        @csrf
-                                        <div class="row">
-                                            <div class="col-md-4">
-                                                <div class="form-group">
-                                                    <label for="id_atributo">Atributo *</label>
-                                                    <select class="form-control @error('id_atributo') is-invalid @enderror" 
-                                                            id="id_atributo" name="id_atributo" required>
-                                                        <option value="">Seleccione un atributo</option>
-                                                        @foreach($atributosDisponibles as $atributoDisponible)
-                                                            <option value="{{ $atributoDisponible->id_atributo }}">
-                                                                {{ $atributoDisponible->vNombre }} ({{ $atributoDisponible->eTipo }})
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
-                                                    @error('id_atributo')
-                                                        <div class="invalid-feedback">{{ $message }}</div>
-                                                    @enderror
-                                                </div>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <div class="form-group">
-                                                    <label for="id_opcion">Opción</label>
-                                                    <select class="form-control @error('id_opcion') is-invalid @enderror" 
-                                                            id="id_opcion" name="id_opcion">
-                                                        <option value="">Seleccione una opción</option>
-                                                    </select>
-                                                    @error('id_opcion')
-                                                        <div class="invalid-feedback">{{ $message }}</div>
-                                                    @enderror
-                                                </div>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <div class="form-group">
-                                                    <label for="vValor">Valor Personalizado</label>
-                                                    <input type="text" class="form-control @error('vValor') is-invalid @enderror" 
-                                                           id="vValor" name="vValor" placeholder="Ingrese un valor personalizado">
-                                                    @error('vValor')
-                                                        <div class="invalid-feedback">{{ $message }}</div>
-                                                    @enderror
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="row mt-3">
-                                            <div class="col-md-12">
-                                                <button type="submit" class="btn btn-primary">
-                                                    <i class="fas fa-save me-1"></i> Agregar Atributo
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Lista de atributos existentes -->
-                    <div class="row">
-                        <div class="col-md-12">
-                            <h5>Atributos Asignados</h5>
-                            
-                            @if($producto->productoAtributos->count() > 0)
-                                <div class="table-responsive">
-                                    <table class="table table-bordered table-striped">
-                                        <thead class="thead-dark">
-                                            <tr>
-                                                <th>Atributo</th>
-                                                <th>Tipo</th>
-                                                <th>Valor/Opción</th>
-                                                <th width="80">Acciones</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach($producto->productoAtributos as $productoAtributo)
-                                                <tr>
-                                                    <td>
-                                                        <strong>{{ $productoAtributo->atributo->vNombre }}</strong>
-                                                        @if($productoAtributo->atributo->vLabel)
-                                                            <br><small class="text-muted">{{ $productoAtributo->atributo->vLabel }}</small>
-                                                        @endif
-                                                    </td>
-                                                    <td>
-                                                        @php
-                                                            $badgeClass = [
-                                                                'texto' => 'primary',
-                                                                'textarea' => 'info',
-                                                                'select' => 'success',
-                                                                'radio' => 'warning',
-                                                                'checkbox' => 'secondary',
-                                                                'archivo' => 'dark'
-                                                            ][$productoAtributo->atributo->eTipo] ?? 'secondary';
-                                                        @endphp
-                                                        <span class="badge bg-{{ $badgeClass }}">
-                                                            {{ $productoAtributo->atributo->eTipo }}
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        @if($productoAtributo->opcion)
-                                                            <span class="badge bg-success">{{ $productoAtributo->opcion->vEtiqueta }}</span>
-                                                        @elseif($productoAtributo->vValor)
-                                                            <code>{{ $productoAtributo->vValor }}</code>
-                                                        @else
-                                                            <span class="text-muted">No asignado</span>
-                                                        @endif
-                                                    </td>
-                                                    <td>
-                                                        <form action="{{ route('productos.atributos.destroy', [
-                                                            'producto' => $producto->id_producto, 
-                                                            'atributo' => $productoAtributo->id_atributo
-                                                        ]) }}" 
-                                                              method="POST" class="d-inline">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" class="btn btn-danger btn-sm" 
-                                                                    onclick="return confirm('¿Estás seguro de eliminar este atributo?')">
-                                                                <i class="fas fa-trash"></i>
-                                                            </button>
-                                                        </form>
-                                                    </td>
-                                                </tr>
+                    @if($producto->atributosAgrupados && count($producto->atributosAgrupados) > 0)
+                        <div class="row">
+                            @foreach($producto->atributosAgrupados as $atributo)
+                                <div class="col-md-6 mb-3">
+                                    <div class="border rounded p-3">
+                                        <h6 class="fw-bold mb-2">{{ $atributo['nombre'] }}</h6>
+                                        <div>
+                                            @foreach($atributo['valores'] as $valor)
+                                                <span class="badge bg-secondary me-1 mb-1">
+                                                    {{ $valor['valor'] }}
+                                                    @if($valor['precio_extra'] > 0)
+                                                        <small class="ms-1">(+${{ number_format($valor['precio_extra'], 2) }})</small>
+                                                    @endif
+                                                </span>
                                             @endforeach
-                                        </tbody>
-                                    </table>
+                                        </div>
+                                    </div>
                                 </div>
-                            @else
-                                <div class="text-center py-4">
-                                    <i class="fas fa-tags fa-3x text-muted mb-3"></i>
-                                    <h5 class="text-muted">No hay atributos asignados</h5>
-                                    <p class="text-muted">Agrega atributos usando el formulario superior</p>
-                                </div>
-                            @endif
+                            @endforeach
                         </div>
-                    </div>
+                        
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Información:</strong> Para crear variaciones del producto, dirígete a la sección de 
+                            <a href="{{ route('variaciones.index') }}" class="alert-link">Variaciones</a> o 
+                            <a href="{{ route('variaciones.create', $producto->id_producto) }}" class="alert-link">crea una nueva valoración</a>.
+                        </div>
+                    @else
+                        <div class="text-center py-4">
+                            <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">No hay atributos asignados</h4>
+                            <p class="text-muted mb-3">Para crear variaciones, primero asigna atributos al producto</p>
+                            <a href="{{ route('productos.asignar-atributos', $producto->id_producto) }}" 
+                               class="btn btn-primary">
+                                <i class="fas fa-tags me-1"></i> Asignar Atributos
+                            </a>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Sección para variaciones existentes -->
+    @if($producto->variaciones->count() > 0)
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="fas fa-boxes me-2"></i>Variaciones Existentes ({{ $producto->variaciones->count() }})</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Combinación</th>
+                            <th>Precio</th>
+                            <th>Stock</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($producto->variaciones as $variacion)
+                        <tr>
+                            <td><code>{{ $variacion->vSKU }}</code></td>
+                            <td>
+                                <small>{{ $variacion->nombre_combinacion }}</small>
+                            </td>
+                            <td>
+                                ${{ number_format($variacion->dPrecio, 2) }}
+                                @if($variacion->tiene_oferta)
+                                <br>
+                                <small class="text-success">Oferta: ${{ number_format($variacion->dPrecio_oferta, 2) }}</small>
+                                @endif
+                            </td>
+                            <td>
+                                <span class="badge {{ $variacion->iStock > 10 ? 'bg-success' : ($variacion->iStock > 0 ? 'bg-warning' : 'bg-danger') }}">
+                                    {{ $variacion->iStock }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge {{ $variacion->bActivo ? 'bg-success' : 'bg-secondary' }}">
+                                    {{ $variacion->bActivo ? 'Activo' : 'Inactivo' }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ route('variaciones.edit', ['producto_id' => $producto->id_producto, 'variacion_id' => $variacion->id_variacion]) }}" 
+                                       class="btn btn-warning" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form action="{{ route('variaciones.destroy', ['producto_id' => $producto->id_producto, 'variacion_id' => $variacion->id_variacion]) }}" 
+                                          method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar esta variación?')">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="btn btn-danger" title="Eliminar">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    @else
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-cubes me-2"></i>Crear Variaciones</h5>
+            </div>
+            <div class="card-body text-center py-5">
+                <i class="fas fa-cubes fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No hay variaciones creadas</h4>
+                <p class="text-muted mb-3">Crea variaciones manualmente desde la sección de variaciones</p>
+                <div class="mt-3">
+                    <a href="{{ route('variaciones.create', $producto->id_producto) }}" class="btn btn-success me-2">
+                        <i class="fas fa-plus me-1"></i> Crear Nueva Valoración
+                    </a>
+                    <a href="{{ route('variaciones.index') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-list me-1"></i> Ver Todas las Variaciones
+                    </a>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>
 @endsection
 
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const atributoSelect = document.getElementById('id_atributo');
-    const opcionSelect = document.getElementById('id_opcion');
-    const valorInput = document.getElementById('vValor');
+@section('styles')
+<style>
+.badge {
+    font-size: 14px;
+    padding: 5px 10px;
+}
 
-    // Cargar opciones cuando se selecciona un atributo
-    atributoSelect.addEventListener('change', function() {
-        const atributoId = this.value;
-        
-        if (atributoId) {
-            fetch(`/atributos/${atributoId}/opciones`)
-                .then(response => response.json())
-                .then(data => {
-                    // Limpiar opciones anteriores
-                    opcionSelect.innerHTML = '<option value="">Seleccione una opción</option>';
-                    
-                    // Agregar nuevas opciones
-                    data.opciones.forEach(opcion => {
-                        const option = document.createElement('option');
-                        option.value = opcion.id_opcion;
-                        option.textContent = opcion.vEtiqueta;
-                        opcionSelect.appendChild(option);
-                    });
+.card {
+    border: 1px solid #dee2e6;
+}
 
-                    // Mostrar/ocultar campos según el tipo
-                    if (data.tipo === 'texto' || data.tipo === 'textarea') {
-                        valorInput.style.display = 'block';
-                        valorInput.closest('.form-group').style.display = 'block';
-                        opcionSelect.style.display = 'none';
-                        opcionSelect.closest('.form-group').style.display = 'none';
-                    } else if (['select', 'radio', 'checkbox'].includes(data.tipo)) {
-                        valorInput.style.display = 'none';
-                        valorInput.closest('.form-group').style.display = 'none';
-                        opcionSelect.style.display = 'block';
-                        opcionSelect.closest('.form-group').style.display = 'block';
-                    } else {
-                        valorInput.style.display = 'block';
-                        valorInput.closest('.form-group').style.display = 'block';
-                        opcionSelect.style.display = 'block';
-                        opcionSelect.closest('.form-group').style.display = 'block';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    opcionSelect.innerHTML = '<option value="">Error al cargar opciones</option>';
-                });
-        } else {
-            opcionSelect.innerHTML = '<option value="">Seleccione una opción</option>';
-            valorInput.style.display = 'block';
-            opcionSelect.style.display = 'block';
-        }
-    });
-
-    // Inicializar estado
-    if (atributoSelect.value) {
-        atributoSelect.dispatchEvent(new Event('change'));
-    }
-});
-</script>
-@endpush
+.card-header {
+    border-bottom: 1px solid rgba(0,0,0,0.125);
+}
+</style>
+@endsection

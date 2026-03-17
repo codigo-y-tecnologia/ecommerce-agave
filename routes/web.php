@@ -24,9 +24,9 @@ use App\Http\Controllers\EtiquetaController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\MarcaController;
 use App\Http\Controllers\AtributoController;
-use App\Http\Controllers\ProductoAtributoController;
 use App\Http\Controllers\BusquedaController;
 use App\Http\Controllers\FavoritoController;
+use App\Http\Controllers\FavoritoInvitadoController;
 use App\Http\Controllers\ReembolsosController;
 use App\Http\Controllers\Checkout\PaymentController;
 use App\Http\Controllers\Checkout\OrderReceivedController;
@@ -55,6 +55,10 @@ use App\Http\Controllers\Pedidos\ConsultaPedidoController;
 use App\Http\Controllers\Superadmin\ConfiguracionController;
 use App\Http\Controllers\DetalleVentaController;
 use App\Http\Controllers\CuponesUsadosController;
+use App\Http\Controllers\VariacionController;
+use App\Http\Controllers\ImpuestoController;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\DB;
 
 Route::get('/', [DashboardController::class, 'index'])->name('home');
 
@@ -187,10 +191,6 @@ Route::get('/buscar', [BusquedaController::class, 'buscar'])->name('busqueda.res
 Route::get('/busqueda-rapida', [BusquedaController::class, 'busquedaRapida'])->name('busqueda.rapida');
 Route::get('/buscar-productos', [BusquedaController::class, 'buscarProductos'])->name('busqueda.productos');
 
-// RUTAS PÚBLICAS PARA FAVORITOS
-Route::get('/favoritos', [FavoritoController::class, 'index'])
-    ->name('favoritos.index');
-
 // Login y registro solo para invitados
 Route::middleware('guest')->group(function () {
 
@@ -228,12 +228,139 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
     // RUTAS PARA FAVORITOS - dentro de auth
-    Route::post('/favoritos/toggle/{producto}', [FavoritoController::class, 'toggle'])
-        ->name('favoritos.toggle');
-    Route::delete('/favoritos/{producto}', [FavoritoController::class, 'destroy'])
-        ->name('favoritos.destroy');
-    Route::get('/favoritos/sync', [FavoritoController::class, 'sync'])
-        ->name('favoritos.sync');
+    Route::get('/favoritos', [FavoritoController::class, 'index'])->name('favoritos.index');
+    Route::post('/favoritos/toggle-producto/{id}', [FavoritoController::class, 'toggleProducto'])->name('favoritos.toggle.producto');
+    Route::post('/favoritos/toggle-variacion/{id}', [FavoritoController::class, 'toggleVariacion'])->name('favoritos.toggle.variacion');
+    Route::delete('/favoritos/{id}', [FavoritoController::class, 'destroy'])->name('favoritos.destroy');
+    Route::get('/favoritos/check-producto/{id}', [FavoritoController::class, 'checkProducto'])->name('favoritos.check.producto');
+    Route::get('/favoritos/check-variacion/{id}', [FavoritoController::class, 'checkVariacion'])->name('favoritos.check.variacion');
+});
+
+// RUTAS PÚBLICAS PARA FAVORITOS PARA INVITADOS
+Route::prefix('favoritos-invitado')->name('favoritos.invitado.')->group(function () {
+    Route::get('/', [FavoritoInvitadoController::class, 'index'])->name('index');
+    Route::post('/toggle-producto/{id}', [FavoritoInvitadoController::class, 'toggleProducto'])->name('toggle.producto');
+    Route::post('/toggle-variacion/{id}', [FavoritoInvitadoController::class, 'toggleVariacion'])->name('toggle.variacion');
+    Route::delete('/', [FavoritoInvitadoController::class, 'destroy'])->name('destroy');
+    Route::get('/check/{idProducto}/{idVariacion?}', [FavoritoInvitadoController::class, 'check'])->name('check');
+    Route::post('/migrar', [FavoritoInvitadoController::class, 'migrarAUsuario'])->name('migrar');
+});
+
+// =====================================================================
+// RUTAS PARA ATRIBUTOS DE PRODUCTOS
+// =====================================================================
+// Ruta para crear valores de atributos rápidamente (DEBE IR ANTES de las rutas con parámetros)
+Route::post('/atributos/{atributo}/valores-quick', [AtributoController::class, 'quickCreateValor'])->name('atributos.valores-quick');
+Route::get('/productos/{id}/atributos', [ProductoController::class, 'atributos'])->name('productos.atributos');
+Route::post('/productos/{id}/guardar-variaciones', [ProductoController::class, 'guardarVariaciones'])->name('productos.guardar-variaciones');
+Route::post('/productos/{id}/generar-combinaciones', [ProductoController::class, 'generarCombinaciones'])->name('productos.generar-combinaciones');
+
+// =====================================================================
+// RUTAS PARA VALORES DE ATRIBUTOS
+// =====================================================================
+Route::prefix('atributos/{atributo}')->name('atributos.')->group(function () {
+    Route::get('/valores', [AtributoController::class, 'valores'])->name('valores');
+    Route::get('/valores/create', [AtributoController::class, 'createValor'])->name('valores.create');
+    Route::post('/valores', [AtributoController::class, 'storeValor'])->name('valores.store');
+    Route::get('/valores/{valor}/edit', [AtributoController::class, 'editValor'])->name('valores.edit');
+    Route::put('/valores/{valor}', [AtributoController::class, 'updateValor'])->name('valores.update');
+    Route::delete('/valores/{valor}', [AtributoController::class, 'destroyValor'])->name('valores.destroy');
+});
+
+// =====================================================================
+// RUTAS PARA ASIGNAR ATRIBUTOS A PRODUCTOS
+// =====================================================================
+Route::get('/productos/{id}/asignar-atributos', [ProductoController::class, 'asignarAtributos'])->name('productos.asignar-atributos');
+Route::post('/productos/{id}/guardar-atributos', [ProductoController::class, 'guardarAtributos'])->name('productos.guardar-atributos');
+
+// =====================================================================
+// RUTAS PARA VARIACIONES - AHORA USANDO VariacionController
+// =====================================================================
+Route::prefix('variaciones')->name('variaciones.')->group(function () {
+    // Listado de productos con variaciones
+    Route::get('/', [VariacionController::class, 'index'])->name('index');
+
+    // Ver variaciones de un producto específico
+    Route::get('/producto/{id}', [VariacionController::class, 'show'])->name('show');
+
+    // ** NUEVA RUTA: Ver detalle de una variación específica **
+    Route::get('/producto/{producto_id}/variacion/{variacion_id}', [VariacionController::class, 'showVariacion'])->name('show.variacion');
+
+    // Crear nueva variación para un producto
+    Route::get('/producto/{producto_id}/crear', [VariacionController::class, 'create'])->name('create');
+    Route::post('/producto/{producto_id}', [VariacionController::class, 'store'])->name('store');
+
+    // Editar variación existente
+    Route::get('/producto/{producto_id}/editar/{variacion_id}', [VariacionController::class, 'edit'])->name('edit');
+    Route::put('/producto/{producto_id}/{variacion_id}', [VariacionController::class, 'update'])->name('update');
+
+    // Eliminar variación
+    Route::delete('/producto/{producto_id}/{variacion_id}', [VariacionController::class, 'destroy'])->name('destroy');
+
+    // ===== NUEVA RUTA PARA VERIFICACIÓN EN TIEMPO REAL =====
+    Route::get('/verificar-sku', [VariacionController::class, 'verificarSKU'])->name('variaciones.verificar-sku');
+});
+
+// Ruta alternativa para el sidebar (desde la navegación principal)
+Route::get('/productos/variaciones', [VariacionController::class, 'index'])->name('productos.variaciones');
+
+// Ruta alternativa para crear variación desde productos
+Route::get('/productos/{id}/crear-variacion', [VariacionController::class, 'create'])
+    ->name('productos.crear-variacion');
+
+// =====================================================================
+// RUTAS ADICIONALES PARA GESTIÓN DE PRODUCTOS
+// =====================================================================
+// Ruta para ver las variaciones de un producto específico
+Route::get('/productos/{id}/ver-variaciones', function ($id) {
+    return redirect()->route('variaciones.show', $id);
+})->name('productos.ver-variaciones');
+
+// Ruta para generar combinaciones automáticas de atributos
+Route::get('/productos/{id}/generar-combinaciones-view', function ($id) {
+    return redirect()->route('productos.atributos', $id);
+})->name('productos.generar-combinaciones-view');
+
+// =====================================================================
+// NUEVAS RUTAS PARA PANEL DE GESTIÓN (TIPO WORDPRESS) - SIN AUTENTICACIÓN
+// =====================================================================
+// Rutas para gestión rápida desde productos - PÚBLICAS
+Route::post('/categorias/quick-create', [CategoriaController::class, 'quickCreate'])->name('categorias.quick-create');
+Route::post('/marcas/quick-create', [MarcaController::class, 'quickCreate'])->name('marcas.quick-create');
+Route::post('/etiquetas/quick-create', [EtiquetaController::class, 'quickCreate'])->name('etiquetas.quick-create');
+Route::post('/atributos/quick-create', [AtributoController::class, 'quickCreate'])->name('atributos.quick-create');
+
+// Rutas para obtener datos en formato JSON - PÚBLICAS
+Route::get('/categorias/json', [CategoriaController::class, 'getJson'])->name('categorias.json');
+Route::get('/marcas/json', [MarcaController::class, 'getJson'])->name('marcas.json');
+Route::get('/etiquetas/json', [EtiquetaController::class, 'getJson'])->name('etiquetas.json');
+Route::get('/atributos/json', [AtributoController::class, 'getJson'])->name('atributos.json');
+
+// =====================================================================
+// RUTAS PARA IMÁGENES DE VARIACIONES (NUEVAS)
+// =====================================================================
+Route::get('/variaciones/{id}/imagenes', [VariacionController::class, 'getImagenes'])->name('variaciones.imagenes');
+Route::post('/variaciones/{id}/imagenes/upload', [VariacionController::class, 'uploadImagen'])->name('variaciones.imagenes.upload');
+Route::delete('/variaciones/imagenes/{imagenId}', [VariacionController::class, 'deleteImagen'])->name('variaciones.imagenes.delete');
+
+// =====================================================================
+// RUTAS PARA VERIFICAR DUPLICADOS EN TIEMPO REAL
+// =====================================================================
+Route::get('/productos/verificar-nombre', [ProductoController::class, 'verificarNombre'])->name('productos.verificar-nombre');
+Route::get('/productos/verificar-sku', [ProductoController::class, 'verificarSKU'])->name('productos.verificar-sku');
+
+Route::get('/dashboard', function () {
+    return redirect()->route('home');
+})->name('dashboard');
+
+Route::get('/debug-favoritos', function () {
+    return [
+        'session_id' => Session::getId(),
+        'tabla_favoritos_temporales_existe' => DB::select("SHOW TABLES LIKE 'tbl_favoritos_temporales'") ? 'Sí' : 'No',
+        'tabla_usuarios_temporales_existe' => DB::select("SHOW TABLES LIKE 'tbl_usuarios_temporales'") ? 'Sí' : 'No',
+        'favoritos_temporales' => DB::table('tbl_favoritos_temporales')->where('session_id', Session::getId())->get(),
+        'usuario_temporal' => DB::table('tbl_usuarios_temporales')->where('session_id', Session::getId())->first(),
+    ];
 });
 
 // --------------------
@@ -312,14 +439,6 @@ Route::middleware(['auth', 'spatie.role:cliente'])->group(function () {
         '/mi-cuenta/pedidos/{pedido}/factura',
         [FacturaController::class, 'download']
     )->name('pedidos.factura');
-
-    // RUTAS PÚBLICAS PARA FAVORITOS - Redirigen a login si no está autenticado
-    Route::post('/favoritos/toggle/{producto}', [FavoritoController::class, 'toggle'])
-        ->name('favoritos.toggle');
-    Route::delete('/favoritos/{producto}', [FavoritoController::class, 'destroy'])
-        ->name('favoritos.destroy');
-    Route::get('/favoritos/sync', [FavoritoController::class, 'sync'])
-        ->name('favoritos.sync');
 });
 
 // --------------------
@@ -371,25 +490,7 @@ Route::middleware(['auth', 'permission:gestionar_cupones'])->group(function () {
         ->parameters(['cupones_usados' => 'id']);
 });
 
-Route::middleware(['auth', 'permission:gestionar_productos'])->group(function () {
-
-    // RUTAS PARA ATRIBUTOS DE PRODUCTOS
-    Route::get('/productos/{producto}/atributos', [ProductoController::class, 'atributos'])
-        ->name('productos.atributos');
-
-    Route::post('/productos/{producto}/atributos', [ProductoAtributoController::class, 'store'])
-        ->name('productos.atributos.store');
-
-    Route::put('/productos/{producto}/atributos/{atributo}', [ProductoAtributoController::class, 'update'])
-        ->name('productos.atributos.update');
-
-    Route::delete('/productos/{producto}/atributos/{atributo}', [ProductoAtributoController::class, 'destroy'])
-        ->name('productos.atributos.destroy');
-
-    // API para obtener opciones de atributos
-    Route::get('/atributos/{atributo}/opciones', [ProductoAtributoController::class, 'getOpciones'])
-        ->name('atributos.opciones');
-});
+Route::middleware(['auth', 'permission:gestionar_productos'])->group(function () {});
 
 Route::middleware(['auth', 'permission:gestionar_tienda'])->group(function () {
 
@@ -400,7 +501,11 @@ Route::middleware(['auth', 'permission:gestionar_tienda'])->group(function () {
     Route::post('/admin/settings/configurar-tienda', [SettingController::class, 'updateStore'])
         ->name('admin.settings.config');
 
+    Route::resource('impuestos', ImpuestoController::class);
     Route::resource('impuestos', ImpuestosController::class);
+    Route::post('/impuestos/quick-create', [ImpuestoController::class, 'quickCreate'])->name('impuestos.quick-create');
+    Route::get('/impuestos/json', [ImpuestoController::class, 'getJson'])->name('impuestos.json');
+
 
     Route::resource('ventas', VentaController::class)->except(['create', 'store', 'destroy']);
 

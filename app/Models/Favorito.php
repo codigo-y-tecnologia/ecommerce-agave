@@ -14,6 +14,7 @@ class Favorito extends Model
     protected $fillable = [
         'id_usuario',
         'id_producto',
+        'id_variacion',
         'bNotificado_stock',
         'bNotificado_descuento',
         'tFecha_agregado'
@@ -33,5 +34,10 @@ class Favorito extends Model
     public function producto()
     {
         return $this->belongsTo(Producto::class, 'id_producto', 'id_producto');
+    }
+
+    public function variacion()
+    {
+        return $this->belongsTo(ProductoVariacion::class, 'id_variacion', 'id_variacion');
     }
 }
