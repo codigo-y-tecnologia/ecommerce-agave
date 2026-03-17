@@ -51,6 +51,12 @@ class SettingController extends Controller
             'costo_de_envio' => 'required|numeric|min:0',
             'envio_gratis_desde' => 'required|numeric|min:0',
         ], [
+            'nombre_tienda.required' => 'El nombre de la tienda es obligatorio',
+            'email_soporte.required' => 'El correo es obligatorio',
+            'telefono.required' => 'El teléfono es obligatorio',
+            'moneda.required' => 'El tipo de moneda es obligatorio',
+            'costo_de_envio.required' => 'El costo de envío es obligatorio',
+            'envio_gratis_desde.required' => 'El envío gratis desde es obligatorio',
             'email' => 'Debe ser un email válido',
             'numeric' => 'Debe ser un número'
         ]);

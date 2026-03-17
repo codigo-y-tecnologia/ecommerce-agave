@@ -73,7 +73,7 @@
             <div class="card-body text-center">
                 <h5>📈 Monitoreo</h5>
                 <p>Observa el rendimiento y estado del servidor.</p>
-                <a href="#" class="btn btn-success w-100">Ver monitoreo</a>
+                <a href="{{ route('superadmin.monitoring.index') }}" class="btn btn-success w-100">Ver monitoreo</a>
             </div>
         </div>
     </div>

@@ -83,7 +83,7 @@
                                         <li><a class="dropdown-item" href="{{ route('superadmin.admins.index') }}">Gestión de administradores</a></li>
                                     @endcan
                                     @can('ver_monitoreo')
-                                        <li><a class="dropdown-item" href="#">Monitoreo del sistema</a></li>
+                                        <li><a class="dropdown-item" href="{{ route('superadmin.monitoring.index') }}">Monitoreo del sistema</a></li>
                                     @endcan
                                     @can('ver_logs_seguridad')
                                         <li><a class="dropdown-item" href="{{ route('superadmin.security.index') }}">Logs de seguridad</a></li>

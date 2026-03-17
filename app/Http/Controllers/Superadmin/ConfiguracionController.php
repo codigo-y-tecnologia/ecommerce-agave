@@ -21,9 +21,12 @@ class ConfiguracionController extends Controller
     {
 
         $request->validate([
-            'modo_mantenimiento' => 'required'
+            'modo_mantenimiento' => 'required',
+            'email_soporte_superadmin' => 'required|email'
         ], [
-            'required' => 'Este campo es obligatorio',
+            'modo_mantenimiento.required' => 'El campo de modo mantenimiento es obligatorio',
+            'email_soporte_superadmin.required' => 'El email es obligatorio',
+            'email_soporte_superadmin.email' => 'El correo electrónico debe tener un formato válido.',
         ]);
 
         foreach ($request->except('_token') as $clave => $valor) {

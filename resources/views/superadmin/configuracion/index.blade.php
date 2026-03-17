@@ -44,6 +44,18 @@ Activado
 
 </div>
 
+<div class="mb-3">
+<label>Email soporte</label>
+<input type="email" name="email_soporte_superadmin" class="form-control @error('email_soporte_superadmin') is-invalid @enderror"
+value="{{ old('email_soporte_superadmin', config('tienda.email_soporte_superadmin') ?? '') }}" required>
+
+@error('email_soporte_superadmin')
+<div class="invalid-feedback">
+    {{ $message }}
+</div>
+@enderror
+</div>
+
 </div>
 </div>
 </div>

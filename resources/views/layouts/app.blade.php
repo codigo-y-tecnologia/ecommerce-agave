@@ -140,13 +140,13 @@
                             <li><a class="dropdown-item" href="{{ route('superadmin.admins.index') }}">Gestión de Administradores</a></li>
                         @endcan
                         @can('ver_monitoreo')    
-                            <li><a class="dropdown-item" href="#">Monitoreo del sistema</a></li>
+                            <li><a class="dropdown-item" href="{{ route('superadmin.monitoring.index') }}">Monitoreo del sistema</a></li>
                         @endcan
                         @can('ver_logs_seguridad')
-                            <li><a class="dropdown-item" href="#">Logs de seguridad</a></li>
+                            <li><a class="dropdown-item" href="{{ route('superadmin.security.index') }}">Logs de seguridad</a></li>
                         @endcan
                         @can('configurar_sistema')
-                            <li><a class="dropdown-item" href="#">Configuración Global</a></li>
+                            <li><a class="dropdown-item" href="{{ route('superadmin.configuracion.index') }}">Configuración Global</a></li>
                         @endcan
                         @can('gestionar_permisos')
                             <li><a class="dropdown-item" href="{{ route('roles.permisos') }}">Gestión de permisos y roles</a></li>

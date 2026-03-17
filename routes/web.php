@@ -51,6 +51,7 @@ use App\Http\Controllers\Superadmin\UsuarioRolController;
 use App\Http\Controllers\Superadmin\SuperadminPerfilController;
 use App\Http\Controllers\Superadmin\CambiarEmailController;
 use App\Http\Controllers\Superadmin\SecurityLogController;
+use App\Http\Controllers\Superadmin\MonitoringController;
 use App\Http\Controllers\Pedidos\ConsultaPedidoController;
 use App\Http\Controllers\Superadmin\ConfiguracionController;
 use App\Http\Controllers\DetalleVentaController;
@@ -618,6 +619,11 @@ Route::middleware([
             Route::get('/export-pdf',            [SecurityLogController::class, 'exportPdf'])->name('export.pdf');
             Route::get('/{log}',                 [SecurityLogController::class, 'show'])->name('show');
             Route::patch('/{log}/resolve',       [SecurityLogController::class, 'resolve'])->name('resolve');
+        });
+
+        Route::prefix('monitoreo')->name('monitoring.')->group(function () {
+            Route::get('/',        [MonitoringController::class, 'index'])->name('index');
+            Route::get('/metrics', [MonitoringController::class, 'metrics'])->name('metrics');
         });
     });
 
