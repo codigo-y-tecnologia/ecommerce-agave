@@ -1103,8 +1103,8 @@
                             $estaBajoStock = $stock > 0 && $stock <= 10;
                             
                             // Lógica de envío
-                            $envioGratis = $precioActual >= 150;
-                            $costoEnvio = 50;
+                            $envioGratis = $precioActual >= config('tienda.envio_gratis_desde');
+                            $costoEnvio = config('tienda.costo_de_envio');
                         @endphp
                         
                         <div class="producto-card" onclick="window.location.href='{{ $url }}'">

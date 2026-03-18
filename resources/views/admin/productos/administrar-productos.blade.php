@@ -40,12 +40,16 @@
                                         👨‍💼 Administración
                                     </a>
                                     <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="{{ route('admin.perfil.index') }}">Mi Perfil</a></li>
                                         <li><a class="dropdown-item" href="{{ route('admin.usuarios') }}">Clientes registrados</a></li>
                                         <li><a class="dropdown-item" href="{{ route('cupones.index') }}">Cupones</a></li>
                                         <li><a class="dropdown-item" href="{{ route('impuestos.index') }}">Impuestos</a></li>
                                         <li><a class="dropdown-item" href="{{ route('productos.index') }}">Productos</a></li>
-                                        <li><a class="dropdown-item" href="#">Pedidos</a></li>
-                                        <li><a class="dropdown-item" href="{{ route('ventas.index') }}">Reportes</a></li>
+                                        <li><a class="dropdown-item" href="{{ route('admin.pedidos.index') }}">Pedidos</a></li>
+                                        <li><a class="dropdown-item" href="{{ route('reportes.index') }}">Reportes</a></li>
+                                        <li><a class="dropdown-item" href="{{ route('admin.postventa.index') }}">Postventa</a></li>
+                                        <li><a class="dropdown-item" href="{{ route('reembolsos.index') }}">Reembolsos</a></li>
+                                        <li><a class="dropdown-item" href="{{ route('admin.settings.index') }}">Ajustes de la tienda</a></li>
                                     </ul>
                                 </li>
                 </ul>

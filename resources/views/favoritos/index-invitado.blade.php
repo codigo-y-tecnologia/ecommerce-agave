@@ -596,8 +596,8 @@
                                 
                             $nombreCompleto = $producto->vNombre;
                             $precio = $producto->dPrecio_venta;
-                            $precioOferta = $producto->dPrecio_oferta;
-                            $tieneDescuento = $producto->bTiene_oferta && $producto->dPrecio_oferta > 0;
+                            $precioOferta = $producto->dPrecio_descuento;
+                            $tieneDescuento = $producto->bTiene_descuento && $producto->dPrecio_descuento > 0;
                             $stock = $producto->iStock;
                             
                             // Obtener imágenes

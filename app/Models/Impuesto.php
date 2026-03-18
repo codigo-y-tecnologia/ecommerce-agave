@@ -77,8 +77,6 @@ class Impuesto extends Model
                 return '<span class="badge bg-primary">IVA</span>';
             case 'IEPS':
                 return '<span class="badge bg-warning text-dark">IEPS</span>';
-            case 'OTRO':
-                return '<span class="badge bg-secondary">OTRO</span>';
             default:
                 return '<span class="badge bg-dark">' . $this->eTipo . '</span>';
         }

@@ -1129,7 +1129,7 @@
 
         <!-- Breadcrumb -->
         <div class="ml-breadcrumb">
-            <a href="{{ route('inicio.real') }}">Inicio</a> <span>›</span>
+            <a href="{{ route('home') }}">Inicio</a> <span>›</span>
             <a href="{{ route('busqueda.resultados') }}">Productos</a> <span>›</span>
             @if($producto->categoria)
                 <span>{{ $producto->categoria->vNombre }}</span> <span>›</span>

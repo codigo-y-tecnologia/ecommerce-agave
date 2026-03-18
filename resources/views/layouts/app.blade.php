@@ -58,10 +58,10 @@
             <!-- BUSCADOR -->
             @if(!auth()->check() || auth()->user()->hasRole('cliente'))
                 <form action="{{ route('busqueda.resultados') }}" method="GET"
-                      class="d-flex mx-3 flex-grow-1 search-box" style="max-width: 600px;">
-                    <input type="search" name="q" class="form-control"
+                      class="d-flex mx-3 flex-grow-1 search-box" id="form-busqueda" style="max-width: 600px;">
+                    <input type="text" name="q" class="form-control"
                            placeholder="Buscar productos..." value="{{ request('q') }}">
-                    <button class="btn btn-dark"><i class="bi bi-search"></i></button>
+                    <button type="submit" class="btn btn-dark"><i class="bi bi-search"></i></button>
                 </form>
             @endif
 
@@ -179,6 +179,7 @@
                     <i class="bi bi-box-arrow-in-right"></i> Ingresar
                 </a>
                 <a class="nav-link text-dark" href="{{ route('consulta.pedido.form') }}"><i class="bi bi-search"></i>Consultar pedido</a>
+                <a class="nav-link text-dark" href="{{ route('favoritos.invitado.index') }}"><i class="fas fa-heart me-1"></i>Mis Favoritos</a>
             @endguest
 
             <a class="nav-link text-dark" href="{{ route('carrito.index') }}">
@@ -197,10 +198,10 @@
                     </a>
                 @endrole
             @endauth
-
             <a class="nav-link text-dark" href="{{ route('busqueda.resultados') }}">
                 🔍 Todos los productos
             </a>
+            <a class="nav-link text-dark" href="{{ route('busqueda.resultados', ['en_descuento' => '1']) }}" style="color: #dc3545; font-weight: bold;" id="link-descuento">🔥 En Descuento</a>
         </div>
     </nav>
 

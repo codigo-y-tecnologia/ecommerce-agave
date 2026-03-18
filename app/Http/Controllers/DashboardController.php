@@ -55,15 +55,15 @@ class DashboardController extends Controller
             }
 
             if ($user->hasRole('cliente')) {
-                return view('inicio', compact('productosDestacados', 'productosDescuento', 'productosRecomendados', 'todosLosItems'));
+                return view('dashboards.cliente', compact('productosDestacados', 'productosDescuento', 'productosRecomendados', 'todosLosItems'));
             }
 
             // Fallback de seguridad
-            return view('inicio', compact('productosDestacados', 'productosDescuento', 'productosRecomendados', 'todosLosItems'));
+            return view('dashboards.cliente', compact('productosDestacados', 'productosDescuento', 'productosRecomendados', 'todosLosItems'));
         }
 
         // Si no está autenticado, mostramos la vista pública (cliente como visitante)
-        return view('inicio', compact('productosDestacados', 'productosDescuento', 'productosRecomendados', 'todosLosItems'));
+        return view('dashboards.cliente', compact('productosDestacados', 'productosDescuento', 'productosRecomendados', 'todosLosItems'));
     }
 
     public function cliente()
@@ -96,7 +96,7 @@ class DashboardController extends Controller
         // 4. TODOS los items (productos + variaciones) para la sección principal
         $todosLosItems = $this->obtenerTodosLosItems();
 
-        return view('inicio', compact('productosDestacados', 'productosDescuento', 'productosRecomendados', 'todosLosItems'));
+        return view('dashboards.cliente', compact('productosDestacados', 'productosDescuento', 'productosRecomendados', 'todosLosItems'));
     }
 
     public function admin()
