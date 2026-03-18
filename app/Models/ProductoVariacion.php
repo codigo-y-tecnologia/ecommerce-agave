@@ -22,11 +22,11 @@ class ProductoVariacion extends Model
         'vSKU',
         'vNombre_variacion',
         'dPrecio',
-        'dPrecio_oferta',
-        'dFecha_inicio_oferta',
-        'dFecha_fin_oferta',
-        'vMotivo_oferta',
-        'bTiene_oferta',
+        'dPrecio_descuento',
+        'dFecha_inicio_descuento',
+        'dFecha_fin_descuento',
+        'vMotivo_descuento',
+        'bTiene_descuento',
         'iStock',
         'dPeso',
         'dLargo_cm',
@@ -43,9 +43,9 @@ class ProductoVariacion extends Model
 
     protected $casts = [
         'dPrecio' => 'decimal:2',
-        'dPrecio_oferta' => 'decimal:2',
+        'dPrecio_descuento' => 'decimal:2',
         'iStock' => 'integer',
-        'bTiene_oferta' => 'boolean',
+        'bTiene_descuento' => 'boolean',
         'bActivo' => 'boolean',
         'dPeso' => 'decimal:3',
         'dLargo_cm' => 'decimal:2',
@@ -53,8 +53,8 @@ class ProductoVariacion extends Model
         'dAlto_cm' => 'decimal:2',
         'tFecha_registro' => 'datetime',
         'tFecha_actualizacion' => 'datetime',
-        'dFecha_inicio_oferta' => 'date',
-        'dFecha_fin_oferta' => 'date'
+        'dFecha_inicio_descuento' => 'date',
+        'dFecha_fin_descuento' => 'date'
     ];
 
     protected $appends = [
@@ -105,29 +105,29 @@ class ProductoVariacion extends Model
 
     public function tieneDescuentoActivo()
     {
-        if (!$this->bTiene_oferta || $this->dPrecio_oferta === null || $this->dPrecio_oferta <= 0) {
+        if (!$this->bTiene_descuento || $this->dPrecio_descuento === null || $this->dPrecio_descuento <= 0) {
             return false;
         }
 
         $fechaActual = now()->toDateString();
 
-        if ($this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
-            return $fechaActual >= $this->dFecha_inicio_oferta && 
-                   $fechaActual <= $this->dFecha_fin_oferta;
+        if ($this->dFecha_inicio_descuento && $this->dFecha_fin_descuento) {
+            return $fechaActual >= $this->dFecha_inicio_descuento && 
+                   $fechaActual <= $this->dFecha_fin_descuento;
         }
 
-        if ($this->dFecha_inicio_oferta && !$this->dFecha_fin_oferta) {
-            return $fechaActual >= $this->dFecha_inicio_oferta;
+        if ($this->dFecha_inicio_descuento && !$this->dFecha_fin_descuento) {
+            return $fechaActual >= $this->dFecha_inicio_descuento;
         }
 
-        if (!$this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
-            return $fechaActual <= $this->dFecha_fin_oferta;
+        if (!$this->dFecha_inicio_descuento && $this->dFecha_fin_descuento) {
+            return $fechaActual <= $this->dFecha_fin_descuento;
         }
 
         return true;
     }
 
-    public function ofertaVigente()
+    public function descuentoVigente()
     {
         return $this->tieneDescuentoActivo();
     }
@@ -135,15 +135,15 @@ class ProductoVariacion extends Model
     public function getPrecioActualAttribute()
     {
         if ($this->tieneDescuentoActivo()) {
-            return $this->dPrecio_oferta;
+            return $this->dPrecio_descuento;
         }
         return $this->dPrecio;
     }
 
     public function getPorcentajeDescuentoAttribute()
     {
-        if ($this->tieneDescuentoActivo() && $this->dPrecio_oferta < $this->dPrecio && $this->dPrecio > 0) {
-            $descuento = (($this->dPrecio - $this->dPrecio_oferta) / $this->dPrecio) * 100;
+        if ($this->tieneDescuentoActivo() && $this->dPrecio_descuento < $this->dPrecio && $this->dPrecio > 0) {
+            $descuento = (($this->dPrecio - $this->dPrecio_descuento) / $this->dPrecio) * 100;
             return round($descuento);
         }
         return 0;

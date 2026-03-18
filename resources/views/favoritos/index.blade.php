@@ -306,8 +306,8 @@
             box-shadow: 0 5px 15px rgba(255, 71, 87, 0.4);
         }
 
-        /* Badge de oferta/descuento */
-        .badge-oferta {
+        /* Badge de descuento */
+        .badge-descuento {
             position: absolute;
             top: 15px;
             left: 15px;
@@ -573,7 +573,7 @@
                             // NOMBRE SIMPLE: solo el nombre del producto + atributos separados por guiones
                             $nombreCompleto = $producto->vNombre . ' - ' . $atributosTexto;
                             
-                            $precioActual = $item->tieneDescuentoActivo() ? $item->dPrecio_oferta : $item->dPrecio;
+                            $precioActual = $item->tieneDescuentoActivo() ? $item->dPrecio_descuento : $item->dPrecio;
                             $precioOriginal = $item->dPrecio;
                             $tieneDescuento = $item->tieneDescuentoActivo();
                             $porcentajeDescuento = $item->porcentaje_descuento;
@@ -590,7 +590,7 @@
                             // NOMBRE SIMPLE: solo el nombre del producto
                             $nombreCompleto = $item->vNombre;
                             
-                            $precioActual = $item->tieneDescuentoActivo() ? $item->dPrecio_oferta : $item->dPrecio_venta;
+                            $precioActual = $item->tieneDescuentoActivo() ? $item->dPrecio_descuento : $item->dPrecio_venta;
                             $precioOriginal = $item->dPrecio_venta;
                             $tieneDescuento = $item->tieneDescuentoActivo();
                             $porcentajeDescuento = $item->porcentaje_descuento;
@@ -636,7 +636,7 @@
                             </button>
 
                             @if($tieneDescuento)
-                                <div class="badge-oferta">
+                                <div class="badge-descuento">
                                     -{{ $porcentajeDescuento }}%
                                 </div>
                             @endif

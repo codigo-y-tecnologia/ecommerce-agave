@@ -332,7 +332,7 @@
             background: #218838;
         }
 
-        .badge-oferta {
+        .badge-descuento {
             position: absolute;
             top: 15px;
             left: 15px;
@@ -569,8 +569,8 @@
                                 
                             $nombreProducto = $producto->vNombre;
                             $precio = $variacion->dPrecio;
-                            $precioOferta = $variacion->dPrecio_oferta;
-                            $tieneDescuento = $variacion->bTiene_oferta && $variacion->dPrecio_oferta > 0;
+                            $precioDescuento = $variacion->dPrecio_descuento;
+                            $tieneDescuento = $variacion->bTiene_descuento && $variacion->dPrecio_descuento > 0;
                             $stock = $variacion->iStock;
                             
                             // Obtener atributos de la variación
@@ -596,8 +596,8 @@
                                 
                             $nombreCompleto = $producto->vNombre;
                             $precio = $producto->dPrecio_venta;
-                            $precioOferta = $producto->dPrecio_oferta;
-                            $tieneDescuento = $producto->bTiene_oferta && $producto->dPrecio_oferta > 0;
+                            $precioDescuento = $producto->dPrecio_descuento;
+                            $tieneDescuento = $producto->bTiene_descuento && $producto->dPrecio_descuento > 0;
                             $stock = $producto->iStock;
                             
                             // Obtener imágenes
@@ -609,8 +609,8 @@
                             $url = route('productos.show.public', $producto->id_producto);
                         }
                         
-                        $precioActual = $tieneDescuento ? $precioOferta : $precio;
-                        $porcentajeDescuento = $tieneDescuento ? round((($precio - $precioOferta) / $precio) * 100) : 0;
+                        $precioActual = $tieneDescuento ? $precioDescuento : $precio;
+                        $porcentajeDescuento = $tieneDescuento ? round((($precio - $precioDescuento) / $precio) * 100) : 0;
                         
                         $stockClass = $stock > 10 ? 'stock-disponible' : ($stock > 0 ? 'stock-bajo' : 'sin-stock');
                         $stockMessage = $stock > 10 
@@ -637,7 +637,7 @@
                             </div>
 
                             @if($tieneDescuento)
-                                <div class="badge-oferta">
+                                <div class="badge-descuento">
                                     -{{ $porcentajeDescuento }}%
                                 </div>
                             @endif

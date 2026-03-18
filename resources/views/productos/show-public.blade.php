@@ -909,9 +909,9 @@
             $imagenesProducto = $producto->imagenes ?? [];
             $tieneVariaciones = $producto->tieneVariaciones();
             
-            // Calcular si el producto padre tiene oferta vigente
+            // Calcular si el producto padre tiene descuento vigente
             $productoTieneDescuento = $producto->tieneDescuentoActivo();
-            $precioBaseProducto = $productoTieneDescuento ? $producto->dPrecio_oferta : $producto->dPrecio_venta;
+            $precioBaseProducto = $productoTieneDescuento ? $producto->dPrecio_descuento : $producto->dPrecio_venta;
             
             // Calcular impuestos del producto padre
             $totalImpuestosProducto = 0;
@@ -994,8 +994,8 @@
                 'sku' => $producto->vCodigo_barras,
                 'nombre' => $producto->vNombre,
                 'precio_original' => (float)$producto->dPrecio_venta,
-                'precio_oferta' => (float)($producto->dPrecio_oferta ?? 0),
-                'tiene_oferta' => $productoTieneDescuento,
+                'precio_descuento' => (float)($producto->dPrecio_descuento ?? 0),
+                'tiene_descuento' => $productoTieneDescuento,
                 'precio_base' => (float)$precioBaseProducto,
                 'total_impuestos' => (float)$totalImpuestosProducto,
                 'precio_final' => (float)($precioBaseProducto + $totalImpuestosProducto),
@@ -1052,7 +1052,7 @@
                 
                 // Calcular si la variación tiene descuento vigente
                 $variacionTieneDescuento = $var->tieneDescuentoActivo();
-                $precioBaseVariacion = $variacionTieneDescuento ? $var->dPrecio_oferta : $var->dPrecio;
+                $precioBaseVariacion = $variacionTieneDescuento ? $var->dPrecio_descuento : $var->dPrecio;
                 $porcentajeDescuento = $var->porcentaje_descuento;
                 
                 $impuestoVariacion = $var->impuesto ?? $producto->impuestos->first();
@@ -1093,8 +1093,8 @@
                     'id' => $var->id_variacion,
                     'sku' => $var->vSKU,
                     'precio_original' => (float)$var->dPrecio,
-                    'precio_oferta' => (float)($var->dPrecio_oferta ?? 0),
-                    'tiene_oferta' => $variacionTieneDescuento,
+                    'precio_descuento' => (float)($var->dPrecio_descuento ?? 0),
+                    'tiene_descuento' => $variacionTieneDescuento,
                     'precio_base' => (float)$precioBaseVariacion,
                     'total_impuestos' => (float)$totalImpuestosVariacion,
                     'precio_final' => (float)($precioBaseVariacion + $totalImpuestosVariacion),
@@ -1105,9 +1105,9 @@
                     'imagenes' => $var->imagenes ?? [],
                     'descripcion' => $var->tDescripcion ?? '',
                     'caracteristicas' => $caracteristicasVariacion,
-                    'motivo_oferta' => $var->vMotivo_oferta ?? '',
-                    'fecha_inicio_oferta' => $var->dFecha_inicio_oferta,
-                    'fecha_fin_oferta' => $var->dFecha_fin_oferta,
+                    'motivo_descuento' => $var->vMotivo_descuento ?? '',
+                    'fecha_inicio_descuento' => $var->dFecha_inicio_descuento,
+                    'fecha_fin_descuento' => $var->dFecha_fin_descuento,
                     'porcentaje_descuento' => $porcentajeDescuento
                 ];
                 
@@ -1156,7 +1156,7 @@
                         <!-- Lupa -->
                         <div id="zoom-lens" class="zoom-lens" style="display: none; position: absolute; width: 150px; height: 150px; border: 2px solid #007bff; background-color: rgba(255,255,255,0.3); pointer-events: none; z-index: 10; border-radius: 4px;"></div>
 
-                        @if($variacionInicial && $variacionInicial['tiene_oferta'])
+                        @if($variacionInicial && $variacionInicial['tiene_descuento'])
                             <span class="position-absolute top-0 end-0 badge bg-danger mt-2 me-2 px-3 py-2" style="z-index: 15; font-size: 14px;">
                                 <i class="fas fa-tag me-1"></i>-{{ $variacionInicial['porcentaje_descuento'] }}%
                             </span>
@@ -1226,19 +1226,19 @@
                             @if($productoTieneDescuento)
                                 <span class="ml-price-original" id="producto-precio-original">${{ number_format($producto->dPrecio_venta, 2) }}</span>
                                 <div class="ml-price-current">
-                                    ${{ number_format($producto->dPrecio_oferta, 2) }}
+                                    ${{ number_format($producto->dPrecio_descuento, 2) }}
                                     <span class="ml-discount" id="producto-descuento-badge">-{{ $producto->porcentaje_descuento }}%</span>
                                 </div>
-                                @if($producto->vMotivo_oferta)
+                                @if($producto->vMotivo_descuento)
                                     <div class="ml-discount-motivo">
-                                        <i class="fas fa-comment me-1"></i> {{ $producto->vMotivo_oferta }}
+                                        <i class="fas fa-comment me-1"></i> {{ $producto->vMotivo_descuento }}
                                     </div>
                                 @endif
-                                @if($producto->dFecha_inicio_oferta && $producto->dFecha_fin_oferta)
+                                @if($producto->dFecha_inicio_descuento && $producto->dFecha_fin_descuento)
                                     <div class="ml-discount-periodo">
                                         <i class="fas fa-calendar-alt me-1"></i> 
-                                        Válido del {{ \Carbon\Carbon::parse($producto->dFecha_inicio_oferta)->format('d/m/Y') }} 
-                                        al {{ \Carbon\Carbon::parse($producto->dFecha_fin_oferta)->format('d/m/Y') }}
+                                        Válido del {{ \Carbon\Carbon::parse($producto->dFecha_inicio_descuento)->format('d/m/Y') }} 
+                                        al {{ \Carbon\Carbon::parse($producto->dFecha_fin_descuento)->format('d/m/Y') }}
                                     </div>
                                 @endif
                             @else
@@ -1259,28 +1259,28 @@
                     @else
                         <div id="producto-precio-info" style="display: none;"></div>
                         <div id="variacion-precio-info" style="display: block;">
-                            @if($variacionInicial['tiene_oferta'])
+                            @if($variacionInicial['tiene_descuento'])
                                 <span class="ml-price-original" id="variacion-precio-original">
                                     ${{ number_format($variacionInicial['precio_original'], 2) }}
                                 </span>
                                 <div class="ml-price-current">
                                     <span id="variacion-precio-actual">
-                                        ${{ number_format($variacionInicial['precio_oferta'], 2) }}
+                                        ${{ number_format($variacionInicial['precio_descuento'], 2) }}
                                     </span>
                                     <span class="ml-discount" id="variacion-descuento-badge">
                                         -{{ $variacionInicial['porcentaje_descuento'] }}%
                                     </span>
                                 </div>
-                                @if($variacionInicial['motivo_oferta'])
+                                @if($variacionInicial['motivo_descuento'])
                                     <div class="ml-discount-motivo" id="variacion-motivo-descuento">
-                                        <i class="fas fa-comment me-1"></i> {{ $variacionInicial['motivo_oferta'] }}
+                                        <i class="fas fa-comment me-1"></i> {{ $variacionInicial['motivo_descuento'] }}
                                     </div>
                                 @endif
-                                @if($variacionInicial['fecha_inicio_oferta'] && $variacionInicial['fecha_fin_oferta'])
+                                @if($variacionInicial['fecha_inicio_descuento'] && $variacionInicial['fecha_fin_descuento'])
                                     <div class="ml-discount-periodo" id="variacion-periodo-descuento">
                                         <i class="fas fa-calendar-alt me-1"></i> 
-                                        Válido del {{ \Carbon\Carbon::parse($variacionInicial['fecha_inicio_oferta'])->format('d/m/Y') }} 
-                                        al {{ \Carbon\Carbon::parse($variacionInicial['fecha_fin_oferta'])->format('d/m/Y') }}
+                                        Válido del {{ \Carbon\Carbon::parse($variacionInicial['fecha_inicio_descuento'])->format('d/m/Y') }} 
+                                        al {{ \Carbon\Carbon::parse($variacionInicial['fecha_fin_descuento'])->format('d/m/Y') }}
                                     </div>
                                 @endif
                             @else
@@ -1343,7 +1343,7 @@
                                             
                                             // Verificar si esta combinación de valor tiene descuento
                                             foreach ($variacionesData as $var) {
-                                                if (isset($var['atributos_mapa'][$idAtributo]) && $var['atributos_mapa'][$idAtributo] == $idValor && $var['tiene_oferta']) {
+                                                if (isset($var['atributos_mapa'][$idAtributo]) && $var['atributos_mapa'][$idAtributo] == $idValor && $var['tiene_descuento']) {
                                                     $tieneDescuentoValor = true;
                                                     break;
                                                 }
@@ -1736,35 +1736,35 @@
             const descuentoBadge = document.getElementById('variacion-descuento-badge');
             const precioActualSpan = document.getElementById('variacion-precio-actual');
             
-            const tieneDescuentoVigente = variacion.tiene_oferta === true && 
-                                           variacion.precio_oferta > 0 && 
-                                           variacion.precio_oferta < variacion.precio_original;
+            const tieneDescuentoVigente = variacion.tiene_descuento === true && 
+                                           variacion.precio_descuento > 0 && 
+                                           variacion.precio_descuento < variacion.precio_original;
             
             if (tieneDescuentoVigente) {
                 precioOriginalSpan.style.display = 'inline';
                 precioOriginalSpan.textContent = '$' + formatNumber(variacion.precio_original);
                 descuentoBadge.style.display = 'inline-block';
                 
-                const porcentaje = Math.round(((variacion.precio_original - variacion.precio_oferta) / variacion.precio_original) * 100);
+                const porcentaje = Math.round(((variacion.precio_original - variacion.precio_descuento) / variacion.precio_original) * 100);
                 descuentoBadge.textContent = '-' + porcentaje + '%';
                 descuentoBadge.className = 'ml-discount bg-danger';
                 
-                precioActualSpan.textContent = '$' + formatNumber(variacion.precio_oferta);
+                precioActualSpan.textContent = '$' + formatNumber(variacion.precio_descuento);
                 
                 // Mostrar información adicional del descuento si existe
                 const motivoElement = document.getElementById('variacion-motivo-descuento');
                 const periodoElement = document.getElementById('variacion-periodo-descuento');
                 
-                if (variacion.motivo_oferta) {
-                    motivoElement.innerHTML = `<i class="fas fa-comment me-1"></i>${variacion.motivo_oferta}`;
+                if (variacion.motivo_descuento) {
+                    motivoElement.innerHTML = `<i class="fas fa-comment me-1"></i>${variacion.motivo_descuento}`;
                     motivoElement.style.display = 'block';
                 } else {
                     motivoElement.style.display = 'none';
                 }
                 
-                if (variacion.fecha_inicio_oferta && variacion.fecha_fin_oferta) {
-                    const fechaInicio = new Date(variacion.fecha_inicio_oferta).toLocaleDateString('es-MX');
-                    const fechaFin = new Date(variacion.fecha_fin_oferta).toLocaleDateString('es-MX');
+                if (variacion.fecha_inicio_descuento && variacion.fecha_fin_descuento) {
+                    const fechaInicio = new Date(variacion.fecha_inicio_descuento).toLocaleDateString('es-MX');
+                    const fechaFin = new Date(variacion.fecha_fin_descuento).toLocaleDateString('es-MX');
                     periodoElement.innerHTML = `<i class="fas fa-calendar-alt me-1"></i>Válido del ${fechaInicio} al ${fechaFin}`;
                     periodoElement.style.display = 'block';
                 } else {

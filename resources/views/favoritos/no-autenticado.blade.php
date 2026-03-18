@@ -106,7 +106,7 @@
     <div class="container">
         <div class="icon">❤️</div>
         <h1>¡Hola! Para agregar favoritos, ingresa a tu cuenta</h1>
-        <p>Guarda tus productos favoritos y recibe notificaciones cuando estén en oferta o se estén agotando.</p>
+        <p>Guarda tus productos favoritos y recibe notificaciones cuando estén en descuento o se estén agotando.</p>
         
         <div class="btn-group">
             <a href="{{ route('usuarios.create') }}" class="btn btn-primary">Crear cuenta</a>

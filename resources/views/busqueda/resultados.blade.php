@@ -506,7 +506,7 @@
             font-weight: bold;
         }
 
-        .badge-oferta {
+        .badge-descuento-imagen {
             position: absolute;
             top: 15px;
             left: 15px;
@@ -550,7 +550,7 @@
             white-space: nowrap;
         }
 
-        .badge-descuento-imagen {
+        .badge-descuento-rojo {
             position: absolute;
             top: 15px;
             right: 15px;
@@ -1056,7 +1056,7 @@
                             if ($esVariacion) {
                                 $tieneDescuento = $producto->tieneDescuentoActivo();
                                 $precioOriginal = $producto->dPrecio;
-                                $precioOferta = $producto->dPrecio_oferta;
+                                $precioDescuento = $producto->dPrecio_descuento;
                                 $stock = $producto->iStock;
                                 $nombreProducto = $producto->productoPadre->vNombre;
                                 $nombreCompleto = $nombreProducto . ' - ' . $producto->getAtributosTexto();
@@ -1071,13 +1071,13 @@
                                 $variacionId = $producto->id_variacion;
                                 $atributosTexto = $producto->getAtributosCompletosTexto();
                                 $atributosCorto = $producto->getAtributosTexto();
-                                $motivoOferta = $producto->vMotivo_oferta ?? '';
-                                $fechaInicio = $producto->dFecha_inicio_oferta ? \Carbon\Carbon::parse($producto->dFecha_inicio_oferta)->format('d/m') : '';
-                                $fechaFin = $producto->dFecha_fin_oferta ? \Carbon\Carbon::parse($producto->dFecha_fin_oferta)->format('d/m') : '';
+                                $motivoDescuento = $producto->vMotivo_descuento ?? '';
+                                $fechaInicio = $producto->dFecha_inicio_descuento ? \Carbon\Carbon::parse($producto->dFecha_inicio_descuento)->format('d/m') : '';
+                                $fechaFin = $producto->dFecha_fin_descuento ? \Carbon\Carbon::parse($producto->dFecha_fin_descuento)->format('d/m') : '';
                             } else {
                                 $tieneDescuento = $producto->tieneDescuentoActivo();
                                 $precioOriginal = $producto->dPrecio_venta;
-                                $precioOferta = $producto->dPrecio_oferta;
+                                $precioDescuento = $producto->dPrecio_descuento;
                                 $stock = $producto->iStock;
                                 $nombreProducto = $producto->vNombre;
                                 $nombreCompleto = $nombreProducto;
@@ -1092,13 +1092,13 @@
                                 $variacionId = null;
                                 $atributosTexto = '';
                                 $atributosCorto = '';
-                                $motivoOferta = $producto->vMotivo_oferta ?? '';
-                                $fechaInicio = $producto->dFecha_inicio_oferta ? \Carbon\Carbon::parse($producto->dFecha_inicio_oferta)->format('d/m') : '';
-                                $fechaFin = $producto->dFecha_fin_oferta ? \Carbon\Carbon::parse($producto->dFecha_fin_oferta)->format('d/m') : '';
+                                $motivoDescuento = $producto->vMotivo_descuento ?? '';
+                                $fechaInicio = $producto->dFecha_inicio_descuento ? \Carbon\Carbon::parse($producto->dFecha_inicio_descuento)->format('d/m') : '';
+                                $fechaFin = $producto->dFecha_fin_descuento ? \Carbon\Carbon::parse($producto->dFecha_fin_descuento)->format('d/m') : '';
                             }
                             
-                            $precioActual = $tieneDescuento ? $precioOferta : $precioOriginal;
-                            $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioOferta) / $precioOriginal) * 100) : 0;
+                            $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                            $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
                             
                             $estaBajoStock = $stock > 0 && $stock <= 10;
                             
@@ -1120,7 +1120,7 @@
                                 </button>
 
                                 @if($tieneDescuento && $porcentajeDescuento > 0)
-                                    <div class="badge-descuento-imagen" title="{{ $motivoOferta ?: 'Descuento especial' }}">
+                                    <div class="badge-descuento-rojo" title="{{ $motivoDescuento ?: 'Descuento especial' }}">
                                         -{{ $porcentajeDescuento }}%
                                     </div>
                                 @elseif($estaBajoStock && !$tieneDescuento)
@@ -1156,16 +1156,16 @@
                                                 ${{ number_format($precioOriginal, 2) }}
                                             </span>
                                             <span class="precio-actual">
-                                                ${{ number_format($precioOferta, 2) }}
+                                                ${{ number_format($precioDescuento, 2) }}
                                             </span>
                                             <span class="badge-descuento">
                                                 -{{ $porcentajeDescuento }}%
                                             </span>
                                         </div>
                                         
-                                        @if($motivoOferta)
-                                            <div class="motivo-descuento" title="{{ $motivoOferta }}">
-                                                <i class="fas fa-comment"></i> {{ Str::limit($motivoOferta, 30) }}
+                                        @if($motivoDescuento)
+                                            <div class="motivo-descuento" title="{{ $motivoDescuento }}">
+                                                <i class="fas fa-comment"></i> {{ Str::limit($motivoDescuento, 30) }}
                                             </div>
                                         @endif
                                         

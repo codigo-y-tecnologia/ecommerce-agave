@@ -31,12 +31,12 @@ return new class extends Migration
             $table->decimal('dAlto_cm', 6, 2)->nullable()->comment('Alto en centímetros');
             $table->string('vClase_envio', 50)->nullable()->comment('Clase de envío: estandar, express, fragil, grandes_dimensiones');
             
-            // Campos de oferta
-            $table->boolean('bTiene_oferta')->default(false);
-            $table->decimal('dPrecio_oferta', 10, 2)->nullable();
-            $table->date('dFecha_inicio_oferta')->nullable();
-            $table->date('dFecha_fin_oferta')->nullable();
-            $table->string('vMotivo_oferta', 255)->nullable();
+            // Campos de descuento
+            $table->boolean('bTiene_descuento')->default(false);
+            $table->decimal('dPrecio_descuento', 10, 2)->nullable();
+            $table->date('dFecha_inicio_descuento')->nullable();
+            $table->date('dFecha_fin_descuento')->nullable();
+            $table->string('vMotivo_descuento', 255)->nullable();
             
             // Campos de fecha
             $table->timestamp('tFecha_registro')->useCurrent();

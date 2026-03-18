@@ -66,10 +66,10 @@ class InicioController extends Controller
             ->whereDoesntHave('variaciones', function ($query) {
                 $query->where('bActivo', true);
             })
-            ->where('bTiene_oferta', true)
+            ->where('bTiene_descuento', true)
             ->where(function($query) {
-                $query->whereNull('dFecha_fin_oferta')
-                    ->orWhere('dFecha_fin_oferta', '>=', now()->toDateString());
+                $query->whereNull('dFecha_fin_descuento')
+                    ->orWhere('dFecha_fin_descuento', '>=', now()->toDateString());
             })
             ->with(['categoria', 'marca', 'etiquetas', 'impuestos'])
             ->get();
@@ -84,10 +84,10 @@ class InicioController extends Controller
         $variaciones = ProductoVariacion::whereHas('producto', function($query) {
                 $query->where('bActivo', true);
             })
-            ->where('bTiene_oferta', true)
+            ->where('bTiene_descuento', true)
             ->where(function($query) {
-                $query->whereNull('dFecha_fin_oferta')
-                    ->orWhere('dFecha_fin_oferta', '>=', now()->toDateString());
+                $query->whereNull('dFecha_fin_descuento')
+                    ->orWhere('dFecha_fin_descuento', '>=', now()->toDateString());
             })
             ->with(['producto.categoria', 'producto.marca', 'producto.etiquetas', 'impuesto', 'atributos.valor'])
             ->get();

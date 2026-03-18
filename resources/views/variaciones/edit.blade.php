@@ -42,11 +42,11 @@
                             <div class="alert alert-success mb-3">
                                 <i class="fas fa-tag me-2"></i>
                                 <strong>¡Esta variación tiene un descuento activo del {{ $porcentajeDescuento }}%!</strong>
-                                @if($variacion->vMotivo_oferta)
-                                    <br><small>Motivo: {{ $variacion->vMotivo_oferta }}</small>
+                                @if($variacion->vMotivo_descuento)
+                                    <br><small>Motivo: {{ $variacion->vMotivo_descuento }}</small>
                                 @endif
-                                @if($variacion->dFecha_inicio_oferta && $variacion->dFecha_fin_oferta)
-                                    <br><small>Período: {{ \Carbon\Carbon::parse($variacion->dFecha_inicio_oferta)->format('d/m/Y') }} - {{ \Carbon\Carbon::parse($variacion->dFecha_fin_oferta)->format('d/m/Y') }}</small>
+                                @if($variacion->dFecha_inicio_descuento && $variacion->dFecha_fin_descuento)
+                                    <br><small>Período: {{ \Carbon\Carbon::parse($variacion->dFecha_inicio_descuento)->format('d/m/Y') }} - {{ \Carbon\Carbon::parse($variacion->dFecha_fin_descuento)->format('d/m/Y') }}</small>
                                 @endif
                             </div>
                         @endif
@@ -149,19 +149,19 @@
                             </div>
                         </div>
 
-                        <!-- CAMPOS DE OFERTA/DESCUENTO -->
+                        <!-- CAMPOS DE DESCUENTO -->
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group mb-3">
                                     <label class="form-label fw-bold">
-                                        <i class="fas fa-percentage me-1"></i>Oferta/Descuento Especial
+                                        <i class="fas fa-percentage me-1"></i>Descuento Especial
                                     </label>
                                     <div class="form-check form-switch">
-                                        <input type="checkbox" name="bTiene_oferta" id="bTiene_oferta" 
+                                        <input type="checkbox" name="bTiene_descuento" id="bTiene_descuento" 
                                                class="form-check-input" value="1"
-                                               {{ old('bTiene_oferta', $variacion->bTiene_oferta) ? 'checked' : '' }}
-                                               onchange="toggleOfertaFields()">
-                                        <label class="form-check-label" for="bTiene_oferta">
+                                               {{ old('bTiene_descuento', $variacion->bTiene_descuento) ? 'checked' : '' }}
+                                               onchange="toggleDescuentoFields()">
+                                        <label class="form-check-label" for="bTiene_descuento">
                                             Activar descuento para esta variación
                                         </label>
                                     </div>
@@ -172,28 +172,28 @@
                             </div>
                         </div>
 
-                        <!-- CAMPOS DE OFERTA/DESCUENTO (SIEMPRE VISIBLES SEGÚN EL ESTADO GUARDADO) -->
-                        <div id="ofertaFields" style="display: {{ old('bTiene_oferta', $variacion->bTiene_oferta) ? 'block' : 'none' }};">
+                        <!-- CAMPOS DE DESCUENTO (SIEMPRE VISIBLES SEGÚN EL ESTADO GUARDADO) -->
+                        <div id="descuentoFields" style="display: {{ old('bTiene_descuento', $variacion->bTiene_descuento) ? 'block' : 'none' }};">
                             <div class="row">
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
-                                        <label for="dPrecio_oferta" class="form-label fw-bold">
+                                        <label for="dPrecio_descuento" class="form-label fw-bold">
                                             Precio de descuento <span class="text-danger">*</span>
                                         </label>
                                         <div class="input-group">
                                             <span class="input-group-text">$</span>
                                             <input type="text" 
-                                                   name="dPrecio_oferta" 
-                                                   id="dPrecio_oferta" 
-                                                   class="form-control @error('dPrecio_oferta') is-invalid @enderror"
-                                                   value="{{ old('dPrecio_oferta', $variacion->dPrecio_oferta ? number_format($variacion->dPrecio_oferta, 2, '.', '') : '') }}" 
-                                                   oninput="validarPrecio(this); validarPrecioOfertaInstantaneo(this); actualizarPrecioFinal();"
-                                                   onblur="validarPrecioOferta()"
+                                                   name="dPrecio_descuento" 
+                                                   id="dPrecio_descuento" 
+                                                   class="form-control @error('dPrecio_descuento') is-invalid @enderror"
+                                                   value="{{ old('dPrecio_descuento', $variacion->dPrecio_descuento ? number_format($variacion->dPrecio_descuento, 2, '.', '') : '') }}" 
+                                                   oninput="validarPrecio(this); validarPrecioDescuentoInstantaneo(this); actualizarPrecioFinal();"
+                                                   onblur="validarPrecioDescuento()"
                                                    placeholder="0.00"
                                                    autocomplete="off">
                                         </div>
-                                        <div id="error-precio-oferta" class="invalid-feedback" style="display: none;"></div>
-                                        @error('dPrecio_oferta')
+                                        <div id="error-precio-descuento" class="invalid-feedback" style="display: none;"></div>
+                                        @error('dPrecio_descuento')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                         <small class="form-text text-muted">Debe ser menor al precio de venta</small>
@@ -202,17 +202,17 @@
                                 
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
-                                        <label for="dFecha_inicio_oferta" class="form-label fw-bold">
+                                        <label for="dFecha_inicio_descuento" class="form-label fw-bold">
                                             Fecha inicio <span class="text-danger">*</span>
                                         </label>
                                         <input type="date" 
-                                               name="dFecha_inicio_oferta" 
-                                               id="dFecha_inicio_oferta" 
-                                               class="form-control @error('dFecha_inicio_oferta') is-invalid @enderror"
-                                               value="{{ old('dFecha_inicio_oferta', $variacion->dFecha_inicio_oferta ? \Carbon\Carbon::parse($variacion->dFecha_inicio_oferta)->format('Y-m-d') : '') }}"
-                                               onchange="validarFechasOferta()"
+                                               name="dFecha_inicio_descuento" 
+                                               id="dFecha_inicio_descuento" 
+                                               class="form-control @error('dFecha_inicio_descuento') is-invalid @enderror"
+                                               value="{{ old('dFecha_inicio_descuento', $variacion->dFecha_inicio_descuento ? \Carbon\Carbon::parse($variacion->dFecha_inicio_descuento)->format('Y-m-d') : '') }}"
+                                               onchange="validarFechasDescuento()"
                                                autocomplete="off">
-                                        @error('dFecha_inicio_oferta')
+                                        @error('dFecha_inicio_descuento')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
@@ -220,18 +220,18 @@
                                 
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
-                                        <label for="dFecha_fin_oferta" class="form-label fw-bold">
+                                        <label for="dFecha_fin_descuento" class="form-label fw-bold">
                                             Fecha fin <span class="text-danger">*</span>
                                         </label>
                                         <input type="date" 
-                                               name="dFecha_fin_oferta" 
-                                               id="dFecha_fin_oferta" 
-                                               class="form-control @error('dFecha_fin_oferta') is-invalid @enderror"
-                                               value="{{ old('dFecha_fin_oferta', $variacion->dFecha_fin_oferta ? \Carbon\Carbon::parse($variacion->dFecha_fin_oferta)->format('Y-m-d') : '') }}"
-                                               onchange="validarFechasOferta()"
+                                               name="dFecha_fin_descuento" 
+                                               id="dFecha_fin_descuento" 
+                                               class="form-control @error('dFecha_fin_descuento') is-invalid @enderror"
+                                               value="{{ old('dFecha_fin_descuento', $variacion->dFecha_fin_descuento ? \Carbon\Carbon::parse($variacion->dFecha_fin_descuento)->format('Y-m-d') : '') }}"
+                                               onchange="validarFechasDescuento()"
                                                autocomplete="off">
-                                        <div id="error-fechas-oferta" class="invalid-feedback" style="display: none;"></div>
-                                        @error('dFecha_fin_oferta')
+                                        <div id="error-fechas-descuento" class="invalid-feedback" style="display: none;"></div>
+                                        @error('dFecha_fin_descuento')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
@@ -241,18 +241,18 @@
                             <div class="row">
                                 <div class="col-md-12">
                                     <div class="form-group mb-3">
-                                        <label for="vMotivo_oferta" class="form-label fw-bold">
+                                        <label for="vMotivo_descuento" class="form-label fw-bold">
                                             Motivo del descuento
                                         </label>
                                         <input type="text" 
-                                               name="vMotivo_oferta" 
-                                               id="vMotivo_oferta" 
-                                               class="form-control @error('vMotivo_oferta') is-invalid @enderror"
-                                               value="{{ old('vMotivo_oferta', $variacion->vMotivo_oferta) }}"
+                                               name="vMotivo_descuento" 
+                                               id="vMotivo_descuento" 
+                                               class="form-control @error('vMotivo_descuento') is-invalid @enderror"
+                                               value="{{ old('vMotivo_descuento', $variacion->vMotivo_descuento) }}"
                                                maxlength="255"
                                                placeholder="Ej: Liquidación de temporada, Black Friday, etc."
                                                autocomplete="off">
-                                        @error('vMotivo_oferta')
+                                        @error('vMotivo_descuento')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                         <small class="form-text text-muted">Opcional: Razón del descuento</small>
@@ -923,8 +923,8 @@
     padding: 1rem;
 }
 
-/* Estilos para sección de oferta */
-#ofertaFields {
+/* Estilos para sección de descuento */
+#descuentoFields {
     transition: all 0.3s ease;
 }
 
@@ -1092,8 +1092,8 @@ function validarPrecio(input) {
     }
     
     // Validaciones específicas
-    if (input.id === 'dPrecio_oferta') {
-        validarPrecioOfertaInstantaneo(input);
+    if (input.id === 'dPrecio_descuento') {
+        validarPrecioDescuentoInstantaneo(input);
     }
     
     actualizarPrecioFinal();
@@ -1125,15 +1125,15 @@ function limpiarErrorPrecio(input) {
     input.classList.remove('is-invalid');
 }
 
-function validarPrecioOfertaInstantaneo(input) {
-    const tieneOferta = document.getElementById('bTiene_oferta');
-    if (!tieneOferta || !tieneOferta.checked) return true;
+function validarPrecioDescuentoInstantaneo(input) {
+    const tieneDescuento = document.getElementById('bTiene_descuento');
+    if (!tieneDescuento || !tieneDescuento.checked) return true;
     
     const precioVenta = parseFloat(document.getElementById('dPrecio').value) || 0;
-    const precioOferta = parseFloat(input.value) || 0;
-    const errorDiv = document.getElementById('error-precio-oferta');
+    const precioDescuento = parseFloat(input.value) || 0;
+    const errorDiv = document.getElementById('error-precio-descuento');
     
-    if (precioOferta >= precioVenta && precioOferta > 0 && input.value !== '') {
+    if (precioDescuento >= precioVenta && precioDescuento > 0 && input.value !== '') {
         input.classList.add('is-invalid');
         errorDiv.style.display = 'block';
         errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
@@ -1145,16 +1145,16 @@ function validarPrecioOfertaInstantaneo(input) {
     }
 }
 
-function validarPrecioOferta() {
-    const tieneOferta = document.getElementById('bTiene_oferta');
-    if (!tieneOferta || !tieneOferta.checked) return true;
+function validarPrecioDescuento() {
+    const tieneDescuento = document.getElementById('bTiene_descuento');
+    if (!tieneDescuento || !tieneDescuento.checked) return true;
     
     const precioVenta = parseFloat(document.getElementById('dPrecio').value) || 0;
-    const precioOferta = parseFloat(document.getElementById('dPrecio_oferta').value) || 0;
-    const input = document.getElementById('dPrecio_oferta');
-    const errorDiv = document.getElementById('error-precio-oferta');
+    const precioDescuento = parseFloat(document.getElementById('dPrecio_descuento').value) || 0;
+    const input = document.getElementById('dPrecio_descuento');
+    const errorDiv = document.getElementById('error-precio-descuento');
     
-    if (precioOferta >= precioVenta && precioOferta > 0) {
+    if (precioDescuento >= precioVenta && precioDescuento > 0) {
         input.classList.add('is-invalid');
         errorDiv.style.display = 'block';
         errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
@@ -1166,10 +1166,10 @@ function validarPrecioOferta() {
     }
 }
 
-function validarFechasOferta() {
-    const fechaInicio = document.getElementById('dFecha_inicio_oferta');
-    const fechaFin = document.getElementById('dFecha_fin_oferta');
-    const errorDiv = document.getElementById('error-fechas-oferta');
+function validarFechasDescuento() {
+    const fechaInicio = document.getElementById('dFecha_inicio_descuento');
+    const fechaFin = document.getElementById('dFecha_fin_descuento');
+    const errorDiv = document.getElementById('error-fechas-descuento');
     
     if (!fechaInicio || !fechaFin) return true;
     
@@ -1478,35 +1478,35 @@ function permitirBorrado(e) {
     return false;
 }
 
-// ==================== FUNCIONES PARA OFERTA/DESCUENTO ====================
+// ==================== FUNCIONES PARA DESCUENTO ====================
 
-function toggleOfertaFields() {
-    const ofertaFields = document.getElementById('ofertaFields');
-    const tieneOferta = document.getElementById('bTiene_oferta').checked;
-    const precioOferta = document.getElementById('dPrecio_oferta');
-    const fechaInicio = document.getElementById('dFecha_inicio_oferta');
-    const fechaFin = document.getElementById('dFecha_fin_oferta');
+function toggleDescuentoFields() {
+    const descuentoFields = document.getElementById('descuentoFields');
+    const tieneDescuento = document.getElementById('bTiene_descuento').checked;
+    const precioDescuento = document.getElementById('dPrecio_descuento');
+    const fechaInicio = document.getElementById('dFecha_inicio_descuento');
+    const fechaFin = document.getElementById('dFecha_fin_descuento');
     
-    if (tieneOferta) {
-        ofertaFields.style.display = 'block';
-        precioOferta.required = true;
+    if (tieneDescuento) {
+        descuentoFields.style.display = 'block';
+        precioDescuento.required = true;
         fechaInicio.required = true;
         fechaFin.required = true;
         
         setTimeout(() => {
-            validarPrecioOferta();
+            validarPrecioDescuento();
             actualizarPrecioFinal();
         }, 100);
     } else {
-        ofertaFields.style.display = 'none';
-        precioOferta.required = false;
+        descuentoFields.style.display = 'none';
+        precioDescuento.required = false;
         fechaInicio.required = false;
         fechaFin.required = false;
         
-        precioOferta.classList.remove('is-invalid');
-        document.getElementById('error-precio-oferta').style.display = 'none';
+        precioDescuento.classList.remove('is-invalid');
+        document.getElementById('error-precio-descuento').style.display = 'none';
         fechaFin.classList.remove('is-invalid');
-        document.getElementById('error-fechas-oferta').style.display = 'none';
+        document.getElementById('error-fechas-descuento').style.display = 'none';
         
         actualizarPrecioFinal();
     }
@@ -1516,8 +1516,8 @@ function toggleOfertaFields() {
 
 function actualizarPrecioFinal() {
     const precioInput = document.getElementById('dPrecio');
-    const tieneOferta = document.getElementById('bTiene_oferta')?.checked;
-    const precioOfertaInput = document.getElementById('dPrecio_oferta');
+    const tieneDescuento = document.getElementById('bTiene_descuento')?.checked;
+    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
     const impuestoSelect = document.getElementById('id_impuesto');
     
     if (!precioInput) return;
@@ -1526,10 +1526,10 @@ function actualizarPrecioFinal() {
     let precioBase = parseFloat(precioInput.value) || 0;
     let precioOriginal = precioBase;
     
-    if (tieneOferta && precioOfertaInput && precioOfertaInput.value) {
-        const precioOferta = parseFloat(precioOfertaInput.value) || 0;
-        if (precioOferta > 0 && precioOferta < precioBase) {
-            precioBase = precioOferta;
+    if (tieneDescuento && precioDescuentoInput && precioDescuentoInput.value) {
+        const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
+        if (precioDescuento > 0 && precioDescuento < precioBase) {
+            precioBase = precioDescuento;
         }
     }
     
@@ -1538,7 +1538,7 @@ function actualizarPrecioFinal() {
     
     // Mostrar precio original si hay descuento
     const precioOriginalDisplay = document.getElementById('precio-original-display');
-    if (tieneOferta && precioBase < precioOriginal) {
+    if (tieneDescuento && precioBase < precioOriginal) {
         precioOriginalDisplay.style.display = 'block';
         precioOriginalDisplay.textContent = 'Precio original: $' + precioOriginal.toFixed(2);
     } else {
@@ -2118,9 +2118,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const skuInput = document.getElementById('vSKU');
     const originalSku = skuInput ? skuInput.dataset.originalSku : '';
     
-    // Inicializar toggle de oferta
-    if (document.getElementById('bTiene_oferta') && document.getElementById('bTiene_oferta').checked) {
-        toggleOfertaFields();
+    // Inicializar toggle de descuento
+    if (document.getElementById('bTiene_descuento') && document.getElementById('bTiene_descuento').checked) {
+        toggleDescuentoFields();
     }
     
     // Inicializar cálculo de precio final
@@ -2128,7 +2128,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Event listeners para calcular precio final cuando cambian los valores
     document.getElementById('dPrecio').addEventListener('input', actualizarPrecioFinal);
-    document.getElementById('dPrecio_oferta').addEventListener('input', actualizarPrecioFinal);
+    document.getElementById('dPrecio_descuento').addEventListener('input', actualizarPrecioFinal);
     document.getElementById('id_impuesto').addEventListener('change', actualizarPrecioFinal);
     
     // Validación en tiempo real de atributos
@@ -2203,12 +2203,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 erroresCriticos = true;
             }
             
-            // 3. Validar precio de oferta si está activo
-            if (document.getElementById('bTiene_oferta') && document.getElementById('bTiene_oferta').checked) {
-                if (!validarPrecioOferta()) {
+            // 3. Validar precio de descuento si está activo
+            if (document.getElementById('bTiene_descuento') && document.getElementById('bTiene_descuento').checked) {
+                if (!validarPrecioDescuento()) {
                     erroresCriticos = true;
                 }
-                if (!validarFechasOferta()) {
+                if (!validarFechasDescuento()) {
                     erroresCriticos = true;
                 }
             }

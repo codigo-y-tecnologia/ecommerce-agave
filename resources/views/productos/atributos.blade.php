@@ -51,7 +51,7 @@
                             <i class="fas fa-info-circle me-2"></i>
                             <strong>Información:</strong> Para crear variaciones del producto, dirígete a la sección de 
                             <a href="{{ route('variaciones.index') }}" class="alert-link">Variaciones</a> o 
-                            <a href="{{ route('variaciones.create', $producto->id_producto) }}" class="alert-link">crea una nueva valoración</a>.
+                            <a href="{{ route('variaciones.create', $producto->id_producto) }}" class="alert-link">crea una nueva variación</a>.
                         </div>
                     @else
                         <div class="text-center py-4">
@@ -97,9 +97,9 @@
                             </td>
                             <td>
                                 ${{ number_format($variacion->dPrecio, 2) }}
-                                @if($variacion->tiene_oferta)
+                                @if($variacion->tieneDescuentoActivo())
                                 <br>
-                                <small class="text-success">Oferta: ${{ number_format($variacion->dPrecio_oferta, 2) }}</small>
+                                <small class="text-success">Descuento: ${{ number_format($variacion->dPrecio_descuento, 2) }}</small>
                                 @endif
                             </td>
                             <td>
@@ -145,7 +145,7 @@
                 <p class="text-muted mb-3">Crea variaciones manualmente desde la sección de variaciones</p>
                 <div class="mt-3">
                     <a href="{{ route('variaciones.create', $producto->id_producto) }}" class="btn btn-success me-2">
-                        <i class="fas fa-plus me-1"></i> Crear Nueva Valoración
+                        <i class="fas fa-plus me-1"></i> Crear Nueva Variación
                     </a>
                     <a href="{{ route('variaciones.index') }}" class="btn btn-outline-primary">
                         <i class="fas fa-list me-1"></i> Ver Todas las Variaciones

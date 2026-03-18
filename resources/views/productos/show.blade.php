@@ -79,9 +79,9 @@
         $imagenesProducto = $producto->imagenes ?? [];
         $tieneVariaciones = $producto->tieneVariaciones();
         
-        // Calcular si el producto padre tiene oferta vigente
-        $productoTieneOferta = $producto->tieneDescuentoActivo();
-        $precioBaseProducto = $productoTieneOferta ? $producto->dPrecio_oferta : $producto->dPrecio_venta;
+        // Calcular si el producto padre tiene descuento vigente
+        $productoTieneDescuento = $producto->tieneDescuentoActivo();
+        $precioBaseProducto = $productoTieneDescuento ? $producto->dPrecio_descuento : $producto->dPrecio_venta;
         
         // Calcular impuestos del producto padre
         $totalImpuestosProducto = 0;
@@ -96,8 +96,8 @@
             'id' => 'producto',
             'sku' => $producto->vCodigo_barras,
             'precio_original' => (float)$producto->dPrecio_venta,
-            'precio_oferta' => (float)($producto->dPrecio_oferta ?? 0),
-            'tiene_oferta' => $productoTieneOferta,
+            'precio_descuento' => (float)($producto->dPrecio_descuento ?? 0),
+            'tiene_descuento' => $productoTieneDescuento,
             'precio_base' => (float)$precioBaseProducto,
             'total_impuestos' => (float)$totalImpuestosProducto,
             'precio_final' => (float)($precioBaseProducto + $totalImpuestosProducto),
@@ -142,9 +142,9 @@
                 }
             }
             
-            // Calcular si la variación tiene oferta vigente
-            $variacionTieneOferta = $var->tieneDescuentoActivo();
-            $precioBaseVariacion = $variacionTieneOferta ? $var->dPrecio_oferta : $var->dPrecio;
+            // Calcular si la variación tiene descuento vigente
+            $variacionTieneDescuento = $var->tieneDescuentoActivo();
+            $precioBaseVariacion = $variacionTieneDescuento ? $var->dPrecio_descuento : $var->dPrecio;
             
             // Calcular impuestos de la variación
             $impuestoVariacion = $var->impuesto ?? $producto->impuestos->first();
@@ -161,8 +161,8 @@
                 'id' => $var->id_variacion,
                 'sku' => $var->vSKU,
                 'precio_original' => (float)$var->dPrecio,
-                'precio_oferta' => (float)($var->dPrecio_oferta ?? 0),
-                'tiene_oferta' => $variacionTieneOferta,
+                'precio_descuento' => (float)($var->dPrecio_descuento ?? 0),
+                'tiene_descuento' => $variacionTieneDescuento,
                 'precio_base' => (float)$precioBaseVariacion,
                 'total_impuestos' => (float)$totalImpuestosVariacion,
                 'precio_final' => (float)($precioBaseVariacion + $totalImpuestosVariacion),
@@ -354,17 +354,17 @@
                                 <tr id="producto-precio-venta-row">
                                     <td class="py-3 px-3">
                                         <strong>Precio de venta</strong>
-                                        @if($productoTieneOferta)
-                                            <span class="badge bg-danger ms-2" id="producto-oferta-badge">Oferta activa</span>
+                                        @if($productoTieneDescuento)
+                                            <span class="badge bg-danger ms-2" id="producto-descuento-badge">Descuento activo</span>
                                         @endif
                                     </td>
                                     <td class="py-3 px-3" id="producto-precio-container">
-                                        @if($productoTieneOferta)
+                                        @if($productoTieneDescuento)
                                             <span class="text-decoration-line-through text-muted me-2" id="producto-precio-original">
                                                 ${{ number_format($producto->dPrecio_venta, 2) }}
                                             </span>
                                             <span class="fw-bold text-danger" id="producto-precio-actual">
-                                                ${{ number_format($producto->dPrecio_oferta, 2) }}
+                                                ${{ number_format($producto->dPrecio_descuento, 2) }}
                                             </span>
                                         @else
                                             <span class="fw-bold" id="producto-precio-actual">${{ number_format($producto->dPrecio_venta, 2) }}</span>
@@ -403,7 +403,7 @@
                                 <tr id="variacion-precio-venta-row" style="display: none;">
                                     <td class="py-3 px-3">
                                         <strong>Precio de venta (variación)</strong>
-                                        <span class="badge bg-danger ms-2" id="variacion-oferta-badge" style="display: none;">Oferta activa</span>
+                                        <span class="badge bg-danger ms-2" id="variacion-descuento-badge" style="display: none;">Descuento activo</span>
                                     </td>
                                     <td class="py-3 px-3" id="variacion-precio-container">
                                         <span class="text-decoration-line-through text-muted me-2" id="variacion-precio-original" style="display: none;"></span>
@@ -1005,19 +1005,19 @@ function aplicarDatosVariacion(variacion) {
     
     const precioActualSpan = document.getElementById('variacion-precio-actual');
     const precioOriginalSpan = document.getElementById('variacion-precio-original');
-    const ofertaBadge = document.getElementById('variacion-oferta-badge');
+    const descuentoBadge = document.getElementById('variacion-descuento-badge');
     
-    if (variacion.tiene_oferta && variacion.precio_oferta > 0 && variacion.precio_oferta < variacion.precio_original) {
+    if (variacion.tiene_descuento && variacion.precio_descuento > 0 && variacion.precio_descuento < variacion.precio_original) {
         precioOriginalSpan.style.display = 'inline';
         precioOriginalSpan.textContent = '$' + formatNumber(variacion.precio_original);
         precioActualSpan.className = 'fw-bold text-danger';
-        precioActualSpan.textContent = '$' + formatNumber(variacion.precio_oferta);
-        ofertaBadge.style.display = 'inline-block';
+        precioActualSpan.textContent = '$' + formatNumber(variacion.precio_descuento);
+        descuentoBadge.style.display = 'inline-block';
     } else {
         precioOriginalSpan.style.display = 'none';
         precioActualSpan.className = 'fw-bold';
         precioActualSpan.textContent = '$' + formatNumber(variacion.precio_original);
-        ofertaBadge.style.display = 'none';
+        descuentoBadge.style.display = 'none';
     }
     
     // ACTUALIZAR IMPUESTOS

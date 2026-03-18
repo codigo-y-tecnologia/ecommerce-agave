@@ -168,22 +168,22 @@ public function store(Request $request, $producto_id)
                 }
             }
         ],
-        'dPrecio_oferta' => [
+        'dPrecio_descuento' => [
             'nullable',
             'numeric',
             'min:0',
             'max:9999999.99',
             function ($attribute, $value, $fail) {
                 if ($value !== null && !preg_match('/^\d{1,7}(\.\d{1,2})?$/', $value)) {
-                    $fail('El precio de oferta debe tener máximo 7 dígitos enteros y 2 decimales.');
+                    $fail('El precio de descuento debe tener máximo 7 dígitos enteros y 2 decimales.');
                 }
             }
         ],
         'iStock' => 'required|integer|min:0|max:999999',
-        'bTiene_oferta' => 'nullable|in:0,1',
-        'dFecha_inicio_oferta' => 'nullable|required_if:bTiene_oferta,1|date',
-        'dFecha_fin_oferta' => 'nullable|required_if:bTiene_oferta,1|date|after_or_equal:dFecha_inicio_oferta',
-        'vMotivo_oferta' => 'nullable|string|max:255',
+        'bTiene_descuento' => 'nullable|in:0,1',
+        'dFecha_inicio_descuento' => 'nullable|required_if:bTiene_descuento,1|date',
+        'dFecha_fin_descuento' => 'nullable|required_if:bTiene_descuento,1|date|after_or_equal:dFecha_inicio_descuento',
+        'vMotivo_descuento' => 'nullable|string|max:255',
         'dPeso' => [
             'nullable',
             'numeric',
@@ -245,9 +245,9 @@ public function store(Request $request, $producto_id)
         // Mensajes de error...
     ]);
 
-    // Validación condicional para precio de oferta
-    $validator->sometimes('dPrecio_oferta', 'required|lt:dPrecio', function ($input) {
-        return $input->bTiene_oferta == 1;
+    // Validación condicional para precio de descuento
+    $validator->sometimes('dPrecio_descuento', 'required|lt:dPrecio', function ($input) {
+        return $input->bTiene_descuento == 1;
     });
 
     if ($validator->fails()) {
@@ -273,11 +273,11 @@ public function store(Request $request, $producto_id)
             'id_producto' => $producto_id,
             'vSKU' => strtoupper($request->vSKU),
             'dPrecio' => $request->dPrecio,
-            'dPrecio_oferta' => $request->dPrecio_oferta ?? null,
-            'dFecha_inicio_oferta' => $request->dFecha_inicio_oferta ?? null,
-            'dFecha_fin_oferta' => $request->dFecha_fin_oferta ?? null,
-            'vMotivo_oferta' => $request->vMotivo_oferta ?? null,
-            'bTiene_oferta' => $request->has('bTiene_oferta') && $request->bTiene_oferta == '1' ? 1 : 0,
+            'dPrecio_descuento' => $request->dPrecio_descuento ?? null,
+            'dFecha_inicio_descuento' => $request->dFecha_inicio_descuento ?? null,
+            'dFecha_fin_descuento' => $request->dFecha_fin_descuento ?? null,
+            'vMotivo_descuento' => $request->vMotivo_descuento ?? null,
+            'bTiene_descuento' => $request->has('bTiene_descuento') && $request->bTiene_descuento == '1' ? 1 : 0,
             'iStock' => $request->iStock,
             'dPeso' => $request->dPeso ?: null,
             'dLargo_cm' => $request->dLargo_cm ?: null,
@@ -468,22 +468,22 @@ public function store(Request $request, $producto_id)
                     }
                 }
             ],
-            'dPrecio_oferta' => [
+            'dPrecio_descuento' => [
                 'nullable',
                 'numeric',
                 'min:0',
                 'max:9999999.99',
                 function ($attribute, $value, $fail) {
                     if ($value !== null && !preg_match('/^\d{1,7}(\.\d{1,2})?$/', $value)) {
-                        $fail('El precio de oferta debe tener máximo 7 dígitos enteros y 2 decimales.');
+                        $fail('El precio de descuento debe tener máximo 7 dígitos enteros y 2 decimales.');
                     }
                 }
             ],
             'iStock' => 'required|integer|min:0|max:999999',
-            'bTiene_oferta' => 'nullable|in:0,1',
-            'dFecha_inicio_oferta' => 'nullable|required_if:bTiene_oferta,1|date',
-            'dFecha_fin_oferta' => 'nullable|required_if:bTiene_oferta,1|date|after_or_equal:dFecha_inicio_oferta',
-            'vMotivo_oferta' => 'nullable|string|max:255',
+            'bTiene_descuento' => 'nullable|in:0,1',
+            'dFecha_inicio_descuento' => 'nullable|required_if:bTiene_descuento,1|date',
+            'dFecha_fin_descuento' => 'nullable|required_if:bTiene_descuento,1|date|after_or_equal:dFecha_inicio_descuento',
+            'vMotivo_descuento' => 'nullable|string|max:255',
             'dPeso' => [
                 'nullable',
                 'numeric',
@@ -552,16 +552,16 @@ public function store(Request $request, $producto_id)
             'dPrecio.numeric' => 'El precio debe ser un número válido',
             'dPrecio.min' => 'El precio no puede ser negativo',
             'dPrecio.max' => 'El precio no puede exceder $9,999,999.99',
-            'dPrecio_oferta.numeric' => 'El precio de oferta debe ser un número válido',
-            'dPrecio_oferta.min' => 'El precio de oferta no puede ser negativo',
-            'dPrecio_oferta.max' => 'El precio de oferta no puede exceder $9,999,999.99',
+            'dPrecio_descuento.numeric' => 'El precio de descuento debe ser un número válido',
+            'dPrecio_descuento.min' => 'El precio de descuento no puede ser negativo',
+            'dPrecio_descuento.max' => 'El precio de descuento no puede exceder $9,999,999.99',
             'iStock.required' => 'El stock es obligatorio',
             'iStock.integer' => 'El stock debe ser un número entero',
             'iStock.min' => 'El stock no puede ser negativo',
             'iStock.max' => 'El stock no puede exceder 999,999 unidades',
-            'dFecha_inicio_oferta.required_if' => 'La fecha de inicio es obligatoria cuando la oferta está activa',
-            'dFecha_fin_oferta.required_if' => 'La fecha de fin es obligatoria cuando la oferta está activa',
-            'dFecha_fin_oferta.after_or_equal' => 'La fecha de fin debe ser igual o posterior a la fecha de inicio',
+            'dFecha_inicio_descuento.required_if' => 'La fecha de inicio es obligatoria cuando el descuento está activo',
+            'dFecha_fin_descuento.required_if' => 'La fecha de fin es obligatoria cuando el descuento está activo',
+            'dFecha_fin_descuento.after_or_equal' => 'La fecha de fin debe ser igual o posterior a la fecha de inicio',
             'dPeso.numeric' => 'El peso debe ser un número válido',
             'dPeso.min' => 'El peso no puede ser negativo',
             'dPeso.max' => 'El peso no puede exceder 999.999 kg',
@@ -594,9 +594,9 @@ public function store(Request $request, $producto_id)
             'atributos.*.exists' => 'El valor seleccionado no es válido',
         ]);
 
-        // Validación condicional para precio de oferta
-        $validator->sometimes('dPrecio_oferta', 'required|lt:dPrecio', function ($input) {
-            return $input->bTiene_oferta == 1;
+        // Validación condicional para precio de descuento
+        $validator->sometimes('dPrecio_descuento', 'required|lt:dPrecio', function ($input) {
+            return $input->bTiene_descuento == 1;
         });
 
         if ($validator->fails()) {
@@ -651,11 +651,11 @@ public function store(Request $request, $producto_id)
             $updateData = [
                 'vSKU' => strtoupper($request->vSKU),
                 'dPrecio' => $request->dPrecio,
-                'dPrecio_oferta' => $request->dPrecio_oferta ?? null,
-                'dFecha_inicio_oferta' => $request->dFecha_inicio_oferta ?? null,
-                'dFecha_fin_oferta' => $request->dFecha_fin_oferta ?? null,
-                'vMotivo_oferta' => $request->vMotivo_oferta ?? null,
-                'bTiene_oferta' => $request->has('bTiene_oferta') && $request->bTiene_oferta == '1' ? 1 : 0,
+                'dPrecio_descuento' => $request->dPrecio_descuento ?? null,
+                'dFecha_inicio_descuento' => $request->dFecha_inicio_descuento ?? null,
+                'dFecha_fin_descuento' => $request->dFecha_fin_descuento ?? null,
+                'vMotivo_descuento' => $request->vMotivo_descuento ?? null,
+                'bTiene_descuento' => $request->has('bTiene_descuento') && $request->bTiene_descuento == '1' ? 1 : 0,
                 'iStock' => $request->iStock,
                 'dPeso' => $request->dPeso ?: null,
                 'dLargo_cm' => $request->dLargo_cm ?: null,

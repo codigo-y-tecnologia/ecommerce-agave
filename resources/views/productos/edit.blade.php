@@ -167,7 +167,7 @@
                             <div class="form-check form-switch">
                                 <input type="checkbox" name="bTiene_descuento" id="bTiene_descuento" 
                                        class="form-check-input" value="1"
-                                       {{ old('bTiene_descuento', $producto->bTiene_oferta) ? 'checked' : '' }}
+                                       {{ old('bTiene_descuento', $producto->bTiene_descuento) ? 'checked' : '' }}
                                        onchange="toggleDescuentoFields()">
                                 <label class="form-check-label" for="bTiene_descuento">
                                     Activar Descuento para este producto
@@ -197,7 +197,7 @@
                 </div>
 
                 <!-- CAMPOS DE DESCUENTO (OCULTOS INICIALMENTE) -->
-                <div id="descuentoFields" style="{{ $producto->bTiene_oferta ? 'display: block;' : 'display: none;' }}">
+                <div id="descuentoFields" style="{{ $producto->bTiene_descuento ? 'display: block;' : 'display: none;' }}">
                     <div class="row">
                         <div class="col-md-4">
                             <div class="form-group mb-3">
@@ -210,7 +210,7 @@
                                            name="dPrecio_descuento" 
                                            id="dPrecio_descuento" 
                                            class="form-control @error('dPrecio_descuento') is-invalid @enderror"
-                                           value="{{ old('dPrecio_descuento', $producto->dPrecio_oferta) }}" 
+                                           value="{{ old('dPrecio_descuento', $producto->dPrecio_descuento) }}" 
                                            oninput="validarPrecio(this); validarPrecioDescuentoProductoInstantaneo(this); actualizarPrecioFinal();"
                                            onblur="validarPrecioDescuentoProducto()"
                                            placeholder="0.00"
@@ -233,7 +233,7 @@
                                        name="dFecha_inicio_descuento" 
                                        id="dFecha_inicio_descuento" 
                                        class="form-control @error('dFecha_inicio_descuento') is-invalid @enderror"
-                                       value="{{ old('dFecha_inicio_descuento', $producto->dFecha_inicio_oferta ? \Carbon\Carbon::parse($producto->dFecha_inicio_oferta)->format('Y-m-d') : '') }}"
+                                       value="{{ old('dFecha_inicio_descuento', $producto->dFecha_inicio_descuento ? \Carbon\Carbon::parse($producto->dFecha_inicio_descuento)->format('Y-m-d') : '') }}"
                                        onchange="validarFechasDescuento()"
                                        autocomplete="off">
                                 @error('dFecha_inicio_descuento')
@@ -251,7 +251,7 @@
                                        name="dFecha_fin_descuento" 
                                        id="dFecha_fin_descuento" 
                                        class="form-control @error('dFecha_fin_descuento') is-invalid @enderror"
-                                       value="{{ old('dFecha_fin_descuento', $producto->dFecha_fin_oferta ? \Carbon\Carbon::parse($producto->dFecha_fin_oferta)->format('Y-m-d') : '') }}"
+                                       value="{{ old('dFecha_fin_descuento', $producto->dFecha_fin_descuento ? \Carbon\Carbon::parse($producto->dFecha_fin_descuento)->format('Y-m-d') : '') }}"
                                        onchange="validarFechasDescuento()"
                                        autocomplete="off">
                                 <div id="error-fechas-descuento" class="invalid-feedback" style="display: none;"></div>
@@ -272,7 +272,7 @@
                                        name="vMotivo_descuento" 
                                        id="vMotivo_descuento" 
                                        class="form-control @error('vMotivo_descuento') is-invalid @enderror"
-                                       value="{{ old('vMotivo_descuento', $producto->vMotivo_oferta) }}"
+                                       value="{{ old('vMotivo_descuento', $producto->vMotivo_descuento) }}"
                                        maxlength="255"
                                        placeholder="Ej: Liquidación de temporada, Black Friday, etc."
                                        autocomplete="off">
@@ -941,8 +941,8 @@
                         <div class="card bg-white text-dark">
                             <div class="card-body text-center">
                                 <h6 class="text-muted">Precio base (con descuento aplicado)</h6>
-                                <h3 class="fw-bold" id="precio-base-display">${{ number_format($producto->ofertaVigente() ? $producto->dPrecio_oferta : $producto->dPrecio_venta, 2) }}</h3>
-                                <small class="text-muted" id="precio-original-display" style="{{ $producto->ofertaVigente() ? 'display: block;' : 'display: none;' }}">
+                                <h3 class="fw-bold" id="precio-base-display">${{ number_format($producto->tieneDescuentoActivo() ? $producto->dPrecio_descuento : $producto->dPrecio_venta, 2) }}</h3>
+                                <small class="text-muted" id="precio-original-display" style="{{ $producto->tieneDescuentoActivo() ? 'display: block;' : 'display: none;' }}">
                                     Precio original: ${{ number_format($producto->dPrecio_venta, 2) }}
                                 </small>
                             </div>
@@ -954,7 +954,7 @@
                                 <h6 class="text-muted">Impuesto</h6>
                                 <h3 class="fw-bold" id="total-impuestos-display">
                                     @php
-                                        $precioBase = $producto->ofertaVigente() ? $producto->dPrecio_oferta : $producto->dPrecio_venta;
+                                        $precioBase = $producto->tieneDescuentoActivo() ? $producto->dPrecio_descuento : $producto->dPrecio_venta;
                                         $totalImpuestos = 0;
                                         $porcentaje = 0;
                                         if($producto->impuestos->count() > 0) {
@@ -4276,27 +4276,27 @@ function actualizarPestanasValores() {
         const largoValue = variacionExistente && variacionExistente.dLargo_cm ? variacionExistente.dLargo_cm : '';
         const anchoValue = variacionExistente && variacionExistente.dAncho_cm ? variacionExistente.dAncho_cm : '';
         const altoValue = variacionExistente && variacionExistente.dAlto_cm ? variacionExistente.dAlto_cm : '';
-        const tieneDescuento = variacionExistente && variacionExistente.bTiene_oferta ? true : false;
-        const precioDescuentoValue = variacionExistente && variacionExistente.dPrecio_oferta ? variacionExistente.dPrecio_oferta : '';
+        const tieneDescuento = variacionExistente && variacionExistente.bTiene_descuento ? true : false;
+        const precioDescuentoValue = variacionExistente && variacionExistente.dPrecio_descuento ? variacionExistente.dPrecio_descuento : '';
         
         // CORRECCIÓN: Extraer fechas correctamente del formato YYYY-MM-DD HH:MM:SS
         let fechaInicioValue = '';
-        if (variacionExistente && variacionExistente.dFecha_inicio_oferta) {
-            const fechaStr = variacionExistente.dFecha_inicio_oferta;
+        if (variacionExistente && variacionExistente.dFecha_inicio_descuento) {
+            const fechaStr = variacionExistente.dFecha_inicio_descuento;
             if (typeof fechaStr === 'string') {
                 fechaInicioValue = fechaStr.substring(0, 10);
             }
         }
         
         let fechaFinValue = '';
-        if (variacionExistente && variacionExistente.dFecha_fin_oferta) {
-            const fechaStr = variacionExistente.dFecha_fin_oferta;
+        if (variacionExistente && variacionExistente.dFecha_fin_descuento) {
+            const fechaStr = variacionExistente.dFecha_fin_descuento;
             if (typeof fechaStr === 'string') {
                 fechaFinValue = fechaStr.substring(0, 10);
             }
         }
         
-        const motivoDescuentoValue = variacionExistente && variacionExistente.vMotivo_oferta ? variacionExistente.vMotivo_oferta : '';
+        const motivoDescuentoValue = variacionExistente && variacionExistente.vMotivo_descuento ? variacionExistente.vMotivo_descuento : '';
         const activoValue = variacionExistente ? (variacionExistente.bActivo ? true : false) : true;
         
         const formHtml = `

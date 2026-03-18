@@ -996,7 +996,7 @@
                     if ($esVariacion) {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio;
-                        $precioDescuento = $item->dPrecio_oferta;
+                        $precioDescuento = $item->dPrecio_descuento;
                         $stock = $item->iStock;
                         $nombreProducto = $item->productoPadre->vNombre;
                         $nombreCompleto = $nombreProducto . ' - ' . $item->getAtributosTexto();
@@ -1009,13 +1009,13 @@
                         $atributosCompletos = $item->getAtributosCompletosTexto();
                         $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vSKU;
-                        $motivoOferta = $item->vMotivo_oferta ?? '';
-                        $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
-                        $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
+                        $motivoDescuento = $item->vMotivo_descuento ?? '';
+                        $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
+                        $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
                     } else {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio_venta;
-                        $precioDescuento = $item->dPrecio_oferta;
+                        $precioDescuento = $item->dPrecio_descuento;
                         $stock = $item->iStock;
                         $nombreProducto = $item->vNombre;
                         $nombreCompleto = $nombreProducto;
@@ -1028,9 +1028,9 @@
                         $atributosCompletos = '';
                         $marca = $item->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vCodigo_barras;
-                        $motivoOferta = $item->vMotivo_oferta ?? '';
-                        $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
-                        $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
+                        $motivoDescuento = $item->vMotivo_descuento ?? '';
+                        $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
+                        $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
                     }
                     
                     $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
@@ -1055,10 +1055,10 @@
                         </button>
 
                         @if($tieneDescuento && $porcentajeDescuento > 0)
-                            <div class="badge-descuento-rojo" title="{{ $motivoOferta ?: 'Descuento especial' }}">
+                            <div class="badge-descuento-rojo" title="{{ $motivoDescuento ?: 'Descuento especial' }}">
                                 -{{ $porcentajeDescuento }}% OFF
-                                @if($motivoOferta)
-                                    <br><small style="font-size: 8px;">{{ Str::limit($motivoOferta, 15) }}</small>
+                                @if($motivoDescuento)
+                                    <br><small style="font-size: 8px;">{{ Str::limit($motivoDescuento, 15) }}</small>
                                 @endif
                             </div>
                         @elseif($estaBajoStock)
@@ -1093,9 +1093,9 @@
                                     <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                 </div>
                                 
-                                @if($motivoOferta && $esVariacion)
-                                    <div class="motivo-descuento" title="{{ $motivoOferta }}">
-                                        <i class="fas fa-tag"></i> {{ Str::limit($motivoOferta, 25) }}
+                                @if($motivoDescuento && $esVariacion)
+                                    <div class="motivo-descuento" title="{{ $motivoDescuento }}">
+                                        <i class="fas fa-tag"></i> {{ Str::limit($motivoDescuento, 25) }}
                                     </div>
                                 @endif
                                 
@@ -1162,7 +1162,7 @@
                         if ($esVariacion) {
                             $tieneDescuento = $item->tieneDescuentoActivo();
                             $precioOriginal = $item->dPrecio;
-                            $precioDescuento = $item->dPrecio_oferta;
+                            $precioDescuento = $item->dPrecio_descuento;
                             $stock = $item->iStock;
                             $nombreProducto = $item->productoPadre->vNombre;
                             $nombreCompleto = $nombreProducto . ' - ' . $item->getAtributosTexto();
@@ -1175,13 +1175,13 @@
                             $atributosCompletos = $item->getAtributosCompletosTexto();
                             $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
                             $sku = $item->vSKU;
-                            $motivoOferta = $item->vMotivo_oferta ?? '';
-                            $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
-                            $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
+                            $motivoDescuento = $item->vMotivo_descuento ?? '';
+                            $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
+                            $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
                         } else {
                             $tieneDescuento = $item->tieneDescuentoActivo();
                             $precioOriginal = $item->dPrecio_venta;
-                            $precioDescuento = $item->dPrecio_oferta;
+                            $precioDescuento = $item->dPrecio_descuento;
                             $stock = $item->iStock;
                             $nombreProducto = $item->vNombre;
                             $nombreCompleto = $nombreProducto;
@@ -1194,9 +1194,9 @@
                             $atributosCompletos = '';
                             $marca = $item->marca->vNombre ?? 'Marca genérica';
                             $sku = $item->vCodigo_barras;
-                            $motivoOferta = $item->vMotivo_oferta ?? '';
-                            $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
-                            $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
+                            $motivoDescuento = $item->vMotivo_descuento ?? '';
+                            $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
+                            $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
                         }
                         
                         $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
@@ -1220,10 +1220,10 @@
                             </button>
 
                             @if($tieneDescuento && $porcentajeDescuento > 0)
-                                <div class="badge-descuento-rojo" title="{{ $motivoOferta ?: 'Descuento especial' }}">
+                                <div class="badge-descuento-rojo" title="{{ $motivoDescuento ?: 'Descuento especial' }}">
                                     -{{ $porcentajeDescuento }}%
-                                    @if($motivoOferta)
-                                        <br><small style="font-size: 8px;">{{ Str::limit($motivoOferta, 15) }}</small>
+                                    @if($motivoDescuento)
+                                        <br><small style="font-size: 8px;">{{ Str::limit($motivoDescuento, 15) }}</small>
                                     @endif
                                 </div>
                             @elseif($estaBajoStock)
@@ -1258,9 +1258,9 @@
                                         <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                     </div>
                                     
-                                    @if($motivoOferta && $esVariacion)
-                                        <div class="motivo-descuento" title="{{ $motivoOferta }}">
-                                            <i class="fas fa-tag"></i> {{ Str::limit($motivoOferta, 25) }}
+                                    @if($motivoDescuento && $esVariacion)
+                                        <div class="motivo-descuento" title="{{ $motivoDescuento }}">
+                                            <i class="fas fa-tag"></i> {{ Str::limit($motivoDescuento, 25) }}
                                         </div>
                                     @endif
                                     
@@ -1321,7 +1321,7 @@
                     if ($esVariacion) {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio;
-                        $precioDescuento = $item->dPrecio_oferta;
+                        $precioDescuento = $item->dPrecio_descuento;
                         $stock = $item->iStock;
                         $nombreProducto = $item->productoPadre->vNombre;
                         $nombreCompleto = $nombreProducto . ' - ' . $item->getAtributosTexto();
@@ -1334,13 +1334,13 @@
                         $atributosCompletos = $item->getAtributosCompletosTexto();
                         $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vSKU;
-                        $motivoOferta = $item->vMotivo_oferta ?? '';
-                        $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
-                        $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
+                        $motivoDescuento = $item->vMotivo_descuento ?? '';
+                        $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
+                        $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
                     } else {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio_venta;
-                        $precioDescuento = $item->dPrecio_oferta;
+                        $precioDescuento = $item->dPrecio_descuento;
                         $stock = $item->iStock;
                         $nombreProducto = $item->vNombre;
                         $nombreCompleto = $nombreProducto;
@@ -1353,9 +1353,9 @@
                         $atributosCompletos = '';
                         $marca = $item->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vCodigo_barras;
-                        $motivoOferta = $item->vMotivo_oferta ?? '';
-                        $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
-                        $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
+                        $motivoDescuento = $item->vMotivo_descuento ?? '';
+                        $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
+                        $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
                     }
                     
                     $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
@@ -1381,7 +1381,7 @@
                         </button>
 
                         @if($tieneDescuento && $porcentajeDescuento > 0)
-                            <div class="badge-descuento-rojo" title="{{ $motivoOferta ?: 'Descuento especial' }}">
+                            <div class="badge-descuento-rojo" title="{{ $motivoDescuento ?: 'Descuento especial' }}">
                                 -{{ $porcentajeDescuento }}%
                             </div>
                         @endif
@@ -1412,9 +1412,9 @@
                                     <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                 </div>
                                 
-                                @if($motivoOferta && $esVariacion)
-                                    <div class="motivo-descuento" title="{{ $motivoOferta }}">
-                                        <i class="fas fa-tag"></i> {{ Str::limit($motivoOferta, 25) }}
+                                @if($motivoDescuento && $esVariacion)
+                                    <div class="motivo-descuento" title="{{ $motivoDescuento }}">
+                                        <i class="fas fa-tag"></i> {{ Str::limit($motivoDescuento, 25) }}
                                     </div>
                                 @endif
                                 
@@ -1469,7 +1469,7 @@
                     if ($esVariacion) {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio;
-                        $precioDescuento = $item->dPrecio_oferta;
+                        $precioDescuento = $item->dPrecio_descuento;
                         $stock = $item->iStock;
                         $nombreProducto = $item->productoPadre->vNombre;
                         $nombreCompleto = $nombreProducto . ' - ' . $item->getAtributosTexto();
@@ -1482,13 +1482,13 @@
                         $atributosCompletos = $item->getAtributosCompletosTexto();
                         $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vSKU;
-                        $motivoOferta = $item->vMotivo_oferta ?? '';
-                        $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
-                        $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
+                        $motivoDescuento = $item->vMotivo_descuento ?? '';
+                        $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
+                        $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
                     } else {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio_venta;
-                        $precioDescuento = $item->dPrecio_oferta;
+                        $precioDescuento = $item->dPrecio_descuento;
                         $stock = $item->iStock;
                         $nombreProducto = $item->vNombre;
                         $nombreCompleto = $nombreProducto;
@@ -1501,9 +1501,9 @@
                         $atributosCompletos = '';
                         $marca = $item->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vCodigo_barras;
-                        $motivoOferta = $item->vMotivo_oferta ?? '';
-                        $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
-                        $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
+                        $motivoDescuento = $item->vMotivo_descuento ?? '';
+                        $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
+                        $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
                     }
                     
                     $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
@@ -1527,10 +1527,10 @@
                         </button>
 
                         @if($tieneDescuento && $porcentajeDescuento > 0)
-                            <div class="badge-descuento-rojo" title="{{ $motivoOferta ?: 'Descuento especial' }}">
+                            <div class="badge-descuento-rojo" title="{{ $motivoDescuento ?: 'Descuento especial' }}">
                                 -{{ $porcentajeDescuento }}% OFF
-                                @if($motivoOferta)
-                                    <br><small style="font-size: 8px;">{{ Str::limit($motivoOferta, 15) }}</small>
+                                @if($motivoDescuento)
+                                    <br><small style="font-size: 8px;">{{ Str::limit($motivoDescuento, 15) }}</small>
                                 @endif
                             </div>
                         @elseif($estaBajoStock)
@@ -1565,9 +1565,9 @@
                                     <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                 </div>
                                 
-                                @if($motivoOferta && $esVariacion)
-                                    <div class="motivo-descuento" title="{{ $motivoOferta }}">
-                                        <i class="fas fa-tag"></i> {{ Str::limit($motivoOferta, 25) }}
+                                @if($motivoDescuento && $esVariacion)
+                                    <div class="motivo-descuento" title="{{ $motivoDescuento }}">
+                                        <i class="fas fa-tag"></i> {{ Str::limit($motivoDescuento, 25) }}
                                     </div>
                                 @endif
                                 

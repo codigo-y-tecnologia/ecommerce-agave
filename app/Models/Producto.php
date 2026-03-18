@@ -36,11 +36,11 @@ class Producto extends Model
         'vImagen_principal',
         'vGif',
         'vImagenes_adicionales',
-        'bTiene_oferta',
-        'dPrecio_oferta',
-        'dFecha_inicio_oferta',
-        'dFecha_fin_oferta',
-        'vMotivo_oferta',
+        'bTiene_descuento',
+        'dPrecio_descuento',
+        'dFecha_inicio_descuento',
+        'dFecha_fin_descuento',
+        'vMotivo_descuento',
         'tFecha_registro',
         'tFecha_actualizacion'
     ];
@@ -56,12 +56,12 @@ class Producto extends Model
         'dAncho_cm' => 'decimal:2',
         'dAlto_cm' => 'decimal:2',
         'vImagenes_adicionales' => 'array',
-        'bTiene_oferta' => 'boolean',
-        'dPrecio_oferta' => 'decimal:2',
+        'bTiene_descuento' => 'boolean',
+        'dPrecio_descuento' => 'decimal:2',
         'tFecha_registro' => 'datetime',
         'tFecha_actualizacion' => 'datetime',
-        'dFecha_inicio_oferta' => 'date',
-        'dFecha_fin_oferta' => 'date'
+        'dFecha_inicio_descuento' => 'date',
+        'dFecha_fin_descuento' => 'date'
     ];
 
     protected $appends = [
@@ -85,12 +85,12 @@ class Producto extends Model
         'stock_formateado'
     ];
 
-    public function setBTieneOfertaAttribute($value)
+    public function setBTieneDescuentoAttribute($value)
     {
         if ($value === '1' || $value === 1 || $value === true || $value === 'on') {
-            $this->attributes['bTiene_oferta'] = true;
+            $this->attributes['bTiene_descuento'] = true;
         } else {
-            $this->attributes['bTiene_oferta'] = false;
+            $this->attributes['bTiene_descuento'] = false;
         }
     }
 
@@ -628,27 +628,27 @@ class Producto extends Model
         return $this->variaciones()->count() > 0;
     }
 
-    // ============ MÉTODOS DE OFERTA/DESCUENTO ============
+    // ============ MÉTODOS DE DESCUENTO ============
 
-    public function ofertaVigente(): bool
+    public function descuentoVigente(): bool
     {
-        if (!$this->bTiene_oferta || $this->dPrecio_oferta === null || $this->dPrecio_oferta <= 0) {
+        if (!$this->bTiene_descuento || $this->dPrecio_descuento === null || $this->dPrecio_descuento <= 0) {
             return false;
         }
 
         $fechaActual = now()->toDateString();
 
-        if ($this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
-            return $fechaActual >= $this->dFecha_inicio_oferta && 
-                   $fechaActual <= $this->dFecha_fin_oferta;
+        if ($this->dFecha_inicio_descuento && $this->dFecha_fin_descuento) {
+            return $fechaActual >= $this->dFecha_inicio_descuento && 
+                   $fechaActual <= $this->dFecha_fin_descuento;
         }
 
-        if ($this->dFecha_inicio_oferta && !$this->dFecha_fin_oferta) {
-            return $fechaActual >= $this->dFecha_inicio_oferta;
+        if ($this->dFecha_inicio_descuento && !$this->dFecha_fin_descuento) {
+            return $fechaActual >= $this->dFecha_inicio_descuento;
         }
 
-        if (!$this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
-            return $fechaActual <= $this->dFecha_fin_oferta;
+        if (!$this->dFecha_inicio_descuento && $this->dFecha_fin_descuento) {
+            return $fechaActual <= $this->dFecha_fin_descuento;
         }
 
         return true;
@@ -656,29 +656,29 @@ class Producto extends Model
 
     public function tieneDescuentoActivo()
     {
-        return $this->ofertaVigente();
+        return $this->descuentoVigente();
     }
 
     public function getPrecioActualAttribute()
     {
-        if ($this->ofertaVigente()) {
-            return $this->dPrecio_oferta;
+        if ($this->descuentoVigente()) {
+            return $this->dPrecio_descuento;
         }
         return $this->dPrecio_venta;
     }
 
     public function getPorcentajeDescuentoAttribute()
     {
-        if ($this->ofertaVigente() && $this->dPrecio_oferta < $this->dPrecio_venta && $this->dPrecio_venta > 0) {
-            $descuento = (($this->dPrecio_venta - $this->dPrecio_oferta) / $this->dPrecio_venta) * 100;
+        if ($this->descuentoVigente() && $this->dPrecio_descuento < $this->dPrecio_venta && $this->dPrecio_venta > 0) {
+            $descuento = (($this->dPrecio_venta - $this->dPrecio_descuento) / $this->dPrecio_venta) * 100;
             return round($descuento);
         }
         return 0;
     }
 
-    public function getOfertaBadgeAttribute()
+    public function getDescuentoBadgeAttribute()
     {
-        if ($this->ofertaVigente()) {
+        if ($this->descuentoVigente()) {
             return '<span class="badge bg-danger">-' . $this->porcentajeDescuento . '%</span>';
         }
         return '';
@@ -686,7 +686,7 @@ class Producto extends Model
 
     public function tieneDescuento()
     {
-        return $this->ofertaVigente();
+        return $this->descuentoVigente();
     }
 
     public function porcentajeDescuento()
