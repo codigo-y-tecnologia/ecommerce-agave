@@ -227,7 +227,6 @@
                     <th>Cantidad</th>
                     <th>Precio Unit.</th>
                     <th>Subtotal</th>
-                    <th>Total Venta</th>
                     <th>Fecha</th>
                     <th>Estado de Pago</th>
                 </tr>
@@ -241,7 +240,6 @@
                     <th><input type="text" class="column-filter" placeholder="Ciudad" /></th>
                     <th><input type="text" class="column-filter" placeholder="Estado" /></th>
                     <th><input type="text" class="column-filter" placeholder="Producto" /></th>
-                    <th></th>
                     <th></th>
                     <th></th>
                     <th></th>
@@ -282,7 +280,6 @@
                     <td style="text-align: center;"><strong>{{ $detalle->iCantidad }}</strong></td>
                     <td style="text-align: right;" data-order="{{ $detalle->dPrecio_unitario }}">${{ number_format($detalle->dPrecio_unitario, 2) }}</td>
                     <td style="text-align: right;" data-order="{{ $detalle->dSubtotal }}">${{ number_format($detalle->dSubtotal, 2) }}</td>
-                    <td style="text-align: right; background-color: #f0f0f0; font-weight: bold;" data-order="{{ $detalle->total_venta }}">${{ number_format($detalle->total_venta, 2) }}</td>
                     <td data-order="{{ isset($detalle->fecha_venta) ? \Carbon\Carbon::parse($detalle->fecha_venta)->format('Y-m-d') : '' }}">
                         <small style="color: #666;">
                             @if(isset($detalle->fecha_venta))
@@ -662,9 +659,9 @@ $(document).ready(function() {
             }
         ],
         columnDefs: [
-            { targets: [8, 9, 10], className: 'dt-right' },
+            { targets: [8, 9], className: 'dt-right' },
             { targets: 7, className: 'dt-center' },
-            { targets: 12, className: 'dt-center' }
+            { targets: 11, className: 'dt-center' }
         ],
         drawCallback: function() {
             var api = this.api();
