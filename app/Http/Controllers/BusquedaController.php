@@ -174,18 +174,18 @@ class BusquedaController extends Controller
                 $q->where('bActivo', true);
             })
             ->where('bActivo', true)
-            ->where('bTiene_oferta', 1)
-            ->where('dPrecio_oferta', '>', 0)
+            ->where('bTiene_descuento', 1)
+            ->where('dPrecio_descuento', '>', 0)
             ->where(function ($query) use ($fechaActual) {
                 $query->where(function ($q) use ($fechaActual) {
-                    $q->whereNull('dFecha_fin_oferta')
-                        ->orWhere('dFecha_fin_oferta', '>=', $fechaActual);
+                    $q->whereNull('dFecha_fin_descuento')
+                        ->orWhere('dFecha_fin_descuento', '>=', $fechaActual);
                 });
             })
             ->where(function ($query) use ($fechaActual) {
                 $query->where(function ($q) use ($fechaActual) {
-                    $q->whereNull('dFecha_inicio_oferta')
-                        ->orWhere('dFecha_inicio_oferta', '<=', $fechaActual);
+                    $q->whereNull('dFecha_inicio_descuento')
+                        ->orWhere('dFecha_inicio_descuento', '<=', $fechaActual);
                 });
             })
             ->get();
@@ -243,23 +243,23 @@ class BusquedaController extends Controller
      */
     private function tieneDescuentoActivoVariacion($variacion)
     {
-        if (!$variacion->bTiene_oferta || $variacion->dPrecio_oferta === null || $variacion->dPrecio_oferta <= 0) {
+        if (!$variacion->bTiene_descuento || $variacion->dPrecio_descuento === null || $variacion->dPrecio_descuento <= 0) {
             return false;
         }
 
         $fechaActual = now()->toDateString();
 
-        if ($variacion->dFecha_inicio_oferta && $variacion->dFecha_fin_oferta) {
-            return $fechaActual >= $variacion->dFecha_inicio_oferta &&
-                $fechaActual <= $variacion->dFecha_fin_oferta;
+        if ($variacion->dFecha_inicio_descuento && $variacion->dFecha_fin_descuento) {
+            return $fechaActual >= $variacion->dFecha_inicio_descuento &&
+                $fechaActual <= $variacion->dFecha_fin_descuento;
         }
 
-        if ($variacion->dFecha_inicio_oferta && !$variacion->dFecha_fin_oferta) {
-            return $fechaActual >= $variacion->dFecha_inicio_oferta;
+        if ($variacion->dFecha_inicio_descuento && !$variacion->dFecha_fin_descuento) {
+            return $fechaActual >= $variacion->dFecha_inicio_descuento;
         }
 
-        if (!$variacion->dFecha_inicio_oferta && $variacion->dFecha_fin_oferta) {
-            return $fechaActual <= $variacion->dFecha_fin_oferta;
+        if (!$variacion->dFecha_inicio_descuento && $variacion->dFecha_fin_descuento) {
+            return $fechaActual <= $variacion->dFecha_fin_descuento;
         }
 
         return true;
@@ -287,7 +287,7 @@ class BusquedaController extends Controller
             return 0;
         }
 
-        $descuento = (($variacion->dPrecio - $variacion->dPrecio_oferta) / $variacion->dPrecio) * 100;
+        $descuento = (($variacion->dPrecio - $variacion->dPrecio_descuento) / $variacion->dPrecio) * 100;
         return round($descuento);
     }
 
@@ -342,8 +342,8 @@ class BusquedaController extends Controller
                     $this->aplicarFiltrosAProductoPadre($q, $request);
                 })
                 ->where('bActivo', true)
-                ->where('bTiene_oferta', 1)
-                ->where('dPrecio_oferta', '>', 0)
+                ->where('bTiene_descuento', 1)
+                ->where('dPrecio_descuento', '>', 0)
                 ->get();
 
             foreach ($variacionesConDescuento as $variacion) {
@@ -565,7 +565,7 @@ class BusquedaController extends Controller
             }
         }
 
-        $precioActual = $this->tieneDescuentoActivoVariacion($variacion) ? $variacion->dPrecio_oferta : $variacion->dPrecio;
+        $precioActual = $this->tieneDescuentoActivoVariacion($variacion) ? $variacion->dPrecio_descuento : $variacion->dPrecio;
 
         if ($request->has('precio_min') && !empty($request->precio_min)) {
             if ($precioActual < floatval($request->precio_min)) {
@@ -588,18 +588,18 @@ class BusquedaController extends Controller
             case 'precio_asc':
                 return $coleccion->sortBy(function ($item) {
                     if ($item->tipo_item === 'variacion') {
-                        return $this->tieneDescuentoActivoVariacion($item) ? $item->dPrecio_oferta : $item->dPrecio;
+                        return $this->tieneDescuentoActivoVariacion($item) ? $item->dPrecio_descuento : $item->dPrecio;
                     } else {
-                        return $this->tieneDescuentoActivoProducto($item) ? $item->dPrecio_oferta : $item->dPrecio_venta;
+                        return $this->tieneDescuentoActivoProducto($item) ? $item->dPrecio_descuento : $item->dPrecio_venta;
                     }
                 })->values();
 
             case 'precio_desc':
                 return $coleccion->sortByDesc(function ($item) {
                     if ($item->tipo_item === 'variacion') {
-                        return $this->tieneDescuentoActivoVariacion($item) ? $item->dPrecio_oferta : $item->dPrecio;
+                        return $this->tieneDescuentoActivoVariacion($item) ? $item->dPrecio_descuento : $item->dPrecio;
                     } else {
-                        return $this->tieneDescuentoActivoProducto($item) ? $item->dPrecio_oferta : $item->dPrecio_venta;
+                        return $this->tieneDescuentoActivoProducto($item) ? $item->dPrecio_descuento : $item->dPrecio_venta;
                     }
                 })->values();
 
@@ -702,7 +702,7 @@ class BusquedaController extends Controller
             }
 
             $tieneDescuento = $this->tieneDescuentoActivoVariacion($variacion);
-            $precioMostrar = $tieneDescuento ? $variacion->dPrecio_oferta : $variacion->dPrecio;
+            $precioMostrar = $tieneDescuento ? $variacion->dPrecio_descuento : $variacion->dPrecio;
             $texto = $variacion->productoPadre->vNombre . ' - ' . $variacion->getAtributosTexto() . ' - $' . number_format($precioMostrar, 2);
 
             if ($tieneDescuento) {

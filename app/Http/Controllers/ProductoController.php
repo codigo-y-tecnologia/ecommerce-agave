@@ -72,7 +72,7 @@ class ProductoController extends Controller
         $impuestos = Impuesto::where('bActivo', true)->orderBy('vNombre')->get();
 
         // Obtener etiquetas especiales
-        $etiquetasEspeciales = Etiqueta::whereIn('vNombre', ['nuevo', 'popular', 'oferta', 'destacado'])->get();
+        $etiquetasEspeciales = Etiqueta::whereIn('vNombre', ['nuevo', 'popular', 'descuento', 'destacado'])->get();
 
         return view('productos.create', compact('categorias', 'marcas', 'etiquetas', 'atributos', 'impuestos', 'etiquetasEspeciales'));
     }
@@ -236,7 +236,7 @@ class ProductoController extends Controller
 
             'vClase_envio' => 'nullable|in:estandar,express,fragil,grandes_dimensiones',
             'etiquetas_especiales' => 'nullable|array',
-            'etiquetas_especiales.*' => 'in:nuevo,popular,oferta,destacado',
+            'etiquetas_especiales.*' => 'in:nuevo,popular,descuento,destacado',
 
             // CAMPOS DE DESCUENTO
             'bTiene_descuento' => 'nullable|in:0,1',
@@ -405,7 +405,7 @@ class ProductoController extends Controller
                 'dAlto_cm' => $request->dAlto_cm,
             ]);
 
-            // MAPEO CORRECTO: Del formulario (descuento) a la base de datos (oferta)
+            // MAPEO CORRECTO: Del formulario (descuento) a la base de datos (descuento)
             $productoData = [
                 'vCodigo_barras' => strtoupper($request->vCodigo_barras),
                 'vNombre' => $request->vNombre,
@@ -426,12 +426,12 @@ class ProductoController extends Controller
 
                 'vClase_envio' => $request->vClase_envio ?: null,
 
-                // MAPEO: Los campos de descuento del formulario se guardan como oferta en la BD
-                'bTiene_oferta' => $request->has('bTiene_descuento') && $request->bTiene_descuento == '1' ? true : false,
-                'dPrecio_oferta' => $request->dPrecio_descuento ?: null,
-                'dFecha_inicio_oferta' => $request->dFecha_inicio_descuento ?: null,
-                'dFecha_fin_oferta' => $request->dFecha_fin_descuento ?: null,
-                'vMotivo_oferta' => $request->vMotivo_descuento ?: null,
+                // MAPEO: Los campos de descuento del formulario se guardan como descuento en la BD
+                'bTiene_descuento' => $request->has('bTiene_descuento') && $request->bTiene_descuento == '1' ? true : false,
+                'dPrecio_descuento' => $request->dPrecio_descuento ?: null,
+                'dFecha_inicio_descuento' => $request->dFecha_inicio_descuento ?: null,
+                'dFecha_fin_descuento' => $request->dFecha_fin_descuento ?: null,
+                'vMotivo_descuento' => $request->vMotivo_descuento ?: null,
             ];
 
             $producto = Producto::create($productoData);
@@ -512,11 +512,11 @@ class ProductoController extends Controller
                         'dPrecio' => $variacionData['dPrecio'] ?? $producto->dPrecio_venta,
 
                         // MAPEO: descuento en variaciones
-                        'dPrecio_oferta' => $variacionData['dPrecio_descuento'] ?? null,
-                        'dFecha_inicio_oferta' => $variacionData['dFecha_inicio_descuento'] ?? null,
-                        'dFecha_fin_oferta' => $variacionData['dFecha_fin_descuento'] ?? null,
-                        'vMotivo_oferta' => $variacionData['vMotivo_descuento'] ?? null,
-                        'bTiene_oferta' => isset($variacionData['bTiene_descuento']) && $variacionData['bTiene_descuento'] == '1' ? 1 : 0,
+                        'dPrecio_descuento' => $variacionData['dPrecio_descuento'] ?? null,
+                        'dFecha_inicio_descuento' => $variacionData['dFecha_inicio_descuento'] ?? null,
+                        'dFecha_fin_descuento' => $variacionData['dFecha_fin_descuento'] ?? null,
+                        'vMotivo_descuento' => $variacionData['vMotivo_descuento'] ?? null,
+                        'bTiene_descuento' => isset($variacionData['bTiene_descuento']) && $variacionData['bTiene_descuento'] == '1' ? 1 : 0,
 
                         'iStock' => $variacionData['iStock'] ?? 0,
 
@@ -674,7 +674,7 @@ class ProductoController extends Controller
         // Obtener impuestos activos para el select
         $impuestos = Impuesto::where('bActivo', true)->orderBy('vNombre')->get();
 
-        $etiquetasEspeciales = Etiqueta::whereIn('vNombre', ['nuevo', 'popular', 'oferta', 'destacado'])->get();
+        $etiquetasEspeciales = Etiqueta::whereIn('vNombre', ['nuevo', 'popular', 'descuento', 'destacado'])->get();
 
         $producto->load(['etiquetas', 'impuestos', 'variaciones.atributos', 'valoresAtributos.atributo', 'variaciones.impuesto']);
 
@@ -842,7 +842,7 @@ class ProductoController extends Controller
 
             'vClase_envio' => 'nullable|in:estandar,express,fragil,grandes_dimensiones',
             'etiquetas_especiales' => 'nullable|array',
-            'etiquetas_especiales.*' => 'in:nuevo,popular,oferta,destacado',
+            'etiquetas_especiales.*' => 'in:nuevo,popular,descuento,destacado',
 
             // CAMPOS DE DESCUENTO
             'bTiene_descuento' => 'nullable|in:0,1',
@@ -993,12 +993,12 @@ class ProductoController extends Controller
 
                 'vClase_envio' => $request->vClase_envio ?: null,
 
-                // MAPEO: descuento del formulario -> oferta en BD
-                'bTiene_oferta' => $request->has('bTiene_descuento') && $request->bTiene_descuento == '1' ? true : false,
-                'dPrecio_oferta' => $request->dPrecio_descuento ?: null,
-                'dFecha_inicio_oferta' => $request->dFecha_inicio_descuento ?: null,
-                'dFecha_fin_oferta' => $request->dFecha_fin_descuento ?: null,
-                'vMotivo_oferta' => $request->vMotivo_descuento ?: null,
+                // MAPEO: descuento del formulario -> descuento en BD
+                'bTiene_descuento' => $request->has('bTiene_descuento') && $request->bTiene_descuento == '1' ? true : false,
+                'dPrecio_descuento' => $request->dPrecio_descuento ?: null,
+                'dFecha_inicio_descuento' => $request->dFecha_inicio_descuento ?: null,
+                'dFecha_fin_descuento' => $request->dFecha_fin_descuento ?: null,
+                'vMotivo_descuento' => $request->vMotivo_descuento ?: null,
             ];
 
             $producto->update($updateData);
@@ -1081,11 +1081,11 @@ class ProductoController extends Controller
                                 'dPrecio' => $variacionData['dPrecio'] ?? $producto->dPrecio_venta,
 
                                 // MAPEO para variaciones
-                                'dPrecio_oferta' => $variacionData['dPrecio_descuento'] ?? null,
-                                'dFecha_inicio_oferta' => $variacionData['dFecha_inicio_descuento'] ?? null,
-                                'dFecha_fin_oferta' => $variacionData['dFecha_fin_descuento'] ?? null,
-                                'vMotivo_oferta' => $variacionData['vMotivo_descuento'] ?? null,
-                                'bTiene_oferta' => isset($variacionData['bTiene_descuento']) && $variacionData['bTiene_descuento'] == '1' ? 1 : 0,
+                                'dPrecio_descuento' => $variacionData['dPrecio_descuento'] ?? null,
+                                'dFecha_inicio_descuento' => $variacionData['dFecha_inicio_descuento'] ?? null,
+                                'dFecha_fin_descuento' => $variacionData['dFecha_fin_descuento'] ?? null,
+                                'vMotivo_descuento' => $variacionData['vMotivo_descuento'] ?? null,
+                                'bTiene_descuento' => isset($variacionData['bTiene_descuento']) && $variacionData['bTiene_descuento'] == '1' ? 1 : 0,
 
                                 'iStock' => $variacionData['iStock'] ?? 0,
 
@@ -1147,11 +1147,11 @@ class ProductoController extends Controller
                             'dPrecio' => $variacionData['dPrecio'] ?? $producto->dPrecio_venta,
 
                             // MAPEO para nuevas variaciones
-                            'dPrecio_oferta' => $variacionData['dPrecio_descuento'] ?? null,
-                            'dFecha_inicio_oferta' => $variacionData['dFecha_inicio_descuento'] ?? null,
-                            'dFecha_fin_oferta' => $variacionData['dFecha_fin_descuento'] ?? null,
-                            'vMotivo_oferta' => $variacionData['vMotivo_descuento'] ?? null,
-                            'bTiene_oferta' => isset($variacionData['bTiene_descuento']) && $variacionData['bTiene_descuento'] == '1' ? 1 : 0,
+                            'dPrecio_descuento' => $variacionData['dPrecio_descuento'] ?? null,
+                            'dFecha_inicio_descuento' => $variacionData['dFecha_inicio_descuento'] ?? null,
+                            'dFecha_fin_descuento' => $variacionData['dFecha_fin_descuento'] ?? null,
+                            'vMotivo_descuento' => $variacionData['vMotivo_descuento'] ?? null,
+                            'bTiene_descuento' => isset($variacionData['bTiene_descuento']) && $variacionData['bTiene_descuento'] == '1' ? 1 : 0,
 
                             'iStock' => $variacionData['iStock'] ?? 0,
 
