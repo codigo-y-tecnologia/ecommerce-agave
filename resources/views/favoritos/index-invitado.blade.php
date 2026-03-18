@@ -232,6 +232,7 @@
         .eliminar-favorito-btn:hover {
             background: white;
             transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
 
         .favorito-info {
@@ -285,6 +286,7 @@
         .favorito-actions {
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         .btn {
@@ -301,6 +303,7 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
+            min-width: 120px;
         }
 
         .btn-primary {
@@ -313,6 +316,16 @@
             transform: translateY(-2px);
         }
 
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
         .btn-danger {
             background: #ff4757;
             color: white;
@@ -321,15 +334,6 @@
         .btn-danger:hover {
             background: #ff2e43;
             transform: translateY(-2px);
-        }
-
-        .btn-success {
-            background: #28a745;
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #218838;
         }
 
         .badge-descuento {
@@ -442,8 +446,22 @@
             background: #e74c3c;
         }
 
+        .single-notification.success {
+            background: #2ecc71;
+        }
+
         .single-notification.info {
             background: #3498db;
+        }
+
+        .toast-icon {
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .toast-message {
+            flex: 1;
+            line-height: 1.4;
         }
 
         @media (max-width: 768px) {
@@ -465,15 +483,19 @@
             .nav-links {
                 gap: 15px;
             }
+            
+            .favorito-actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
         }
 
         @media (max-width: 480px) {
             .favoritos-grid {
                 grid-template-columns: 1fr;
-            }
-            
-            .favorito-actions {
-                flex-direction: column;
             }
             
             .nav-links {
@@ -485,6 +507,11 @@
             .nav-links li a {
                 display: block;
                 padding: 5px 0;
+            }
+            
+            .badge-variacion {
+                font-size: 9px;
+                padding: 2px 6px;
             }
         }
     </style>
@@ -589,6 +616,10 @@
                             if ($imagenPrincipal) $imagenes[] = $imagenPrincipal;
                             
                             $url = route('productos.show.public', [$producto->id_producto, 'variacion' => $favorito->id_variacion]);
+                            
+                            // Obtener impuesto
+                            $impuesto = DB::table('tbl_impuestos')->where('id_impuesto', $variacion->id_impuesto)->first();
+                            $porcentajeImpuesto = $impuesto ? $impuesto->dPorcentaje : 0;
                         } else {
                             $producto = DB::table('tbl_productos')
                                 ->where('id_producto', $favorito->id_producto)
@@ -607,9 +638,18 @@
                             }
                             
                             $url = route('productos.show.public', $producto->id_producto);
+                            
+                            // Obtener impuestos del producto
+                            $impuestosProducto = DB::table('tbl_producto_impuestos')
+                                ->join('tbl_impuestos', 'tbl_producto_impuestos.id_impuesto', '=', 'tbl_impuestos.id_impuesto')
+                                ->where('tbl_producto_impuestos.id_producto', $producto->id_producto)
+                                ->select('tbl_impuestos.dPorcentaje')
+                                ->get();
+                            $porcentajeImpuesto = $impuestosProducto->sum('dPorcentaje');
                         }
                         
-                        $precioActual = $tieneDescuento ? $precioDescuento : $precio;
+                        $precioBase = $tieneDescuento ? $precioDescuento : $precio;
+                        $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
                         $porcentajeDescuento = $tieneDescuento ? round((($precio - $precioDescuento) / $precio) * 100) : 0;
                         
                         $stockClass = $stock > 10 ? 'stock-disponible' : ($stock > 0 ? 'stock-bajo' : 'sin-stock');
@@ -636,7 +676,7 @@
                                 <i class="fas fa-user"></i> Invitado
                             </div>
 
-                            @if($tieneDescuento)
+                            @if($tieneDescuento && $porcentajeDescuento > 0)
                                 <div class="badge-descuento">
                                     -{{ $porcentajeDescuento }}%
                                 </div>
@@ -663,12 +703,12 @@
                             </h3>
                             
                             <div class="favorito-precio">
-                                @if($tieneDescuento)
+                                @if($tieneDescuento && $porcentajeDescuento > 0)
                                     <span style="text-decoration: line-through; color: #999; font-size: 16px; margin-right: 8px;">
                                         ${{ number_format($precio, 2) }}
                                     </span>
                                 @endif
-                                ${{ number_format($precioActual, 2) }}
+                                ${{ number_format($precioFinal, 2) }}
                             </div>
 
                             <div class="favorito-stock {{ $stockClass }}">
@@ -676,10 +716,15 @@
                             </div>
 
                             <div class="favorito-actions">
-                                <a href="{{ $url }}" class="btn btn-primary">
+                                <a href="javascript:void(0)" 
+                                   class="btn btn-success" 
+                                   onclick="event.stopPropagation(); agregarAlCarrito({{ $favorito->id_producto }}, {{ $esVariacion ? $favorito->id_variacion : 'null' }})">
+                                    <span>🛒</span> Agregar al carrito
+                                </a>
+                                <a href="{{ $url }}" class="btn btn-primary" onclick="event.stopPropagation();">
                                     <span>👁️</span> Ver Producto
                                 </a>
-                                <button class="btn btn-danger" onclick="eliminarFavoritoTemporal({{ $favorito->id_producto }}, {{ $esVariacion ? $favorito->id_variacion : 'null' }})">
+                                <button class="btn btn-danger" onclick="event.stopPropagation(); eliminarFavoritoTemporal({{ $favorito->id_producto }}, {{ $esVariacion ? $favorito->id_variacion : 'null' }})">
                                     <span>🗑️</span> Eliminar
                                 </button>
                             </div>
@@ -712,6 +757,7 @@
     <script>
         let currentNotification = null;
         let notificationTimeout = null;
+        const csrfToken = '{{ csrf_token() }}';
 
         function eliminarFavoritoTemporal(productoId, variacionId = null) {
             if (!confirm('¿Eliminar de favoritos?')) return;
@@ -732,7 +778,7 @@
             fetch('{{ route("favoritos.invitado.destroy") }}', {
                 method: 'DELETE',
                 headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'X-CSRF-TOKEN': csrfToken,
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 },
@@ -781,6 +827,41 @@
             });
         }
 
+        function agregarAlCarrito(productoId, variacionId = null) {
+            @auth
+                fetch('/carrito/agregar', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        producto_id: productoId,
+                        variacion_id: variacionId,
+                        cantidad: 1
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Producto agregado al carrito', 'success');
+                    } else {
+                        showNotification(data.message || 'Error al agregar', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('Error de conexión', 'error');
+                });
+            @else
+                const redirectUrl = new URL('{{ route("login") }}');
+                redirectUrl.searchParams.set('from_carrito', 'true');
+                redirectUrl.searchParams.set('redirect', window.location.href);
+                window.location.href = redirectUrl.toString();
+            @endauth
+        }
+
         function removeNotification() {
             if (currentNotification) {
                 currentNotification.classList.remove('show');
@@ -807,8 +888,8 @@
             let emoji = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
             
             notification.innerHTML = `
-                <span style="font-size: 20px;">${emoji}</span>
-                <span>${message}</span>
+                <span class="toast-icon">${emoji}</span>
+                <span class="toast-message">${message}</span>
             `;
             
             document.body.appendChild(notification);

@@ -1283,11 +1283,6 @@
                             </div>
                             
                             <div class="mb-3">
-                                <label for="tDescripcion_impuesto" class="form-label fw-bold">Descripción (Opcional)</label>
-                                <textarea class="form-control" id="tDescripcion_impuesto" name="tDescripcion" rows="2"></textarea>
-                            </div>
-                            
-                            <div class="mb-3">
                                 <div class="form-check">
                                     <input type="checkbox" class="form-check-input" 
                                            id="bActivo_impuesto" name="bActivo" value="1" checked>
@@ -1592,11 +1587,6 @@
                                        placeholder="16.00" required>
                                 <span class="input-group-text">%</span>
                             </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="tDescripcion_impuesto_modal" class="form-label fw-bold">Descripción (Opcional)</label>
-                            <textarea class="form-control" id="tDescripcion_impuesto_modal" name="tDescripcion" rows="2"></textarea>
                         </div>
                         
                         <div class="mb-3">
@@ -4077,7 +4067,6 @@ function abrirModalImpuesto() {
     document.getElementById('vNombre_impuesto_modal').value = '';
     document.getElementById('eTipo_impuesto_modal').value = '';
     document.getElementById('dPorcentaje_impuesto_modal').value = '';
-    document.getElementById('tDescripcion_impuesto_modal').value = '';
     document.getElementById('bActivo_impuesto_modal').checked = true;
     modalImpuesto.show();
 }
@@ -5122,7 +5111,6 @@ function guardarImpuesto() {
     const vNombre = document.getElementById('vNombre_impuesto_modal').value.trim();
     const eTipo = document.getElementById('eTipo_impuesto_modal').value;
     const dPorcentaje = document.getElementById('dPorcentaje_impuesto_modal').value;
-    const tDescripcion = document.getElementById('tDescripcion_impuesto_modal').value;
     const bActivo = document.getElementById('bActivo_impuesto_modal').checked ? 1 : 0;
     
     if (!vNombre || !eTipo || !dPorcentaje) {
@@ -5152,7 +5140,6 @@ function guardarImpuesto() {
             vNombre: vNombre,
             eTipo: eTipo,
             dPorcentaje: dPorcentaje,
-            tDescripcion: tDescripcion,
             bActivo: bActivo
         })
     })
@@ -5226,7 +5213,6 @@ function limpiarFormularioImpuesto() {
     document.getElementById('vNombre_impuesto').value = '';
     document.getElementById('eTipo_impuesto').value = '';
     document.getElementById('dPorcentaje_impuesto').value = '';
-    document.getElementById('tDescripcion_impuesto').value = '';
     document.getElementById('bActivo_impuesto').checked = true;
 }
 

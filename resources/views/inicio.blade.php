@@ -97,6 +97,14 @@
             text-decoration: underline;
         }
 
+        .nav-links li a.favorito-link {
+            color: #495057;
+        }
+
+        .nav-links li a.favorito-link:hover {
+            color: #667eea;
+        }
+
         .nav-links li button {
             font-size: clamp(0.85rem, 2.5vw, 1rem);
             background: none;
@@ -106,20 +114,9 @@
             font-weight: bold;
         }
 
-        .btn-invitado {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white !important;
-            padding: 8px 15px;
-            border-radius: 25px;
-            font-weight: bold;
-            display: inline-block;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .btn-invitado:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.4);
-            text-decoration: none !important;
+        .nav-links li button:hover {
+            color: #667eea;
+            text-decoration: underline;
         }
 
         /* Barra de búsqueda */
@@ -381,6 +378,30 @@
         .sin-stock {
             color: #dc3545;
             font-weight: bold;
+        }
+
+        /* Botón agregar al carrito */
+        .btn-agregar-carrito {
+            width: 100%;
+            padding: 8px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .btn-agregar-carrito:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-agregar-carrito:active {
+            transform: translateY(0);
         }
 
         .badge-descuento {
@@ -926,11 +947,9 @@
                 <li><a href="{{ route('busqueda.resultados', ['en_descuento' => '1']) }}" style="color: #dc3545; font-weight: bold;" id="link-descuento">🔥 En Descuento</a></li>
                 <li>
                     @auth
-                        <a href="{{ route('favoritos.index') }}" style="color: #495057; font-weight: bold;">❤️ Mis Favoritos</a>
+                        <a href="{{ route('favoritos.index') }}" class="favorito-link">❤️ Mis Favoritos</a>
                     @else
-                        <a href="{{ route('favoritos.invitado.index') }}" class="btn-invitado">
-                            <i class="fas fa-user me-1"></i> Mis Favoritos
-                        </a>
+                        <a href="{{ route('favoritos.invitado.index') }}" class="favorito-link">❤️ Mis Favoritos</a>
                     @endauth
                 </li>
                 @auth
@@ -938,7 +957,7 @@
                     <li>
                         <form method="POST" action="{{ route('logout') }}" style="display:inline;">
                             @csrf
-                            <button type="submit" style="background: none; border: none; color: #495057; cursor: pointer; font-weight: bold; font-size: 16px;">Cerrar Sesión</button>
+                            <button type="submit">Cerrar Sesión</button>
                         </form>
                     </li>
                 @else
@@ -1012,6 +1031,7 @@
                         $motivoDescuento = $item->vMotivo_descuento ?? '';
                         $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
                         $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
+                        $porcentajeImpuesto = $item->porcentaje_impuesto ?? 0;
                     } else {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio_venta;
@@ -1031,12 +1051,14 @@
                         $motivoDescuento = $item->vMotivo_descuento ?? '';
                         $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
                         $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
+                        $porcentajeImpuesto = $item->porcentaje_impuestos ?? 0;
                     }
                     
-                    $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                    $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                    $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
                     $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
                     
-                    $envioGratis = $precioActual >= 150;
+                    $envioGratis = $precioFinal >= 150;
                     $costoEnvio = 50;
                     
                     $estaBajoStock = $stock > 0 && $stock <= 10;
@@ -1089,7 +1111,7 @@
                             @if($tieneDescuento && $porcentajeDescuento > 0)
                                 <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
                                 <div style="display: flex; align-items: center; flex-wrap: wrap;">
-                                    <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
+                                    <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                     <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                 </div>
                                 
@@ -1105,7 +1127,7 @@
                                     </div>
                                 @endif
                             @else
-                                <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
+                                <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                             @endif
                         </div>
 
@@ -1129,6 +1151,15 @@
                             @else
                                 ❌ Sin stock
                             @endif
+                        </div>
+
+                        <!-- Agregar al carrito -->
+                        <div class="agregar-carrito-container" style="margin: 10px 0;">
+                            <button type="button" 
+                                    class="btn-agregar-carrito" 
+                                    onclick="event.stopPropagation(); agregarAlCarrito({{ $productoId }}, {{ $variacionId ?? 'null' }})">
+                                <i class="fas fa-shopping-cart"></i> Agregar al carrito
+                            </button>
                         </div>
 
                         <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
@@ -1178,6 +1209,7 @@
                             $motivoDescuento = $item->vMotivo_descuento ?? '';
                             $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
                             $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
+                            $porcentajeImpuesto = $item->porcentaje_impuesto ?? 0;
                         } else {
                             $tieneDescuento = $item->tieneDescuentoActivo();
                             $precioOriginal = $item->dPrecio_venta;
@@ -1197,12 +1229,14 @@
                             $motivoDescuento = $item->vMotivo_descuento ?? '';
                             $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
                             $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
+                            $porcentajeImpuesto = $item->porcentaje_impuestos ?? 0;
                         }
                         
-                        $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                        $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                        $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
                         $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
                         
-                        $envioGratis = $precioActual >= 150;
+                        $envioGratis = $precioFinal >= 150;
                         $costoEnvio = 50;
                         
                         $estaBajoStock = $stock > 0 && $stock <= 10;
@@ -1254,7 +1288,7 @@
                                 @if($tieneDescuento && $porcentajeDescuento > 0)
                                     <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
                                     <div style="display: flex; align-items: center; flex-wrap: wrap;">
-                                        <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
+                                        <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                         <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                     </div>
                                     
@@ -1270,7 +1304,7 @@
                                         </div>
                                     @endif
                                 @else
-                                    <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
+                                    <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                 @endif
                             </div>
 
@@ -1294,6 +1328,15 @@
                                 @else
                                     ❌ Sin stock
                                 @endif
+                            </div>
+
+                            <!-- Agregar al carrito -->
+                            <div class="agregar-carrito-container" style="margin: 10px 0;">
+                                <button type="button" 
+                                        class="btn-agregar-carrito" 
+                                        onclick="event.stopPropagation(); agregarAlCarrito({{ $productoId }}, {{ $variacionId ?? 'null' }})">
+                                    <i class="fas fa-shopping-cart"></i> Agregar al carrito
+                                </button>
                             </div>
 
                             <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
@@ -1337,6 +1380,7 @@
                         $motivoDescuento = $item->vMotivo_descuento ?? '';
                         $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
                         $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
+                        $porcentajeImpuesto = $item->porcentaje_impuesto ?? 0;
                     } else {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio_venta;
@@ -1356,12 +1400,14 @@
                         $motivoDescuento = $item->vMotivo_descuento ?? '';
                         $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
                         $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
+                        $porcentajeImpuesto = $item->porcentaje_impuestos ?? 0;
                     }
                     
-                    $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                    $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                    $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
                     $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
                     
-                    $envioGratis = $precioActual >= 150;
+                    $envioGratis = $precioFinal >= 150;
                     $costoEnvio = 50;
                 @endphp
                 
@@ -1408,7 +1454,7 @@
                             @if($tieneDescuento && $porcentajeDescuento > 0)
                                 <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
                                 <div style="display: flex; align-items: center; flex-wrap: wrap;">
-                                    <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
+                                    <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                     <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                 </div>
                                 
@@ -1424,7 +1470,7 @@
                                     </div>
                                 @endif
                             @else
-                                <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
+                                <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                             @endif
                         </div>
 
@@ -1442,6 +1488,15 @@
                             @else
                                 ❌ Sin stock
                             @endif
+                        </div>
+
+                        <!-- Agregar al carrito -->
+                        <div class="agregar-carrito-container" style="margin: 10px 0;">
+                            <button type="button" 
+                                    class="btn-agregar-carrito" 
+                                    onclick="event.stopPropagation(); agregarAlCarrito({{ $productoId }}, {{ $variacionId ?? 'null' }})">
+                                <i class="fas fa-shopping-cart"></i> Agregar al carrito
+                            </button>
                         </div>
 
                         <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
@@ -1485,6 +1540,7 @@
                         $motivoDescuento = $item->vMotivo_descuento ?? '';
                         $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
                         $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
+                        $porcentajeImpuesto = $item->porcentaje_impuesto ?? 0;
                     } else {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio_venta;
@@ -1504,12 +1560,14 @@
                         $motivoDescuento = $item->vMotivo_descuento ?? '';
                         $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
                         $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
+                        $porcentajeImpuesto = $item->porcentaje_impuestos ?? 0;
                     }
                     
-                    $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                    $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                    $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
                     $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
                     
-                    $envioGratis = $precioActual >= 150;
+                    $envioGratis = $precioFinal >= 150;
                     $costoEnvio = 50;
                     
                     $estaBajoStock = $stock > 0 && $stock <= 10;
@@ -1561,7 +1619,7 @@
                             @if($tieneDescuento && $porcentajeDescuento > 0)
                                 <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
                                 <div style="display: flex; align-items: center; flex-wrap: wrap;">
-                                    <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
+                                    <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                     <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                 </div>
                                 
@@ -1577,7 +1635,7 @@
                                     </div>
                                 @endif
                             @else
-                                <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
+                                <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                             @endif
                         </div>
 
@@ -1601,6 +1659,15 @@
                             @else
                                 ❌ Sin stock
                             @endif
+                        </div>
+
+                        <!-- Agregar al carrito -->
+                        <div class="agregar-carrito-container" style="margin: 10px 0;">
+                            <button type="button" 
+                                    class="btn-agregar-carrito" 
+                                    onclick="event.stopPropagation(); agregarAlCarrito({{ $productoId }}, {{ $variacionId ?? 'null' }})">
+                                <i class="fas fa-shopping-cart"></i> Agregar al carrito
+                            </button>
                         </div>
 
                         <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
@@ -1879,6 +1946,42 @@
                 button.classList.add('inactivo');
                 button.innerHTML = '🤍';
             }
+        }
+
+        function agregarAlCarrito(productoId, variacionId = null) {
+            @auth
+                fetch('/carrito/agregar', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        producto_id: productoId,
+                        variacion_id: variacionId,
+                        cantidad: 1
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('✅ Producto agregado al carrito', 'success');
+                    } else {
+                        showNotification('❌ ' + (data.message || 'Error al agregar'), 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('❌ Error de conexión', 'error');
+                });
+            @else
+                // Redirigir a login para invitados
+                const redirectUrl = new URL('{{ route("login") }}');
+                redirectUrl.searchParams.set('from_carrito', 'true');
+                redirectUrl.searchParams.set('redirect', window.location.href);
+                window.location.href = redirectUrl.toString();
+            @endauth
         }
 
         document.addEventListener('DOMContentLoaded', function() {

@@ -384,12 +384,6 @@
             font-weight: 600;
         }
 
-        .ml-price-installments {
-            font-size: 14px;
-            color: #28a745;
-            margin-top: 8px;
-        }
-
         .ml-tax-info {
             font-size: 13px;
             color: #6c757d;
@@ -736,6 +730,28 @@
             transform: translateY(-2px);
         }
 
+        .ml-btn-cart {
+            flex: 2;
+            background: #007bff;
+            border: none;
+            color: white;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .ml-btn-cart:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+
         /* Modal */
         .ml-modal .modal-content {
             background: transparent;
@@ -915,11 +931,13 @@
             
             // Calcular impuestos del producto padre
             $totalImpuestosProducto = 0;
+            $porcentajeImpuestosProducto = 0;
             $textoImpuestosProducto = '';
             $contadorImpuestos = 0;
             foreach($producto->impuestos as $impuesto) {
                 $montoImpuesto = $precioBaseProducto * ($impuesto->dPorcentaje / 100);
                 $totalImpuestosProducto += $montoImpuesto;
+                $porcentajeImpuestosProducto += $impuesto->dPorcentaje;
                 
                 if ($contadorImpuestos > 0) {
                     $textoImpuestosProducto .= ' + ';
@@ -927,6 +945,8 @@
                 $textoImpuestosProducto .= $impuesto->vNombre . ' ' . $impuesto->dPorcentaje . '%';
                 $contadorImpuestos++;
             }
+            
+            $precioFinalProducto = $precioBaseProducto + $totalImpuestosProducto;
             
             // Obtener características del producto padre
             $caracteristicasProducto = [];
@@ -998,7 +1018,8 @@
                 'tiene_descuento' => $productoTieneDescuento,
                 'precio_base' => (float)$precioBaseProducto,
                 'total_impuestos' => (float)$totalImpuestosProducto,
-                'precio_final' => (float)($precioBaseProducto + $totalImpuestosProducto),
+                'porcentaje_impuestos' => (float)$porcentajeImpuestosProducto,
+                'precio_final' => (float)$precioFinalProducto,
                 'texto_impuestos' => $textoImpuestosProducto,
                 'stock' => (int)$producto->iStock,
                 'tiene_variaciones' => $tieneVariaciones,
@@ -1057,11 +1078,13 @@
                 
                 $impuestoVariacion = $var->impuesto ?? $producto->impuestos->first();
                 $totalImpuestosVariacion = 0;
+                $porcentajeImpuestosVariacion = 0;
                 $textoImpuestosVariacion = '';
                 
                 if ($impuestoVariacion) {
                     $montoImpuesto = $precioBaseVariacion * ($impuestoVariacion->dPorcentaje / 100);
                     $totalImpuestosVariacion = $montoImpuesto;
+                    $porcentajeImpuestosVariacion = $impuestoVariacion->dPorcentaje;
                     $textoImpuestosVariacion = $impuestoVariacion->vNombre . ' ' . $impuestoVariacion->dPorcentaje . '%';
                 }
 
@@ -1089,6 +1112,8 @@
                     ];
                 }
 
+                $precioFinalVariacion = $precioBaseVariacion + $totalImpuestosVariacion;
+
                 $variacionesData[$var->id_variacion] = [
                     'id' => $var->id_variacion,
                     'sku' => $var->vSKU,
@@ -1097,7 +1122,8 @@
                     'tiene_descuento' => $variacionTieneDescuento,
                     'precio_base' => (float)$precioBaseVariacion,
                     'total_impuestos' => (float)$totalImpuestosVariacion,
-                    'precio_final' => (float)($precioBaseVariacion + $totalImpuestosVariacion),
+                    'porcentaje_impuestos' => (float)$porcentajeImpuestosVariacion,
+                    'precio_final' => (float)$precioFinalVariacion,
                     'texto_impuestos' => $textoImpuestosVariacion,
                     'stock' => (int)$var->iStock,
                     'atributos_texto' => $atributosTexto,
@@ -1219,14 +1245,14 @@
                     <span id="producto-sku">{{ $datosIniciales['sku'] }}</span>
                 </div>
 
-                <!-- Precios -->
+                <!-- Precios con impuestos incluidos -->
                 <div class="ml-price-container" id="precio-container">
                     @if($mostrarProductoInicial)
                         <div id="producto-precio-info" style="display: block;">
                             @if($productoTieneDescuento)
                                 <span class="ml-price-original" id="producto-precio-original">${{ number_format($producto->dPrecio_venta, 2) }}</span>
                                 <div class="ml-price-current">
-                                    ${{ number_format($producto->dPrecio_descuento, 2) }}
+                                    ${{ number_format($precioFinalProducto, 2) }}
                                     <span class="ml-discount" id="producto-descuento-badge">-{{ $producto->porcentaje_descuento }}%</span>
                                 </div>
                                 @if($producto->vMotivo_descuento)
@@ -1243,7 +1269,7 @@
                                 @endif
                             @else
                                 <div class="ml-price-current" id="producto-precio-actual">
-                                    ${{ number_format($producto->dPrecio_venta, 2) }}
+                                    ${{ number_format($precioFinalProducto, 2) }}
                                 </div>
                             @endif
                         </div>
@@ -1265,7 +1291,7 @@
                                 </span>
                                 <div class="ml-price-current">
                                     <span id="variacion-precio-actual">
-                                        ${{ number_format($variacionInicial['precio_descuento'], 2) }}
+                                        ${{ number_format($variacionInicial['precio_final'], 2) }}
                                     </span>
                                     <span class="ml-discount" id="variacion-descuento-badge">
                                         -{{ $variacionInicial['porcentaje_descuento'] }}%
@@ -1285,21 +1311,17 @@
                                 @endif
                             @else
                                 <div class="ml-price-current" id="variacion-precio-actual">
-                                    ${{ number_format($variacionInicial['precio_original'], 2) }}
+                                    ${{ number_format($variacionInicial['precio_final'], 2) }}
                                 </div>
                             @endif
                         </div>
                     @endif
 
-                    <div class="ml-price-installments">
-                        <i class="fas fa-credit-card"></i> Hasta 12 cuotas sin interés
-                    </div>
-
                     <div class="ml-tax-info" id="impuestos-info">
                         <i class="fas fa-file-invoice-dollar"></i>
                         <span id="impuestos-texto">
-                            @if(!empty($datosIniciales['texto_impuestos']))
-                                Impuestos: {{ $datosIniciales['texto_impuestos'] }}
+                            @if($porcentajeImpuestosProducto > 0)
+                                Precio final incluye {{ number_format($porcentajeImpuestosProducto, 2) }}% de impuestos
                             @else
                                 Sin impuestos adicionales
                             @endif
@@ -1379,9 +1401,9 @@
                         <i class="fas fa-heart"></i>
                         <span class="btn-text">{{ $producto->esFavorito() ? 'En favoritos' : 'Favorito' }}</span>
                     </button>
-                    <button class="ml-btn-buy" onclick="agregarAlCarrito({{ $producto->id_producto }})">
+                    <button class="ml-btn-cart" onclick="agregarAlCarrito({{ $producto->id_producto }}, {{ $variacionInicial ? $variacionInicial['id'] : 'null' }})">
                         <i class="fas fa-shopping-cart"></i>
-                        Comprar ahora
+                        Agregar al carrito
                     </button>
                 </div>
             </div>
@@ -1749,7 +1771,7 @@
                 descuentoBadge.textContent = '-' + porcentaje + '%';
                 descuentoBadge.className = 'ml-discount bg-danger';
                 
-                precioActualSpan.textContent = '$' + formatNumber(variacion.precio_descuento);
+                precioActualSpan.textContent = '$' + formatNumber(variacion.precio_final);
                 
                 // Mostrar información adicional del descuento si existe
                 const motivoElement = document.getElementById('variacion-motivo-descuento');
@@ -1773,7 +1795,7 @@
             } else {
                 precioOriginalSpan.style.display = 'none';
                 descuentoBadge.style.display = 'none';
-                precioActualSpan.textContent = '$' + formatNumber(variacion.precio_original);
+                precioActualSpan.textContent = '$' + formatNumber(variacion.precio_final);
                 
                 const motivoElement = document.getElementById('variacion-motivo-descuento');
                 if (motivoElement) motivoElement.style.display = 'none';
@@ -1784,8 +1806,8 @@
 
             // Impuestos
             const impuestosInfo = document.getElementById('impuestos-texto');
-            if (variacion.texto_impuestos && variacion.texto_impuestos.trim() !== '') {
-                impuestosInfo.textContent = 'Impuestos: ' + variacion.texto_impuestos;
+            if (variacion.porcentaje_impuestos > 0) {
+                impuestosInfo.textContent = 'Precio final incluye ' + variacion.porcentaje_impuestos.toFixed(2) + '% de impuestos';
             } else {
                 impuestosInfo.textContent = 'Sin impuestos adicionales';
             }
@@ -1838,8 +1860,8 @@
             document.getElementById('variacion-precio-info').style.display = 'none';
 
             const impuestosInfo = document.getElementById('impuestos-texto');
-            if (productoData.texto_impuestos && productoData.texto_impuestos.trim() !== '') {
-                impuestosInfo.textContent = 'Impuestos: ' + productoData.texto_impuestos;
+            if (productoData.porcentaje_impuestos > 0) {
+                impuestosInfo.textContent = 'Precio final incluye ' + productoData.porcentaje_impuestos.toFixed(2) + '% de impuestos';
             } else {
                 impuestosInfo.textContent = 'Sin impuestos adicionales';
             }
@@ -2052,8 +2074,40 @@
             });
         }
 
-        function agregarAlCarrito(productoId) {
-            showNotification('Producto agregado al carrito', 'success');
+        function agregarAlCarrito(productoId, variacionId = null) {
+            @auth
+                fetch('/carrito/agregar', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        producto_id: productoId,
+                        variacion_id: variacionId,
+                        cantidad: 1
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('✅ Producto agregado al carrito', 'success');
+                    } else {
+                        showNotification('❌ ' + (data.message || 'Error al agregar'), 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('❌ Error de conexión', 'error');
+                });
+            @else
+                // Redirigir a login para invitados
+                const redirectUrl = new URL('{{ route("login") }}');
+                redirectUrl.searchParams.set('from_carrito', 'true');
+                redirectUrl.searchParams.set('redirect', window.location.href);
+                window.location.href = redirectUrl.toString();
+            @endauth
         }
 
         // Inicialización

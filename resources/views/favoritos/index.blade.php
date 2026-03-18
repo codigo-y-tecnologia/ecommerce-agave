@@ -152,7 +152,7 @@
             margin-bottom: 40px;
         }
 
-        /* Tarjeta de favorito - SOLO CORREGIDO EL ZOOM */
+        /* Tarjeta de favorito */
         .favorito-card {
             background: white;
             border-radius: 12px;
@@ -177,19 +177,17 @@
             justify-content: center;
         }
 
-        /* SOLO CAMBIÉ ESTO - de 'cover' a 'contain' para eliminar el zoom */
         .favorito-imagen {
             width: 100%;
             height: 100%;
-            object-fit: contain; /* Cambiado de 'cover' a 'contain' */
+            object-fit: contain;
             transition: transform 0.5s ease;
             background-color: #f8f9fa;
-            padding: 10px; /* Añadí padding para mejor presentación */
+            padding: 10px;
         }
 
-        /* Reduje el zoom al mínimo */
         .favorito-card:hover .favorito-imagen {
-            transform: scale(1.02); /* Zoom mínimo en lugar de 1.05 */
+            transform: scale(1.02);
         }
 
         /* Botón de eliminar favorito */
@@ -266,6 +264,7 @@
         .favorito-actions {
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         .btn {
@@ -282,6 +281,7 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
+            min-width: 120px;
         }
 
         .btn-primary {
@@ -293,6 +293,17 @@
             background: linear-gradient(45deg, #5a67d8, #6b46c1);
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
         }
 
         .btn-danger {
@@ -405,6 +416,10 @@
             background: #e74c3c;
         }
 
+        .single-notification.success {
+            background: #2ecc71;
+        }
+
         .favoritos-count-container {
             background: white;
             padding: 10px 20px;
@@ -417,6 +432,24 @@
             font-weight: bold;
             color: #007bff;
             font-size: 18px;
+        }
+
+        /* Badge de variación */
+        .badge-variacion {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            z-index: 99;
+            max-width: 90%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         /* Responsive */
@@ -440,15 +473,19 @@
                 flex-wrap: wrap;
                 gap: 15px;
             }
+            
+            .favorito-actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
         }
 
         @media (max-width: 480px) {
             .favoritos-grid {
                 grid-template-columns: 1fr;
-            }
-            
-            .favorito-actions {
-                flex-direction: column;
             }
             
             .barra-busqueda-principal input[type="text"] {
@@ -472,6 +509,11 @@
                 flex-direction: column;
                 gap: 10px;
                 text-align: center;
+            }
+            
+            .badge-variacion {
+                font-size: 9px;
+                padding: 2px 6px;
             }
         }
     </style>
@@ -561,7 +603,7 @@
                             $item = $favorito->variacion;
                             $producto = $item->producto;
                             
-                            // Obtener texto de atributos (guardado pero no mostrado)
+                            // Obtener texto de atributos
                             $atributosTexto = [];
                             foreach($item->atributos as $atributoRel) {
                                 if($atributoRel->atributo && $atributoRel->valor) {
@@ -573,16 +615,16 @@
                             // NOMBRE SIMPLE: solo el nombre del producto + atributos separados por guiones
                             $nombreCompleto = $producto->vNombre . ' - ' . $atributosTexto;
                             
-                            $precioActual = $item->tieneDescuentoActivo() ? $item->dPrecio_descuento : $item->dPrecio;
-                            $precioOriginal = $item->dPrecio;
                             $tieneDescuento = $item->tieneDescuentoActivo();
-                            $porcentajeDescuento = $item->porcentaje_descuento;
+                            $precioOriginal = $item->dPrecio;
+                            $precioDescuento = $item->dPrecio_descuento;
                             $stock = $item->iStock;
                             $imagenes = $item->imagenes;
                             $url = route('productos.show.public', [$producto->id_producto, 'variacion' => $item->id_variacion]);
                             $productoPadreId = $producto->id_producto;
                             $tipo = 'variacion';
                             $id = $item->id_variacion;
+                            $porcentajeImpuesto = $item->porcentaje_impuesto ?? 0;
                         } else {
                             // Es un producto
                             $item = $favorito->producto;
@@ -590,17 +632,21 @@
                             // NOMBRE SIMPLE: solo el nombre del producto
                             $nombreCompleto = $item->vNombre;
                             
-                            $precioActual = $item->tieneDescuentoActivo() ? $item->dPrecio_descuento : $item->dPrecio_venta;
-                            $precioOriginal = $item->dPrecio_venta;
                             $tieneDescuento = $item->tieneDescuentoActivo();
-                            $porcentajeDescuento = $item->porcentaje_descuento;
+                            $precioOriginal = $item->dPrecio_venta;
+                            $precioDescuento = $item->dPrecio_descuento;
                             $stock = $item->iStock;
                             $imagenes = $item->imagenes;
                             $url = route('productos.show.public', $item->id_producto);
                             $productoPadreId = $item->id_producto;
                             $tipo = 'producto';
                             $id = $item->id_producto;
+                            $porcentajeImpuesto = $item->porcentaje_impuestos ?? 0;
                         }
+                        
+                        $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                        $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
+                        $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
                         
                         // Determinar clase de stock
                         $stockClass = $stock > 10 ? 'stock-disponible' : ($stock > 0 ? 'stock-bajo' : 'sin-stock');
@@ -635,9 +681,15 @@
                                 ❌
                             </button>
 
-                            @if($tieneDescuento)
+                            @if($tieneDescuento && $porcentajeDescuento > 0)
                                 <div class="badge-descuento">
                                     -{{ $porcentajeDescuento }}%
+                                </div>
+                            @endif
+                            
+                            @if($esVariacion && !empty($atributosTexto))
+                                <div class="badge-variacion" title="{{ $atributosTexto }}">
+                                    {{ $atributosTexto }}
                                 </div>
                             @endif
 
@@ -662,7 +714,7 @@
                                         ${{ number_format($precioOriginal, 2) }}
                                     </span>
                                 @endif
-                                ${{ number_format($precioActual, 2) }}
+                                ${{ number_format($precioFinal, 2) }}
                             </div>
 
                             <div class="favorito-stock {{ $stockClass }}">
@@ -670,10 +722,15 @@
                             </div>
 
                             <div class="favorito-actions">
-                                <a href="{{ $url }}" class="btn btn-primary">
+                                <a href="javascript:void(0)" 
+                                   class="btn btn-success" 
+                                   onclick="event.stopPropagation(); agregarAlCarrito({{ $productoPadreId }}, {{ $esVariacion ? $id : 'null' }})">
+                                    <span>🛒</span> Agregar al carrito
+                                </a>
+                                <a href="{{ $url }}" class="btn btn-primary" onclick="event.stopPropagation();">
                                     <span>👁️</span> Ver Producto
                                 </a>
-                                <button class="btn btn-danger" onclick="eliminarFavorito({{ $productoPadreId }}, '{{ $tipo }}', {{ $id }})">
+                                <button class="btn btn-danger" onclick="event.stopPropagation(); eliminarFavorito({{ $productoPadreId }}, '{{ $tipo }}', {{ $id }})">
                                     <span>🗑️</span> Eliminar
                                 </button>
                             </div>
@@ -699,6 +756,7 @@
         // VARIABLES GLOBALES
         let currentNotification = null;
         let notificationTimeout = null;
+        const csrfToken = '{{ csrf_token() }}';
 
         // Función para eliminar favorito
         function eliminarFavorito(productoId, tipo, id) {
@@ -715,7 +773,7 @@
             const cards = document.querySelectorAll(selector);
             
             if (cards.length === 0) {
-                showNotification('Error: No se encontró el producto ❌');
+                showNotification('Error: No se encontró el producto ❌', 'error');
                 return;
             }
 
@@ -739,7 +797,7 @@
             fetch(url, {
                 method: 'DELETE',
                 headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'X-CSRF-TOKEN': csrfToken,
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 }
@@ -781,9 +839,9 @@
                     });
                     
                     const mensaje = 'Producto eliminado de favoritos ✅';
-                    showNotification(mensaje);
+                    showNotification(mensaje, 'success');
                 } else {
-                    showNotification('Error al eliminar ❌');
+                    showNotification('Error al eliminar ❌', 'error');
                     cards.forEach(card => {
                         if (card) {
                             card.style.opacity = '1';
@@ -794,7 +852,7 @@
             })
             .catch(error => {
                 console.error('Error:', error);
-                showNotification('Error de conexión ❌');
+                showNotification('Error de conexión ❌', 'error');
                 cards.forEach(card => {
                     if (card) {
                         card.style.opacity = '1';
@@ -834,23 +892,19 @@
         }
 
         // Función para mostrar una sola notificación
-        function showNotification(message) {
+        function showNotification(message, type = 'success') {
             removeNotification();
             
             const notification = document.createElement('div');
-            notification.className = 'single-notification';
+            notification.className = `single-notification ${type}`;
             
-            if (message.includes('✅')) {
-                notification.className = 'single-notification';
-            } else {
-                notification.className = 'single-notification error';
-            }
+            let emoji = type === 'success' ? '✅' : '❌';
             
             const cleanMessage = message.replace('✅', '').replace('❌', '').trim();
             
             notification.innerHTML = `
-                <span>${message.includes('✅') ? '✅' : '❌'}</span>
-                <span>${cleanMessage}</span>
+                <span class="toast-icon">${emoji}</span>
+                <span class="toast-message">${cleanMessage}</span>
             `;
             
             document.body.appendChild(notification);
@@ -926,6 +980,43 @@
                     mainContainer.innerHTML = emptyStateHTML;
                 }
             }
+        }
+
+        // Función para agregar al carrito
+        function agregarAlCarrito(productoId, variacionId = null) {
+            @auth
+                fetch('/carrito/agregar', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        producto_id: productoId,
+                        variacion_id: variacionId,
+                        cantidad: 1
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('✅ Producto agregado al carrito', 'success');
+                    } else {
+                        showNotification('❌ ' + (data.message || 'Error al agregar'), 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('❌ Error de conexión', 'error');
+                });
+            @else
+                // Redirigir a login para invitados
+                const redirectUrl = new URL('{{ route("login") }}');
+                redirectUrl.searchParams.set('from_carrito', 'true');
+                redirectUrl.searchParams.set('redirect', window.location.href);
+                window.location.href = redirectUrl.toString();
+            @endauth
         }
 
         // Prevenir que el clic en los botones se propague a la card

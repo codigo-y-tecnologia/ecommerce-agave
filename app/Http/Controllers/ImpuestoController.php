@@ -35,7 +35,6 @@ class ImpuestoController extends Controller
             'vNombre' => 'required|max:100|unique:tbl_impuestos,vNombre',
             'eTipo' => 'required|in:IVA,IEPS,OTRO',
             'dPorcentaje' => 'required|numeric|min:0|max:100',
-            'tDescripcion' => 'nullable|string|max:255',
             'bActivo' => 'nullable|boolean'
         ], [
             'vNombre.required' => 'El nombre del impuesto es obligatorio',
@@ -66,7 +65,6 @@ class ImpuestoController extends Controller
                 'vNombre' => $request->vNombre,
                 'eTipo' => $request->eTipo,
                 'dPorcentaje' => $request->dPorcentaje,
-                'tDescripcion' => $request->tDescripcion,
                 'bActivo' => $request->has('bActivo') ? true : false
             ]);
 
@@ -123,7 +121,6 @@ class ImpuestoController extends Controller
             'vNombre' => 'required|max:100|unique:tbl_impuestos,vNombre,' . $impuesto->id_impuesto . ',id_impuesto',
             'eTipo' => 'required|in:IVA,IEPS,OTRO',
             'dPorcentaje' => 'required|numeric|min:0|max:100',
-            'tDescripcion' => 'nullable|string|max:255',
             'bActivo' => 'nullable|boolean'
         ]);
 
@@ -138,7 +135,6 @@ class ImpuestoController extends Controller
                 'vNombre' => $request->vNombre,
                 'eTipo' => $request->eTipo,
                 'dPorcentaje' => $request->dPorcentaje,
-                'tDescripcion' => $request->tDescripcion,
                 'bActivo' => $request->has('bActivo') ? true : false
             ]);
 
@@ -191,7 +187,6 @@ class ImpuestoController extends Controller
             'vNombre' => 'required|max:100|unique:tbl_impuestos,vNombre',
             'eTipo' => 'required|in:IVA,IEPS,OTRO',
             'dPorcentaje' => 'required|numeric|min:0|max:100',
-            'tDescripcion' => 'nullable|string|max:255',
             'bActivo' => 'nullable|boolean'
         ]);
 
@@ -208,7 +203,6 @@ class ImpuestoController extends Controller
                 'vNombre' => $request->vNombre,
                 'eTipo' => $request->eTipo,
                 'dPorcentaje' => $request->dPorcentaje,
-                'tDescripcion' => $request->tDescripcion,
                 'bActivo' => $request->has('bActivo') ? true : false
             ]);
 
@@ -234,7 +228,7 @@ class ImpuestoController extends Controller
     {
         $impuestos = Impuesto::where('bActivo', true)
             ->orderBy('vNombre')
-            ->get(['id_impuesto', 'vNombre', 'eTipo', 'dPorcentaje', 'tDescripcion']);
+            ->get(['id_impuesto', 'vNombre', 'eTipo', 'dPorcentaje']);
 
         return response()->json([
             'success' => true,

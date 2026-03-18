@@ -22,7 +22,6 @@ class Impuesto extends Model
         'vNombre',
         'eTipo',
         'dPorcentaje',
-        'tDescripcion',
         'bActivo',
         'dFecha_creacion'
     ];
