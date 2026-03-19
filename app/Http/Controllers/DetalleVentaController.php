@@ -12,7 +12,8 @@ class DetalleVentaController extends Controller
 {
     public function index(Request $request)
     {
-       
+        // Query principal con LEFT JOINs para enriquecer datos
+        // MODIFICADO: Ahora agrupa por id_venta para evitar duplicados
         $query = detalle_venta::selectRaw('
             MIN(tbl_detalle_ventas.id_detalle_venta) as id_detalle_venta,
             tbl_detalle_ventas.id_venta,
@@ -25,9 +26,9 @@ class DetalleVentaController extends Controller
             COALESCE(tbl_usuarios.vApaterno, tbl_pedidos.vApaterno, "")                as usuario_apellido1,
             COALESCE(tbl_usuarios.vAmaterno, tbl_pedidos.vAmaterno, "")                as usuario_apellido2,
             COALESCE(tbl_usuarios.vEmail,    tbl_pedidos.vEmail,    "No especificado") as usuario_email,
-            COALESCE(MIN(tbl_direcciones.vTelefono_contacto), tbl_pedidos.env_telefono_contacto, "No registrado") as usuario_telefono,
-            COALESCE(MIN(tbl_direcciones.vCiudad), "No especificada") as vCiudad,
-            COALESCE(MIN(tbl_direcciones.vEstado), "No especificado") as vEstado,
+            COALESCE(dir_sub.vTelefono_contacto, tbl_pedidos.env_telefono_contacto, "No registrado") as usuario_telefono,
+            COALESCE(dir_sub.vCiudad, "No especificada") as vCiudad,
+            COALESCE(dir_sub.vEstado, "No especificado") as vEstado,
             COALESCE(tbl_ventas.dTotal, 0) as total_venta,
             COALESCE(tbl_ventas.dDescuento, 0) as dDescuento,
             tbl_ventas.tFecha_venta as fecha_venta,
@@ -40,9 +41,7 @@ class DetalleVentaController extends Controller
         ->leftJoin('tbl_ventas', 'tbl_detalle_ventas.id_venta', '=', 'tbl_ventas.id_venta')
         ->leftJoin('tbl_usuarios', 'tbl_ventas.id_usuario', '=', 'tbl_usuarios.id_usuario')
         ->leftJoin('tbl_pedidos', 'tbl_ventas.id_pedido', '=', 'tbl_pedidos.id_pedido')
-        ->leftJoin('tbl_direcciones', function($join) {
-            $join->on('tbl_usuarios.id_usuario', '=', 'tbl_direcciones.id_usuario');
-        })
+        ->leftJoin(\DB::raw('(SELECT d1.id_usuario, d1.vTelefono_contacto, d1.vCiudad, d1.vEstado FROM tbl_direcciones d1 INNER JOIN (SELECT id_usuario, MIN(id_direccion) as min_id FROM tbl_direcciones GROUP BY id_usuario) d2 ON d1.id_usuario = d2.id_usuario AND d1.id_direccion = d2.min_id) as dir_sub'), 'tbl_usuarios.id_usuario', '=', 'dir_sub.id_usuario')
         ->leftJoin('tbl_productos', 'tbl_detalle_ventas.id_producto', '=', 'tbl_productos.id_producto')
         ->groupBy(
             'tbl_detalle_ventas.id_venta',
@@ -56,6 +55,9 @@ class DetalleVentaController extends Controller
             'tbl_pedidos.vAmaterno',
             'tbl_pedidos.vEmail',
             'tbl_pedidos.env_telefono_contacto',
+            'dir_sub.vTelefono_contacto',
+            'dir_sub.vCiudad',
+            'dir_sub.vEstado',
             'tbl_ventas.dTotal',
             'tbl_ventas.dDescuento',
             'tbl_ventas.tFecha_venta',
