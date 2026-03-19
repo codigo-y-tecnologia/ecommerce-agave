@@ -342,8 +342,8 @@ class BusquedaController extends Controller
                     $this->aplicarFiltrosAProductoPadre($q, $request);
                 })
                 ->where('bActivo', true)
-                ->where('bTiene_descuento', 1)
-                ->where('dPrecio_descuento', '>', 0)
+                ->where('bTiene_oferta', 1)
+                ->where('dPrecio_oferta', '>', 0)
                 ->get();
 
             foreach ($variacionesConDescuento as $variacion) {

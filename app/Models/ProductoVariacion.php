@@ -22,39 +22,39 @@ class ProductoVariacion extends Model
         'vSKU',
         'vNombre_variacion',
         'dPrecio',
-        'dPrecio_descuento',
-        'dFecha_inicio_descuento',
-        'dFecha_fin_descuento',
-        'vMotivo_descuento',
-        'bTiene_descuento',
+        'dPrecio_oferta',
+        'dFecha_inicio_oferta',
+        'dFecha_fin_oferta',
+        'vMotivo_oferta',
         'iStock',
         'dPeso',
         'dLargo_cm',
         'dAncho_cm',
         'dAlto_cm',
+        'bTiene_oferta',
+        'id_impuesto',
         'vClase_envio',
         'tDescripcion',
         'vImagen',
         'bActivo',
-        'id_impuesto',
         'tFecha_registro',
         'tFecha_actualizacion'
     ];
 
     protected $casts = [
         'dPrecio' => 'decimal:2',
-        'dPrecio_descuento' => 'decimal:2',
+        'dPrecio_oferta' => 'decimal:2',
         'iStock' => 'integer',
-        'bTiene_descuento' => 'boolean',
+        'bTiene_oferta' => 'boolean',
         'bActivo' => 'boolean',
-        'dPeso' => 'decimal:3',
+        'dPeso' => 'decimal:2',
         'dLargo_cm' => 'decimal:2',
         'dAncho_cm' => 'decimal:2',
         'dAlto_cm' => 'decimal:2',
         'tFecha_registro' => 'datetime',
         'tFecha_actualizacion' => 'datetime',
-        'dFecha_inicio_descuento' => 'date',
-        'dFecha_fin_descuento' => 'date'
+        'dFecha_inicio_oferta' => 'date',
+        'dFecha_fin_oferta' => 'date'
     ];
 
     protected $appends = [
@@ -105,23 +105,23 @@ class ProductoVariacion extends Model
 
     public function tieneDescuentoActivo()
     {
-        if (!$this->bTiene_descuento || $this->dPrecio_descuento === null || $this->dPrecio_descuento <= 0) {
+        if (!$this->bTiene_oferta || $this->dPrecio_oferta === null || $this->dPrecio_oferta <= 0) {
             return false;
         }
 
         $fechaActual = now()->toDateString();
 
-        if ($this->dFecha_inicio_descuento && $this->dFecha_fin_descuento) {
-            return $fechaActual >= $this->dFecha_inicio_descuento &&
-                $fechaActual <= $this->dFecha_fin_descuento;
+        if ($this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
+            return $fechaActual >= $this->dFecha_inicio_oferta &&
+                $fechaActual <= $this->dFecha_fin_oferta;
         }
 
-        if ($this->dFecha_inicio_descuento && !$this->dFecha_fin_descuento) {
-            return $fechaActual >= $this->dFecha_inicio_descuento;
+        if ($this->dFecha_inicio_oferta && !$this->dFecha_fin_oferta) {
+            return $fechaActual >= $this->dFecha_inicio_oferta;
         }
 
-        if (!$this->dFecha_inicio_descuento && $this->dFecha_fin_descuento) {
-            return $fechaActual <= $this->dFecha_fin_descuento;
+        if (!$this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
+            return $fechaActual <= $this->dFecha_fin_oferta;
         }
 
         return true;
@@ -135,15 +135,18 @@ class ProductoVariacion extends Model
     public function getPrecioActualAttribute()
     {
         if ($this->tieneDescuentoActivo()) {
-            return $this->dPrecio_descuento;
+            return $this->dPrecio_oferta;
         }
         return $this->dPrecio;
     }
 
     public function getPorcentajeDescuentoAttribute()
     {
-        if ($this->tieneDescuentoActivo() && $this->dPrecio_descuento < $this->dPrecio && $this->dPrecio > 0) {
-            $descuento = (($this->dPrecio - $this->dPrecio_descuento) / $this->dPrecio) * 100;
+        if (
+            $this->tieneDescuentoActivo() && $this->dPrecio_oferta < $this->dPrecio &&
+            $this->dPrecio > 0
+        ) {
+            $descuento = (($this->dPrecio - $this->dPrecio_oferta) / $this->dPrecio) * 100;
             return round($descuento);
         }
         return 0;
@@ -334,7 +337,7 @@ class ProductoVariacion extends Model
 
         // Si no hay imágenes, retornar vacío
         if (empty($imagenes)) {
-            \Log::warning('No hay imágenes para guardar en variación ID: ' . $this->id_variacion);
+            Log::warning('No hay imágenes para guardar en variación ID: ' . $this->id_variacion);
             return [];
         }
 
@@ -344,7 +347,7 @@ class ProductoVariacion extends Model
         // Crear la carpeta si no existe
         if (!Storage::disk('public')->exists($carpetaAdicionales)) {
             Storage::disk('public')->makeDirectory($carpetaAdicionales);
-            \Log::info('Carpeta creada: ' . $carpetaAdicionales);
+            Log::info('Carpeta creada: ' . $carpetaAdicionales);
         }
 
         // Obtener el último orden de las imágenes adicionales existentes
@@ -360,20 +363,20 @@ class ProductoVariacion extends Model
             ->where('eTipo', 'adicional')
             ->count();
 
-        \Log::info('Estado actual - Total imágenes: ' . $totalActual . ', Último orden: ' . $ultimoOrden . ', Nuevas imágenes: ' . count($imagenes));
+        Log::info('Estado actual - Total imágenes: ' . $totalActual . ', Último orden: ' . $ultimoOrden . ', Nuevas imágenes: ' . count($imagenes));
 
         $imagenesGuardadas = [];
 
         foreach ($imagenes as $index => $imagen) {
             // Verificar que el objeto sea válido
             if (!$imagen || !$imagen->isValid()) {
-                \Log::warning('Archivo de imagen inválido en posición ' . $index . ' para variación ID: ' . $this->id_variacion);
+                Log::warning('Archivo de imagen inválido en posición ' . $index . ' para variación ID: ' . $this->id_variacion);
                 continue;
             }
 
             // Verificar límite de imágenes
             if ($totalActual >= $maxImagenes) {
-                \Log::warning('Se alcanzó el límite máximo de ' . $maxImagenes . ' imágenes adicionales para la variación ID: ' . $this->id_variacion);
+                Log::warning('Se alcanzó el límite máximo de ' . $maxImagenes . ' imágenes adicionales para la variación ID: ' . $this->id_variacion);
                 break;
             }
 
@@ -382,7 +385,7 @@ class ProductoVariacion extends Model
                 $nombreArchivo = 'imagen_' . $orden . '_' . time() . '_' . uniqid() . '.' . $extension;
                 $ruta = $imagen->storeAs($carpetaAdicionales, $nombreArchivo, 'public');
 
-                \Log::info('Archivo guardado en: ' . $ruta);
+                Log::info('Archivo guardado en: ' . $ruta);
 
                 $imagenRegistrada = VariacionImagen::create([
                     'id_variacion' => $this->id_variacion,
@@ -396,14 +399,14 @@ class ProductoVariacion extends Model
                 $orden++;
                 $totalActual++;
 
-                \Log::info('Imagen adicional guardada: ' . $ruta . ' para variación ID: ' . $this->id_variacion);
+                Log::info('Imagen adicional guardada: ' . $ruta . ' para variación ID: ' . $this->id_variacion);
             } catch (\Exception $e) {
-                \Log::error('Error al guardar imagen adicional individual: ' . $e->getMessage() . ' para variación ID: ' . $this->id_variacion);
+                Log::error('Error al guardar imagen adicional individual: ' . $e->getMessage() . ' para variación ID: ' . $this->id_variacion);
                 // Continuar con la siguiente imagen
             }
         }
 
-        \Log::info('Proceso completado. Se guardaron ' . count($imagenesGuardadas) . ' de ' . count($imagenes) . ' imágenes para variación ID: ' . $this->id_variacion);
+        Log::info('Proceso completado. Se guardaron ' . count($imagenesGuardadas) . ' de ' . count($imagenes) . ' imágenes para variación ID: ' . $this->id_variacion);
 
         return $imagenesGuardadas;
     }

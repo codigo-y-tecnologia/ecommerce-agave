@@ -35,7 +35,10 @@ class OrderReceivedController extends Controller
         }
 
         $pedido = $query->firstOrFail();
-        Log::info('📦 Mostrando pedido', ['pedido' => $pedido]);
+        Log::info('📦 Pedido cargado', [
+            'id' => $pedido->id_pedido,
+            'usuario' => $pedido->id_usuario
+        ]);
 
         // Método de pago
         $payment_method = $pedido->venta->eMetodo_pago ?? 'No disponible';
