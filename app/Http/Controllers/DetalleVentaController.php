@@ -12,8 +12,7 @@ class DetalleVentaController extends Controller
 {
     public function index(Request $request)
     {
-        // Query principal con LEFT JOINs para enriquecer datos
-        // MODIFICADO: Ahora agrupa por id_venta para evitar duplicados
+
         $query = DetalleVenta::selectRaw('
             MIN(tbl_detalle_ventas.id_detalle_venta) as id_detalle_venta,
             tbl_detalle_ventas.id_venta,
@@ -30,6 +29,7 @@ class DetalleVentaController extends Controller
             COALESCE(MIN(tbl_direcciones.vCiudad), "No especificada") as vCiudad,
             COALESCE(MIN(tbl_direcciones.vEstado), "No especificado") as vEstado,
             COALESCE(tbl_ventas.dTotal, 0) as total_venta,
+            COALESCE(tbl_ventas.dDescuento, 0) as dDescuento,
             tbl_ventas.tFecha_venta as fecha_venta,
             COALESCE(tbl_ventas.eEstado, "completada") as eEstado,
             YEAR(tbl_ventas.tFecha_venta) as año_venta,
@@ -57,6 +57,7 @@ class DetalleVentaController extends Controller
                 'tbl_pedidos.vEmail',
                 'tbl_pedidos.env_telefono_contacto',
                 'tbl_ventas.dTotal',
+                'tbl_ventas.dDescuento',
                 'tbl_ventas.tFecha_venta',
                 'tbl_ventas.eEstado'
             )
