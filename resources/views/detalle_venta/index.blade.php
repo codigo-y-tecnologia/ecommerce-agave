@@ -35,7 +35,7 @@
         <div class="stat-card" onclick="openDetailModal('ingresos')">
             <i class="fas fa-external-link-alt"></i>
             <div style="font-size: 0.9rem; opacity: 0.9;">Ingresos Totales</div>
-            <div style="font-size: 2rem; font-weight: bold; margin-top: 10px;">${{ number_format($detallesVenta->sum('dSubtotal'), 2) }}</div>
+            <div style="font-size: 2rem; font-weight: bold; margin-top: 10px;">${{ number_format($detallesVenta->sum(function($d) { return $d->dSubtotal - ($d->dDescuento ?? 0); }), 2) }}</div>
         </div>
     </div>
 
@@ -84,7 +84,7 @@
             return [
                 'nombre' => $grupo->first()->nombre_producto,
                 'cantidad_total' => $grupo->sum('iCantidad'),
-                'ventas_totales' => $grupo->sum('dSubtotal'),
+                'ventas_totales' => $grupo->sum(function($d) { return $d->dSubtotal - ($d->dDescuento ?? 0); }),
                 'num_ventas' => $grupo->count()
             ];
         })->sortByDesc('cantidad_total')->values();
@@ -93,7 +93,7 @@
         $ventasPorEstado = $detallesVenta->groupBy('vEstado')->map(function($grupo) {
             return [
                 'estado' => $grupo->first()->vEstado,
-                'total_ventas' => $grupo->sum('dSubtotal'),
+                'total_ventas' => $grupo->sum(function($d) { return $d->dSubtotal - ($d->dDescuento ?? 0); }),
                 'cantidad_productos' => $grupo->sum('iCantidad'),
                 'num_transacciones' => $grupo->count()
             ];
@@ -117,7 +117,7 @@
                 'año' => $año,
                 'mes' => $mes,
                 'nombre_mes' => $mesesEspanol[$mes] . ' ' . $año,
-                'total_ventas' => $grupo->sum('dSubtotal'),
+                'total_ventas' => $grupo->sum(function($d) { return $d->dSubtotal - ($d->dDescuento ?? 0); }),
                 'cantidad_productos' => $grupo->sum('iCantidad'),
                 'num_ventas' => $grupo->count()
             ];
@@ -225,8 +225,9 @@
                     <th>Estado</th>
                     <th>Producto</th>
                     <th>Cantidad</th>
-                    <th>Precio Unit.</th>
                     <th>Subtotal</th>
+                    <th>Descuento</th>
+                    <th>Total</th>
                     <th>Fecha</th>
                     <th>Estado de Pago</th>
                 </tr>
@@ -278,8 +279,15 @@
                         </div>
                     </td>
                     <td style="text-align: center;"><strong>{{ $detalle->iCantidad }}</strong></td>
-                    <td style="text-align: right;" data-order="{{ $detalle->dPrecio_unitario }}">${{ number_format($detalle->dPrecio_unitario, 2) }}</td>
                     <td style="text-align: right;" data-order="{{ $detalle->dSubtotal }}">${{ number_format($detalle->dSubtotal, 2) }}</td>
+                    <td style="text-align: right;" data-order="{{ $detalle->dDescuento ?? 0 }}">
+                        @if(isset($detalle->dDescuento) && $detalle->dDescuento > 0)
+                            <span style="color: #e53e3e;">-${{ number_format($detalle->dDescuento, 2) }}</span>
+                        @else
+                            <span style="color: #a0aec0;">—</span>
+                        @endif
+                    </td>
+                    <td style="text-align: right; font-weight: bold; color: #2d7d46;" data-order="{{ $detalle->dSubtotal - ($detalle->dDescuento ?? 0) }}">${{ number_format($detalle->dSubtotal - ($detalle->dDescuento ?? 0), 2) }}</td>
                     <td data-order="{{ isset($detalle->fecha_venta) ? \Carbon\Carbon::parse($detalle->fecha_venta)->format('Y-m-d') : '' }}">
                         <small style="color: #666;">
                             @if(isset($detalle->fecha_venta))
@@ -416,6 +424,8 @@
                         <th>Producto</th>
                         <th>Cantidad</th>
                         <th>Subtotal</th>
+                        <th>Descuento</th>
+                        <th>Total</th>
                         <th>Fecha</th>
                         <th>Estado</th>
                     </tr>
@@ -428,6 +438,14 @@
                         <td>{{ $detalle->nombre_producto }}</td>
                         <td>{{ $detalle->iCantidad }}</td>
                         <td>${{ number_format($detalle->dSubtotal, 2) }}</td>
+                        <td>
+                            @if(isset($detalle->dDescuento) && $detalle->dDescuento > 0)
+                                <span style="color:#e53e3e;">-${{ number_format($detalle->dDescuento, 2) }}</span>
+                            @else
+                                <span style="color:#a0aec0;">—</span>
+                            @endif
+                        </td>
+                        <td style="font-weight:bold; color:#2d7d46;">${{ number_format($detalle->dSubtotal - ($detalle->dDescuento ?? 0), 2) }}</td>
                         <td>
                             @if(isset($detalle->fecha_venta))
                                 {{ \Carbon\Carbon::parse($detalle->fecha_venta)->format('d/m/Y') }}
@@ -508,9 +526,10 @@
         </div>
         <div class="detail-modal-body">
             @php
-                $totalIngresos = $detallesVenta->sum('dSubtotal');
-                $promedioVenta = $detallesVenta->count() > 0 ? $totalIngresos / $detallesVenta->unique('id_venta')->count() : 0;
-                $ventaMasAlta = $detallesVenta->max('dSubtotal');
+                $totalIngresos = $detallesVenta->sum(function($d) { return $d->dSubtotal - ($d->dDescuento ?? 0); });
+                $ventasUnicas = $detallesVenta->unique('id_venta')->count();
+                $promedioVenta = $ventasUnicas > 0 ? $totalIngresos / $ventasUnicas : 0;
+                $ventaMasAlta = $detallesVenta->max(function($d) { return $d->dSubtotal - ($d->dDescuento ?? 0); });
             @endphp
             
             <div class="stat-summary">
@@ -537,6 +556,7 @@
                         <th>Productos</th>
                         <th>Cantidad Total</th>
                         <th>Subtotal</th>
+                        <th>Descuento</th>
                         <th>Total Venta</th>
                         <th>Fecha</th>
                     </tr>
@@ -547,6 +567,7 @@
                         $primeraVenta = $detalles->first();
                         $cantidadTotal = $detalles->sum('iCantidad');
                         $subtotalTotal = $detalles->sum('dSubtotal');
+                        $descuentoTotal = $primeraVenta->dDescuento ?? 0;
                     @endphp
                     <tr>
                         <td>#{{ $idVenta }}</td>
@@ -554,7 +575,14 @@
                         <td>{{ $detalles->count() }} producto(s)</td>
                         <td>{{ $cantidadTotal }}</td>
                         <td>${{ number_format($subtotalTotal, 2) }}</td>
-                        <td>${{ number_format($primeraVenta->total_venta, 2) }}</td>
+                        <td>
+                            @if($descuentoTotal > 0)
+                                <span style="color:#e53e3e;">-${{ number_format($descuentoTotal, 2) }}</span>
+                            @else
+                                <span style="color:#a0aec0;">—</span>
+                            @endif
+                        </td>
+                        <td style="font-weight:bold; color:#2d7d46;">${{ number_format($subtotalTotal - $descuentoTotal, 2) }}</td>
                         <td>
                             @if(isset($primeraVenta->fecha_venta))
                                 {{ \Carbon\Carbon::parse($primeraVenta->fecha_venta)->format('d/m/Y') }}
