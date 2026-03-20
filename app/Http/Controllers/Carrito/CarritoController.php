@@ -48,7 +48,7 @@ class CarritoController extends Controller
         // Calcular total actualizado
         $total = $detalles->sum(
             fn($d) =>
-            $d->producto->precio_con_impuestos * $d->iCantidad
+            $d->dPrecio_unitario * $d->iCantidad
         );
 
         return view('carrito.index', [
@@ -81,6 +81,13 @@ class CarritoController extends Controller
 
         // Validar que el producto exista
         $producto = Producto::findOrFail($idProducto);
+
+        if (is_null($producto->dPrecio_final)) {
+            return redirect()->back()->with(
+                'error',
+                'Este producto no tiene precio configurado.'
+            );
+        }
 
         // Validación: producto sin stock
         if ($producto->iStock <= 0) {
@@ -125,7 +132,7 @@ class CarritoController extends Controller
                 'id_carrito' => $carrito->id_carrito,
                 'id_producto' => $producto->id_producto,
                 'iCantidad' => $cantidadSolicitada,
-                'dPrecio_unitario' => $producto->precio_con_impuestos,
+                'dPrecio_unitario' => $producto->dPrecio_final,
             ]);
         }
 

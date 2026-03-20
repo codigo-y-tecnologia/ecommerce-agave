@@ -200,8 +200,8 @@
                             <tr>
                                 <th>Producto</th>
                                 <th class="text-center">Cantidad</th>
-                                <th class="text-end">Precio Unitario</th>
-                                <th class="text-end">Impuestos</th>
+                                <th class="text-end">Precio</th>
+                               <!-- <th class="text-end">Impuestos</th> -->
                                 <th class="text-end">Subtotal</th>
                             </tr>
                         </thead>
@@ -210,7 +210,9 @@
                         @php
                             $producto = $detalle->producto;
                             $cantidad = $detalle->cantidad;
-
+                            $precio_unitario = $producto->dPrecio_final;
+                            $subtotalProducto = $precio_unitario * $cantidad;
+                            /*
                             // Precio base del producto sin impuestos
                             $precio_base = $producto->dPrecio_venta;
 
@@ -250,6 +252,7 @@
                             // Totales multiplicados por cantidad
                             $impuestosTotales = $impuestos_unitarios * $cantidad;
                             $subtotalProducto = $precio_final_unitario * $cantidad;
+                            */
 
                         @endphp
                         <tr>
@@ -259,14 +262,14 @@
 
                             {{-- Precio unitario sin impuestos --}}
                             <td class="text-end">
-                                ${{ number_format($precio_base, 2) }}
+                                ${{ number_format($precio_unitario, 2) }}
                             </td>
 
                             {{-- Impuestos (IEPS + IVA) --}}
-                            <td class="text-end">
+                            {{-- <td class="text-end">
                                 <small class="text-muted d-block">{{ implode(', ', $desglose) }}</small>
                                 ${{ number_format($impuestosTotales, 2) }}
-                            </td>
+                            </td> --}}
 
                             {{-- Subtotal final (precio base + ieps + iva) * cantidad --}}
                             <td class="text-end fw-bold">
@@ -287,10 +290,10 @@
                                 <span><strong>Subtotal:</strong></span>
                                 <span>${{ number_format($subtotal, 2) }}</span>
                             </div>
-                            <div class="d-flex justify-content-between mb-2">
+                            {{-- <div class="d-flex justify-content-between mb-2">
                                 <span><strong>Impuestos:</strong></span>
                                 <span>${{ number_format($totalImpuestos, 2) }}</span>
-                            </div>
+                            </div> --}}
                             <div class="d-flex justify-content-between mb-2" id="envio-linea">
                                 <span><strong>Envío:</strong></span>
                                 <span>
@@ -1293,7 +1296,7 @@ function renderPaypalIfNeeded() {
                 });
             }
         } catch (err) {
-            console.error('Error al obtener la dirección:', error);
+            console.error('Error al obtener la dirección:', err);
             Swal.fire({
                 icon: 'error',
                 title: 'Error',

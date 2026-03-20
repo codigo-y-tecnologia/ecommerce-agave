@@ -25,7 +25,7 @@ class CalcularDescuentoService
         $mensaje = "Cupón aplicado correctamente: {$cupon->vCodigo_cupon}";
 
         // Validar monto mínimo
-        if ($cupon->dMonto_minimo && $subtotal < $cupon->dMonto_minimo) {
+        if ($cupon->dMonto_minimo && ($subtotal + $envio) < $cupon->dMonto_minimo) {
             return [
                 'descuento' => 0.0,
                 'envio' => $envioBase,

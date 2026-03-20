@@ -92,7 +92,7 @@
             <tr>
                 <th>Producto</th>
                 <th class="text-center">Cant.</th>
-                <th class="text-end">Precio (sin impuestos)</th>
+                <th class="text-end">Precio</th>
                 <th class="text-end">Subtotal</th>
             </tr>
         </thead>
@@ -100,14 +100,16 @@
             @foreach($pedido->detalles as $det)
                 @php
                     $producto = $det->producto;
-                    $precioBase = $producto->dPrecio_venta;
-                    $subtotalProducto = $precioBase * $det->iCantidad;
+                    // $precioBase = $producto->dPrecio_venta;
+                    // $subtotalProducto = $precioBase * $det->iCantidad;
+                    $precio = $det->dPrecio_unitario;
+                    $subtotalProducto = $precio * $det->iCantidad;
                 @endphp
 
                 <tr>
                     <td>{{ $producto->vNombre }}</td>
                     <td class="text-center">{{ $det->iCantidad }}</td>
-                    <td class="text-end">${{ number_format($precioBase, 2) }}</td>
+                    <td class="text-end">${{ number_format($precio, 2) }}</td>
                     <td class="text-end">${{ number_format($subtotalProducto, 2) }}</td>
                 </tr>
             @endforeach
