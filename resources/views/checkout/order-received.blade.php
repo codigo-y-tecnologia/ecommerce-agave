@@ -125,27 +125,27 @@
 
             <table class="table">
                 <tbody>
-                    <tr>
-                        <th>Subtotal (sin impuestos):</th>
+                    {{-- <tr>
+                        <th>Subtotal:</th>
                         <td class="text-end">${{ number_format($subtotal, 2) }}</td>
-                    </tr>
+                    </tr> --}}
 
                     <!-- Impuestos por tipo -->
-                    @foreach($impuestosPorTipo as $tipo => $monto)
+                    {{-- @foreach($impuestosPorTipo as $tipo => $monto)
                         <tr>
                             <th>{{ $tipo }}:</th>
                             <td class="text-end">${{ number_format($monto, 2) }}</td>
                         </tr>
-                    @endforeach
+                    @endforeach --}}
 
-                    <tr>
+                    {{-- <tr>
                         <th>Total Impuestos:</th>
                         <td class="text-end">${{ number_format($totalImpuestos, 2) }}</td>
-                    </tr>
+                    </tr> --}}
 
                     <tr>
-                        <th>Subtotal con impuestos:</th>
-                        <td class="text-end fw-bold">${{ number_format($subtotalConImpuestos, 2) }}</td>
+                        <th>Subtotal:</th>
+                        <td class="text-end fw-bold">${{ number_format($subtotal, 2) }}</td>
                     </tr>
 
                     @if($descuento > 0)

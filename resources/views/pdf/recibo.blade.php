@@ -64,9 +64,9 @@
             <tr>
                 <td>{{ $det->producto->vNombre }}</td>
                 <td>{{ $det->iCantidad }}</td>
-                <td class="text-right">${{ number_format($det->producto->dPrecio_venta, 2) }}</td>
+                <td class="text-right">${{ number_format($det->dPrecio_unitario, 2) }}</td>
                 <td class="text-right">
-                    ${{ number_format($det->producto->dPrecio_venta * $det->iCantidad, 2) }}
+                    ${{ number_format($det->dPrecio_unitario * $det->iCantidad, 2) }}
                 </td>
             </tr>
         @endforeach
@@ -78,10 +78,10 @@
         <td class="text-right"><strong>Subtotal:</strong></td>
         <td class="text-right">${{ number_format($subtotal, 2) }}</td>
     </tr>
-    <tr>
+    {{-- <tr>
         <td class="text-right"><strong>Impuestos:</strong></td>
         <td class="text-right">${{ number_format($totalImpuestos, 2) }}</td>
-    </tr>
+    </tr> --}}
     @if($descuento > 0)
     <tr>
         <td class="text-right"><strong>Descuento @if($cuponCodigo) ({{ $cuponCodigo }}) @endif:</strong></td>

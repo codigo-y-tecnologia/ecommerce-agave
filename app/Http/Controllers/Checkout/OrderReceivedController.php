@@ -89,7 +89,7 @@ class OrderReceivedController extends Controller
         $pedido = Pedido::with(['detalles.producto.impuestos', 'venta'])
             ->findOrFail($id);
 
-        // 🔐 Seguridad básica:
+        // Seguridad básica:
         // - Si está logueado, validar que el pedido sea suyo
         if (Auth::check() && $pedido->id_usuario !== Auth::id()) {
             abort(403);
