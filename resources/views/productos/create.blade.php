@@ -22,6 +22,14 @@
         </div>
     @endif
 
+    @if(session('post_max_size_error'))
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>¡Atención!</strong> El tamaño total de los archivos excede el límite del servidor (50MB). Por favor, reduce el tamaño de los archivos.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
     <form action="{{ route('productos.store') }}" method="POST" enctype="multipart/form-data" id="productoForm">
         @csrf
 
@@ -48,7 +56,7 @@
                                        title="Solo letras y números (máximo 15 caracteres)"
                                        data-original-value="{{ old('vCodigo_barras') }}"
                                        autocomplete="off">
-                                <div id="sku-error" class="duplicate-error" style="display: none;"></div>
+                                <div id="sku-error" class="invalid-feedback" style="display: none;"></div>
                             </div>
                             @error('vCodigo_barras')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -71,7 +79,7 @@
                                        autocomplete="off"
                                        data-original-value="{{ old('vNombre') }}"
                                        oninput="verificarNombreProductoLocal(this)">
-                                <div id="nombre-error" class="duplicate-error" style="display: none;"></div>
+                                <div id="nombre-error" class="invalid-feedback" style="display: none;"></div>
                             </div>
                             @error('vNombre')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -493,7 +501,7 @@
                         </div>
                     </div>
 
-                    <!-- SECCIÓN DE IMPUESTO (SELECTOR ÚNICO) CON BOTÓN DE CREACIÓN RÁPIDA -->
+                   <!-- SECCIÓN DE IMPUESTO (IVA e IEPS) -->
                     <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label for="id_impuesto" class="form-label fw-bold">
@@ -509,8 +517,9 @@
                                             <option value="{{ $impuesto->id_impuesto }}" 
                                                 data-porcentaje="{{ $impuesto->dPorcentaje }}"
                                                 data-tipo="{{ $impuesto->eTipo }}"
+                                                data-nombre="{{ $impuesto->vNombre }}"
                                                 {{ old('id_impuesto') == $impuesto->id_impuesto ? 'selected' : '' }}>
-                                                {{ $impuesto->vNombre }} ({{ $impuesto->eTipo }} - {{ number_format($impuesto->dPorcentaje, 2) }}%)
+                                                {{ $impuesto->vNombre }} ({{ $impuesto->dPorcentaje }}%)
                                             </option>
                                         @endforeach
                                     </select>
@@ -525,13 +534,16 @@
                                     <button type="button" class="btn btn-outline-primary" onclick="abrirModalImpuesto()">
                                         <i class="fas fa-plus-circle"></i>
                                     </button>
+                                    <div class="alert alert-warning mt-2 w-100">
+                                        <small>No hay impuestos configurados. Crea uno nuevo.</small>
+                                    </div>
                                 @endif
                             </div>
                             @error('id_impuesto')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                             <small class="form-text text-muted mt-2">
-                                Selecciona el impuesto que aplica a este producto (opcional)
+                                Selecciona el impuesto que aplica a este producto (IVA o IEPS)
                             </small>
                         </div>
                     </div>
@@ -764,14 +776,14 @@
         <!-- SECCIÓN DE PRECIO FINAL CON IMPUESTO -->
         <div class="card mb-4 bg-info text-white">
             <div class="card-header bg-dark text-white">
-                <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Precio Final con Impuesto</h5>
+                <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Precio Final</h5>
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-4">
                         <div class="card bg-white text-dark">
                             <div class="card-body text-center">
-                                <h6 class="text-muted">Precio base (con descuento aplicado)</h6>
+                                <h6 class="text-muted">Precio base</h6>
                                 <h3 class="fw-bold" id="precio-base-display">$0.00</h3>
                                 <small class="text-muted" id="precio-original-display" style="display: none;"></small>
                             </div>
@@ -789,10 +801,34 @@
                     <div class="col-md-4">
                         <div class="card bg-success text-white">
                             <div class="card-body text-center">
-                                <h6>Precio final (con impuesto)</h6>
+                                <h6>Total final</h6>
                                 <h2 class="fw-bold" id="precio-final-display">$0.00</h2>
-                                <small>Este es el precio que verá el cliente</small>
+                                <small id="tipo-operacion">Precio final</small>
                             </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Información detallada -->
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="alert alert-light text-dark p-3">
+                            <i class="fas fa-calculator me-2"></i>
+                            <div id="isr-info">
+                                Selecciona un impuesto para ver el cálculo
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Nota explicativa -->
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <div class="alert alert-warning text-dark p-2 small">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Resumen:</strong><br>
+                            • <strong>IVA</strong>: Se SUMA al precio base<br>
+                            • <strong>IEPS</strong>: Se SUMA al precio base
                         </div>
                     </div>
                 </div>
@@ -872,12 +908,6 @@
                                                            {{ is_array(old('atributos.'.$atributo->id_atributo)) && in_array($valor->id_atributo_valor, old('atributos.'.$atributo->id_atributo, [])) ? 'checked' : '' }}>
                                                     <label class="form-check-label" for="valor-{{ $valor->id_atributo_valor }}" style="color: #495057;">
                                                         {{ $valor->vValor }}
-                                                        @if($valor->dPrecio_extra > 0)
-                                                            <span class="badge bg-success ms-1">+${{ number_format($valor->dPrecio_extra, 2) }}</span>
-                                                        @endif
-                                                        @if($valor->iStock > 0)
-                                                            <small class="text-muted d-block">Stock: {{ $valor->iStock }}</small>
-                                                        @endif
                                                     </label>
                                                 </div>
                                             </div>
@@ -972,335 +1002,6 @@
             </a>
         </div>
     </form>
-
-    <!-- PANEL DE HERRAMIENTAS CON TABS -->
-    <div class="card mt-4 border">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <div>
-                <h4 class="mb-0"><i class="fas fa-tools me-2"></i>Herramientas de Gestión Rápida</h4>
-                <small class="text-muted">Crea rápidamente elementos necesarios para tu producto</small>
-            </div>
-        </div>
-        <div class="card-body p-0">
-            <!-- TABS DE NAVEGACIÓN -->
-            <ul class="nav nav-tabs" id="toolsTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="categorias-tab" data-bs-toggle="tab" 
-                            data-bs-target="#categorias-content" type="button" role="tab">
-                        <i class="fas fa-tags me-1"></i>Categorías
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="marcas-tab" data-bs-toggle="tab" 
-                            data-bs-target="#marcas-content" type="button" role="tab">
-                        <i class="fas fa-industry me-1"></i>Marcas
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="etiquetas-tab" data-bs-toggle="tab" 
-                            data-bs-target="#etiquetas-content" type="button" role="tab">
-                        <i class="fas fa-tag me-1"></i>Etiquetas
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="atributos-tab" data-bs-toggle="tab" 
-                            data-bs-target="#atributos-content" type="button" role="tab">
-                        <i class="fas fa-list-alt me-1"></i>Atributos
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="impuestos-tab" data-bs-toggle="tab" 
-                            data-bs-target="#impuestos-content" type="button" role="tab">
-                        <i class="fas fa-file-invoice-dollar me-1"></i>Impuestos
-                    </button>
-                </li>
-            </ul>
-            
-            <!-- CONTENIDO DE LOS TABS (FORMULARIOS RÁPIDOS) -->
-            <div class="tab-content p-4">
-                <!-- TAB: CATEGORÍAS -->
-                <div class="tab-pane fade show active" id="categorias-content" role="tabpanel">
-                    <div class="quick-form" id="quick-categoria-form">
-                        <h5><i class="fas fa-tags me-2"></i>Crear Nueva Categoría</h5>
-                        <p class="text-muted small mb-3">Las categorías ayudan a organizar tus productos de forma jerárquica.</p>
-                        
-                        <form id="categoriaQuickForm" method="POST" enctype="multipart/form-data">
-                            @csrf
-                            
-                            <div class="mb-3">
-                                <label for="vNombre_categoria" class="form-label fw-bold">Nombre de la Categoría *</label>
-                                <input type="text" class="form-control" 
-                                       id="vNombre_categoria" name="vNombre" 
-                                       required
-                                       placeholder="Ej: Tequila, Mezcal, Añejos..."
-                                       oninput="quickActualizarSlug(this.value, 'vSlug_categoria')">
-                                <small class="form-text text-muted">Nombre descriptivo para la categoría</small>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="vSlug_categoria" class="form-label fw-bold">Slug (URL amigable) *</label>
-                                <input type="text" class="form-control" 
-                                       id="vSlug_categoria" name="vSlug" 
-                                       required
-                                       placeholder="tequila-reposado">
-                                <small class="form-text text-muted">
-                                    URL para la categoría (ej: tequila-reposado). Se genera automáticamente desde el nombre.
-                                </small>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="id_categoria_padre_quick" class="form-label fw-bold">Categoría Padre</label>
-                                <select class="form-control" id="id_categoria_padre_quick" name="id_categoria_padre">
-                                    <option value="">-- Seleccionar Categoría Padre (Opcional) --</option>
-                                    @php
-                                        function mostrarCategoriasParaQuick($categorias, $nivel = 0) {
-                                            foreach($categorias as $categoria) {
-                                                $prefijo = str_repeat('&nbsp;&nbsp;&nbsp;', $nivel);
-                                                $icono = $nivel == 0 ? '🏠 ' : '↳ ';
-                                                echo '<option value="' . $categoria->id_categoria . '">' .
-                                                     $prefijo . $icono . htmlspecialchars($categoria->vNombre) . 
-                                                     '</option>';
-                                                
-                                                if ($categoria->hijos && $categoria->hijos->count() > 0) {
-                                                    mostrarCategoriasParaQuick($categoria->hijos, $nivel + 1);
-                                                }
-                                            }
-                                        }
-                                        
-                                        $categoriasRaiz = $categorias->where('id_categoria_padre', null)->where('bActivo', true);
-                                    @endphp
-                                    
-                                    @php mostrarCategoriasParaQuick($categoriasRaiz, 0); @endphp
-                                </select>
-                                <small class="form-text text-muted">Selecciona si esta categoría pertenece a otra</small>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="tDescripcion_categoria" class="form-label fw-bold">Descripción</label>
-                                <textarea class="form-control" 
-                                          id="tDescripcion_categoria" name="tDescripcion" rows="3"
-                                          placeholder="Describe la categoría..."></textarea>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Estado</label>
-                                <div class="form-check mt-2">
-                                    <input type="checkbox" class="form-check-input" 
-                                           id="bActivo_categoria" name="bActivo" value="1" checked>
-                                    <label class="form-check-label" for="bActivo_categoria">
-                                        Categoría activa
-                                    </label>
-                                </div>
-                                <small class="form-text text-muted">Las categorías inactivas no estarán disponibles</small>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Imagen de la Categoría</label>
-                                
-                                <!-- Preview de nueva imagen -->
-                                <div class="mb-3" id="categoriaImagePreview" style="display: none;">
-                                    <div class="border rounded p-3 text-center">
-                                        <img id="categoriaPreviewImg" src="#" 
-                                             class="img-thumbnail" 
-                                             style="max-width: 150px; max-height: 150px; object-fit: cover;"
-                                             alt="Preview">
-                                        <div class="mt-2">
-                                            <small class="text-muted d-block">Vista previa</small>
-                                            <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarImagenCategoria()">
-                                                <i class="fas fa-times me-1"></i>Cancelar imagen
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="input-group">
-                                    <input type="file" class="form-control" 
-                                           id="vImagen_categoria" name="vImagen"
-                                           accept="image/jpeg,image/jpg,image/png,image/webp"
-                                           onchange="previewImagenCategoria(this)">
-                                    <button type="button" class="btn btn-outline-secondary" onclick="resetearInputImagen()">
-                                        <i class="fas fa-undo"></i>
-                                    </button>
-                                </div>
-                                <small class="form-text text-muted">
-                                    Formatos: JPG, JPEG, PNG, WebP. Tamaño máximo: 2MB. La imagen es opcional.
-                                </small>
-                            </div>
-
-                            <div class="d-flex justify-content-between">
-                                <button type="button" class="btn btn-secondary" onclick="limpiarFormularioCategoria()">
-                                    <i class="fas fa-undo me-1"></i> Limpiar
-                                </button>
-                                <button type="submit" class="btn btn-primary" id="btnCrearCategoria">
-                                    <i class="fas fa-save me-1"></i> Crear Categoría
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-                
-                <!-- TAB: MARCAS -->
-                <div class="tab-pane fade" id="marcas-content" role="tabpanel">
-                    <div class="quick-form" id="quick-marca-form">
-                        <h5><i class="fas fa-industry me-2"></i>Crear Nueva Marca</h5>
-                        <p class="text-muted small mb-3">Las marcas identifican al fabricante o productor del artículo.</p>
-                        
-                        <form id="marcaQuickForm">
-                            @csrf
-                            <div class="mb-3">
-                                <label for="vNombre_marca" class="form-label fw-bold">Nombre de la Marca *</label>
-                                <input type="text" class="form-control" id="vNombre_marca" name="vNombre" 
-                                       placeholder="Ej: José Cuervo, Patrón, Don Julio" required>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="tDescripcion_marca" class="form-label fw-bold">Descripción (Opcional)</label>
-                                <textarea class="form-control" id="tDescripcion_marca" name="tDescripcion" rows="3" 
-                                          placeholder="Describe la marca..."></textarea>
-                            </div>
-                            
-                            <div class="d-flex justify-content-between">
-                                <button type="button" class="btn btn-secondary" onclick="limpiarFormularioMarca()">
-                                    <i class="fas fa-undo me-1"></i> Limpiar
-                                </button>
-                                <button type="submit" class="btn btn-primary" id="btnCrearMarca">
-                                    <i class="fas fa-save me-1"></i> Crear Marca
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-                
-                <!-- TAB: ETIQUETAS (SIN COLOR) -->
-                <div class="tab-pane fade" id="etiquetas-content" role="tabpanel">
-                    <div class="quick-form" id="quick-etiqueta-form">
-                        <h5><i class="fas fa-tag me-2"></i>Crear Nueva Etiqueta</h5>
-                        <p class="text-muted small mb-3">Las etiquetas son palabras clave que ayudan a clasificar productos.</p>
-                        
-                        <form id="etiquetaQuickForm">
-                            @csrf
-                            <div class="mb-3">
-                                <label for="vNombre_eti" class="form-label fw-bold">Nombre de la Etiqueta *</label>
-                                <input type="text" class="form-control" id="vNombre_eti" name="vNombre" 
-                                       placeholder="Ej: Artesanal, Orgánico, Premium" required>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="tDescripcion_eti" class="form-label fw-bold">Descripción (Opcional)</label>
-                                <textarea class="form-control" id="tDescripcion_eti" name="tDescripcion" rows="2" 
-                                          placeholder="Descripción de la etiqueta..."></textarea>
-                            </div>
-                            
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                <strong>Nota:</strong> Después de crear la etiqueta, estará disponible en la sección "Etiquetas" del formulario.
-                            </div>
-                            
-                            <div class="d-flex justify-content-end">
-                                <button type="submit" class="btn btn-primary" id="btnCrearEtiqueta">
-                                    <i class="fas fa-save me-1"></i> Crear Etiqueta
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-                
-                <!-- TAB: ATRIBUTOS -->
-                <div class="tab-pane fade" id="atributos-content" role="tabpanel">
-                    <div class="quick-form" id="quick-atributo-form">
-                        <h5><i class="fas fa-list-alt me-2"></i>Crear Nuevo Atributo</h5>
-                        <p class="text-muted small mb-3">Los atributos son características que definen las variaciones de un producto (Tamaño, Color, Material, etc.).</p>
-                        
-                        <form id="atributoQuickForm">
-                            @csrf
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="vNombre_attr" class="form-label fw-bold">Nombre del Atributo *</label>
-                                    <input type="text" class="form-control" id="vNombre_attr" name="vNombre" 
-                                           placeholder="Ej: Tamaño, Color, Sabor, Edad"
-                                           oninput="quickGenerarSlug(this.value, 'vSlug_attr')" required>
-                                    <small class="text-muted">Ejemplos: Tamaño, Color, Material, Sabor</small>
-                                </div>
-                                
-                                <div class="col-md-6 mb-3">
-                                    <label for="vSlug_attr" class="form-label fw-bold">Slug (URL amigable)</label>
-                                    <input type="text" class="form-control" id="vSlug_attr" name="vSlug" 
-                                           placeholder="tamano, color, material">
-                                    <small class="text-muted">Se genera automáticamente desde el nombre</small>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="tDescripcion_attr" class="form-label fw-bold">Descripción (Opcional)</label>
-                                <textarea class="form-control" id="tDescripcion_attr" name="tDescripcion" rows="2" 
-                                          placeholder="Describe el atributo..."></textarea>
-                            </div>
-                            
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                <strong>Nota:</strong> Después de crear el atributo, podrás agregar valores específicos en la sección <strong>"Seleccionar Atributos para Variaciones"</strong> usando el botón "Agregar Valor" junto a cada atributo.
-                            </div>
-                            
-                            <div class="d-flex justify-content-end">
-                                <button type="submit" class="btn btn-primary" id="btnCrearAtributo">
-                                    <i class="fas fa-save me-1"></i> Crear Atributo
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- TAB: IMPUESTOS -->
-                <div class="tab-pane fade" id="impuestos-content" role="tabpanel">
-                    <div class="quick-form" id="quick-impuesto-form">
-                        <h5><i class="fas fa-file-invoice-dollar me-2"></i>Crear Nuevo Impuesto</h5>
-                        <form id="impuestoQuickForm">
-                            @csrf
-                            <div class="mb-3">
-                                <label for="vNombre_impuesto" class="form-label fw-bold">Nombre del Impuesto *</label>
-                                <input type="text" class="form-control" id="vNombre_impuesto" name="vNombre" 
-                                       placeholder="Ej: IVA, ISR, IEPS" required>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="eTipo_impuesto" class="form-label fw-bold">Tipo de Impuesto *</label>
-                                <select class="form-control" id="eTipo_impuesto" name="eTipo" required>
-                                    <option value="">Seleccionar tipo</option>
-                                    <option value="IVA">IVA</option>
-                                    <option value="IEPS">IEPS</option>
-                                    <option value="OTRO">OTRO</option>
-                                </select>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="dPorcentaje_impuesto" class="form-label fw-bold">Porcentaje *</label>
-                                <div class="input-group">
-                                    <input type="number" step="0.01" min="0" max="100" class="form-control" 
-                                           id="dPorcentaje_impuesto" name="dPorcentaje" 
-                                           placeholder="16.00" required>
-                                    <span class="input-group-text">%</span>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input" 
-                                           id="bActivo_impuesto" name="bActivo" value="1" checked>
-                                    <label class="form-check-label" for="bActivo_impuesto">Activo</label>
-                                </div>
-                            </div>
-                            
-                            <div class="d-flex justify-content-end">
-                                <button type="submit" class="btn btn-primary" id="btnCrearImpuesto">
-                                    <i class="fas fa-save me-1"></i> Crear Impuesto
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>  
-            </div>
-        </div>
-    </div>
 
     <!-- MODALES PARA CREACIÓN RÁPIDA -->
     
@@ -1549,7 +1250,7 @@
         </div>
     </div>
 
-    <!-- MODAL PARA CREAR IMPUESTO -->
+    <!-- MODAL PARA CREAR IMPUESTO (IVA e IEPS) -->
     <div class="modal fade" id="modalImpuesto" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -1566,7 +1267,8 @@
                         <div class="mb-3">
                             <label for="vNombre_impuesto_modal" class="form-label fw-bold">Nombre del Impuesto *</label>
                             <input type="text" class="form-control" id="vNombre_impuesto_modal" name="vNombre" 
-                                   placeholder="Ej: IVA, ISR, IEPS" required>
+                                   placeholder="Ej: IVA, IEPS" value="" required>
+                            <small class="text-muted">Ejemplos: IVA, IEPS</small>
                         </div>
                         
                         <div class="mb-3">
@@ -1575,7 +1277,6 @@
                                 <option value="">Seleccionar tipo</option>
                                 <option value="IVA">IVA</option>
                                 <option value="IEPS">IEPS</option>
-                                <option value="OTRO">OTRO</option>
                             </select>
                         </div>
                         
@@ -1584,9 +1285,10 @@
                             <div class="input-group">
                                 <input type="number" step="0.01" min="0" max="100" class="form-control" 
                                        id="dPorcentaje_impuesto_modal" name="dPorcentaje" 
-                                       placeholder="16.00" required>
+                                       placeholder="16.00" value="" required>
                                 <span class="input-group-text">%</span>
                             </div>
+                            <small class="text-muted">IVA 16%, IEPS 8% (ejemplo)</small>
                         </div>
                         
                         <div class="mb-3">
@@ -1748,38 +1450,6 @@
     font-size: 1.1rem;
 }
 
-.quick-form {
-    background: #f8f9fa;
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid #dee2e6;
-    margin-bottom: 15px;
-}
-
-.quick-form h5 {
-    color: #2E8B57;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #2E8B57;
-}
-
-.invalid-feedback {
-    display: block;
-    width: 100%;
-    margin-top: 0.25rem;
-    font-size: 0.875em;
-    color: #dc3545;
-}
-
-.variacion-precio-descuento.is-invalid {
-    border-color: #dc3545;
-    padding-right: calc(1.5em + 0.75rem);
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right calc(0.375em + 0.1875rem) center;
-    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
-}
-
 .image-preview-card {
     transition: transform 0.2s;
     border: 2px solid transparent;
@@ -1920,7 +1590,7 @@ let modalEtiqueta = null;
 let modalAtributo = null;
 let modalImpuesto = null;
 
-// ============ VALIDACIONES LOCALES ============
+// ============ FUNCIONES DE VALIDACIÓN ============
 
 function verificarSKUProductoLocal(input) {
     const sku = input.value.trim();
@@ -1929,7 +1599,10 @@ function verificarSKUProductoLocal(input) {
     
     if (sku === '' || sku === originalValue) {
         input.classList.remove('is-invalid');
-        if (errorDiv) errorDiv.style.display = 'none';
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+        }
         return true;
     }
     
@@ -1942,7 +1615,10 @@ function verificarSKUProductoLocal(input) {
         return false;
     } else {
         input.classList.remove('is-invalid');
-        if (errorDiv) errorDiv.style.display = 'none';
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+        }
         return true;
     }
 }
@@ -1954,7 +1630,10 @@ function verificarNombreProductoLocal(input) {
     
     if (nombre === '' || nombre === originalValue) {
         input.classList.remove('is-invalid');
-        if (errorDiv) errorDiv.style.display = 'none';
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+        }
         return true;
     }
     
@@ -1967,7 +1646,10 @@ function verificarNombreProductoLocal(input) {
         return false;
     } else {
         input.classList.remove('is-invalid');
-        if (errorDiv) errorDiv.style.display = 'none';
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+        }
         return true;
     }
 }
@@ -1975,255 +1657,40 @@ function verificarNombreProductoLocal(input) {
 function verificarSKUVariacionLocal(input, valorKey) {
     const sku = input.value.trim();
     const container = input.closest('.form-group');
-    let errorDiv = container.querySelector('.duplicate-error');
+    let errorDiv = container ? container.querySelector('.duplicate-error') : null;
     
-    if (!errorDiv) {
+    if (!errorDiv && container) {
         errorDiv = document.createElement('div');
-        errorDiv.className = 'duplicate-error';
+        errorDiv.className = 'invalid-feedback duplicate-error';
         container.appendChild(errorDiv);
     }
     
     if (sku === '') {
         input.classList.remove('is-invalid');
-        errorDiv.style.display = 'none';
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+        }
         return true;
     }
     
     if (skusExistentes.has(sku) || skusVariacionExistentes.has(sku)) {
         input.classList.add('is-invalid');
-        errorDiv.textContent = `⚠️ Ya existe un producto o variación con el SKU "${sku}".`;
-        errorDiv.style.display = 'block';
+        if (errorDiv) {
+            errorDiv.textContent = `⚠️ Ya existe un producto o variación con el SKU "${sku}".`;
+            errorDiv.style.display = 'block';
+        }
         return false;
     } else {
         input.classList.remove('is-invalid');
-        errorDiv.style.display = 'none';
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+        }
         return true;
     }
 }
 
-function validarPrecioDescuentoProducto() {
-    const tieneDescuentoCheckbox = document.getElementById('bTiene_descuento');
-    const precioVentaInput = document.getElementById('dPrecio_venta');
-    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
-    const errorDiv = document.getElementById('error-precio-descuento');
-
-    if (!tieneDescuentoCheckbox || !tieneDescuentoCheckbox.checked) {
-        if (precioDescuentoInput) {
-            precioDescuentoInput.classList.remove('is-invalid');
-        }
-        if (errorDiv) {
-            errorDiv.style.display = 'none';
-        }
-        return true;
-    }
-
-    const precioVenta = parseFloat(precioVentaInput?.value) || 0;
-    const precioDescuento = parseFloat(precioDescuentoInput?.value) || 0;
-    const inputValue = precioDescuentoInput?.value;
-
-    let esValido = true;
-
-    if (inputValue && inputValue !== '') {
-        if (precioDescuento >= precioVenta || precioDescuento === 0) {
-            esValido = false;
-        }
-    } else {
-        esValido = false;
-    }
-
-    if (!esValido) {
-        precioDescuentoInput.classList.add('is-invalid');
-        if (errorDiv) {
-            errorDiv.style.display = 'block';
-            if (precioDescuento >= precioVenta && inputValue) {
-                errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta.';
-            } else {
-                errorDiv.textContent = 'Este campo es obligatorio cuando el descuento está activo.';
-            }
-        }
-    } else {
-        precioDescuentoInput.classList.remove('is-invalid');
-        if (errorDiv) {
-            errorDiv.style.display = 'none';
-        }
-    }
-    
-    return esValido;
-}
-
-function validarPrecioDescuentoVariacionInstantaneo(input) {
-    const precioNormalId = input.dataset.precioNormalId;
-    const precioNormal = document.getElementById(precioNormalId);
-    const valorKey = input.dataset.valorKey;
-    const checkbox = document.getElementById(`descuento-${valorKey}`);
-    const errorDiv = document.getElementById(`error-precio-descuento-${valorKey}`);
-    
-    if (!checkbox || !checkbox.checked) return true;
-    
-    if (precioNormal && input.value) {
-        const precioNormalValor = parseFloat(precioNormal.value) || 0;
-        const precioDescuentoValor = parseFloat(input.value) || 0;
-        
-        if (precioDescuentoValor >= precioNormalValor && precioDescuentoValor > 0 && input.value !== '') {
-            input.classList.add('is-invalid');
-            errorDiv.style.display = 'block';
-            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio normal';
-            return false;
-        } else {
-            input.classList.remove('is-invalid');
-            errorDiv.style.display = 'none';
-            return true;
-        }
-    }
-    return true;
-}
-
-// ============ VALIDACIÓN FINAL CON SWEETALERT ============
-function validarCamposUnicosAntesDeEnviar() {
-    const skuInput = document.getElementById('vCodigo_barras');
-    const nombreInput = document.getElementById('vNombre');
-    const tieneDescuentoCheckbox = document.getElementById('bTiene_descuento');
-    const precioVentaInput = document.getElementById('dPrecio_venta');
-    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
-    const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
-    const fechaFinInput = document.getElementById('dFecha_fin_descuento');
-
-    let errores = [];
-
-    // 1. Validar SKU del Producto
-    if (skuInput && !verificarSKUProductoLocal(skuInput)) {
-        errores.push(`Ya existe un producto con el SKU "${skuInput.value}".`);
-    }
-
-    // 2. Validar Nombre del Producto
-    if (nombreInput && !verificarNombreProductoLocal(nombreInput)) {
-        errores.push(`Ya existe un producto con el nombre "${nombreInput.value}".`);
-    }
-
-    // 3. Validar Descuento del Producto
-    if (tieneDescuentoCheckbox && tieneDescuentoCheckbox.checked) {
-        const precioVenta = parseFloat(precioVentaInput?.value) || 0;
-        const precioDescuento = parseFloat(precioDescuentoInput?.value) || 0;
-        const precioDescuentoValor = precioDescuentoInput?.value;
-
-        if (!precioDescuentoValor || precioDescuentoValor === '') {
-            errores.push('El precio de descuento es obligatorio cuando el descuento está activo.');
-        } else if (precioDescuento >= precioVenta) {
-            errores.push(`El precio de descuento ($${precioDescuento.toFixed(2)}) debe ser menor que el precio de venta ($${precioVenta.toFixed(2)}).`);
-        }
-
-        if (!fechaInicioInput?.value) {
-            errores.push('La fecha de inicio es obligatoria cuando el descuento está activo.');
-        }
-        if (!fechaFinInput?.value) {
-            errores.push('La fecha de fin es obligatoria cuando el descuento está activo.');
-        }
-
-        if (fechaInicioInput?.value && fechaFinInput?.value) {
-            const inicio = new Date(fechaInicioInput.value);
-            const fin = new Date(fechaFinInput.value);
-            if (fin < inicio) {
-                errores.push('La fecha de fin no puede ser anterior a la fecha de inicio.');
-            }
-        }
-    }
-
-    // 4. Validar SKUs de variaciones
-    const variacionesSKU = document.querySelectorAll('[id^="sku-"]');
-    for (let input of variacionesSKU) {
-        if (input.value && input.value.trim() !== '') {
-            const valorKey = input.id.replace('sku-', '');
-            if (!verificarSKUVariacionLocal(input, valorKey)) {
-                errores.push(`Ya existe un producto o variación con el SKU "${input.value}".`);
-                // Solo mostramos el primer error de SKU para no saturar
-                break;
-            }
-        }
-    }
-
-    // 5. Validar descuentos de variaciones
-    Object.keys(atributosActivos).forEach(atributoId => {
-        Object.keys(atributosActivos[atributoId].valores).forEach(valorId => {
-            const valorKey = `${atributoId}_${valorId}`;
-            const descuentoCheckbox = document.getElementById(`descuento-${valorKey}`);
-            const precioInput = document.getElementById(`precio-${valorKey}`);
-            const precioDescuentoInput = document.getElementById(`precio_descuento-${valorKey}`);
-            const fechaInicioInput = document.getElementById(`fecha-inicio-${valorKey}`);
-            const fechaFinInput = document.getElementById(`fecha-fin-${valorKey}`);
-            const valorNombre = atributosActivos[atributoId].valores[valorId].nombre;
-            
-            if (descuentoCheckbox && descuentoCheckbox.checked) {
-                const precioNormal = parseFloat(precioInput?.value) || 0;
-                const precioDescuento = parseFloat(precioDescuentoInput?.value) || 0;
-                
-                if (!precioDescuentoInput?.value || precioDescuentoInput.value === '') {
-                    errores.push(`El precio de descuento es obligatorio para la variación "${valorNombre}".`);
-                } else if (precioDescuento >= precioNormal) {
-                    errores.push(`El precio de descuento ($${precioDescuento.toFixed(2)}) debe ser menor que el precio normal ($${precioNormal.toFixed(2)}) para la variación "${valorNombre}".`);
-                }
-                
-                if (!fechaInicioInput?.value) {
-                    errores.push(`La fecha de inicio es obligatoria para la variación "${valorNombre}".`);
-                }
-                if (!fechaFinInput?.value) {
-                    errores.push(`La fecha de fin es obligatoria para la variación "${valorNombre}".`);
-                }
-                
-                if (fechaInicioInput?.value && fechaFinInput?.value) {
-                    const inicio = new Date(fechaInicioInput.value);
-                    const fin = new Date(fechaFinInput.value);
-                    if (fin < inicio) {
-                        errores.push(`La fecha de fin no puede ser anterior a la fecha de inicio para la variación "${valorNombre}".`);
-                    }
-                }
-            }
-        });
-    });
-
-    // 6. Mostrar errores con SweetAlert
-    if (errores.length > 0) {
-        Swal.fire({
-            icon: 'error',
-            title: '¡Error de validación!',
-            html: `
-                <div class="text-left" style="max-height: 400px; overflow-y: auto;">
-                    <p class="mb-2">Por favor, corrige los siguientes errores:</p>
-                    <ul class="text-left">
-                        ${errores.map(err => `<li class="mb-1">⚠️ ${err}</li>`).join('')}
-                    </ul>
-                </div>
-            `,
-            confirmButtonText: 'Entendido',
-            confirmButtonColor: '#d33',
-            width: '600px'
-        });
-        return false;
-    }
-
-    return true;
-}
-
-// ============ EVENTO SUBMIT ============
-document.addEventListener('DOMContentLoaded', function() {
-    const productoForm = document.getElementById('productoForm');
-    if (productoForm) {
-        productoForm.onsubmit = function(e) {
-            if (!validarCamposUnicosAntesDeEnviar()) {
-                e.preventDefault();
-                return false;
-            }
-            
-            if (!validarTamañoTotalAntesDeEnviar()) {
-                e.preventDefault();
-                return false;
-            }
-            
-            return true;
-        };
-    }
-});
-
-// ============ FUNCIONES DE VALIDACIÓN DE SKU Y PRECIOS ============
 function validarSKU(input) {
     input.value = input.value.replace(/[^A-Za-z0-9-]/g, '');
     if (input.value.length > 50) {
@@ -2275,14 +1742,6 @@ function validarPrecio(input) {
         }, 0);
     }
     input.classList.remove('is-invalid');
-    
-    if (input.id === 'dPrecio_descuento') {
-        validarPrecioDescuentoProducto();
-    }
-    
-    if (input.id === 'dPrecio_venta') {
-        actualizarPrecioFinal();
-    }
 }
 
 function validarStock(input) {
@@ -2302,244 +1761,14 @@ function validarStock(input) {
     input.classList.remove('is-invalid');
 }
 
-// ============ FUNCIONES DE DESCUENTO ============
-function toggleDescuentoFields() {
-    const descuentoFields = document.getElementById('descuentoFields');
-    const tieneDescuento = document.getElementById('bTiene_descuento').checked;
-    const precioDescuento = document.getElementById('dPrecio_descuento');
-    const fechaInicio = document.getElementById('dFecha_inicio_descuento');
-    const fechaFin = document.getElementById('dFecha_fin_descuento');
-
-    if (tieneDescuento) {
-        descuentoFields.style.display = 'block';
-        precioDescuento.required = true;
-        fechaInicio.required = true;
-        fechaFin.required = true;
-
-        setTimeout(() => {
-            validarPrecioDescuentoProducto();
-            validarFechasDescuento();
-            actualizarPrecioFinal();
-        }, 100);
-    } else {
-        descuentoFields.style.display = 'none';
-        precioDescuento.required = false;
-        fechaInicio.required = false;
-        fechaFin.required = false;
-
-        precioDescuento.classList.remove('is-invalid');
-        document.getElementById('error-precio-descuento').style.display = 'none';
-        fechaFin.classList.remove('is-invalid');
-        document.getElementById('error-fechas-descuento').style.display = 'none';
-
-        actualizarPrecioFinal();
-    }
+function validarPeso(input) {
+    validarDimension(input, 3, 999.999);
 }
 
-function validarFechasDescuento() {
-    const fechaInicio = document.getElementById('dFecha_inicio_descuento');
-    const fechaFin = document.getElementById('dFecha_fin_descuento');
-    const errorDiv = document.getElementById('error-fechas-descuento');
-    
-    if (!fechaInicio || !fechaFin) return true;
-    
-    if (fechaInicio.value && fechaFin.value) {
-        const inicio = new Date(fechaInicio.value);
-        const fin = new Date(fechaFin.value);
-        
-        if (fin < inicio) {
-            fechaFin.classList.add('is-invalid');
-            errorDiv.style.display = 'block';
-            errorDiv.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio';
-            return false;
-        } else {
-            fechaFin.classList.remove('is-invalid');
-            errorDiv.style.display = 'none';
-            return true;
-        }
-    }
-    return true;
+function validarDimensionCm(input) {
+    validarDimension(input, 2, 999.99);
 }
 
-function validarFechasDescuentoVariacion(inicioId, finId, valorKey) {
-    const fechaInicio = document.getElementById(inicioId);
-    const fechaFin = document.getElementById(finId);
-    const errorDiv = document.getElementById(`error-fechas-descuento-${valorKey}`);
-    
-    if (!fechaInicio || !fechaFin) return true;
-    
-    if (fechaInicio.value && fechaFin.value) {
-        const inicio = new Date(fechaInicio.value);
-        const fin = new Date(fechaFin.value);
-        
-        if (fin < inicio) {
-            fechaFin.classList.add('is-invalid');
-            errorDiv.style.display = 'block';
-            errorDiv.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio';
-            return false;
-        } else {
-            fechaFin.classList.remove('is-invalid');
-            errorDiv.style.display = 'none';
-            return true;
-        }
-    }
-    return true;
-}
-
-function validarPrecioDescuentoVariacion(input) {
-    const precioNormalId = input.dataset.precioNormalId;
-    const precioNormal = document.getElementById(precioNormalId);
-    const valorKey = input.dataset.valorKey;
-    const checkbox = document.getElementById(`descuento-${valorKey}`);
-    const errorDiv = document.getElementById(`error-precio-descuento-${valorKey}`);
-    
-    if (!checkbox || !checkbox.checked) return true;
-    
-    if (precioNormal && input.value) {
-        const precioNormalValor = parseFloat(precioNormal.value) || 0;
-        const precioDescuentoValor = parseFloat(input.value) || 0;
-        
-        if (precioDescuentoValor >= precioNormalValor && precioDescuentoValor > 0) {
-            input.classList.add('is-invalid');
-            errorDiv.style.display = 'block';
-            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio normal';
-            return false;
-        } else {
-            input.classList.remove('is-invalid');
-            errorDiv.style.display = 'none';
-            return true;
-        }
-    }
-    return true;
-}
-
-function toggleDescuentoVariacion(checkbox, valorKey) {
-    const fields = document.querySelector(`.descuento-fields-${valorKey}`);
-    const precioDescuento = document.getElementById(`precio_descuento-${valorKey}`);
-    const fechaInicio = document.getElementById(`fecha-inicio-${valorKey}`);
-    const fechaFin = document.getElementById(`fecha-fin-${valorKey}`);
-    const errorDiv = document.getElementById(`error-precio-descuento-${valorKey}`);
-    
-    if (checkbox.checked) {
-        fields.style.display = 'block';
-        precioDescuento.required = true;
-        fechaInicio.required = true;
-        fechaFin.required = true;
-        
-        setTimeout(() => {
-            validarPrecioDescuentoVariacion(precioDescuento);
-            actualizarPrecioFinalVariacion(valorKey);
-        }, 100);
-    } else {
-        fields.style.display = 'none';
-        precioDescuento.required = false;
-        fechaInicio.required = false;
-        fechaFin.required = false;
-        
-        precioDescuento.classList.remove('is-invalid');
-        if (errorDiv) errorDiv.style.display = 'none';
-        fechaFin.classList.remove('is-invalid');
-        document.getElementById(`error-fechas-descuento-${valorKey}`).style.display = 'none';
-        
-        actualizarPrecioFinalVariacion(valorKey);
-    }
-}
-
-// ============ FUNCIÓN DE CÁLCULO DE IMPUESTO Y PRECIO FINAL ============
-function actualizarPrecioFinal() {
-    const precioVentaInput = document.getElementById('dPrecio_venta');
-    const tieneDescuento = document.getElementById('bTiene_descuento')?.checked;
-    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
-    const impuestoSelect = document.getElementById('id_impuesto');
-    
-    if (!precioVentaInput) return;
-    
-    let precioBase = parseFloat(precioVentaInput.value) || 0;
-    let precioOriginal = precioBase;
-    
-    if (tieneDescuento && precioDescuentoInput && precioDescuentoInput.value) {
-        const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
-        if (precioDescuento > 0 && precioDescuento < precioBase) {
-            precioBase = precioDescuento;
-        }
-    }
-    
-    document.getElementById('precio-base-display').textContent = '$' + precioBase.toFixed(2);
-    
-    const precioOriginalDisplay = document.getElementById('precio-original-display');
-    if (tieneDescuento && precioBase < precioOriginal) {
-        precioOriginalDisplay.style.display = 'block';
-        precioOriginalDisplay.textContent = 'Precio original: $' + precioOriginal.toFixed(2);
-        precioOriginalDisplay.className = 'text-muted';
-    } else {
-        precioOriginalDisplay.style.display = 'none';
-    }
-    
-    let totalImpuestos = 0;
-    let porcentaje = 0;
-    
-    if (impuestoSelect && impuestoSelect.value) {
-        const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
-        porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
-        totalImpuestos = precioBase * (porcentaje / 100);
-    }
-    
-    const precioFinal = precioBase + totalImpuestos;
-    
-    document.getElementById('total-impuestos-display').textContent = '$' + totalImpuestos.toFixed(2);
-    document.getElementById('precio-final-display').textContent = '$' + precioFinal.toFixed(2);
-    
-    if (porcentaje > 0) {
-        document.getElementById('porcentaje-impuestos-display').textContent = porcentaje.toFixed(2) + '%';
-    } else {
-        document.getElementById('porcentaje-impuestos-display').textContent = '0%';
-    }
-}
-
-function actualizarPrecioFinalVariacion(valorKey) {
-    const precioInput = document.getElementById(`precio-${valorKey}`);
-    const descuentoCheckbox = document.getElementById(`descuento-${valorKey}`);
-    const precioDescuentoInput = document.getElementById(`precio_descuento-${valorKey}`);
-    const impuestoSelect = document.getElementById(`impuesto-${valorKey}`);
-    const precioFinalSpan = document.getElementById(`precio-final-${valorKey}`);
-    const detalleImpuestoSpan = document.getElementById(`detalle-impuesto-${valorKey}`);
-    
-    if (!precioInput || !precioFinalSpan) return;
-    
-    let precioBase = parseFloat(precioInput.value) || 0;
-    
-    if (descuentoCheckbox && descuentoCheckbox.checked && precioDescuentoInput && precioDescuentoInput.value) {
-        const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
-        if (precioDescuento > 0 && precioDescuento < precioBase) {
-            precioBase = precioDescuento;
-        }
-    }
-    
-    let totalImpuestos = 0;
-    let porcentaje = 0;
-    let nombreImpuesto = '';
-    
-    if (impuestoSelect && impuestoSelect.value) {
-        const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
-        porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
-        nombreImpuesto = selectedOption.text.split('(')[0].trim();
-        totalImpuestos = precioBase * (porcentaje / 100);
-    }
-    
-    const precioFinal = precioBase + totalImpuestos;
-    
-    precioFinalSpan.textContent = '$' + precioFinal.toFixed(2);
-    
-    if (detalleImpuestoSpan) {
-        if (porcentaje > 0) {
-            detalleImpuestoSpan.textContent = `${nombreImpuesto}: ${porcentaje.toFixed(2)}% ($${totalImpuestos.toFixed(2)})`;
-        } else {
-            detalleImpuestoSpan.textContent = 'Sin impuesto';
-        }
-    }
-}
-
-// ============ FUNCIONES DE DIMENSIONES ============
 function validarDimension(input, maxDecimales, maxValor) {
     let value = input.value;
     const cursorPos = input.selectionStart;
@@ -2605,14 +1834,6 @@ function validarDimension(input, maxDecimales, maxValor) {
     }
     
     input.classList.remove('is-invalid');
-}
-
-function validarPeso(input) {
-    validarDimension(input, 3, 999.999);
-}
-
-function validarDimensionCm(input) {
-    validarDimension(input, 2, 999.99);
 }
 
 function formatearPeso(input) {
@@ -2685,7 +1906,492 @@ function permitirBorrado(e) {
     return false;
 }
 
+// ============ FUNCIONES DE DESCUENTO ============
+
+function toggleDescuentoFields() {
+    const descuentoFields = document.getElementById('descuentoFields');
+    const tieneDescuento = document.getElementById('bTiene_descuento').checked;
+    const precioDescuento = document.getElementById('dPrecio_descuento');
+    const fechaInicio = document.getElementById('dFecha_inicio_descuento');
+    const fechaFin = document.getElementById('dFecha_fin_descuento');
+
+    if (tieneDescuento) {
+        descuentoFields.style.display = 'block';
+        precioDescuento.required = true;
+        fechaInicio.required = true;
+        fechaFin.required = true;
+
+        setTimeout(() => {
+            validarPrecioDescuentoProducto();
+            validarFechasDescuento();
+            actualizarPrecioFinal();
+        }, 100);
+    } else {
+        descuentoFields.style.display = 'none';
+        precioDescuento.required = false;
+        fechaInicio.required = false;
+        fechaFin.required = false;
+
+        precioDescuento.classList.remove('is-invalid');
+        const errorDiv = document.getElementById('error-precio-descuento');
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+        }
+        fechaFin.classList.remove('is-invalid');
+        const errorFechas = document.getElementById('error-fechas-descuento');
+        if (errorFechas) {
+            errorFechas.style.display = 'none';
+            errorFechas.textContent = '';
+        }
+
+        actualizarPrecioFinal();
+    }
+}
+
+function validarPrecioDescuentoProducto() {
+    const tieneDescuentoCheckbox = document.getElementById('bTiene_descuento');
+    const precioVentaInput = document.getElementById('dPrecio_venta');
+    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
+    const errorDiv = document.getElementById('error-precio-descuento');
+
+    if (!tieneDescuentoCheckbox || !tieneDescuentoCheckbox.checked) {
+        if (precioDescuentoInput) {
+            precioDescuentoInput.classList.remove('is-invalid');
+        }
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+        }
+        return true;
+    }
+
+    const precioVenta = parseFloat(precioVentaInput?.value) || 0;
+    const precioDescuento = parseFloat(precioDescuentoInput?.value) || 0;
+    const inputValue = precioDescuentoInput?.value;
+
+    let esValido = true;
+
+    if (inputValue && inputValue !== '') {
+        if (precioDescuento >= precioVenta || precioDescuento === 0) {
+            esValido = false;
+        }
+    } else {
+        esValido = false;
+    }
+
+    if (!esValido) {
+        precioDescuentoInput.classList.add('is-invalid');
+        if (errorDiv) {
+            errorDiv.style.display = 'block';
+            if (precioDescuento >= precioVenta && inputValue) {
+                errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta.';
+            } else {
+                errorDiv.textContent = 'Este campo es obligatorio cuando el descuento está activo.';
+            }
+        }
+    } else {
+        precioDescuentoInput.classList.remove('is-invalid');
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+        }
+    }
+    
+    return esValido;
+}
+
+function validarFechasDescuento() {
+    const fechaInicio = document.getElementById('dFecha_inicio_descuento');
+    const fechaFin = document.getElementById('dFecha_fin_descuento');
+    const errorDiv = document.getElementById('error-fechas-descuento');
+    
+    if (!fechaInicio || !fechaFin) return true;
+    
+    if (fechaInicio.value && fechaFin.value) {
+        const inicio = new Date(fechaInicio.value);
+        const fin = new Date(fechaFin.value);
+        
+        if (fin < inicio) {
+            fechaFin.classList.add('is-invalid');
+            if (errorDiv) {
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio';
+            }
+            return false;
+        } else {
+            fechaFin.classList.remove('is-invalid');
+            if (errorDiv) {
+                errorDiv.style.display = 'none';
+                errorDiv.textContent = '';
+            }
+            return true;
+        }
+    }
+    return true;
+}
+
+function validarPrecioDescuentoVariacionInstantaneo(input) {
+    const precioNormalId = input.dataset.precioNormalId;
+    const precioNormal = document.getElementById(precioNormalId);
+    const valorKey = input.dataset.valorKey;
+    const checkbox = document.getElementById(`descuento-${valorKey}`);
+    const errorDiv = document.getElementById(`error-precio-descuento-${valorKey}`);
+    
+    if (!checkbox || !checkbox.checked) return true;
+    
+    if (precioNormal && input.value) {
+        const precioNormalValor = parseFloat(precioNormal.value) || 0;
+        const precioDescuentoValor = parseFloat(input.value) || 0;
+        
+        if (precioDescuentoValor >= precioNormalValor && precioDescuentoValor > 0 && input.value !== '') {
+            input.classList.add('is-invalid');
+            if (errorDiv) {
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'El precio de descuento debe ser menor que el precio normal';
+            }
+            return false;
+        } else {
+            input.classList.remove('is-invalid');
+            if (errorDiv) {
+                errorDiv.style.display = 'none';
+                errorDiv.textContent = '';
+            }
+            return true;
+        }
+    }
+    return true;
+}
+
+function validarPrecioDescuentoVariacion(input) {
+    const precioNormalId = input.dataset.precioNormalId;
+    const precioNormal = document.getElementById(precioNormalId);
+    const valorKey = input.dataset.valorKey;
+    const checkbox = document.getElementById(`descuento-${valorKey}`);
+    const errorDiv = document.getElementById(`error-precio-descuento-${valorKey}`);
+    
+    if (!checkbox || !checkbox.checked) return true;
+    
+    if (precioNormal && input.value) {
+        const precioNormalValor = parseFloat(precioNormal.value) || 0;
+        const precioDescuentoValor = parseFloat(input.value) || 0;
+        
+        if (precioDescuentoValor >= precioNormalValor && precioDescuentoValor > 0) {
+            input.classList.add('is-invalid');
+            if (errorDiv) {
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'El precio de descuento debe ser menor que el precio normal';
+            }
+            return false;
+        } else {
+            input.classList.remove('is-invalid');
+            if (errorDiv) {
+                errorDiv.style.display = 'none';
+                errorDiv.textContent = '';
+            }
+            return true;
+        }
+    }
+    return true;
+}
+
+function validarFechasDescuentoVariacion(inicioId, finId, valorKey) {
+    const fechaInicio = document.getElementById(inicioId);
+    const fechaFin = document.getElementById(finId);
+    const errorDiv = document.getElementById(`error-fechas-descuento-${valorKey}`);
+    
+    if (!fechaInicio || !fechaFin) return true;
+    
+    if (fechaInicio.value && fechaFin.value) {
+        const inicio = new Date(fechaInicio.value);
+        const fin = new Date(fechaFin.value);
+        
+        if (fin < inicio) {
+            fechaFin.classList.add('is-invalid');
+            if (errorDiv) {
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio';
+            }
+            return false;
+        } else {
+            fechaFin.classList.remove('is-invalid');
+            if (errorDiv) {
+                errorDiv.style.display = 'none';
+                errorDiv.textContent = '';
+            }
+            return true;
+        }
+    }
+    return true;
+}
+
+function toggleDescuentoVariacion(checkbox, valorKey) {
+    const fields = document.querySelector(`.descuento-fields-${valorKey}`);
+    const precioDescuento = document.getElementById(`precio_descuento-${valorKey}`);
+    const fechaInicio = document.getElementById(`fecha-inicio-${valorKey}`);
+    const fechaFin = document.getElementById(`fecha-fin-${valorKey}`);
+    const errorDiv = document.getElementById(`error-precio-descuento-${valorKey}`);
+    const errorFechas = document.getElementById(`error-fechas-descuento-${valorKey}`);
+    
+    if (checkbox.checked) {
+        if (fields) fields.style.display = 'block';
+        if (precioDescuento) precioDescuento.required = true;
+        if (fechaInicio) fechaInicio.required = true;
+        if (fechaFin) fechaFin.required = true;
+        
+        setTimeout(() => {
+            if (precioDescuento) validarPrecioDescuentoVariacion(precioDescuento);
+            actualizarPrecioFinalVariacion(valorKey);
+        }, 100);
+    } else {
+        if (fields) fields.style.display = 'none';
+        if (precioDescuento) {
+            precioDescuento.required = false;
+            precioDescuento.classList.remove('is-invalid');
+        }
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+        }
+        if (fechaInicio) fechaInicio.required = false;
+        if (fechaFin) {
+            fechaFin.required = false;
+            fechaFin.classList.remove('is-invalid');
+        }
+        if (errorFechas) {
+            errorFechas.style.display = 'none';
+            errorFechas.textContent = '';
+        }
+        
+        actualizarPrecioFinalVariacion(valorKey);
+    }
+}
+
+// ============ FUNCIÓN DE CÁLCULO DE PRECIO FINAL (IVA e IEPS) ============
+function actualizarPrecioFinal() {
+    const precioVentaInput = document.getElementById('dPrecio_venta');
+    const tieneDescuentoCheckbox = document.getElementById('bTiene_descuento');
+    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
+    const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
+    const fechaFinInput = document.getElementById('dFecha_fin_descuento');
+    const impuestoSelect = document.getElementById('id_impuesto');
+    
+    if (!precioVentaInput) return;
+    
+    const precioVenta = parseFloat(precioVentaInput.value) || 0;
+    let precioBase = precioVenta;
+    let precioOriginal = precioVenta;
+    let descuentoActivo = false;
+    let mensajeDescuento = 'Descuento no activo';
+    
+    // Verificar si el descuento está activo HOY
+    if (tieneDescuentoCheckbox && tieneDescuentoCheckbox.checked) {
+        const fechaHoy = new Date();
+        fechaHoy.setHours(0, 0, 0, 0);
+        
+        let fechaInicio = null;
+        let fechaFin = null;
+        
+        if (fechaInicioInput && fechaInicioInput.value) {
+            fechaInicio = new Date(fechaInicioInput.value + 'T00:00:00');
+        }
+        
+        if (fechaFinInput && fechaFinInput.value) {
+            fechaFin = new Date(fechaFinInput.value + 'T23:59:59');
+        }
+        
+        const precioDescuento = parseFloat(precioDescuentoInput?.value) || 0;
+        
+        let descuentoDebeAplicarse = false;
+        
+        if (fechaInicio && fechaFin) {
+            if (fechaHoy >= fechaInicio && fechaHoy <= fechaFin) {
+                descuentoDebeAplicarse = true;
+                mensajeDescuento = `Descuento activo HOY`;
+            } else if (fechaHoy < fechaInicio) {
+                mensajeDescuento = `Descuento inicia ${fechaInicio.toLocaleDateString()}`;
+            } else {
+                mensajeDescuento = `Descuento terminó ${fechaFin.toLocaleDateString()}`;
+            }
+        } else if (fechaInicio && !fechaFin) {
+            if (fechaHoy >= fechaInicio) {
+                descuentoDebeAplicarse = true;
+                mensajeDescuento = `Descuento activo desde ${fechaInicio.toLocaleDateString()}`;
+            } else {
+                mensajeDescuento = `Descuento inicia ${fechaInicio.toLocaleDateString()}`;
+            }
+        } else if (!fechaInicio && fechaFin) {
+            if (fechaHoy <= fechaFin) {
+                descuentoDebeAplicarse = true;
+                mensajeDescuento = `Descuento hasta ${fechaFin.toLocaleDateString()}`;
+            } else {
+                mensajeDescuento = `Descuento terminó ${fechaFin.toLocaleDateString()}`;
+            }
+        } else {
+            descuentoDebeAplicarse = true;
+            mensajeDescuento = 'Descuento activo';
+        }
+        
+        if (descuentoDebeAplicarse && precioDescuento > 0 && precioDescuento < precioVenta) {
+            precioBase = precioDescuento;
+            descuentoActivo = true;
+        }
+    }
+    
+    document.getElementById('precio-base-display').textContent = '$' + precioBase.toFixed(2);
+    
+    // Mostrar precio original si hay descuento
+    const precioOriginalDisplay = document.getElementById('precio-original-display');
+    if (precioOriginalDisplay) {
+        if (tieneDescuentoCheckbox && tieneDescuentoCheckbox.checked && precioDescuentoInput?.value) {
+            precioOriginalDisplay.style.display = 'block';
+            if (descuentoActivo) {
+                precioOriginalDisplay.innerHTML = `
+                    <span class="text-decoration-line-through">$${precioVenta.toFixed(2)}</span>
+                    <span class="badge bg-success ms-2">¡DESCUENTO!</span>
+                    <br><small>${mensajeDescuento}</small>
+                `;
+            } else {
+                precioOriginalDisplay.innerHTML = `
+                    Precio normal: $${precioVenta.toFixed(2)}
+                    <br><small class="text-warning">⏱️ ${mensajeDescuento}</small>
+                `;
+            }
+        } else {
+            precioOriginalDisplay.style.display = 'none';
+        }
+    }
+    
+    // Calcular impuesto (IVA o IEPS - ambos se SUMAN)
+    let totalImpuesto = 0;
+    let porcentaje = 0;
+    let nombreImpuesto = '';
+    let precioFinal = precioBase;
+    
+    if (impuestoSelect && impuestoSelect.value) {
+        const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
+        porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
+        nombreImpuesto = selectedOption.dataset.nombre || selectedOption.text.split('(')[0].trim();
+        
+        // TANTO IVA COMO IEPS SE SUMAN
+        totalImpuesto = precioBase * (porcentaje / 100);
+        precioFinal = precioBase + totalImpuesto;
+    }
+    
+    document.getElementById('total-impuestos-display').textContent = '+$' + totalImpuesto.toFixed(2);
+    document.getElementById('precio-final-display').textContent = '$' + precioFinal.toFixed(2);
+    document.getElementById('porcentaje-impuestos-display').textContent = 
+        porcentaje > 0 ? `+${porcentaje.toFixed(2)}% (${nombreImpuesto})` : '0%';
+    
+    // Mostrar detalle
+    const detalleInfo = document.getElementById('isr-info');
+    if (detalleInfo) {
+        let htmlDetalle = '';
+        
+        if (descuentoActivo) {
+            htmlDetalle += `
+                <div class="alert alert-success p-2 mb-2">
+                    <strong>¡DESCUENTO ACTIVO!</strong><br>
+                    Precio original: $${precioVenta.toFixed(2)} → Precio con descuento: $${precioBase.toFixed(2)}
+                </div>
+            `;
+        }
+        
+        if (nombreImpuesto) {
+            htmlDetalle += `
+                <strong>Cálculo de ${nombreImpuesto}:</strong><br>
+                Precio base: $${precioBase.toFixed(2)}<br>
+                ${nombreImpuesto} (${porcentaje}%): +$${totalImpuesto.toFixed(2)}<br>
+                <strong>Total: $${precioFinal.toFixed(2)}</strong>
+            `;
+        } else {
+            htmlDetalle += `Precio final: $${precioBase.toFixed(2)} (Sin impuestos)`;
+        }
+        
+        detalleInfo.innerHTML = htmlDetalle;
+    }
+}
+
+function actualizarPrecioFinalVariacion(valorKey) {
+    const precioInput = document.getElementById(`precio-${valorKey}`);
+    const descuentoCheckbox = document.getElementById(`descuento-${valorKey}`);
+    const precioDescuentoInput = document.getElementById(`precio_descuento-${valorKey}`);
+    const fechaInicioInput = document.getElementById(`fecha-inicio-${valorKey}`);
+    const fechaFinInput = document.getElementById(`fecha-fin-${valorKey}`);
+    const impuestoSelect = document.getElementById(`impuesto-${valorKey}`);
+    const precioFinalSpan = document.getElementById(`precio-final-${valorKey}`);
+    const detalleImpuestoSpan = document.getElementById(`detalle-impuesto-${valorKey}`);
+    
+    if (!precioInput || !precioFinalSpan) return;
+    
+    let precioBase = parseFloat(precioInput.value) || 0;
+    let descuentoActivo = false;
+    
+    // Verificar descuento de variación
+    if (descuentoCheckbox && descuentoCheckbox.checked && precioDescuentoInput?.value) {
+        const fechaHoy = new Date();
+        fechaHoy.setHours(0, 0, 0, 0);
+        
+        let fechaInicio = null;
+        let fechaFin = null;
+        
+        if (fechaInicioInput?.value) {
+            fechaInicio = new Date(fechaInicioInput.value + 'T00:00:00');
+        }
+        if (fechaFinInput?.value) {
+            fechaFin = new Date(fechaFinInput.value + 'T23:59:59');
+        }
+        
+        const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
+        
+        let aplicar = false;
+        if (fechaInicio && fechaFin) {
+            aplicar = fechaHoy >= fechaInicio && fechaHoy <= fechaFin;
+        } else if (fechaInicio && !fechaFin) {
+            aplicar = fechaHoy >= fechaInicio;
+        } else if (!fechaInicio && fechaFin) {
+            aplicar = fechaHoy <= fechaFin;
+        } else {
+            aplicar = true;
+        }
+        
+        if (aplicar && precioDescuento > 0 && precioDescuento < precioBase) {
+            precioBase = precioDescuento;
+            descuentoActivo = true;
+        }
+    }
+    
+    // Calcular impuesto (IVA o IEPS - ambos se suman)
+    let totalImpuesto = 0;
+    let porcentaje = 0;
+    let nombreImpuesto = '';
+    let precioFinal = precioBase;
+    
+    if (impuestoSelect && impuestoSelect.value) {
+        const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
+        porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
+        nombreImpuesto = selectedOption.dataset.nombre || selectedOption.text.split('(')[0].trim();
+        
+        totalImpuesto = precioBase * (porcentaje / 100);
+        precioFinal = precioBase + totalImpuesto;
+    }
+    
+    precioFinalSpan.textContent = '$' + precioFinal.toFixed(2);
+    
+    if (detalleImpuestoSpan) {
+        let html = '';
+        if (descuentoActivo) html += `<span class="text-success">✓ Descuento activo</span><br>`;
+        if (porcentaje > 0) {
+            html += `${nombreImpuesto}: +${porcentaje.toFixed(2)}% ($${totalImpuesto.toFixed(2)})`;
+        } else {
+            html += 'Sin impuesto';
+        }
+        detalleImpuestoSpan.innerHTML = html;
+    }
+}
+
 // ============ FUNCIONES DE IMÁGENES ============
+
 function calcularTamañoTotal() {
     let total = 0;
     
@@ -2714,39 +2420,37 @@ function actualizarBarraProgresoTamaño() {
     const totalSizeSpan = document.getElementById('total-size');
     const limiteMsg = document.getElementById('limiteArchivosMsg');
     
-    if (totalSize < 1024) {
-        totalSizeSpan.textContent = totalSize + ' B';
-    } else if (totalSize < 1024 * 1024) {
-        totalSizeSpan.textContent = (totalSize / 1024).toFixed(2) + ' KB';
-    } else {
-        totalSizeSpan.textContent = (totalSize / (1024 * 1024)).toFixed(2) + ' MB';
+    if (totalSizeSpan) {
+        if (totalSize < 1024) {
+            totalSizeSpan.textContent = totalSize + ' B';
+        } else if (totalSize < 1024 * 1024) {
+            totalSizeSpan.textContent = (totalSize / 1024).toFixed(2) + ' KB';
+        } else {
+            totalSizeSpan.textContent = (totalSize / (1024 * 1024)).toFixed(2) + ' MB';
+        }
     }
     
-    progressBar.style.width = Math.min(porcentaje, 100) + '%';
-    
-    if (porcentaje > 90) {
-        progressBar.classList.remove('bg-success');
-        progressBar.classList.add('bg-danger');
-    } else if (porcentaje > 70) {
-        progressBar.classList.remove('bg-success');
-        progressBar.classList.add('bg-warning');
-    } else {
-        progressBar.classList.remove('bg-danger', 'bg-warning');
-        progressBar.classList.add('bg-success');
+    if (progressBar) {
+        progressBar.style.width = Math.min(porcentaje, 100) + '%';
     }
     
     if (totalSize > maxTotalSize) {
         limiteExcedido = true;
-        limiteMsg.style.display = 'block';
-        document.getElementById('btnSubmit').disabled = true;
+        if (limiteMsg) limiteMsg.style.display = 'block';
+        const btnSubmit = document.getElementById('btnSubmit');
+        if (btnSubmit) btnSubmit.disabled = true;
     } else {
         limiteExcedido = false;
-        limiteMsg.style.display = 'none';
-        document.getElementById('btnSubmit').disabled = false;
+        if (limiteMsg) limiteMsg.style.display = 'none';
+        const btnSubmit = document.getElementById('btnSubmit');
+        if (btnSubmit) btnSubmit.disabled = false;
     }
 }
 
 function actualizarContadorImagenes() {
+    const totalImagenesSpan = document.getElementById('total-imagenes');
+    if (!totalImagenesSpan) return;
+    
     let total = (imagenPrincipalFile ? 1 : 0) + (gifFile ? 1 : 0) + selectedImages.length;
     
     Object.keys(imagenesVariacion).forEach(valorKey => {
@@ -2755,7 +2459,7 @@ function actualizarContadorImagenes() {
         }
     });
     
-    document.getElementById('total-imagenes').textContent = total;
+    totalImagenesSpan.textContent = total;
 }
 
 function previewImagenPrincipal(input) {
@@ -2790,19 +2494,19 @@ function previewImagenPrincipal(input) {
         const reader = new FileReader();
         
         reader.onload = function(e) {
-            previewImg.src = e.target.result;
-            previewContainer.style.display = 'block';
+            if (previewImg) previewImg.src = e.target.result;
+            if (previewContainer) previewContainer.style.display = 'block';
             actualizarBarraProgresoTamaño();
+            actualizarContadorImagenes();
         }
         
         reader.readAsDataURL(input.files[0]);
     } else {
-        previewContainer.style.display = 'none';
+        if (previewContainer) previewContainer.style.display = 'none';
         imagenPrincipalFile = null;
         actualizarBarraProgresoTamaño();
+        actualizarContadorImagenes();
     }
-    
-    actualizarContadorImagenes();
 }
 
 function cancelarImagenPrincipal() {
@@ -2810,7 +2514,7 @@ function cancelarImagenPrincipal() {
     const previewContainer = document.getElementById('preview_principal_container');
     
     input.value = '';
-    previewContainer.style.display = 'none';
+    if (previewContainer) previewContainer.style.display = 'none';
     imagenPrincipalFile = null;
     actualizarBarraProgresoTamaño();
     actualizarContadorImagenes();
@@ -2847,19 +2551,19 @@ function previewGif(input) {
         const reader = new FileReader();
         
         reader.onload = function(e) {
-            previewImg.src = e.target.result;
-            previewContainer.style.display = 'block';
+            if (previewImg) previewImg.src = e.target.result;
+            if (previewContainer) previewContainer.style.display = 'block';
             actualizarBarraProgresoTamaño();
+            actualizarContadorImagenes();
         }
         
         reader.readAsDataURL(input.files[0]);
     } else {
-        previewContainer.style.display = 'none';
+        if (previewContainer) previewContainer.style.display = 'none';
         gifFile = null;
         actualizarBarraProgresoTamaño();
+        actualizarContadorImagenes();
     }
-    
-    actualizarContadorImagenes();
 }
 
 function cancelarGif() {
@@ -2867,7 +2571,7 @@ function cancelarGif() {
     const previewContainer = document.getElementById('preview_gif_container');
     
     input.value = '';
-    previewContainer.style.display = 'none';
+    if (previewContainer) previewContainer.style.display = 'none';
     gifFile = null;
     actualizarBarraProgresoTamaño();
     actualizarContadorImagenes();
@@ -2878,6 +2582,11 @@ function handleImageSelection(event) {
     const maxFiles = 7;
     const currentCount = selectedImages.length;
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    
+    if (!files || files.length === 0) {
+        event.target.value = '';
+        return;
+    }
     
     const tamanioActual = calcularTamañoTotal();
     
@@ -2914,50 +2623,47 @@ function handleImageSelection(event) {
     }
     
     let archivosAgregados = 0;
+    
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         
         if (!validTypes.includes(file.type)) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Formato no válido',
-                text: `El archivo "${file.name}" no es un formato válido. Formatos aceptados: JPG, JPEG, PNG, WEBP.`
-            });
             continue;
         }
         
         if (file.size > 5 * 1024 * 1024) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Archivo demasiado grande',
-                text: `La imagen "${file.name}" excede el límite de 5MB.`
-            });
             continue;
         }
         
-        if (!isImageDuplicate(file)) {
-            const imageId = 'img_' + Date.now() + '_' + imageCounter++;
-            const preview = URL.createObjectURL(file);
-            
-            selectedImages.push({
-                id: imageId,
-                file: file,
-                preview: preview,
-                name: file.name,
-                size: file.size
-            });
-            archivosAgregados++;
+        if (isImageDuplicate(file)) {
+            continue;
         }
+        
+        const imageId = 'img_' + Date.now() + '_' + imageCounter++;
+        const preview = URL.createObjectURL(file);
+        
+        selectedImages.push({
+            id: imageId,
+            file: file,
+            preview: preview,
+            name: file.name,
+            size: file.size
+        });
+        archivosAgregados++;
     }
     
     if (archivosAgregados > 0) {
-        document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
+        const countSpan = document.getElementById('selected-images-count');
+        if (countSpan) {
+            countSpan.textContent = selectedImages.length + ' archivos';
+        }
+        
         renderSelectedImages();
         actualizarBarraProgresoTamaño();
+        actualizarContadorImagenes();
     }
     
     event.target.value = '';
-    actualizarContadorImagenes();
 }
 
 function isImageDuplicate(newFile) {
@@ -2975,7 +2681,8 @@ function removeSelectedImage(imageId) {
     }
     selectedImages = selectedImages.filter(img => img.id !== imageId);
     
-    document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
+    const countSpan = document.getElementById('selected-images-count');
+    if (countSpan) countSpan.textContent = selectedImages.length + ' archivos';
     renderSelectedImages();
     actualizarContadorImagenes();
     actualizarBarraProgresoTamaño();
@@ -3027,7 +2734,6 @@ function renderSelectedImages() {
         
         const small1 = document.createElement('small');
         small1.className = 'text-muted d-block';
-        small1.style.cssText = 'font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
         small1.textContent = image.file.name.length > 20 ? image.file.name.substring(0, 20) + '...' : image.file.name;
         
         const small2 = document.createElement('small');
@@ -3058,91 +2764,6 @@ function validarTamañoTotalAntesDeEnviar() {
     const totalSize = calcularTamañoTotal();
     const maxSize = 50 * 1024 * 1024;
     
-    let archivosGrandes = [];
-    
-    if (imagenPrincipalFile && imagenPrincipalFile.size > 5 * 1024 * 1024) {
-        archivosGrandes.push(`Imagen principal: ${(imagenPrincipalFile.size / (1024 * 1024)).toFixed(2)}MB (máx 5MB)`);
-    }
-    
-    if (gifFile && gifFile.size > 10 * 1024 * 1024) {
-        archivosGrandes.push(`GIF: ${(gifFile.size / (1024 * 1024)).toFixed(2)}MB (máx 10MB)`);
-    }
-    
-    selectedImages.forEach(img => {
-        if (img.file.size > 5 * 1024 * 1024) {
-            archivosGrandes.push(`Imagen adicional "${img.file.name}": ${(img.file.size / (1024 * 1024)).toFixed(2)}MB (máx 5MB)`);
-        }
-    });
-    
-    Object.keys(imagenesVariacion).forEach(valorKey => {
-        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
-            imagenesVariacion[valorKey].imagenes.forEach(img => {
-                if (img.file.size > 5 * 1024 * 1024) {
-                    archivosGrandes.push(`Imagen adicional de variación "${img.name}": ${(img.file.size / (1024 * 1024)).toFixed(2)}MB (máx 5MB)`);
-                }
-            });
-        }
-    });
-    
-    if (archivosGrandes.length > 0) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Archivos demasiado grandes',
-            html: `
-                <div class="text-left" style="max-height: 300px; overflow-y: auto;">
-                    <p class="mb-3">Los siguientes archivos exceden su límite individual:</p>
-                    <ul class="text-left">
-                        ${archivosGrandes.map(msg => `<li class="mb-2">⚠️ ${msg}</li>`).join('')}
-                    </ul>
-                    <hr>
-                    <p class="text-muted small mb-0">Por favor, reduce el tamaño de estos archivos antes de continuar.</p>
-                </div>
-            `,
-            confirmButtonText: 'Entendido',
-            confirmButtonColor: '#3085d6',
-            width: '600px'
-        });
-        return false;
-    }
-    
-    if (totalSize > maxSize) {
-        const exceso = totalSize - maxSize;
-        
-        Swal.fire({
-            icon: 'error',
-            title: 'Archivos demasiado grandes',
-            html: `
-                <div class="text-center">
-                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
-                    <h5 class="mb-3">El tamaño total excede el límite del servidor</h5>
-                    <p class="mb-2"><strong>Tamaño actual:</strong> ${(totalSize / (1024 * 1024)).toFixed(2)}MB</p>
-                    <p class="mb-2"><strong>Límite permitido:</strong> 50MB</p>
-                    <p class="mb-3"><strong>Debes reducir:</strong> ${(exceso / (1024 * 1024)).toFixed(2)}MB</p>
-                    
-                    <div class="bg-light p-3 rounded mt-3" style="max-height: 200px; overflow-y: auto;">
-                        <p class="fw-bold mb-2">📊 Desglose de archivos:</p>
-                        <ul class="text-left small">
-                            ${imagenPrincipalFile ? `<li>📷 Imagen principal: ${(imagenPrincipalFile.size / (1024 * 1024)).toFixed(2)}MB</li>` : ''}
-                            ${gifFile ? `<li>🎬 GIF: ${(gifFile.size / (1024 * 1024)).toFixed(2)}MB</li>` : ''}
-                            ${selectedImages.map(img => `<li>🖼️ ${img.file.name.substring(0, 20)}...: ${(img.file.size / (1024 * 1024)).toFixed(2)}MB</li>`).join('')}
-                        </ul>
-                    </div>
-                    
-                    <hr>
-                    <p class="text-muted small mt-3">💡 Recomendaciones:</p>
-                    <ul class="text-left small">
-                        <li>Comprime las imágenes antes de subirlas</li>
-                        <li>Sube menos imágenes adicionales</li>
-                    </ul>
-                </div>
-            `,
-            confirmButtonText: 'Entendido',
-            confirmButtonColor: '#3085d6',
-            width: '600px'
-        });
-        return false;
-    }
-    
     if (!imagenPrincipalFile) {
         Swal.fire({
             icon: 'error',
@@ -3152,10 +2773,161 @@ function validarTamañoTotalAntesDeEnviar() {
         return false;
     }
     
+    if (totalSize > maxSize) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Archivos demasiado grandes',
+            text: `El tamaño total de los archivos (${(totalSize / (1024 * 1024)).toFixed(2)}MB) excede el límite de 50MB.`
+        });
+        return false;
+    }
+    
+    return true;
+}
+
+function validarCamposUnicosAntesDeEnviar() {
+    const skuInput = document.getElementById('vCodigo_barras');
+    const nombreInput = document.getElementById('vNombre');
+    const tieneDescuentoCheckbox = document.getElementById('bTiene_descuento');
+    const precioVentaInput = document.getElementById('dPrecio_venta');
+    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
+    const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
+    const fechaFinInput = document.getElementById('dFecha_fin_descuento');
+
+    let errores = [];
+
+    // 1. Validar SKU del Producto
+    if (skuInput && !verificarSKUProductoLocal(skuInput)) {
+        errores.push(`Ya existe un producto con el SKU "${skuInput.value}".`);
+    }
+
+    // 2. Validar Nombre del Producto
+    if (nombreInput && !verificarNombreProductoLocal(nombreInput)) {
+        errores.push(`Ya existe un producto con el nombre "${nombreInput.value}".`);
+    }
+
+    // 3. Validar Descuento del Producto
+    if (tieneDescuentoCheckbox && tieneDescuentoCheckbox.checked) {
+        const precioVenta = parseFloat(precioVentaInput?.value) || 0;
+        const precioDescuento = parseFloat(precioDescuentoInput?.value) || 0;
+
+        if (!precioDescuentoInput?.value || precioDescuentoInput.value === '') {
+            errores.push('El precio de descuento es obligatorio cuando el descuento está activo.');
+        } else if (precioDescuento >= precioVenta) {
+            errores.push(`El precio de descuento ($${precioDescuento.toFixed(2)}) debe ser menor que el precio de venta ($${precioVenta.toFixed(2)}).`);
+        }
+
+        if (!fechaInicioInput?.value) {
+            errores.push('La fecha de inicio es obligatoria cuando el descuento está activo.');
+        }
+        if (!fechaFinInput?.value) {
+            errores.push('La fecha de fin es obligatoria cuando el descuento está activo.');
+        }
+
+        if (fechaInicioInput?.value && fechaFinInput?.value) {
+            const inicio = new Date(fechaInicioInput.value);
+            const fin = new Date(fechaFinInput.value);
+            if (fin < inicio) {
+                errores.push('La fecha de fin no puede ser anterior a la fecha de inicio.');
+            }
+        }
+    }
+
+    // 4. Validar SKUs de variaciones
+    const variacionesSKU = document.querySelectorAll('[id^="sku-"]');
+    for (let input of variacionesSKU) {
+        if (input.value && input.value.trim() !== '') {
+            const valorKey = input.id.replace('sku-', '');
+            if (!verificarSKUVariacionLocal(input, valorKey)) {
+                errores.push(`Ya existe un producto o variación con el SKU "${input.value}".`);
+                break;
+            }
+        }
+    }
+
+    // 5. Validar descuentos de variaciones
+    Object.keys(atributosActivos).forEach(atributoId => {
+        Object.keys(atributosActivos[atributoId].valores).forEach(valorId => {
+            const valorKey = `${atributoId}_${valorId}`;
+            const descuentoCheckbox = document.getElementById(`descuento-${valorKey}`);
+            const precioInput = document.getElementById(`precio-${valorKey}`);
+            const precioDescuentoInput = document.getElementById(`precio_descuento-${valorKey}`);
+            const fechaInicioInput = document.getElementById(`fecha-inicio-${valorKey}`);
+            const fechaFinInput = document.getElementById(`fecha-fin-${valorKey}`);
+            const valorNombre = atributosActivos[atributoId].valores[valorId].nombre;
+            
+            if (descuentoCheckbox && descuentoCheckbox.checked) {
+                const precioNormal = parseFloat(precioInput?.value) || 0;
+                const precioDescuento = parseFloat(precioDescuentoInput?.value) || 0;
+                
+                if (!precioDescuentoInput?.value || precioDescuentoInput.value === '') {
+                    errores.push(`El precio de descuento es obligatorio para la variación "${valorNombre}".`);
+                } else if (precioDescuento >= precioNormal) {
+                    errores.push(`El precio de descuento ($${precioDescuento.toFixed(2)}) debe ser menor que el precio normal ($${precioNormal.toFixed(2)}) para la variación "${valorNombre}".`);
+                }
+                
+                if (!fechaInicioInput?.value) {
+                    errores.push(`La fecha de inicio es obligatoria para la variación "${valorNombre}".`);
+                }
+                if (!fechaFinInput?.value) {
+                    errores.push(`La fecha de fin es obligatoria para la variación "${valorNombre}".`);
+                }
+                
+                if (fechaInicioInput?.value && fechaFinInput?.value) {
+                    const inicio = new Date(fechaInicioInput.value);
+                    const fin = new Date(fechaFinInput.value);
+                    if (fin < inicio) {
+                        errores.push(`La fecha de fin no puede ser anterior a la fecha de inicio para la variación "${valorNombre}".`);
+                    }
+                }
+            }
+        });
+    });
+
+    // 6. NUEVA VALIDACIÓN: Atributos activos sin valores seleccionados
+    let atributosIncompletos = [];
+    document.querySelectorAll('.atributo-activo-checkbox:checked').forEach(checkbox => {
+        const atributoId = checkbox.dataset.atributoId;
+        const atributoNombre = checkbox.dataset.atributoNombre;
+        const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+        
+        if (valoresContainer) {
+            const valoresSeleccionados = valoresContainer.querySelectorAll('.valor-checkbox:checked');
+            if (valoresSeleccionados.length === 0) {
+                atributosIncompletos.push(`"${atributoNombre}"`);
+            }
+        }
+    });
+    
+    if (atributosIncompletos.length > 0) {
+        errores.push(`Los siguientes atributos están activados pero no tienen valores seleccionados: ${atributosIncompletos.join(', ')}.`);
+    }
+
+    // 7. Mostrar errores con SweetAlert
+    if (errores.length > 0) {
+        Swal.fire({
+            icon: 'error',
+            title: '¡Error de validación!',
+            html: `
+                <div class="text-left" style="max-height: 400px; overflow-y: auto;">
+                    <p class="mb-2 fw-bold">Por favor, corrige los siguientes errores:</p>
+                    <ul class="text-left list-unstyled">
+                        ${errores.map(err => `<li class="mb-2 text-danger"><i class="fas fa-exclamation-circle me-2"></i>${err}</li>`).join('')}
+                    </ul>
+                </div>
+            `,
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#d33',
+            width: '600px'
+        });
+        return false;
+    }
+
     return true;
 }
 
 // ============ FUNCIONES DE ATRIBUTOS Y VARIACIONES ============
+
 function actualizarPestanasValores() {
     const tabsContainer = document.getElementById('valores-activos-tabs-container');
     const noAtributosMsg = document.getElementById('no-atributos-activos-message');
@@ -3179,13 +2951,13 @@ function actualizarPestanasValores() {
     
     if (todosLosValores.length === 0) {
         tabsContainer.style.display = 'none';
-        noAtributosMsg.style.display = 'block';
+        if (noAtributosMsg) noAtributosMsg.style.display = 'block';
         if (totalValoresBadge) totalValoresBadge.textContent = '0 valores';
         return;
     }
     
     tabsContainer.style.display = 'block';
-    noAtributosMsg.style.display = 'none';
+    if (noAtributosMsg) noAtributosMsg.style.display = 'none';
     if (totalValoresBadge) {
         totalValoresBadge.textContent = todosLosValores.length + ' ' + (todosLosValores.length === 1 ? 'valor' : 'valores');
     }
@@ -3235,6 +3007,7 @@ function actualizarPestanasValores() {
         }];
         const skuSugerido = generarSkuSugerido(productoSku, combinacion);
         
+        // IMPORTANTE: Aquí está el HTML corregido de cada pestaña de variación
         const formHtml = `
             <div class="variacion-form-container">
                 <div class="variacion-header-info mb-4">
@@ -3362,7 +3135,6 @@ function actualizarPestanasValores() {
                                        required
                                        oninput="validarSKU(this); verificarSKUVariacionLocal(this, '${valorKey}')"
                                        onblur="verificarSKUVariacionLocal(this, '${valorKey}')"
-                                       pattern="[A-Za-z0-9-]+"
                                        title="Solo letras, números y guiones"
                                        placeholder="Ej: ${skuSugerido}"
                                        data-atributo-id="${valor.atributoId}"
@@ -3371,7 +3143,7 @@ function actualizarPestanasValores() {
                             </div>
                             <small class="form-text text-muted">
                                 <i class="fas fa-lightbulb me-1"></i>
-                                El SKU debe ser único
+                                El SKU debe ser único. Solo letras, números y guiones.
                             </small>
                         </div>
                     </div>
@@ -3409,9 +3181,10 @@ function actualizarPestanasValores() {
                                        required
                                        oninput="validarPrecio(this); actualizarPrecioFinalVariacion('${valorKey}')"
                                        placeholder="0.00"
-                                       title="Máximo: 9,999,999.99"
+                                       title="Máximo: 9,999,999.99 (7 dígitos enteros, 2 decimales)"
                                        autocomplete="off">
                             </div>
+                            <small class="form-text text-muted">Máximo: 9,999,999.99</small>
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -3434,6 +3207,7 @@ function actualizarPestanasValores() {
                                        min="0"
                                        max="999999"
                                        placeholder="0"
+                                       title="Máximo 6 dígitos (0-999999)"
                                        autocomplete="off">
                             </div>
                             <small class="form-text text-muted">Máximo 999,999 unidades</small>
@@ -3482,13 +3256,13 @@ function actualizarPestanasValores() {
                                                         <option value="{{ $impuesto->id_impuesto }}" 
                                                                 data-porcentaje="{{ $impuesto->dPorcentaje }}"
                                                                 data-tipo="{{ $impuesto->eTipo }}">
-                                                            {{ $impuesto->vNombre }} ({{ $impuesto->eTipo }} - {{ number_format($impuesto->dPorcentaje, 2) }}%)
+                                                            {{ $impuesto->vNombre }} ({{ $impuesto->dPorcentaje }}%)
                                                         </option>
                                                     @endforeach
                                                 @endif
                                             </select>
                                             <small class="form-text text-muted">
-                                                Selecciona un impuesto específico para esta variación. Si no seleccionas, se usará el impuesto del producto.
+                                                Selecciona un impuesto específico para esta variación (IVA o IEPS)
                                             </small>
                                         </div>
                                     </div>
@@ -3523,6 +3297,7 @@ function actualizarPestanasValores() {
                                    placeholder="0.000"
                                    title="Máximo: 999.999 kg (máximo 3 decimales)"
                                    autocomplete="off">
+                            <small class="form-text text-muted">Máx: 999.999 kg</small>
                         </div>
                     </div>
                     <div class="col-md-3">
@@ -3541,6 +3316,7 @@ function actualizarPestanasValores() {
                                    placeholder="0.00"
                                    title="Máximo: 999.99 cm (máximo 2 decimales)"
                                    autocomplete="off">
+                            <small class="form-text text-muted">Máx: 999.99 cm</small>
                         </div>
                     </div>
                     <div class="col-md-3">
@@ -3559,6 +3335,7 @@ function actualizarPestanasValores() {
                                    placeholder="0.00"
                                    title="Máximo: 999.99 cm (máximo 2 decimales)"
                                    autocomplete="off">
+                            <small class="form-text text-muted">Máx: 999.99 cm</small>
                         </div>
                     </div>
                     <div class="col-md-3">
@@ -3577,6 +3354,7 @@ function actualizarPestanasValores() {
                                    placeholder="0.00"
                                    title="Máximo: 999.99 cm (máximo 2 decimales)"
                                    autocomplete="off">
+                            <small class="form-text text-muted">Máx: 999.99 cm</small>
                         </div>
                     </div>
                 </div>
@@ -3721,6 +3499,9 @@ function actualizarPestanasValores() {
         contentPane.innerHTML = formHtml;
         tabContent.appendChild(contentPane);
     });
+    
+    // Cargar impuestos en los selects de las nuevas variaciones
+    setTimeout(cargarImpuestosEnVariaciones, 200);
 }
 
 function generarSkuSugerido(productoSku, combinacion) {
@@ -3738,6 +3519,8 @@ function actualizarResumenAtributos() {
     const lista = document.getElementById('atributos-activos-lista');
     const totalAtributosBadge = document.getElementById('total-atributos-activos-badge');
     
+    if (!lista || !totalAtributosBadge) return;
+    
     lista.innerHTML = '';
     let atributosCount = 0;
     let totalValores = 0;
@@ -3750,43 +3533,133 @@ function actualizarResumenAtributos() {
             
             const item = document.createElement('div');
             item.className = 'p-2 bg-white border rounded';
-            
-            const span1 = document.createElement('span');
-            span1.className = 'fw-bold text-primary';
-            span1.textContent = atributo.nombre + ': ';
-            
-            const span2 = document.createElement('span');
-            span2.className = 'badge bg-success ms-2';
-            span2.textContent = valoresArray.length + ' valores';
-            
-            const div = document.createElement('div');
-            div.className = 'mt-1 small';
-            
-            valoresArray.forEach(v => {
-                const badge = document.createElement('span');
-                badge.className = 'badge bg-light text-dark me-1';
-                badge.textContent = v.nombre;
-                div.appendChild(badge);
-            });
-            
-            item.appendChild(span1);
-            item.appendChild(span2);
-            item.appendChild(div);
-            
+            item.innerHTML = `
+                <span class="fw-bold text-primary">${atributo.nombre}: </span>
+                <span class="badge bg-success ms-2">${valoresArray.length} valores</span>
+                <div class="mt-1 small">
+                    ${valoresArray.map(v => `<span class="badge bg-light text-dark me-1">${v.nombre}</span>`).join('')}
+                </div>
+            `;
             lista.appendChild(item);
         }
     });
     
-    if (atributosCount > 0) {
-        resumenDiv.style.display = 'block';
-        totalAtributosBadge.textContent = atributosCount + ' atributos activos (' + totalValores + ' valores)';
-    } else {
-        resumenDiv.style.display = 'none';
-        totalAtributosBadge.textContent = '0 atributos activos';
+    if (resumenDiv) {
+        resumenDiv.style.display = atributosCount > 0 ? 'block' : 'none';
     }
+    totalAtributosBadge.textContent = atributosCount > 0 ? 
+        `${atributosCount} atributos activos (${totalValores} valores)` : 
+        '0 atributos activos';
+}
+function validarAtributosAntesDeEnviar() {
+    let errores = [];
+    let hayAtributosActivos = false;
+    
+    // Recorrer todos los checkboxes de atributos activos
+    document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
+        const atributoId = checkbox.dataset.atributoId;
+        const atributoNombre = checkbox.dataset.atributoNombre;
+        
+        if (checkbox.checked) {
+            hayAtributosActivos = true;
+            
+            // Verificar si tiene valores seleccionados
+            const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+            if (valoresContainer) {
+                const valoresSeleccionados = valoresContainer.querySelectorAll('.valor-checkbox:checked');
+                
+                if (valoresSeleccionados.length === 0) {
+                    errores.push(`❌ El atributo "${atributoNombre}" está activado pero no tiene ningún valor seleccionado.`);
+                }
+            }
+        }
+    });
+    
+    // Si hay errores, mostrarlos y prevenir envío
+    if (errores.length > 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Atributos incompletos',
+            html: `
+                <div class="text-left">
+                    <p class="mb-3">Por favor, corrige los siguientes errores:</p>
+                    <ul class="text-left">
+                        ${errores.map(err => `<li class="mb-2 text-danger">${err}</li>`).join('')}
+                    </ul>
+                    <hr>
+                    <p class="text-muted small mb-0">
+                        <i class="fas fa-lightbulb me-1"></i>
+                        Si no quieres usar un valor de este atributo, desmarca la casilla del atributo.
+                    </p>
+                </div>
+            `,
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#3085d6'
+        });
+        return false;
+    }
+    
+    return true;
+}
+
+function cargarImpuestosEnVariaciones() {
+    const selectPrincipal = document.getElementById('id_impuesto');
+    if (!selectPrincipal) return;
+    
+    document.querySelectorAll('select[id^="impuesto-"]').forEach(select => {
+        const valorActual = select.value;
+        
+        while (select.options.length > 1) {
+            select.remove(1);
+        }
+        
+        for (let i = 1; i < selectPrincipal.options.length; i++) {
+            const option = document.createElement('option');
+            option.value = selectPrincipal.options[i].value;
+            option.setAttribute('data-porcentaje', selectPrincipal.options[i].getAttribute('data-porcentaje'));
+            option.setAttribute('data-tipo', selectPrincipal.options[i].getAttribute('data-tipo'));
+            option.textContent = selectPrincipal.options[i].textContent;
+            select.appendChild(option);
+        }
+        
+        if (valorActual && valorActual !== '') {
+            select.value = valorActual;
+        }
+    });
+}
+
+function actualizarSelectsImpuestosVariaciones(impuesto) {
+    const selectsVariacion = document.querySelectorAll('select[id^="impuesto-"]');
+    
+    if (selectsVariacion.length === 0) return;
+    
+    const impuestoId = impuesto.id_impuesto;
+    const porcentaje = impuesto.dPorcentaje;
+    const tipo = impuesto.eTipo;
+    const texto = impuesto.vNombre + ' (' + tipo + ' - ' + parseFloat(porcentaje).toFixed(2) + '%)';
+    
+    selectsVariacion.forEach(select => {
+        let existe = false;
+        for (let i = 0; i < select.options.length; i++) {
+            if (select.options[i].value == impuestoId) {
+                existe = true;
+                break;
+            }
+        }
+        
+        if (!existe) {
+            const option = document.createElement('option');
+            option.value = impuestoId;
+            option.setAttribute('data-porcentaje', porcentaje);
+            option.setAttribute('data-tipo', tipo);
+            option.textContent = texto;
+            select.appendChild(option);
+        }
+    });
 }
 
 // ============ FUNCIONES PARA IMÁGENES DE VARIACIONES ============
+
 function previewImagenPrincipalVariacion(input, previewId) {
     const previewContainer = document.getElementById(previewId);
     
@@ -3816,16 +3689,21 @@ function previewImagenPrincipalVariacion(input, previewId) {
         
         const reader = new FileReader();
         reader.onload = function(e) {
-            previewContainer.style.display = 'block';
-            const img = previewContainer.querySelector('img');
-            img.src = e.target.result;
+            if (previewContainer) {
+                const img = previewContainer.querySelector('img');
+                if (img) {
+                    img.src = e.target.result;
+                    previewContainer.style.display = 'block';
+                }
+            }
+            actualizarBarraProgresoTamaño();
+            actualizarContadorImagenes();
         }
         reader.readAsDataURL(file);
-        
+    } else {
+        if (previewContainer) previewContainer.style.display = 'none';
         actualizarBarraProgresoTamaño();
         actualizarContadorImagenes();
-    } else {
-        previewContainer.style.display = 'none';
     }
 }
 
@@ -3857,16 +3735,21 @@ function previewGifVariacion(input, previewId) {
         
         const reader = new FileReader();
         reader.onload = function(e) {
-            previewContainer.style.display = 'block';
-            const img = previewContainer.querySelector('img');
-            img.src = e.target.result;
+            if (previewContainer) {
+                const img = previewContainer.querySelector('img');
+                if (img) {
+                    img.src = e.target.result;
+                    previewContainer.style.display = 'block';
+                }
+            }
+            actualizarBarraProgresoTamaño();
+            actualizarContadorImagenes();
         }
         reader.readAsDataURL(file);
-        
+    } else {
+        if (previewContainer) previewContainer.style.display = 'none';
         actualizarBarraProgresoTamaño();
         actualizarContadorImagenes();
-    } else {
-        previewContainer.style.display = 'none';
     }
 }
 
@@ -3891,54 +3774,29 @@ function handleImagenesAdicionalesVariacion(event, valorKey) {
         Swal.fire({
             icon: 'warning',
             title: 'Límite de imágenes',
-            text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales. Ya tienes ${imagenesVariacion[valorKey].imagenes.length} seleccionadas.`
+            text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales.`
         });
         input.value = '';
         return;
     }
     
     const tamanioActual = calcularTamañoTotal();
-    
     let nuevoTamanio = tamanioActual;
-    files.forEach(file => {
-        nuevoTamanio += file.size;
-    });
+    files.forEach(file => nuevoTamanio += file.size);
     
     if (nuevoTamanio > maxTotalSize) {
         Swal.fire({
             icon: 'warning',
             title: 'Límite de tamaño excedido',
-            html: `
-                <div class="text-center">
-                    <p>Si agregas estas imágenes, excederás el límite de 50MB.</p>
-                    <p class="mb-0"><strong>Tamaño actual:</strong> ${(tamanioActual / (1024 * 1024)).toFixed(2)}MB</p>
-                    <p><strong>Tamaño con nuevas imágenes:</strong> ${(nuevoTamanio / (1024 * 1024)).toFixed(2)}MB</p>
-                </div>
-            `,
-            confirmButtonText: 'Entendido'
+            text: 'Si agregas estas imágenes, excederás el límite de 50MB.'
         });
         input.value = '';
         return;
     }
     
     files.forEach(file => {
-        if (!validTypes.includes(file.type)) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Formato no válido',
-                text: `El archivo "${file.name}" no es un formato válido. Formatos aceptados: JPG, JPEG, PNG, WEBP.`
-            });
-            return;
-        }
-        
-        if (file.size > 5 * 1024 * 1024) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Archivo demasiado grande',
-                text: `La imagen "${file.name}" excede el límite de 5MB.`
-            });
-            return;
-        }
+        if (!validTypes.includes(file.type)) return;
+        if (file.size > 5 * 1024 * 1024) return;
         
         const imageId = 'var_img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         const preview = URL.createObjectURL(file);
@@ -3953,12 +3811,9 @@ function handleImagenesAdicionalesVariacion(event, valorKey) {
     });
     
     renderImagenesAdicionalesVariacion(valorKey);
-    
     countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
-    
     actualizarBarraProgresoTamaño();
     actualizarContadorImagenes();
-    
     input.value = '';
 }
 
@@ -4031,793 +3886,175 @@ function eliminarImagenAdicionalVariacion(valorKey, imageId) {
     }
 }
 
-// ============ FUNCIONES PARA MODALES Y CREACIÓN RÁPIDA ============
+// ============ FUNCIONES PARA MODALES ============
+
 function abrirModalCategoria() {
-    document.getElementById('vNombre_categoria_modal').value = '';
-    document.getElementById('vSlug_categoria_modal').value = '';
-    document.getElementById('id_categoria_padre_modal').value = '';
-    document.getElementById('tDescripcion_categoria_modal').value = '';
-    document.getElementById('vImagen_categoria_modal').value = '';
-    document.getElementById('categoriaModalImagePreview').style.display = 'none';
-    document.getElementById('bActivo_categoria_modal').checked = true;
+    const inputNombre = document.getElementById('vNombre_categoria_modal');
+    const inputSlug = document.getElementById('vSlug_categoria_modal');
+    const selectPadre = document.getElementById('id_categoria_padre_modal');
+    const textareaDesc = document.getElementById('tDescripcion_categoria_modal');
+    const inputImagen = document.getElementById('vImagen_categoria_modal');
+    const checkboxActivo = document.getElementById('bActivo_categoria_modal');
+    
+    if (inputNombre) inputNombre.value = '';
+    if (inputSlug) inputSlug.value = '';
+    if (selectPadre) selectPadre.value = '';
+    if (textareaDesc) textareaDesc.value = '';
+    if (inputImagen) inputImagen.value = '';
+    
+    const preview = document.getElementById('categoriaModalImagePreview');
+    if (preview) preview.style.display = 'none';
+    
+    if (checkboxActivo) checkboxActivo.checked = true;
+    
     categoriaModalImagenFile = null;
-    modalCategoria.show();
+    
+    if (modalCategoria) modalCategoria.show();
 }
 
 function abrirModalMarca() {
-    document.getElementById('vNombre_marca_modal').value = '';
-    document.getElementById('tDescripcion_marca_modal').value = '';
-    modalMarca.show();
+    const inputNombre = document.getElementById('vNombre_marca_modal');
+    const textareaDesc = document.getElementById('tDescripcion_marca_modal');
+    
+    if (inputNombre) inputNombre.value = '';
+    if (textareaDesc) textareaDesc.value = '';
+    
+    if (modalMarca) modalMarca.show();
 }
 
 function abrirModalEtiqueta() {
-    document.getElementById('vNombre_eti_modal').value = '';
-    document.getElementById('tDescripcion_eti_modal').value = '';
-    modalEtiqueta.show();
+    const inputNombre = document.getElementById('vNombre_eti_modal');
+    const textareaDesc = document.getElementById('tDescripcion_eti_modal');
+    
+    if (inputNombre) inputNombre.value = '';
+    if (textareaDesc) textareaDesc.value = '';
+    
+    if (modalEtiqueta) modalEtiqueta.show();
 }
 
 function abrirModalAtributo() {
-    document.getElementById('vNombre_attr_modal').value = '';
-    document.getElementById('vSlug_attr_modal').value = '';
-    document.getElementById('tDescripcion_attr_modal').value = '';
-    modalAtributo.show();
+    const inputNombre = document.getElementById('vNombre_attr_modal');
+    const inputSlug = document.getElementById('vSlug_attr_modal');
+    const textareaDesc = document.getElementById('tDescripcion_attr_modal');
+    
+    if (inputNombre) inputNombre.value = '';
+    if (inputSlug) inputSlug.value = '';
+    if (textareaDesc) textareaDesc.value = '';
+    
+    if (modalAtributo) modalAtributo.show();
 }
 
 function abrirModalImpuesto() {
-    document.getElementById('vNombre_impuesto_modal').value = '';
-    document.getElementById('eTipo_impuesto_modal').value = '';
-    document.getElementById('dPorcentaje_impuesto_modal').value = '';
-    document.getElementById('bActivo_impuesto_modal').checked = true;
-    modalImpuesto.show();
+    const inputNombre = document.getElementById('vNombre_impuesto_modal');
+    const selectTipo = document.getElementById('eTipo_impuesto_modal');
+    const inputPorcentaje = document.getElementById('dPorcentaje_impuesto_modal');
+    const checkboxActivo = document.getElementById('bActivo_impuesto_modal');
+    
+    if (inputNombre) inputNombre.value = '';
+    if (selectTipo) selectTipo.value = 'IVA';
+    if (inputPorcentaje) inputPorcentaje.value = '16.00';
+    if (checkboxActivo) checkboxActivo.checked = true;
+    
+    if (modalImpuesto) modalImpuesto.show();
 }
 
 function mostrarFormularioValor(atributoId, atributoNombre) {
-    document.getElementById('atributoNombreModal').textContent = atributoNombre;
-    document.getElementById('valor_atributo_id').value = atributoId;
-    document.getElementById('vValor_modal').value = '';
-    document.getElementById('vSlug_valor_modal').value = '';
-    document.getElementById('bActivo_valor_modal').checked = true;
-    valorModal.show();
+    const spanNombre = document.getElementById('atributoNombreModal');
+    const inputAtributoId = document.getElementById('valor_atributo_id');
+    const inputValor = document.getElementById('vValor_modal');
+    const inputSlug = document.getElementById('vSlug_valor_modal');
+    const checkboxActivo = document.getElementById('bActivo_valor_modal');
+    
+    if (spanNombre) spanNombre.textContent = atributoNombre;
+    if (inputAtributoId) inputAtributoId.value = atributoId;
+    if (inputValor) inputValor.value = '';
+    if (inputSlug) inputSlug.value = '';
+    if (checkboxActivo) checkboxActivo.checked = true;
+    
+    if (valorModal) valorModal.show();
 }
 
 function generarSlugValor(valor) {
     if (!valor) {
-        document.getElementById('vSlug_valor_modal').value = '';
+        const inputSlug = document.getElementById('vSlug_valor_modal');
+        if (inputSlug) inputSlug.value = '';
         return;
     }
     
-    let slug = valor.toLowerCase();
-    slug = slug.replace(/á/g, 'a');
-    slug = slug.replace(/é/g, 'e');
-    slug = slug.replace(/í/g, 'i');
-    slug = slug.replace(/ó/g, 'o');
-    slug = slug.replace(/ú/g, 'u');
-    slug = slug.replace(/ñ/g, 'n');
-    slug = slug.replace(/[^a-z0-9\s]/g, '');
-    slug = slug.replace(/\s+/g, '-');
-    slug = slug.replace(/-+/g, '-');
-    slug = slug.replace(/^-+/, '').replace(/-+$/, '');
-    document.getElementById('vSlug_valor_modal').value = slug;
+    let slug = valor.toLowerCase()
+        .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i').replace(/ó/g, 'o').replace(/ú/g, 'u')
+        .replace(/ñ/g, 'n')
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+/, '').replace(/-+$/, '');
+    
+    const inputSlug = document.getElementById('vSlug_valor_modal');
+    if (inputSlug) inputSlug.value = slug;
 }
 
-function guardarValorAtributo() {
-    const atributoId = document.getElementById('valor_atributo_id').value;
-    const vValor = document.getElementById('vValor_modal').value.trim();
-    const vSlug = document.getElementById('vSlug_valor_modal').value.trim();
-    const bActivo = document.getElementById('bActivo_valor_modal').checked ? 1 : 0;
-    
-    if (!vValor) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'El valor es obligatorio'
-        });
+function generarSlugCategoria(nombre) {
+    if (!nombre) {
+        const inputSlug = document.getElementById('vSlug_categoria_modal');
+        if (inputSlug) inputSlug.value = '';
         return;
     }
+    let slug = nombre.toLowerCase()
+        .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i').replace(/ó/g, 'o').replace(/ú/g, 'u')
+        .replace(/ñ/g, 'n')
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+/, '').replace(/-+$/, '');
     
-    Swal.fire({
-        title: 'Creando valor...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
-    
-    fetch(`/atributos/${atributoId}/valores-quick`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            vValor: vValor,
-            vSlug: vSlug,
-            bActivo: bActivo
-        })
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => { throw err; });
-        }
-        return response.json();
-    })
-    .then(data => {
-        Swal.close();
-        
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: data.message || 'Valor creado exitosamente',
-                timer: 2000,
-                showConfirmButton: false
-            });
-            
-            valorModal.hide();
-            agregarValorAlAtributo(data.valor);
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: data.message || 'Error al crear el valor'
-            });
-        }
-    })
-    .catch(error => {
-        Swal.close();
-        
-        let errorMessage = 'Error en la solicitud';
-        if (error.errors) {
-            errorMessage = Object.values(error.errors).flat().join(', ');
-        } else if (error.message) {
-            errorMessage = error.message;
-        }
-        
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: errorMessage
-        });
-    });
+    const inputSlug = document.getElementById('vSlug_categoria_modal');
+    if (inputSlug) inputSlug.value = slug;
 }
 
-function agregarValorAlAtributo(valor) {
-    const container = document.getElementById(`valores-container-${valor.id_atributo}`);
-    if (!container) return;
-    
-    const alerta = container.querySelector('.alert-warning');
-    if (alerta) {
-        alerta.remove();
+function generarSlugAtributo(nombre) {
+    if (!nombre) {
+        const inputSlug = document.getElementById('vSlug_attr_modal');
+        if (inputSlug) inputSlug.value = '';
+        return;
     }
+    let slug = nombre.toLowerCase()
+        .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i').replace(/ó/g, 'o').replace(/ú/g, 'u')
+        .replace(/ñ/g, 'n')
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+/, '').replace(/-+$/, '');
     
-    let selectAllDiv = container.querySelector('.mb-3');
-    if (!selectAllDiv) {
-        selectAllDiv = document.createElement('div');
-        selectAllDiv.className = 'mb-3';
-        selectAllDiv.innerHTML = `
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input seleccionar-todos-checkbox" id="seleccionar-todos-${valor.id_atributo}" data-atributo-id="${valor.id_atributo}">
-                <label class="form-check-label" for="seleccionar-todos-${valor.id_atributo}">
-                    <strong>Seleccionar todos</strong>
-                </label>
-            </div>
-        `;
-        container.appendChild(selectAllDiv);
-        
-        const hr = document.createElement('hr');
-        hr.className = 'my-2';
-        container.appendChild(hr);
-    }
-    
-    let row = container.querySelector('.row:not(.mb-3)');
-    if (!row) {
-        row = document.createElement('div');
-        row.className = 'row';
-        container.appendChild(row);
-    }
-    
-    const col = document.createElement('div');
-    col.className = 'col-md-6 mb-2';
-    
-    const divCheck = document.createElement('div');
-    divCheck.className = 'form-check';
-    
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.name = `atributos[${valor.id_atributo}][]`;
-    input.value = valor.id_atributo_valor;
-    input.className = 'form-check-input valor-checkbox';
-    input.id = `valor-${valor.id_atributo_valor}`;
-    input.setAttribute('data-atributo-id', valor.id_atributo);
-    input.setAttribute('data-atributo-nombre', valor.atributo_nombre || '');
-    input.setAttribute('data-valor-nombre', valor.vValor);
-    
-    const label = document.createElement('label');
-    label.className = 'form-check-label';
-    label.htmlFor = `valor-${valor.id_atributo_valor}`;
-    label.textContent = valor.vValor;
-    
-    divCheck.appendChild(input);
-    divCheck.appendChild(label);
-    col.appendChild(divCheck);
-    row.appendChild(col);
-    
-    input.addEventListener('change', function() {
-        const atributoId = this.dataset.atributoId;
-        const atributoNombre = this.dataset.atributoNombre;
-        const valorId = this.value;
-        const valorNombre = this.dataset.valorNombre;
-        
-        const atributoActivo = document.getElementById(`atributo-activo-${atributoId}`);
-        if (!atributoActivo.checked) {
-            atributoActivo.checked = true;
-            atributoActivo.dispatchEvent(new Event('change'));
-        }
-        
-        if (!atributosActivos[atributoId]) {
-            atributosActivos[atributoId] = {
-                id: atributoId,
-                nombre: atributoNombre,
-                valores: {}
-            };
-        }
-        
-        if (this.checked) {
-            atributosActivos[atributoId].valores[valorId] = {
-                id: valorId,
-                nombre: valorNombre,
-                atributoId: atributoId,
-                atributoNombre: atributoNombre
-            };
-        } else {
-            delete atributosActivos[atributoId].valores[valorId];
-            if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
-                delete atributosActivos[atributoId];
-            }
-        }
-        
-        const seleccionados = container.querySelectorAll('.valor-checkbox:checked');
-        const seleccionarTodos = document.getElementById(`seleccionar-todos-${atributoId}`);
-        if (seleccionarTodos) {
-            seleccionarTodos.indeterminate = seleccionados.length > 0 && seleccionados.length < container.querySelectorAll('.valor-checkbox').length;
-        }
-        
-        actualizarPestanasValores();
-        actualizarResumenAtributos();
-    });
-    
-    const badge = container.closest('.card').querySelector('.badge.bg-secondary');
-    if (badge) {
-        const valorCount = container.querySelectorAll('.valor-checkbox').length;
-        badge.textContent = valorCount + ' valores';
-    }
+    const inputSlug = document.getElementById('vSlug_attr_modal');
+    if (inputSlug) inputSlug.value = slug;
 }
 
-function initQuickForms() {
-    console.log('Inicializando formularios rápidos...');
+function quickGenerarSlug(texto, inputId) {
+    if (!texto) return;
+    let slug = texto.toLowerCase()
+        .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i').replace(/ó/g, 'o').replace(/ú/g, 'u')
+        .replace(/ñ/g, 'n')
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+/, '').replace(/-+$/, '');
     
-    const categoriaForm = document.getElementById('categoriaQuickForm');
-    if (categoriaForm) {
-        categoriaForm.removeEventListener('submit', window.categoriaSubmitHandler);
-        
-        window.categoriaSubmitHandler = function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            if (categoriaImagenFile) {
-                formData.append('vImagen', categoriaImagenFile);
-            }
-            
-            Swal.fire({
-                title: 'Creando categoría...',
-                text: 'Por favor espera',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
-            
-            fetch('{{ route("categorias.store") }}', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => { throw err; });
-                }
-                return response.json();
-            })
-            .then(data => {
-                Swal.close();
-                
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: data.message || 'Categoría creada exitosamente',
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                    
-                    agregarCategoriaAlSelect(data.categoria);
-                    limpiarFormularioCategoria();
-                } else {
-                    let errorMessage = data.message || 'Error al crear la categoría';
-                    if (data.errors) {
-                        errorMessage = Object.values(data.errors).flat().join('<br>');
-                    }
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        html: errorMessage
-                    });
-                }
-            })
-            .catch(error => {
-                Swal.close();
-                console.error('Error:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: error.message || 'Error de conexión al servidor'
-                });
-            });
-        };
-        
-        categoriaForm.addEventListener('submit', window.categoriaSubmitHandler);
-        console.log('✓ Formulario de categoría inicializado');
-    }
-    
-    const marcaForm = document.getElementById('marcaQuickForm');
-    if (marcaForm) {
-        marcaForm.removeEventListener('submit', window.marcaSubmitHandler);
-        
-        window.marcaSubmitHandler = function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            
-            Swal.fire({
-                title: 'Creando marca...',
-                text: 'Por favor espera',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
-            
-            fetch('{{ route("marcas.quick-create") }}', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => { throw err; });
-                }
-                return response.json();
-            })
-            .then(data => {
-                Swal.close();
-                
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: data.message,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                    
-                    const select = document.getElementById('id_marca');
-                    const option = document.createElement('option');
-                    option.value = data.marca.id_marca;
-                    option.textContent = data.marca.vNombre;
-                    select.appendChild(option);
-                    select.value = data.marca.id_marca;
-                    
-                    limpiarFormularioMarca();
-                } else {
-                    let errorMessage = data.message || 'Error al crear la marca';
-                    if (data.errors) {
-                        errorMessage = Object.values(data.errors).flat().join('<br>');
-                    }
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        html: errorMessage
-                    });
-                }
-            })
-            .catch(error => {
-                Swal.close();
-                console.error('Error:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: error.message || 'Error de conexión al servidor'
-                });
-            });
-        };
-        
-        marcaForm.addEventListener('submit', window.marcaSubmitHandler);
-        console.log('✓ Formulario de marca inicializado');
-    }
-    
-    const etiquetaForm = document.getElementById('etiquetaQuickForm');
-    if (etiquetaForm) {
-        etiquetaForm.removeEventListener('submit', window.etiquetaSubmitHandler);
-        
-        window.etiquetaSubmitHandler = function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            
-            Swal.fire({
-                title: 'Creando etiqueta...',
-                text: 'Por favor espera',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
-            
-            fetch('{{ route("etiquetas.quick-create") }}', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => { throw err; });
-                }
-                return response.json();
-            })
-            .then(data => {
-                Swal.close();
-                
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: data.message,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                    
-                    agregarEtiquetaAlListado(data.etiqueta);
-                    limpiarFormularioEtiqueta();
-                } else {
-                    let errorMessage = data.message || 'Error al crear la etiqueta';
-                    if (data.errors) {
-                        errorMessage = Object.values(data.errors).flat().join('<br>');
-                    }
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        html: errorMessage
-                    });
-                }
-            })
-            .catch(error => {
-                Swal.close();
-                console.error('Error:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: error.message || 'Error de conexión al servidor'
-                });
-            });
-        };
-        
-        etiquetaForm.addEventListener('submit', window.etiquetaSubmitHandler);
-        console.log('✓ Formulario de etiqueta inicializado');
-    }
-    
-    const atributoForm = document.getElementById('atributoQuickForm');
-    if (atributoForm) {
-        atributoForm.removeEventListener('submit', window.atributoSubmitHandler);
-        
-        window.atributoSubmitHandler = function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            
-            Swal.fire({
-                title: 'Creando atributo...',
-                text: 'Por favor espera',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
-            
-            fetch('{{ route("atributos.quick-create") }}', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => { throw err; });
-                }
-                return response.json();
-            })
-            .then(data => {
-                Swal.close();
-                
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: data.message,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                    
-                    agregarAtributoAlListado(data.atributo);
-                    
-                    document.getElementById('vNombre_attr').value = '';
-                    document.getElementById('vSlug_attr').value = '';
-                    document.getElementById('tDescripcion_attr').value = '';
-                } else {
-                    let errorMessage = data.message || 'Error al crear el atributo';
-                    if (data.errors) {
-                        errorMessage = Object.values(data.errors).flat().join('<br>');
-                    }
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        html: errorMessage
-                    });
-                }
-            })
-            .catch(error => {
-                Swal.close();
-                console.error('Error:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: error.message || 'Error de conexión al servidor'
-                });
-            });
-        };
-        
-        atributoForm.addEventListener('submit', window.atributoSubmitHandler);
-        console.log('✓ Formulario de atributo inicializado');
-    }
-    
-    const impuestoForm = document.getElementById('impuestoQuickForm');
-    if (impuestoForm) {
-        impuestoForm.removeEventListener('submit', window.impuestoSubmitHandler);
-        
-        window.impuestoSubmitHandler = function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            
-            Swal.fire({
-                title: 'Creando impuesto...',
-                text: 'Por favor espera',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
-            
-            fetch('{{ route("impuestos.quick-create") }}', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => { throw err; });
-                }
-                return response.json();
-            })
-            .then(data => {
-                Swal.close();
-                
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: data.message,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                    
-                    const select = document.getElementById('id_impuesto');
-                    const option = document.createElement('option');
-                    option.value = data.impuesto.id_impuesto;
-                    option.setAttribute('data-porcentaje', data.impuesto.dPorcentaje);
-                    option.setAttribute('data-tipo', data.impuesto.eTipo);
-                    option.textContent = data.impuesto.vNombre + ' (' + data.impuesto.eTipo + ' - ' + parseFloat(data.impuesto.dPorcentaje).toFixed(2) + '%)';
-                    select.appendChild(option);
-                    
-                    select.value = data.impuesto.id_impuesto;
-                    actualizarPrecioFinal();
-                    limpiarFormularioImpuesto();
-                } else {
-                    let errorMessage = data.message || 'Error al crear el impuesto';
-                    if (data.errors) {
-                        errorMessage = Object.values(data.errors).flat().join('<br>');
-                    }
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        html: errorMessage
-                    });
-                }
-            })
-            .catch(error => {
-                Swal.close();
-                console.error('Error:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: error.message || 'Error de conexión al servidor'
-                });
-            });
-        };
-        
-        impuestoForm.addEventListener('submit', window.impuestoSubmitHandler);
-        console.log('✓ Formulario de impuesto inicializado');
-    }
+    const input = document.getElementById(inputId);
+    if (input) input.value = slug;
 }
 
-function agregarCategoriaAlSelect(categoria) {
-    const select = document.getElementById('id_categoria');
-    
-    const option = document.createElement('option');
-    option.value = categoria.id_categoria;
-    let icono = categoria.id_categoria_padre ? '↳ ' : '🏠 ';
-    option.innerHTML = icono + categoria.vNombre;
-    select.appendChild(option);
-    select.value = categoria.id_categoria;
+function quickActualizarSlug(nombre, slugId) {
+    quickGenerarSlug(nombre, slugId);
 }
 
-function agregarEtiquetaAlListado(etiqueta) {
-    const container = document.getElementById('etiquetas-container').querySelector('.row');
-    
-    const noEtiquetasMsg = document.getElementById('no-etiquetas-msg');
-    if (noEtiquetasMsg) {
-        noEtiquetasMsg.remove();
-    }
-    
-    const col = document.createElement('div');
-    col.className = 'col-md-6 col-6 mb-2 etiqueta-item';
-    col.setAttribute('data-etiqueta-id', etiqueta.id_etiqueta);
-    
-    const divCheck = document.createElement('div');
-    divCheck.className = 'form-check';
-    
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.name = 'etiquetas[]';
-    input.value = etiqueta.id_etiqueta;
-    input.className = 'form-check-input';
-    input.id = 'etiqueta_' + etiqueta.id_etiqueta;
-    input.checked = true;
-    
-    const label = document.createElement('label');
-    label.className = 'form-check-label';
-    label.htmlFor = 'etiqueta_' + etiqueta.id_etiqueta;
-    
-    const span = document.createElement('span');
-    span.className = 'badge bg-secondary';
-    span.textContent = etiqueta.vNombre;
-    
-    label.appendChild(span);
-    divCheck.appendChild(input);
-    divCheck.appendChild(label);
-    col.appendChild(divCheck);
-    container.appendChild(col);
-}
-
-function agregarAtributoAlListado(atributo) {
-    const container = document.getElementById('atributos-container');
-    const noAtributosMsg = document.getElementById('no-atributos-msg');
-    
-    if (noAtributosMsg) {
-        noAtributosMsg.remove();
-    }
-    
-    const col = document.createElement('div');
-    col.className = 'col-md-6 mb-4 atributo-item';
-    col.setAttribute('data-atributo-id', atributo.id_atributo);
-    
-    const card = document.createElement('div');
-    card.className = 'card border h-100';
-    
-    const cardHeader = document.createElement('div');
-    cardHeader.className = 'card-header bg-light d-flex justify-content-between align-items-center';
-    cardHeader.innerHTML = `
-        <div class="form-check">
-            <input type="checkbox" class="form-check-input atributo-activo-checkbox" 
-                   id="atributo-activo-${atributo.id_atributo}"
-                   data-atributo-id="${atributo.id_atributo}"
-                   data-atributo-nombre="${atributo.vNombre}">
-            <label class="form-check-label fw-bold" for="atributo-activo-${atributo.id_atributo}" style="color: #495057;">
-                ${atributo.vNombre}
-                <span class="badge bg-secondary ms-2">0 valores</span>
-            </label>
-        </div>
-        <div>
-            <span class="badge bg-warning text-dark atributo-estado-badge" id="estado-${atributo.id_atributo}" style="display: none;">
-                <i class="fas fa-check-circle me-1"></i>Activo
-            </span>
-            <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="mostrarFormularioValor(${atributo.id_atributo}, '${atributo.vNombre}')">
-                <i class="fas fa-plus-circle me-1"></i>Agregar Valor
-            </button>
-        </div>
-    `;
-    
-    const cardBody = document.createElement('div');
-    cardBody.className = 'card-body atributo-valores-container';
-    cardBody.id = `valores-container-${atributo.id_atributo}`;
-    cardBody.style.display = 'none';
-    cardBody.style.backgroundColor = 'white';
-    
-    const alertDiv = document.createElement('div');
-    alertDiv.className = 'alert alert-warning mb-0';
-    alertDiv.innerHTML = `
-        <i class="fas fa-exclamation-triangle me-2"></i>
-        Este atributo no tiene valores. 
-        <button type="button" class="btn btn-link p-0 ms-1" onclick="mostrarFormularioValor(${atributo.id_atributo}, '${atributo.vNombre}')">
-            Crear primer valor
-        </button>
-    `;
-    
-    cardBody.appendChild(alertDiv);
-    card.appendChild(cardHeader);
-    card.appendChild(cardBody);
-    col.appendChild(card);
-    container.appendChild(col);
-    
-    const checkbox = document.getElementById(`atributo-activo-${atributo.id_atributo}`);
-    if (checkbox) {
-        checkbox.addEventListener('change', function() {
-            const atributoId = this.dataset.atributoId;
-            const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
-            const estadoBadge = document.getElementById(`estado-${atributoId}`);
-            
-            if (this.checked) {
-                valoresContainer.style.display = 'block';
-                estadoBadge.style.display = 'inline-block';
-                
-                if (!atributosActivos[atributoId]) {
-                    atributosActivos[atributoId] = {
-                        id: atributoId,
-                        nombre: this.dataset.atributoNombre,
-                        valores: {}
-                    };
-                }
-            } else {
-                valoresContainer.style.display = 'none';
-                estadoBadge.style.display = 'none';
-                delete atributosActivos[atributoId];
-            }
-            
-            actualizarPestanasValores();
-            actualizarResumenAtributos();
-        });
-    }
-}
+// ============ FUNCIONES PARA GUARDAR EN MODALES ============
 
 function guardarCategoria() {
-    const vNombre = document.getElementById('vNombre_categoria_modal').value.trim();
-    const vSlug = document.getElementById('vSlug_categoria_modal').value.trim();
-    const idCategoriaPadre = document.getElementById('id_categoria_padre_modal').value;
-    const tDescripcion = document.getElementById('tDescripcion_categoria_modal').value;
-    const bActivo = document.getElementById('bActivo_categoria_modal').checked ? 1 : 0;
+    const vNombre = document.getElementById('vNombre_categoria_modal')?.value.trim();
+    const vSlug = document.getElementById('vSlug_categoria_modal')?.value.trim();
+    const idCategoriaPadre = document.getElementById('id_categoria_padre_modal')?.value;
+    const tDescripcion = document.getElementById('tDescripcion_categoria_modal')?.value;
+    const bActivo = document.getElementById('bActivo_categoria_modal')?.checked ? 1 : 0;
     
     if (!vNombre || !vSlug) {
         Swal.fire({
@@ -4838,7 +4075,7 @@ function guardarCategoria() {
     const formData = new FormData();
     formData.append('vNombre', vNombre);
     formData.append('vSlug', vSlug);
-    formData.append('tDescripcion', tDescripcion);
+    formData.append('tDescripcion', tDescripcion || '');
     formData.append('bActivo', bActivo);
     if (idCategoriaPadre) {
         formData.append('id_categoria_padre', idCategoriaPadre);
@@ -4868,8 +4105,16 @@ function guardarCategoria() {
                 showConfirmButton: false
             });
             
-            agregarCategoriaAlSelect(data.categoria);
-            modalCategoria.hide();
+            const select = document.getElementById('id_categoria');
+            if (select) {
+                const option = document.createElement('option');
+                option.value = data.categoria.id_categoria;
+                option.innerHTML = (data.categoria.id_categoria_padre ? '↳ ' : '🏠 ') + data.categoria.vNombre;
+                select.appendChild(option);
+                select.value = data.categoria.id_categoria;
+            }
+            
+            if (modalCategoria) modalCategoria.hide();
         } else {
             let errorMessage = data.message || 'Error al crear la categoría';
             if (data.errors) {
@@ -4893,8 +4138,8 @@ function guardarCategoria() {
 }
 
 function guardarMarca() {
-    const vNombre = document.getElementById('vNombre_marca_modal').value.trim();
-    const tDescripcion = document.getElementById('tDescripcion_marca_modal').value;
+    const vNombre = document.getElementById('vNombre_marca_modal')?.value.trim();
+    const tDescripcion = document.getElementById('tDescripcion_marca_modal')?.value;
     
     if (!vNombre) {
         Swal.fire({
@@ -4921,7 +4166,7 @@ function guardarMarca() {
         },
         body: JSON.stringify({
             vNombre: vNombre,
-            tDescripcion: tDescripcion
+            tDescripcion: tDescripcion || ''
         })
     })
     .then(response => response.json())
@@ -4938,13 +4183,15 @@ function guardarMarca() {
             });
             
             const select = document.getElementById('id_marca');
-            const option = document.createElement('option');
-            option.value = data.marca.id_marca;
-            option.textContent = data.marca.vNombre;
-            select.appendChild(option);
-            select.value = data.marca.id_marca;
+            if (select) {
+                const option = document.createElement('option');
+                option.value = data.marca.id_marca;
+                option.textContent = data.marca.vNombre;
+                select.appendChild(option);
+                select.value = data.marca.id_marca;
+            }
             
-            modalMarca.hide();
+            if (modalMarca) modalMarca.hide();
         } else {
             let errorMessage = data.message || 'Error al crear la marca';
             if (data.errors) {
@@ -4968,8 +4215,8 @@ function guardarMarca() {
 }
 
 function guardarEtiqueta() {
-    const vNombre = document.getElementById('vNombre_eti_modal').value.trim();
-    const tDescripcion = document.getElementById('tDescripcion_eti_modal').value;
+    const vNombre = document.getElementById('vNombre_eti_modal')?.value.trim();
+    const tDescripcion = document.getElementById('tDescripcion_eti_modal')?.value;
     
     if (!vNombre) {
         Swal.fire({
@@ -4996,7 +4243,7 @@ function guardarEtiqueta() {
         },
         body: JSON.stringify({
             vNombre: vNombre,
-            tDescripcion: tDescripcion
+            tDescripcion: tDescripcion || ''
         })
     })
     .then(response => response.json())
@@ -5012,8 +4259,41 @@ function guardarEtiqueta() {
                 showConfirmButton: false
             });
             
-            agregarEtiquetaAlListado(data.etiqueta);
-            modalEtiqueta.hide();
+            const container = document.getElementById('etiquetas-container');
+            if (container) {
+                const row = container.querySelector('.row');
+                if (row) {
+                    const col = document.createElement('div');
+                    col.className = 'col-md-6 col-6 mb-2 etiqueta-item';
+                    
+                    const divCheck = document.createElement('div');
+                    divCheck.className = 'form-check';
+                    
+                    const input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.name = 'etiquetas[]';
+                    input.value = data.etiqueta.id_etiqueta;
+                    input.className = 'form-check-input';
+                    input.id = 'etiqueta_' + data.etiqueta.id_etiqueta;
+                    input.checked = true;
+                    
+                    const label = document.createElement('label');
+                    label.className = 'form-check-label';
+                    label.htmlFor = 'etiqueta_' + data.etiqueta.id_etiqueta;
+                    
+                    const span = document.createElement('span');
+                    span.className = 'badge bg-secondary';
+                    span.textContent = data.etiqueta.vNombre;
+                    
+                    label.appendChild(span);
+                    divCheck.appendChild(input);
+                    divCheck.appendChild(label);
+                    col.appendChild(divCheck);
+                    row.appendChild(col);
+                }
+            }
+            
+            if (modalEtiqueta) modalEtiqueta.hide();
         } else {
             let errorMessage = data.message || 'Error al crear la etiqueta';
             if (data.errors) {
@@ -5036,17 +4316,13 @@ function guardarEtiqueta() {
     });
 }
 
-function guardarAtributo() {
-    const vNombre = document.getElementById('vNombre_attr_modal').value.trim();
-    const vSlug = document.getElementById('vSlug_attr_modal').value.trim();
-    const tDescripcion = document.getElementById('tDescripcion_attr_modal').value;
+async function guardarAtributo() {
+    const vNombre = document.getElementById('vNombre_attr_modal')?.value.trim();
+    const vSlug = document.getElementById('vSlug_attr_modal')?.value.trim();
+    const tDescripcion = document.getElementById('tDescripcion_attr_modal')?.value;
     
     if (!vNombre) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'El nombre del atributo es obligatorio'
-        });
+        Swal.fire({ icon: 'error', title: 'Error', text: 'El nombre del atributo es obligatorio' });
         return;
     }
     
@@ -5057,21 +4333,40 @@ function guardarAtributo() {
         didOpen: () => { Swal.showLoading(); }
     });
     
-    fetch('{{ route("atributos.quick-create") }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            vNombre: vNombre,
-            vSlug: vSlug || undefined,
-            tDescripcion: tDescripcion
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
+    // Crear FormData
+    const formData = new FormData();
+    formData.append('vNombre', vNombre);
+    if (vSlug) formData.append('vSlug', vSlug);
+    if (tDescripcion) formData.append('tDescripcion', tDescripcion);
+    
+    // Obtener token CSRF del formulario principal
+    const csrfToken = document.querySelector('#productoForm input[name="_token"]')?.value ||
+                      document.querySelector('meta[name="csrf-token"]')?.content;
+    
+    if (!csrfToken) {
+        Swal.close();
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo obtener el token de seguridad. Recarga la página.' });
+        return;
+    }
+    formData.append('_token', csrfToken);
+    
+    try {
+        const response = await fetch('{{ route("atributos.quick-create") }}', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        });
+        
+        if (response.status === 419) {
+            throw new Error('Token CSRF inválido. Recarga la página.');
+        }
+        
+        const data = await response.json();
+        if (!response.ok) throw data;
+        
         Swal.close();
         
         if (data.success) {
@@ -5083,35 +4378,130 @@ function guardarAtributo() {
                 showConfirmButton: false
             });
             
+            // ==== AGREGAR EL NUEVO ATRIBUTO AL DOM SIN RECARGAR ====
             agregarAtributoAlListado(data.atributo);
-            modalAtributo.hide();
+            
+            if (modalAtributo) modalAtributo.hide();
+            
+            // Limpiar campos del modal
+            document.getElementById('vNombre_attr_modal').value = '';
+            document.getElementById('vSlug_attr_modal').value = '';
+            document.getElementById('tDescripcion_attr_modal').value = '';
         } else {
             let errorMessage = data.message || 'Error al crear el atributo';
             if (data.errors) {
                 errorMessage = Object.values(data.errors).flat().join('<br>');
             }
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                html: errorMessage
-            });
+            Swal.fire({ icon: 'error', title: 'Error', html: errorMessage });
         }
-    })
-    .catch(error => {
+    } catch (error) {
         Swal.close();
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Error de conexión al servidor'
+        console.error('Error:', error);
+        Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'Error de conexión' });
+    }
+}
+
+// Función para agregar el nuevo atributo al listado de atributos
+function agregarAtributoAlListado(atributo) {
+    // Buscar el contenedor de atributos
+    const atributosContainer = document.getElementById('atributos-container');
+    
+    if (!atributosContainer) {
+        console.warn('No se encontró el contenedor de atributos');
+        return;
+    }
+    
+    // Si no hay atributos (mensaje de "no hay atributos"), limpiar y mostrar el contenedor
+    const noAtributosMsg = document.getElementById('no-atributos-msg');
+    if (noAtributosMsg) {
+        noAtributosMsg.style.display = 'none';
+    }
+    
+    // Crear el HTML del nuevo atributo
+    const nuevoAtributoHtml = `
+        <div class="col-md-6 mb-4 atributo-item" data-atributo-id="${atributo.id_atributo}">
+            <div class="card border h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <div class="form-check">
+                        <input type="checkbox" 
+                               class="form-check-input atributo-activo-checkbox" 
+                               id="atributo-activo-${atributo.id_atributo}"
+                               data-atributo-id="${atributo.id_atributo}"
+                               data-atributo-nombre="${atributo.vNombre}">
+                        <label class="form-check-label fw-bold" for="atributo-activo-${atributo.id_atributo}">
+                            ${atributo.vNombre}
+                            <span class="badge bg-secondary ms-2">0 valores</span>
+                        </label>
+                    </div>
+                    <div>
+                        <span class="badge bg-warning text-dark atributo-estado-badge" id="estado-${atributo.id_atributo}" style="display: none;">
+                            <i class="fas fa-check-circle me-1"></i>Activo
+                        </span>
+                        <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="mostrarFormularioValor(${atributo.id_atributo}, '${atributo.vNombre}')">
+                            <i class="fas fa-plus-circle me-1"></i>Agregar Valor
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card-body atributo-valores-container" id="valores-container-${atributo.id_atributo}" style="display: none; background-color: white;">
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Este atributo no tiene valores. 
+                        <button type="button" class="btn btn-link p-0 ms-1" onclick="mostrarFormularioValor(${atributo.id_atributo}, '${atributo.vNombre}')">
+                            Crear primer valor
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Agregar el nuevo atributo al contenedor
+    atributosContainer.insertAdjacentHTML('beforeend', nuevoAtributoHtml);
+    
+    // Agregar los event listeners necesarios para el nuevo atributo
+    const nuevoCheckbox = document.getElementById(`atributo-activo-${atributo.id_atributo}`);
+    if (nuevoCheckbox) {
+        nuevoCheckbox.addEventListener('change', function() {
+            const atributoId = this.dataset.atributoId;
+            const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+            const estadoBadge = document.getElementById(`estado-${atributoId}`);
+            
+            if (this.checked) {
+                if (valoresContainer) valoresContainer.style.display = 'block';
+                if (estadoBadge) estadoBadge.style.display = 'inline-block';
+                if (!atributosActivos[atributoId]) {
+                    atributosActivos[atributoId] = {
+                        id: atributoId,
+                        nombre: this.dataset.atributoNombre,
+                        valores: {}
+                    };
+                }
+            } else {
+                if (valoresContainer) valoresContainer.style.display = 'none';
+                if (estadoBadge) estadoBadge.style.display = 'none';
+                delete atributosActivos[atributoId];
+            }
+            actualizarPestanasValores();
+            actualizarResumenAtributos();
         });
-    });
+    }
+    
+    // Actualizar el contador de atributos si existe
+    const totalAtributosBadge = document.getElementById('total-atributos-activos-badge');
+    if (totalAtributosBadge) {
+        const atributosCount = document.querySelectorAll('.atributo-item').length;
+        totalAtributosBadge.textContent = `${atributosCount} atributos disponibles`;
+    }
+    
+    console.log(`Atributo "${atributo.vNombre}" agregado correctamente`);
 }
 
 function guardarImpuesto() {
-    const vNombre = document.getElementById('vNombre_impuesto_modal').value.trim();
-    const eTipo = document.getElementById('eTipo_impuesto_modal').value;
-    const dPorcentaje = document.getElementById('dPorcentaje_impuesto_modal').value;
-    const bActivo = document.getElementById('bActivo_impuesto_modal').checked ? 1 : 0;
+    const vNombre = document.getElementById('vNombre_impuesto_modal')?.value.trim();
+    const eTipo = document.getElementById('eTipo_impuesto_modal')?.value;
+    const dPorcentaje = document.getElementById('dPorcentaje_impuesto_modal')?.value;
+    const bActivo = document.getElementById('bActivo_impuesto_modal')?.checked ? 1 : 0;
     
     if (!vNombre || !eTipo || !dPorcentaje) {
         Swal.fire({
@@ -5143,7 +4533,12 @@ function guardarImpuesto() {
             bActivo: bActivo
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw err; });
+        }
+        return response.json();
+    })
     .then(data => {
         Swal.close();
         
@@ -5156,16 +4551,37 @@ function guardarImpuesto() {
                 showConfirmButton: false
             });
             
-            const select = document.getElementById('id_impuesto');
-            const option = document.createElement('option');
-            option.value = data.impuesto.id_impuesto;
-            option.setAttribute('data-porcentaje', data.impuesto.dPorcentaje);
-            option.setAttribute('data-tipo', data.impuesto.eTipo);
-            option.textContent = data.impuesto.vNombre + ' (' + data.impuesto.eTipo + ' - ' + parseFloat(data.impuesto.dPorcentaje).toFixed(2) + '%)';
-            select.appendChild(option);
-            select.value = data.impuesto.id_impuesto;
-            actualizarPrecioFinal();
-            modalImpuesto.hide();
+            const selectProducto = document.getElementById('id_impuesto');
+            if (selectProducto) {
+                let existe = false;
+                for (let i = 0; i < selectProducto.options.length; i++) {
+                    if (selectProducto.options[i].value == data.impuesto.id_impuesto) {
+                        existe = true;
+                        break;
+                    }
+                }
+                
+                if (!existe) {
+                    const option = document.createElement('option');
+                    option.value = data.impuesto.id_impuesto;
+                    option.setAttribute('data-porcentaje', data.impuesto.dPorcentaje);
+                    option.setAttribute('data-tipo', data.impuesto.eTipo);
+                    option.textContent = data.impuesto.vNombre + ' (' + data.impuesto.eTipo + ' - ' + parseFloat(data.impuesto.dPorcentaje).toFixed(2) + '%)';
+                    selectProducto.appendChild(option);
+                }
+                
+                selectProducto.value = data.impuesto.id_impuesto;
+                actualizarPrecioFinal();
+            }
+            
+            actualizarSelectsImpuestosVariaciones(data.impuesto);
+            
+            if (modalImpuesto) modalImpuesto.hide();
+            
+            document.getElementById('vNombre_impuesto_modal').value = '';
+            document.getElementById('eTipo_impuesto_modal').value = '';
+            document.getElementById('dPorcentaje_impuesto_modal').value = '';
+            
         } else {
             let errorMessage = data.message || 'Error al crear el impuesto';
             if (data.errors) {
@@ -5180,14 +4596,242 @@ function guardarImpuesto() {
     })
     .catch(error => {
         Swal.close();
+        
+        let errorMessage = 'Error de conexión al servidor';
+        if (error.errors) {
+            errorMessage = Object.values(error.errors).flat().join(', ');
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Error de conexión al servidor'
+            text: errorMessage
         });
     });
 }
 
+async function guardarValorAtributo() {
+    const atributoId = document.getElementById('valor_atributo_id')?.value;
+    const vValor = document.getElementById('vValor_modal')?.value.trim();
+    const vSlug = document.getElementById('vSlug_valor_modal')?.value.trim();
+    const bActivo = document.getElementById('bActivo_valor_modal')?.checked ? 1 : 0;
+    
+    if (!atributoId || !vValor) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'El valor es obligatorio' });
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Creando valor...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+    
+    // Crear FormData
+    const formData = new FormData();
+    formData.append('vValor', vValor);
+    formData.append('vSlug', vSlug || '');
+    formData.append('bActivo', bActivo);
+    
+    // Obtener token
+    const csrfToken = document.querySelector('#productoForm input[name="_token"]')?.value ||
+                      document.querySelector('meta[name="csrf-token"]')?.content;
+    
+    if (!csrfToken) {
+        Swal.close();
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo obtener el token de seguridad.' });
+        return;
+    }
+    formData.append('_token', csrfToken);
+    
+    try {
+        const response = await fetch(`/atributos/${atributoId}/valores-quick`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        });
+        
+        if (response.status === 419) {
+            throw new Error('Token CSRF inválido. Recarga la página.');
+        }
+        
+        const data = await response.json();
+        if (!response.ok) throw data;
+        
+        Swal.close();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: data.message || 'Valor creado exitosamente',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            // ==== AGREGAR EL NUEVO VALOR AL ATRIBUTO SIN RECARGAR ====
+            agregarValorAlAtributo(atributoId, data.valor);
+            
+            if (valorModal) valorModal.hide();
+            
+            // Limpiar campos
+            document.getElementById('vValor_modal').value = '';
+            document.getElementById('vSlug_valor_modal').value = '';
+            document.getElementById('bActivo_valor_modal').checked = true;
+        } else {
+            Swal.fire({ icon: 'error', title: 'Error', text: data.message || 'Error al crear el valor' });
+        }
+    } catch (error) {
+        Swal.close();
+        console.error('Error:', error);
+        Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'Error en la solicitud' });
+    }
+}
+
+// Función para agregar un nuevo valor al atributo
+function agregarValorAlAtributo(atributoId, valor) {
+    // Buscar el contenedor de valores del atributo
+    const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+    
+    if (!valoresContainer) {
+        console.warn(`No se encontró el contenedor de valores para el atributo ${atributoId}`);
+        return;
+    }
+    
+    // Verificar si ya tiene valores o está vacío
+    const tieneValores = valoresContainer.querySelectorAll('.valor-checkbox').length > 0;
+    
+    // Si no tenía valores, eliminar el mensaje de alerta y agregar la estructura
+    if (!tieneValores) {
+        valoresContainer.innerHTML = `
+            <div class="mb-3">
+                <div class="form-check">
+                    <input type="checkbox" 
+                           class="form-check-input seleccionar-todos-checkbox" 
+                           id="seleccionar-todos-${atributoId}"
+                           data-atributo-id="${atributoId}">
+                    <label class="form-check-label">
+                        <strong>Seleccionar todos</strong>
+                    </label>
+                </div>
+            </div>
+            <hr class="my-2">
+            <div class="row" id="valores-row-${atributoId}"></div>
+        `;
+        
+        // Agregar event listener al checkbox "seleccionar todos"
+        const seleccionarTodos = document.getElementById(`seleccionar-todos-${atributoId}`);
+        if (seleccionarTodos) {
+            seleccionarTodos.addEventListener('change', function() {
+                const atributoId = this.dataset.atributoId;
+                const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+                if (!valoresContainer) return;
+                const valorCheckboxes = valoresContainer.querySelectorAll('.valor-checkbox');
+                valorCheckboxes.forEach(cb => {
+                    cb.checked = this.checked;
+                    const atributoNombre = cb.dataset.atributoNombre;
+                    const valorId = cb.value;
+                    const valorNombre = cb.dataset.valorNombre;
+                    if (this.checked) {
+                        if (!atributosActivos[atributoId]) {
+                            atributosActivos[atributoId] = { id: atributoId, nombre: atributoNombre, valores: {} };
+                        }
+                        atributosActivos[atributoId].valores[valorId] = { id: valorId, nombre: valorNombre, atributoId: atributoId, atributoNombre: atributoNombre };
+                    } else {
+                        if (atributosActivos[atributoId] && atributosActivos[atributoId].valores[valorId]) {
+                            delete atributosActivos[atributoId].valores[valorId];
+                        }
+                        if (atributosActivos[atributoId] && Object.keys(atributosActivos[atributoId].valores).length === 0) {
+                            delete atributosActivos[atributoId];
+                        }
+                    }
+                });
+                actualizarPestanasValores();
+                actualizarResumenAtributos();
+            });
+        }
+    }
+    
+    // Obtener la fila de valores
+    const valoresRow = document.getElementById(`valores-row-${atributoId}`) || valoresContainer.querySelector('.row');
+    if (!valoresRow) return;
+    
+    // Obtener el nombre del atributo
+    const atributoCheckbox = document.getElementById(`atributo-activo-${atributoId}`);
+    const atributoNombre = atributoCheckbox ? atributoCheckbox.dataset.atributoNombre : 'Atributo';
+    
+    // Crear el HTML del nuevo valor
+    const nuevoValorHtml = `
+        <div class="col-md-6 mb-2">
+            <div class="form-check">
+                <input type="checkbox" 
+                       name="atributos[${atributoId}][]" 
+                       value="${valor.id_atributo_valor}" 
+                       class="form-check-input valor-checkbox"
+                       id="valor-${valor.id_atributo_valor}"
+                       data-atributo-id="${atributoId}"
+                       data-atributo-nombre="${atributoNombre}"
+                       data-valor-nombre="${valor.vValor}">
+                <label class="form-check-label" for="valor-${valor.id_atributo_valor}">
+                    ${valor.vValor}
+                </label>
+            </div>
+        </div>
+    `;
+    
+    // Agregar el nuevo valor
+    valoresRow.insertAdjacentHTML('beforeend', nuevoValorHtml);
+    
+    // Actualizar el badge de cantidad de valores
+    const badge = document.querySelector(`#atributo-activo-${atributoId} + label .badge`);
+    if (badge) {
+        const valoresCount = valoresContainer.querySelectorAll('.valor-checkbox').length;
+        badge.textContent = `${valoresCount} valores`;
+    }
+    
+    // Agregar event listener al nuevo checkbox
+    const nuevoCheckbox = document.getElementById(`valor-${valor.id_atributo_valor}`);
+    if (nuevoCheckbox) {
+        nuevoCheckbox.addEventListener('change', function() {
+            const atributoId = this.dataset.atributoId;
+            const atributoNombre = this.dataset.atributoNombre;
+            const valorId = this.value;
+            const valorNombre = this.dataset.valorNombre;
+            
+            const atributoActivo = document.getElementById(`atributo-activo-${atributoId}`);
+            if (!atributoActivo.checked) {
+                atributoActivo.checked = true;
+                atributoActivo.dispatchEvent(new Event('change'));
+            }
+            
+            if (!atributosActivos[atributoId]) {
+                atributosActivos[atributoId] = { id: atributoId, nombre: atributoNombre, valores: {} };
+            }
+            
+            if (this.checked) {
+                atributosActivos[atributoId].valores[valorId] = { id: valorId, nombre: valorNombre, atributoId: atributoId, atributoNombre: atributoNombre };
+            } else {
+                if (atributosActivos[atributoId] && atributosActivos[atributoId].valores[valorId]) {
+                    delete atributosActivos[atributoId].valores[valorId];
+                }
+                if (atributosActivos[atributoId] && Object.keys(atributosActivos[atributoId].valores).length === 0) {
+                    delete atributosActivos[atributoId];
+                }
+            }
+            
+            actualizarPestanasValores();
+            actualizarResumenAtributos();
+        });
+    }
+    
+    console.log(`Valor "${valor.vValor}" agregado al atributo ID ${atributoId}`);
+}
 function limpiarFormularioCategoria() {
     document.getElementById('vNombre_categoria').value = '';
     document.getElementById('vSlug_categoria').value = '';
@@ -5234,20 +4878,33 @@ function previewImagenCategoria(input) {
             return;
         }
         
+        if (file.size > 2 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Archivo demasiado grande',
+                text: 'La imagen no puede exceder los 2MB'
+            });
+            input.value = '';
+            return;
+        }
+        
         categoriaImagenFile = file;
         
         const reader = new FileReader();
         reader.onload = function(e) {
-            previewImg.src = e.target.result;
-            preview.style.display = 'block';
+            if (previewImg) previewImg.src = e.target.result;
+            if (preview) preview.style.display = 'block';
         }
         reader.readAsDataURL(file);
     }
 }
 
 function cancelarImagenCategoria() {
-    document.getElementById('categoriaImagePreview').style.display = 'none';
-    document.getElementById('vImagen_categoria').value = '';
+    const preview = document.getElementById('categoriaImagePreview');
+    const input = document.getElementById('vImagen_categoria');
+    
+    if (preview) preview.style.display = 'none';
+    if (input) input.value = '';
     categoriaImagenFile = null;
 }
 
@@ -5287,173 +4944,118 @@ function previewImagenCategoriaModal(input) {
         
         const reader = new FileReader();
         reader.onload = function(e) {
-            previewImg.src = e.target.result;
-            preview.style.display = 'block';
+            if (previewImg) previewImg.src = e.target.result;
+            if (preview) preview.style.display = 'block';
         }
         reader.readAsDataURL(file);
     }
 }
 
 function cancelarImagenCategoriaModal() {
-    document.getElementById('categoriaModalImagePreview').style.display = 'none';
-    document.getElementById('vImagen_categoria_modal').value = '';
+    const preview = document.getElementById('categoriaModalImagePreview');
+    const input = document.getElementById('vImagen_categoria_modal');
+    
+    if (preview) preview.style.display = 'none';
+    if (input) input.value = '';
     categoriaModalImagenFile = null;
 }
 
-function generarSlugCategoria(nombre) {
-    if (!nombre) {
-        document.getElementById('vSlug_categoria_modal').value = '';
-        return;
-    }
-    let slug = nombre.toLowerCase()
-        .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i').replace(/ó/g, 'o').replace(/ú/g, 'u')
-        .replace(/ñ/g, 'n')
-        .replace(/[^a-z0-9\s]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-+/, '').replace(/-+$/, '');
-    document.getElementById('vSlug_categoria_modal').value = slug;
-}
-
-function generarSlugAtributo(nombre) {
-    if (!nombre) {
-        document.getElementById('vSlug_attr_modal').value = '';
-        return;
-    }
-    let slug = nombre.toLowerCase()
-        .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i').replace(/ó/g, 'o').replace(/ú/g, 'u')
-        .replace(/ñ/g, 'n')
-        .replace(/[^a-z0-9\s]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-+/, '').replace(/-+$/, '');
-    document.getElementById('vSlug_attr_modal').value = slug;
-}
-
-function quickGenerarSlug(texto, inputId) {
-    if (!texto) return;
-    let slug = texto.toLowerCase()
-        .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i').replace(/ó/g, 'o').replace(/ú/g, 'u')
-        .replace(/ñ/g, 'n')
-        .replace(/[^a-z0-9\s]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-+/, '').replace(/-+$/, '');
-    document.getElementById(inputId).value = slug;
-}
-
-function quickActualizarSlug(nombre, slugId) {
-    quickGenerarSlug(nombre, slugId);
-}
-
-// ============ INICIALIZACIÓN PRINCIPAL ============
+// ============ CONFIGURAR EVENTOS PARA ACTUALIZACIÓN EN TIEMPO REAL ============
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Inicializando aplicación...');
     
-    try {
-        modalCategoria = new bootstrap.Modal(document.getElementById('modalCategoria'));
-        modalMarca = new bootstrap.Modal(document.getElementById('modalMarca'));
-        modalEtiqueta = new bootstrap.Modal(document.getElementById('modalEtiqueta'));
-        modalAtributo = new bootstrap.Modal(document.getElementById('modalAtributo'));
-        modalImpuesto = new bootstrap.Modal(document.getElementById('modalImpuesto'));
-        valorModal = new bootstrap.Modal(document.getElementById('crearValorModal'));
-        console.log('✓ Modales inicializados');
-    } catch (e) {
-        console.error('Error al inicializar modales:', e);
-    }
-
-    initQuickForms();
+    // Eventos para el producto principal
+    const precioVentaInput = document.getElementById('dPrecio_venta');
+    const tieneDescuentoCheckbox = document.getElementById('bTiene_descuento');
+    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
+    const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
+    const fechaFinInput = document.getElementById('dFecha_fin_descuento');
+    const impuestoSelect = document.getElementById('id_impuesto');
     
-    const nombreInput = document.getElementById('vNombre');
-    if (nombreInput) {
-        nombreInput.addEventListener('input', function() { verificarNombreProductoLocal(this); });
-        nombreInput.addEventListener('blur', function() { verificarNombreProductoLocal(this); });
-        console.log('✓ Eventos de nombre asignados');
+    if (precioVentaInput) {
+        precioVentaInput.addEventListener('input', actualizarPrecioFinal);
+        precioVentaInput.addEventListener('change', actualizarPrecioFinal);
     }
     
-    const skuInput = document.getElementById('vCodigo_barras');
-    if (skuInput) {
-        skuInput.addEventListener('input', function() { 
-            validarSKU(this);
-            verificarSKUProductoLocal(this);
+    if (tieneDescuentoCheckbox) {
+        tieneDescuentoCheckbox.addEventListener('change', function() {
+            toggleDescuentoFields();
+            actualizarPrecioFinal();
         });
-        skuInput.addEventListener('blur', function() { 
-            verificarSKUProductoLocal(this);
-        });
-        console.log('✓ Eventos de SKU asignados');
     }
     
-    document.addEventListener('input', function(e) {
-        if (e.target.id && e.target.id.startsWith('sku-')) {
-            const valorKey = e.target.id.replace('sku-', '');
-            validarSKU(e.target);
-            verificarSKUVariacionLocal(e.target, valorKey);
+    if (precioDescuentoInput) {
+        precioDescuentoInput.addEventListener('input', actualizarPrecioFinal);
+        precioDescuentoInput.addEventListener('change', actualizarPrecioFinal);
+    }
+    
+    if (fechaInicioInput) {
+        fechaInicioInput.addEventListener('change', function() {
+            validarFechasDescuento();
+            actualizarPrecioFinal();
+        });
+        fechaInicioInput.addEventListener('blur', actualizarPrecioFinal);
+    }
+    
+    if (fechaFinInput) {
+        fechaFinInput.addEventListener('change', function() {
+            validarFechasDescuento();
+            actualizarPrecioFinal();
+        });
+        fechaFinInput.addEventListener('blur', actualizarPrecioFinal);
+    }
+    
+    if (impuestoSelect) {
+        impuestoSelect.addEventListener('change', actualizarPrecioFinal);
+    }
+    
+    // Eventos para variaciones
+    document.addEventListener('change', function(e) {
+        if (e.target.id && e.target.id.startsWith('fecha-inicio-')) {
+            const valorKey = e.target.id.replace('fecha-inicio-', '');
+            validarFechasDescuentoVariacion(e.target.id, `fecha-fin-${valorKey}`, valorKey);
+            actualizarPrecioFinalVariacion(valorKey);
         }
-    });
-    
-    document.addEventListener('blur', function(e) {
-        if (e.target.id && e.target.id.startsWith('sku-')) {
-            const valorKey = e.target.id.replace('sku-', '');
-            if (e.target.value.trim() !== '') {
-                verificarSKUVariacionLocal(e.target, valorKey);
-            }
+        
+        if (e.target.id && e.target.id.startsWith('fecha-fin-')) {
+            const valorKey = e.target.id.replace('fecha-fin-', '');
+            validarFechasDescuentoVariacion(`fecha-inicio-${valorKey}`, e.target.id, valorKey);
+            actualizarPrecioFinalVariacion(valorKey);
+        }
+        
+        if (e.target.id && e.target.id.startsWith('descuento-')) {
+            const valorKey = e.target.id.replace('descuento-', '');
+            toggleDescuentoVariacion(e.target, valorKey);
         }
     });
     
     actualizarResumenAtributos();
     actualizarPestanasValores();
     
-    const tieneDescuentoCheckbox = document.getElementById('bTiene_descuento');
-    if (tieneDescuentoCheckbox && tieneDescuentoCheckbox.checked) {
-        setTimeout(() => {
-            validarPrecioDescuentoProducto();
-            validarFechasDescuento();
-        }, 100);
-    }
-    
-    setTimeout(() => {
-        document.querySelectorAll('.valor-checkbox:checked').forEach(cb => {
-            cb.dispatchEvent(new Event('change'));
-        });
-    }, 500);
-    
-    console.log('✓ Inicialización completa');
+    setTimeout(actualizarPrecioFinal, 100);
 });
 
 // ============ EVENT LISTENERS ADICIONALES PARA ATRIBUTOS ============
 document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
     checkbox.addEventListener('change', function() {
         const atributoId = this.dataset.atributoId;
-        const atributoNombre = this.dataset.atributoNombre;
         const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
         const estadoBadge = document.getElementById(`estado-${atributoId}`);
         
         if (this.checked) {
-            valoresContainer.style.display = 'block';
-            estadoBadge.style.display = 'inline-block';
+            if (valoresContainer) valoresContainer.style.display = 'block';
+            if (estadoBadge) estadoBadge.style.display = 'inline-block';
             
             if (!atributosActivos[atributoId]) {
                 atributosActivos[atributoId] = {
                     id: atributoId,
-                    nombre: atributoNombre,
+                    nombre: this.dataset.atributoNombre,
                     valores: {}
                 };
             }
         } else {
-            valoresContainer.style.display = 'none';
-            estadoBadge.style.display = 'none';
-            
-            const checkboxes = valoresContainer.querySelectorAll('.valor-checkbox');
-            checkboxes.forEach(cb => {
-                cb.checked = false;
-            });
-            
+            if (valoresContainer) valoresContainer.style.display = 'none';
+            if (estadoBadge) estadoBadge.style.display = 'none';
             delete atributosActivos[atributoId];
-            
-            const seleccionarTodos = document.getElementById(`seleccionar-todos-${atributoId}`);
-            if (seleccionarTodos) {
-                seleccionarTodos.checked = false;
-            }
         }
         
         actualizarPestanasValores();
@@ -5465,6 +5067,8 @@ document.querySelectorAll('.seleccionar-todos-checkbox').forEach(checkbox => {
     checkbox.addEventListener('change', function() {
         const atributoId = this.dataset.atributoId;
         const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+        if (!valoresContainer) return;
+        
         const valorCheckboxes = valoresContainer.querySelectorAll('.valor-checkbox');
         
         valorCheckboxes.forEach(cb => {
@@ -5489,7 +5093,7 @@ document.querySelectorAll('.seleccionar-todos-checkbox').forEach(checkbox => {
                     atributoNombre: atributoNombre
                 };
             } else {
-                if (atributosActivos[atributoId]) {
+                if (atributosActivos[atributoId] && atributosActivos[atributoId].valores[valorId]) {
                     delete atributosActivos[atributoId].valores[valorId];
                     if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
                         delete atributosActivos[atributoId];
@@ -5532,33 +5136,124 @@ document.querySelectorAll('.valor-checkbox').forEach(checkbox => {
                 atributoNombre: atributoNombre
             };
         } else {
-            delete atributosActivos[atributoId].valores[valorId];
-            if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
-                delete atributosActivos[atributoId];
-            }
-        }
-        
-        const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
-        const valorCheckboxes = valoresContainer.querySelectorAll('.valor-checkbox');
-        const seleccionarTodos = document.getElementById(`seleccionar-todos-${atributoId}`);
-        const seleccionados = valoresContainer.querySelectorAll('.valor-checkbox:checked');
-        
-        if (seleccionarTodos) {
-            if (seleccionados.length === valorCheckboxes.length) {
-                seleccionarTodos.checked = true;
-                seleccionarTodos.indeterminate = false;
-            } else if (seleccionados.length > 0) {
-                seleccionarTodos.checked = false;
-                seleccionarTodos.indeterminate = true;
-            } else {
-                seleccionarTodos.checked = false;
-                seleccionarTodos.indeterminate = false;
+            if (atributosActivos[atributoId] && atributosActivos[atributoId].valores[valorId]) {
+                delete atributosActivos[atributoId].valores[valorId];
+                if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
+                    delete atributosActivos[atributoId];
+                }
             }
         }
         
         actualizarPestanasValores();
         actualizarResumenAtributos();
     });
+});
+
+// ============ MANEJO DEL ENVÍO DEL FORMULARIO PRINCIPAL ============
+document.getElementById('productoForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    
+    // Primero validar atributos incompletos
+    if (!validarAtributosAntesDeEnviar()) {
+        return false;
+    }
+    
+    // Luego las demás validaciones
+    if (!validarCamposUnicosAntesDeEnviar()) {
+        return false;
+    }
+    
+    if (!validarTamañoTotalAntesDeEnviar()) {
+        return false;
+    }
+
+    
+    const form = this;
+    const formData = new FormData(form);
+    
+    // IMPORTANTE: Las imágenes ya están en formData por el input file,
+    // pero si selectedImages tiene imágenes, aseguramos que se agreguen
+    if (selectedImages.length > 0) {
+        // Eliminar las entradas existentes de imagenes[] para evitar duplicados
+        formData.delete('imagenes[]');
+        
+        // Agregar cada imagen seleccionada
+        selectedImages.forEach((image) => {
+            formData.append('imagenes[]', image.file);
+        });
+    }
+    
+    // Agregar imágenes de variaciones
+    Object.keys(imagenesVariacion).forEach(valorKey => {
+        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+            imagenesVariacion[valorKey].imagenes.forEach((img, idx) => {
+                formData.append(`variaciones[${valorKey}][imagenes_adicionales][${idx}]`, img.file);
+            });
+        }
+    });
+    
+    Swal.fire({
+        title: 'Guardando producto...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if (response.redirected) {
+            window.location.href = response.url;
+        } else if (response.ok) {
+            return response.json();
+        } else {
+            throw new Error('Error al guardar el producto');
+        }
+    })
+    .then(data => {
+        Swal.close();
+        if (data && data.redirect) {
+            window.location.href = data.redirect;
+        } else {
+            window.location.href = '{{ route("productos.index") }}';
+        }
+    })
+    .catch(error => {
+        Swal.close();
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Hubo un problema al guardar el producto'
+        });
+    });
+});
+
+// Inicializar modales
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        const modalCategoriaEl = document.getElementById('modalCategoria');
+        const modalMarcaEl = document.getElementById('modalMarca');
+        const modalEtiquetaEl = document.getElementById('modalEtiqueta');
+        const modalAtributoEl = document.getElementById('modalAtributo');
+        const modalImpuestoEl = document.getElementById('modalImpuesto');
+        const crearValorModalEl = document.getElementById('crearValorModal');
+        
+        if (modalCategoriaEl) modalCategoria = new bootstrap.Modal(modalCategoriaEl);
+        if (modalMarcaEl) modalMarca = new bootstrap.Modal(modalMarcaEl);
+        if (modalEtiquetaEl) modalEtiqueta = new bootstrap.Modal(modalEtiquetaEl);
+        if (modalAtributoEl) modalAtributo = new bootstrap.Modal(modalAtributoEl);
+        if (modalImpuestoEl) modalImpuesto = new bootstrap.Modal(modalImpuestoEl);
+        if (crearValorModalEl) valorModal = new bootstrap.Modal(crearValorModalEl);
+    } catch (e) {
+        console.error('Error al inicializar modales:', e);
+    }
 });
 </script>
 @endpush

@@ -12,10 +12,6 @@ class Impuesto extends Model
     protected $table = 'tbl_impuestos';
     protected $primaryKey = 'id_impuesto';
 
-    /**
-     * Desactivar timestamps automáticos de Laravel
-     * porque la tabla usa dFecha_creacion en lugar de created_at/updated_at
-     */
     public $timestamps = false;
 
     protected $fillable = [
@@ -32,9 +28,6 @@ class Impuesto extends Model
         'dFecha_creacion' => 'datetime'
     ];
 
-    /**
-     * Boot method para establecer fecha de creación automáticamente
-     */
     protected static function boot()
     {
         parent::boot();
@@ -46,71 +39,83 @@ class Impuesto extends Model
         });
     }
 
-    /**
-     * Relación muchos a muchos con productos
-     */
     public function productos()
     {
         return $this->belongsToMany(Producto::class, 'tbl_producto_impuestos', 'id_impuesto', 'id_producto')
                     ->withTimestamps();
     }
 
-    /**
-     * Scope para impuestos activos
-     */
+    public function variaciones()
+    {
+        return $this->hasMany(ProductoVariacion::class, 'id_impuesto');
+    }
+
     public function scopeActivos($query)
     {
         return $query->where('bActivo', true);
     }
 
-    /**
-     * Scope para filtrar por tipo de impuesto
-     */
     public function scopeDeTipo($query, $tipo)
     {
         return $query->where('eTipo', $tipo);
     }
 
-    /**
-     * Obtener el tipo de impuesto con formato
-     */
     public function getTipoFormateadoAttribute()
     {
         switch ($this->eTipo) {
             case 'IVA':
                 return '<span class="badge bg-primary">IVA</span>';
-            case 'IEPS':
-                return '<span class="badge bg-warning text-dark">IEPS</span>';
-            case 'OTRO':
-                return '<span class="badge bg-secondary">OTRO</span>';
+            case 'ISR':
+                return '<span class="badge bg-warning text-dark">ISR</span>';
             default:
-                return '<span class="badge bg-dark">' . $this->eTipo . '</span>';
+                return '<span class="badge bg-secondary">' . $this->eTipo . '</span>';
         }
     }
 
-    /**
-     * Obtener el porcentaje formateado
-     */
     public function getPorcentajeFormateadoAttribute()
     {
         return number_format($this->dPorcentaje, 2) . '%';
     }
 
-    /**
-     * Obtener el nombre completo del impuesto con porcentaje
-     */
     public function getNombreCompletoAttribute()
     {
         return $this->vNombre . ' (' . $this->eTipo . ' - ' . $this->porcentajeFormateado . ')';
     }
 
-    /**
-     * Obtener el badge de estado
-     */
     public function getEstadoBadgeAttribute()
     {
         return $this->bActivo 
             ? '<span class="badge bg-success">Activo</span>'
             : '<span class="badge bg-danger">Inactivo</span>';
+    }
+
+    // Método para calcular IVA
+    public static function calcularIVA($precio)
+    {
+        $iva = self::where('vNombre', 'IVA')
+            ->where('bActivo', true)
+            ->first();
+        
+        if ($iva) {
+            return $precio * ($iva->dPorcentaje / 100);
+        }
+        
+        // Si no existe IVA, usar 16% por defecto
+        return $precio * 0.16;
+    }
+
+    // Método para calcular ISR (solo informativo)
+    public static function calcularISR($utilidad)
+    {
+        $isr = self::where('vNombre', 'ISR')
+            ->where('bActivo', true)
+            ->first();
+        
+        if ($isr) {
+            return $utilidad * ($isr->dPorcentaje / 100);
+        }
+        
+        // Si no existe ISR, usar 30% por defecto como ejemplo
+        return $utilidad * 0.30;
     }
 }

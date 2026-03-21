@@ -28,7 +28,6 @@ class ProductoController extends Controller
     {
         $query = Producto::with(['marca', 'categoria', 'etiquetas', 'impuestos']);
         
-        // Agregar búsqueda por nombre o SKU
         if ($request->has('search') && !empty($request->search)) {
             $searchTerm = $request->search;
             $query->where(function($q) use ($searchTerm) {
@@ -63,18 +62,15 @@ class ProductoController extends Controller
         $marcas = Marca::all();
         $etiquetas = Etiqueta::all();
         
-        // CORREGIDO: Cargar atributos con sus valores activos - SIN orderBy('iOrden')
         $atributos = Atributo::with(['valoresActivos' => function($query) {
             $query->where('bActivo', true);
         }])->where('bActivo', true)->get();
         
-        // Obtener impuestos activos para el select
-        $impuestos = Impuesto::where('bActivo', true)->orderBy('vNombre')->get();
+        $impuestos = Impuesto::where('bActivo', true)
+            ->orderBy('vNombre')
+            ->get();
         
-        // Obtener etiquetas especiales
-        $etiquetasEspeciales = Etiqueta::whereIn('vNombre', ['nuevo', 'popular', 'descuento', 'destacado'])->get();
-        
-        return view('productos.create', compact('categorias', 'marcas', 'etiquetas', 'atributos', 'impuestos', 'etiquetasEspeciales'));
+        return view('productos.create', compact('categorias', 'marcas', 'etiquetas', 'atributos', 'impuestos'));
     }
 
     /**
@@ -144,7 +140,6 @@ class ProductoController extends Controller
             'imagenes.*' => 'image|mimes:jpeg,jpg,png,webp|max:5120',
             'atributos' => 'nullable|array',
             
-            // VALIDACIONES PARA DIMENSIONES Y PESO
             'dPeso' => [
                 'nullable',
                 'numeric',
@@ -235,10 +230,7 @@ class ProductoController extends Controller
             ],
             
             'vClase_envio' => 'nullable|in:estandar,express,fragil,grandes_dimensiones',
-            'etiquetas_especiales' => 'nullable|array',
-            'etiquetas_especiales.*' => 'in:nuevo,popular,descuento,destacado',
             
-            // CAMPOS DE DESCUENTO
             'bTiene_descuento' => 'nullable|in:0,1',
             'dPrecio_descuento' => [
                 'nullable',
@@ -253,7 +245,6 @@ class ProductoController extends Controller
                             $fail('El precio de descuento debe tener máximo 7 dígitos enteros y 2 decimales.');
                         }
                         
-                        // Validar que el precio de descuento sea menor al precio de venta
                         if ($request->input('bTiene_descuento') == '1' && $value >= $request->dPrecio_venta) {
                             $fail('El precio de descuento debe ser menor que el precio de venta.');
                         }
@@ -264,59 +255,6 @@ class ProductoController extends Controller
             'dFecha_fin_descuento' => 'nullable|date|after_or_equal:dFecha_inicio_descuento',
             'vMotivo_descuento' => 'nullable|string|max:255',
             'variaciones' => 'nullable|array',
-        ], [
-            'vCodigo_barras.required' => 'El SKU es obligatorio',
-            'vCodigo_barras.unique' => 'Ya existe un producto con este SKU',
-            'vCodigo_barras.regex' => 'El SKU solo puede contener letras y números',
-            'vCodigo_barras.max' => 'El SKU no puede exceder los 15 caracteres',
-            'vNombre.required' => 'El nombre del producto es obligatorio',
-            'vNombre.unique' => 'Ya existe un producto con este nombre',
-            'vNombre.max' => 'El nombre no puede exceder los 100 caracteres',
-            'dPrecio_venta.required' => 'El precio de venta es obligatorio',
-            'dPrecio_venta.numeric' => 'El precio de venta debe ser un número válido',
-            'dPrecio_venta.min' => 'El precio de venta no puede ser negativo',
-            'dPrecio_venta.max' => 'El precio de venta máximo es 9,999,999.99',
-            'iStock.required' => 'El stock es obligatorio',
-            'iStock.integer' => 'El stock debe ser un número entero',
-            'iStock.min' => 'El stock no puede ser negativo',
-            'iStock.max' => 'El stock no puede ser mayor a 999,999 unidades',
-            'id_categoria.required' => 'La categoría es obligatoria',
-            'id_marca.required' => 'La marca es obligatoria',
-            'id_impuesto.exists' => 'El impuesto seleccionado no existe',
-            'imagen_principal.required' => 'La imagen principal es obligatoria',
-            'imagen_principal.image' => 'El archivo debe ser una imagen',
-            'imagen_principal.mimes' => 'La imagen principal debe ser JPG, JPEG o PNG',
-            'imagen_principal.max' => 'La imagen principal no debe superar los 5MB',
-            'gif_producto.mimes' => 'El archivo debe ser un GIF',
-            'gif_producto.max' => 'El GIF no debe superar los 10MB',
-            'imagenes.max' => 'No puedes subir más de 7 imágenes adicionales',
-            'imagenes.*.image' => 'Solo se permiten archivos de imagen',
-            'imagenes.*.mimes' => 'Formatos permitidos: JPG, JPEG, PNG, WEBP',
-            'imagenes.*.max' => 'Cada imagen no debe superar los 5MB',
-            
-            // Mensajes personalizados para dimensiones
-            'dPeso.numeric' => 'El peso debe ser un número válido',
-            'dPeso.min' => 'El peso no puede ser negativo',
-            'dPeso.max' => 'El peso no puede ser mayor a 999.999 kg',
-            'dLargo_cm.numeric' => 'El largo debe ser un número válido',
-            'dLargo_cm.min' => 'El largo no puede ser negativo',
-            'dLargo_cm.max' => 'El largo no puede ser mayor a 999.99 cm',
-            'dAncho_cm.numeric' => 'El ancho debe ser un número válido',
-            'dAncho_cm.min' => 'El ancho no puede ser negativo',
-            'dAncho_cm.max' => 'El ancho no puede ser mayor a 999.99 cm',
-            'dAlto_cm.numeric' => 'El alto debe ser un número válido',
-            'dAlto_cm.min' => 'El alto no puede ser negativo',
-            'dAlto_cm.max' => 'El alto no puede ser mayor a 999.99 cm',
-            
-            'vClase_envio.in' => 'La clase de envío seleccionada no es válida',
-            'bTiene_descuento.in' => 'El valor de descuento debe ser 0 o 1',
-            'dPrecio_descuento.numeric' => 'El precio de descuento debe ser un número válido',
-            'dPrecio_descuento.min' => 'El precio de descuento no puede ser negativo',
-            'dPrecio_descuento.max' => 'El precio de descuento máximo es 9,999,999.99',
-            'dFecha_inicio_descuento.date' => 'La fecha de inicio de descuento debe ser una fecha válida',
-            'dFecha_fin_descuento.date' => 'La fecha de fin de descuento debe ser una fecha válida',
-            'dFecha_fin_descuento.after_or_equal' => 'La fecha de fin debe ser igual o posterior a la fecha de inicio',
-            'vMotivo_descuento.max' => 'El motivo del descuento no puede exceder los 255 caracteres',
         ]);
 
         // Validaciones condicionales para descuento
@@ -347,7 +285,6 @@ class ProductoController extends Controller
                         }
                     }
                     
-                    // Validación para descuento en variaciones
                     if (isset($variacion['dPrecio_descuento']) && !empty($variacion['dPrecio_descuento'])) {
                         if (!preg_match('/^\d{1,7}(\.\d{1,2})?$/', $variacion['dPrecio_descuento'])) {
                             $validator->errors()->add("variaciones.{$key}.dPrecio_descuento", 'El precio de descuento debe tener máximo 7 dígitos enteros y 2 decimales.');
@@ -358,7 +295,6 @@ class ProductoController extends Controller
                         }
                     }
                     
-                    // Validación de campos requeridos cuando hay descuento
                     if (isset($variacion['bTiene_descuento']) && $variacion['bTiene_descuento'] == 1) {
                         if (empty($variacion['dPrecio_descuento'])) {
                             $validator->errors()->add("variaciones.{$key}.dPrecio_descuento", 'El precio de descuento es obligatorio cuando el descuento está activo.');
@@ -370,7 +306,6 @@ class ProductoController extends Controller
                             $validator->errors()->add("variaciones.{$key}.dFecha_fin_descuento", 'La fecha de fin es obligatoria cuando el descuento está activo.');
                         }
                         
-                        // Validar que la fecha de fin sea igual o posterior a la fecha de inicio
                         if (!empty($variacion['dFecha_inicio_descuento']) && !empty($variacion['dFecha_fin_descuento'])) {
                             if ($variacion['dFecha_fin_descuento'] < $variacion['dFecha_inicio_descuento']) {
                                 $validator->errors()->add("variaciones.{$key}.dFecha_fin_descuento", 'La fecha de fin debe ser igual o posterior a la fecha de inicio.');
@@ -403,9 +338,9 @@ class ProductoController extends Controller
                 'dLargo_cm' => $request->dLargo_cm,
                 'dAncho_cm' => $request->dAncho_cm,
                 'dAlto_cm' => $request->dAlto_cm,
+                'imagenes_adicionales_count' => $request->hasFile('imagenes') ? count($request->file('imagenes')) : 0
             ]);
 
-            // MAPEO CORRECTO: Del formulario (descuento) a la base de datos (descuento)
             $productoData = [
                 'vCodigo_barras' => strtoupper($request->vCodigo_barras),
                 'vNombre' => $request->vNombre,
@@ -418,7 +353,6 @@ class ProductoController extends Controller
                 'id_marca' => $request->id_marca,
                 'bActivo' => $request->has('bActivo') ? true : false,
                 
-                // Dimensiones
                 'dPeso' => ($request->dPeso !== null && $request->dPeso !== '') ? floatval($request->dPeso) : null,
                 'dLargo_cm' => ($request->dLargo_cm !== null && $request->dLargo_cm !== '') ? floatval($request->dLargo_cm) : null,
                 'dAncho_cm' => ($request->dAncho_cm !== null && $request->dAncho_cm !== '') ? floatval($request->dAncho_cm) : null,
@@ -426,7 +360,6 @@ class ProductoController extends Controller
                 
                 'vClase_envio' => $request->vClase_envio ?: null,
                 
-                // MAPEO: Los campos de descuento del formulario se guardan como descuento en la BD
                 'bTiene_descuento' => $request->has('bTiene_descuento') && $request->bTiene_descuento == '1' ? true : false,
                 'dPrecio_descuento' => $request->dPrecio_descuento ?: null,
                 'dFecha_inicio_descuento' => $request->dFecha_inicio_descuento ?: null,
@@ -436,33 +369,52 @@ class ProductoController extends Controller
 
             $producto = Producto::create($productoData);
 
-            // Sincronizar impuesto
+            // Sincronizar impuesto (IVA o IEPS)
             if ($request->has('id_impuesto') && !empty($request->id_impuesto)) {
                 $producto->impuestos()->sync([$request->id_impuesto]);
                 $producto->recalcularPrecioFinal();
             }
 
             Log::info('Producto creado con ID:', ['id' => $producto->id_producto]);
-            Log::info('Dimensiones guardadas:', [
-                'dPeso' => $producto->dPeso,
-                'dLargo_cm' => $producto->dLargo_cm,
-                'dAncho_cm' => $producto->dAncho_cm,
-                'dAlto_cm' => $producto->dAlto_cm,
-            ]);
 
-            // Guardar imagen principal (ACTUALIZADO PARA GUARDAR EN BD)
+            // Guardar imagen principal
             if ($request->hasFile('imagen_principal')) {
                 $producto->guardarImagenPrincipal($request->file('imagen_principal'));
+                Log::info('Imagen principal guardada');
             }
 
-            // Guardar GIF si existe (ACTUALIZADO PARA GUARDAR EN BD)
+            // Guardar GIF si existe
             if ($request->hasFile('gif_producto')) {
                 $producto->guardarGif($request->file('gif_producto'));
+                Log::info('GIF guardado');
             }
 
-            // Guardar imágenes adicionales (ACTUALIZADO PARA GUARDAR EN BD)
+            // Guardar imágenes adicionales
             if ($request->hasFile('imagenes')) {
-                $producto->guardarImagenesAdicionales($request->file('imagenes'));
+                $imagenes = $request->file('imagenes');
+                \Log::info('Intentando guardar ' . count($imagenes) . ' imágenes adicionales');
+                
+                if (!is_array($imagenes)) {
+                    $imagenes = [$imagenes];
+                }
+                
+                $imagenesValidas = array_filter($imagenes, function($file) {
+                    return $file && $file->isValid();
+                });
+                
+                if (!empty($imagenesValidas)) {
+                    $resultado = $producto->guardarImagenesAdicionales($imagenesValidas);
+                    \Log::info('Resultado de guardar imágenes:', [
+                        'cantidad_guardadas' => is_array($resultado) ? count($resultado) : 0
+                    ]);
+                    
+                    $producto->refresh();
+                    \Log::info('vImagenes_adicionales después de guardar:', [
+                        'valor' => $producto->vImagenes_adicionales,
+                        'tipo' => gettype($producto->vImagenes_adicionales),
+                        'count' => is_array($producto->vImagenes_adicionales) ? count($producto->vImagenes_adicionales) : 0
+                    ]);
+                }
             }
 
             // Sincronizar etiquetas
@@ -492,7 +444,7 @@ class ProductoController extends Controller
                 }
             }
 
-            // Guardar variaciones (ACTUALIZADO PARA GUARDAR IMÁGENES EN BD)
+            // Guardar variaciones
             if ($request->has('variaciones')) {
                 foreach ($request->variaciones as $key => $variacionData) {
                     if (!isset($variacionData['vSKU']) || empty($variacionData['vSKU'])) {
@@ -506,21 +458,40 @@ class ProductoController extends Controller
                         $claseEnvio = 'estandar';
                     }
 
+                    $precioBase = $variacionData['dPrecio'] ?? $producto->dPrecio_venta;
+                    $tieneDescuento = isset($variacionData['bTiene_descuento']) && $variacionData['bTiene_descuento'] == '1';
+                    
+                    if ($tieneDescuento && isset($variacionData['dPrecio_descuento']) && $variacionData['dPrecio_descuento'] > 0) {
+                        $precioBase = $variacionData['dPrecio_descuento'];
+                    }
+                    
+                    $totalImpuestos = 0;
+                    $idImpuesto = $variacionData['id_impuesto'] ?? null;
+                    
+                    if ($idImpuesto) {
+                        $impuesto = Impuesto::find($idImpuesto);
+                        if ($impuesto) {
+                            $totalImpuestos = $precioBase * ($impuesto->dPorcentaje / 100);
+                        }
+                    } elseif ($producto->impuestos->count() > 0) {
+                        $impuestoPrincipal = $producto->impuestos->first();
+                        $totalImpuestos = $precioBase * ($impuestoPrincipal->dPorcentaje / 100);
+                    }
+                    
+                    $precioFinal = $precioBase + $totalImpuestos;
+
                     $variacion = ProductoVariacion::create([
                         'id_producto' => $producto->id_producto,
                         'vSKU' => strtoupper($variacionData['vSKU']),
                         'dPrecio' => $variacionData['dPrecio'] ?? $producto->dPrecio_venta,
-                        
-                        // MAPEO: descuento en variaciones
                         'dPrecio_descuento' => $variacionData['dPrecio_descuento'] ?? null,
+                        'dPrecio_final' => $precioFinal,
                         'dFecha_inicio_descuento' => $variacionData['dFecha_inicio_descuento'] ?? null,
                         'dFecha_fin_descuento' => $variacionData['dFecha_fin_descuento'] ?? null,
                         'vMotivo_descuento' => $variacionData['vMotivo_descuento'] ?? null,
-                        'bTiene_descuento' => isset($variacionData['bTiene_descuento']) && $variacionData['bTiene_descuento'] == '1' ? 1 : 0,
-                        
+                        'bTiene_descuento' => $tieneDescuento ? 1 : 0,
                         'iStock' => $variacionData['iStock'] ?? 0,
                         
-                        // Dimensiones de variación
                         'dPeso' => (isset($variacionData['dPeso']) && $variacionData['dPeso'] !== '') ? floatval($variacionData['dPeso']) : null,
                         'dLargo_cm' => (isset($variacionData['dLargo_cm']) && $variacionData['dLargo_cm'] !== '') ? floatval($variacionData['dLargo_cm']) : null,
                         'dAncho_cm' => (isset($variacionData['dAncho_cm']) && $variacionData['dAncho_cm'] !== '') ? floatval($variacionData['dAncho_cm']) : null,
@@ -529,12 +500,11 @@ class ProductoController extends Controller
                         'vClase_envio' => $claseEnvio,
                         'tDescripcion' => $variacionData['tDescripcion'] ?? null,
                         'bActivo' => isset($variacionData['bActivo']) ? 1 : 0,
-                        'id_impuesto' => $variacionData['id_impuesto'] ?? null,
+                        'id_impuesto' => $idImpuesto,
                     ]);
 
-                    Log::info('Variación creada con ID:', ['id' => $variacion->id_variacion]);
+                    Log::info('Variación creada con ID:', ['id' => $variacion->id_variacion, 'precio_final' => $precioFinal]);
 
-                    // Guardar relación de atributos para la variación
                     if (isset($variacionData['id_atributo']) && isset($variacionData['id_atributo_valor'])) {
                         VariacionAtributo::create([
                             'id_variacion' => $variacion->id_variacion,
@@ -543,24 +513,20 @@ class ProductoController extends Controller
                         ]);
                     }
 
-                    // Guardar imagen de la variación si existe (ACTUALIZADO)
                     if ($request->hasFile("variaciones.{$key}.imagen_principal")) {
                         $variacion->guardarImagenPrincipal($request->file("variaciones.{$key}.imagen_principal"));
+                        Log::info('Imagen principal de variación guardada');
                     }
                     
-                    // Guardar GIF de la variación si existe (ACTUALIZADO)
                     if ($request->hasFile("variaciones.{$key}.gif")) {
                         $variacion->guardarGif($request->file("variaciones.{$key}.gif"));
+                        Log::info('GIF de variación guardado');
                     }
                     
-                    // Guardar imágenes adicionales de la variación si existen (ACTUALIZADO)
                     if ($request->hasFile("variaciones.{$key}.imagenes_adicionales")) {
-                        $imagenes = $request->file("variaciones.{$key}.imagenes_adicionales");
-                        if (is_array($imagenes)) {
-                            $variacion->guardarImagenesAdicionales($imagenes);
-                        } else {
-                            $variacion->guardarImagenesAdicionales([$imagenes]);
-                        }
+                        $imagenesVariacion = $request->file("variaciones.{$key}.imagenes_adicionales");
+                        $variacion->guardarImagenesAdicionales($imagenesVariacion);
+                        Log::info('Imágenes adicionales de variación guardadas');
                     }
                 }
             }
@@ -577,7 +543,6 @@ class ProductoController extends Controller
             Log::error('Error al crear producto: ' . $e->getMessage());
             Log::error('Trace: ' . $e->getTraceAsString());
             
-            // Verificar si es error de tamaño POST
             if ($e instanceof \Illuminate\Http\Exceptions\PostTooLargeException) {
                 return redirect()->back()
                     ->withInput()
@@ -613,7 +578,6 @@ class ProductoController extends Controller
         ->where('bActivo', true)
         ->findOrFail($id);
         
-        // Forzar carga de atributos de variaciones si no se cargaron correctamente
         foreach ($producto->variaciones as $variacion) {
             if (!$variacion->relationLoaded('atributos')) {
                 $variacion->load('atributos.valor', 'atributos.atributo');
@@ -628,19 +592,18 @@ class ProductoController extends Controller
      */
     public function show(Producto $producto)
     {
-        // Cargar todas las relaciones necesarias para la vista de administración
         $producto->load([
             'marca', 
             'categoria', 
             'etiquetas', 
             'impuestos', 
             'variaciones' => function ($query) {
-                $query->where('bActivo', true); // Solo variaciones activas
+                $query->where('bActivo', true);
             },
             'variaciones.atributos.valor', 
             'variaciones.atributos.atributo',
             'variaciones.impuesto',
-            'valoresAtributos.atributo' // Para atributos generales
+            'valoresAtributos.atributo'
         ]);
         
         return view('productos.show', compact('producto'));
@@ -667,19 +630,126 @@ class ProductoController extends Controller
         $marcas = Marca::all();
         $etiquetas = Etiqueta::all();
         
-        // CORREGIDO: Cargar atributos con sus valores activos - SIN orderBy('iOrden')
         $atributos = Atributo::with(['valoresActivos' => function($query) {
             $query->where('bActivo', true);
         }])->where('bActivo', true)->get();
         
-        // Obtener impuestos activos para el select
-        $impuestos = Impuesto::where('bActivo', true)->orderBy('vNombre')->get();
+        $impuestos = Impuesto::where('bActivo', true)
+            ->orderBy('vNombre')
+            ->get();
         
-        $etiquetasEspeciales = Etiqueta::whereIn('vNombre', ['nuevo', 'popular', 'descuento', 'destacado'])->get();
+        // Cargar relaciones con imágenes de variaciones
+        $producto->load([
+            'etiquetas', 
+            'impuestos', 
+            'variaciones.atributos.valor', 
+            'variaciones.atributos.atributo',
+            'variaciones.impuesto',
+            'variaciones.imagenesRegistradas',
+            'valoresAtributos.atributo'
+        ]);
         
-        $producto->load(['etiquetas', 'impuestos', 'variaciones.atributos', 'valoresAtributos.atributo', 'variaciones.impuesto']);
+        // Productos existentes excluyendo el actual
+        $productosExistentes = Producto::where('id_producto', '!=', $producto->id_producto)
+            ->select('vCodigo_barras as sku', 'vNombre as nombre')
+            ->get()
+            ->map(function($p) {
+                return ['sku' => $p->sku, 'nombre' => $p->nombre];
+            })
+            ->values();
         
-        return view('productos.edit', compact('producto', 'categorias', 'marcas', 'etiquetas', 'atributos', 'impuestos', 'etiquetasEspeciales'));
+        // Variaciones existentes excluyendo las del producto actual
+        $variacionesExistentes = ProductoVariacion::where('id_producto', '!=', $producto->id_producto)
+            ->select('vSKU as sku')
+            ->get()
+            ->map(function($v) {
+                return ['sku' => $v->sku];
+            })
+            ->values();
+        
+        // Variaciones del producto actual con sus datos e imágenes
+        $variacionesExistentesData = [];
+        foreach($producto->variaciones as $variacion) {
+            $key = '';
+            foreach($variacion->atributos as $atributo) {
+                $key = $atributo->id_atributo . '_' . $atributo->id_atributo_valor;
+            }
+            
+            // Obtener URLs de las imágenes de la variación
+            $imagenes = [];
+            
+            // Imagen principal
+            if ($variacion->imagen_principal_url) {
+                $imagenes[] = $variacion->imagen_principal_url;
+            }
+            
+            // GIF
+            if ($variacion->gif_url) {
+                $imagenes[] = $variacion->gif_url;
+            }
+            
+            // Imágenes adicionales
+            foreach ($variacion->imagenes_adicionales_urls as $img) {
+                $imagenes[] = $img;
+            }
+            
+            $variacionesExistentesData[$key] = [
+                'id_variacion' => $variacion->id_variacion,
+                'vSKU' => $variacion->vSKU,
+                'dPrecio' => $variacion->dPrecio,
+                'dPrecio_descuento' => $variacion->dPrecio_descuento,
+                'dPrecio_final' => $variacion->dPrecio_final,
+                'bTiene_descuento' => $variacion->bTiene_descuento,
+                'dFecha_inicio_descuento' => $variacion->dFecha_inicio_descuento ? \Carbon\Carbon::parse($variacion->dFecha_inicio_descuento)->format('Y-m-d') : '',
+                'dFecha_fin_descuento' => $variacion->dFecha_fin_descuento ? \Carbon\Carbon::parse($variacion->dFecha_fin_descuento)->format('Y-m-d') : '',
+                'vMotivo_descuento' => $variacion->vMotivo_descuento,
+                'iStock' => $variacion->iStock,
+                'bActivo' => $variacion->bActivo,
+                'dPeso' => $variacion->dPeso,
+                'dLargo_cm' => $variacion->dLargo_cm,
+                'dAncho_cm' => $variacion->dAncho_cm,
+                'dAlto_cm' => $variacion->dAlto_cm,
+                'vClase_envio' => $variacion->vClase_envio,
+                'tDescripcion' => $variacion->tDescripcion,
+                'id_impuesto' => $variacion->id_impuesto,
+                'imagenes' => $imagenes,
+                'imagen_principal_url' => $variacion->imagen_principal_url,
+                'gif_url' => $variacion->gif_url,
+                'imagenes_adicionales_urls' => $variacion->imagenes_adicionales_urls
+            ];
+        }
+        
+        // Valores de atributos seleccionados para el producto
+        $valoresSeleccionadosAttr = [];
+        foreach($producto->valoresAtributos->groupBy('id_atributo') as $atributoId => $valores) {
+            $atributo = $valores->first()->atributo;
+            if($atributo) {
+                $valoresSeleccionadosAttr[$atributoId] = [
+                    'id' => $atributo->id_atributo,
+                    'nombre' => $atributo->vNombre,
+                    'valores' => $valores->mapWithKeys(function($valor) {
+                        return [$valor->id_atributo_valor => $valor->vValor];
+                    })->toArray()
+                ];
+            }
+        }
+        
+        // Imágenes actuales del producto para mostrar en el formulario
+        $imagenesActuales = $producto->imagenes ?? [];
+        
+        return view('productos.edit', compact(
+            'producto',
+            'categorias',
+            'marcas',
+            'etiquetas',
+            'atributos',
+            'impuestos',
+            'productosExistentes',
+            'variacionesExistentes',
+            'variacionesExistentesData',
+            'valoresSeleccionadosAttr',
+            'imagenesActuales'
+        ));
     }
 
     /**
@@ -687,7 +757,6 @@ class ProductoController extends Controller
      */
     public function update(Request $request, Producto $producto)
     {
-        // Validar el tamaño total de la solicitud primero
         $contentLength = $request->server('CONTENT_LENGTH');
         $maxSize = 52 * 1024 * 1024; // 52MB en bytes
         
@@ -700,7 +769,6 @@ class ProductoController extends Controller
                 ->with('swal_error', true);
         }
 
-        // Similar al store pero con ignore para unique
         $validator = Validator::make($request->all(), [
             'vCodigo_barras' => [
                 'required',
@@ -747,11 +815,11 @@ class ProductoController extends Controller
             'gif_producto' => 'nullable|mimes:gif|max:10240',
             'imagenes' => 'nullable|array|max:7',
             'imagenes.*' => 'image|mimes:jpeg,jpg,png,webp|max:5120',
-            'imagenes_a_eliminar' => 'nullable|array',
-            'imagenes_a_eliminar.*' => 'string',
+            'imagenes_adicionales_a_eliminar' => 'nullable|string',
+            'eliminar_imagen_principal_producto' => 'nullable|in:0,1',
+            'eliminar_gif_producto' => 'nullable|in:0,1',
             'atributos' => 'nullable|array',
             
-            // VALIDACIONES PARA DIMENSIONES Y PESO
             'dPeso' => [
                 'nullable',
                 'numeric',
@@ -842,10 +910,7 @@ class ProductoController extends Controller
             ],
             
             'vClase_envio' => 'nullable|in:estandar,express,fragil,grandes_dimensiones',
-            'etiquetas_especiales' => 'nullable|array',
-            'etiquetas_especiales.*' => 'in:nuevo,popular,descuento,destacado',
             
-            // CAMPOS DE DESCUENTO
             'bTiene_descuento' => 'nullable|in:0,1',
             'dPrecio_descuento' => [
                 'nullable',
@@ -885,7 +950,7 @@ class ProductoController extends Controller
             return $input->bTiene_descuento == 1;
         });
 
-        // Validación de variaciones (similar al store)
+        // Validación de variaciones
         if ($request->has('variaciones')) {
             $validator->after(function ($validator) use ($request, $producto) {
                 foreach ($request->variaciones as $key => $variacion) {
@@ -893,7 +958,6 @@ class ProductoController extends Controller
                     if (!empty($sku)) {
                         $query = ProductoVariacion::where('vSKU', $sku);
                         
-                        // Si es una variación existente, ignorar su propio ID
                         if (isset($variacion['id_variacion'])) {
                             $query->where('id_variacion', '!=', $variacion['id_variacion']);
                         }
@@ -903,14 +967,12 @@ class ProductoController extends Controller
                         }
                     }
                     
-                    // Validación de precio
                     if (isset($variacion['dPrecio']) && !empty($variacion['dPrecio'])) {
                         if (!preg_match('/^\d{1,7}(\.\d{1,2})?$/', $variacion['dPrecio'])) {
                             $validator->errors()->add("variaciones.{$key}.dPrecio", 'El precio debe tener máximo 7 dígitos enteros y 2 decimales.');
                         }
                     }
                     
-                    // Validación de descuento
                     if (isset($variacion['dPrecio_descuento']) && !empty($variacion['dPrecio_descuento'])) {
                         if (!preg_match('/^\d{1,7}(\.\d{1,2})?$/', $variacion['dPrecio_descuento'])) {
                             $validator->errors()->add("variaciones.{$key}.dPrecio_descuento", 'El precio de descuento debe tener máximo 7 dígitos enteros y 2 decimales.');
@@ -921,7 +983,6 @@ class ProductoController extends Controller
                         }
                     }
                     
-                    // Validación de campos requeridos cuando hay descuento
                     if (isset($variacion['bTiene_descuento']) && $variacion['bTiene_descuento'] == 1) {
                         if (empty($variacion['dPrecio_descuento'])) {
                             $validator->errors()->add("variaciones.{$key}.dPrecio_descuento", 'El precio de descuento es obligatorio cuando el descuento está activo.');
@@ -933,7 +994,6 @@ class ProductoController extends Controller
                             $validator->errors()->add("variaciones.{$key}.dFecha_fin_descuento", 'La fecha de fin es obligatoria cuando el descuento está activo.');
                         }
                         
-                        // Validar que la fecha de fin sea igual o posterior a la fecha de inicio
                         if (!empty($variacion['dFecha_inicio_descuento']) && !empty($variacion['dFecha_fin_descuento'])) {
                             if ($variacion['dFecha_fin_descuento'] < $variacion['dFecha_inicio_descuento']) {
                                 $validator->errors()->add("variaciones.{$key}.dFecha_fin_descuento", 'La fecha de fin debe ser igual o posterior a la fecha de inicio.');
@@ -954,12 +1014,31 @@ class ProductoController extends Controller
         try {
             DB::beginTransaction();
 
-            // Validar límite de imágenes
+            // ============ LOG PARA DEPURAR ELIMINACIÓN DE IMÁGENES ============
+            Log::info('=== INICIO ACTUALIZACIÓN PRODUCTO ID: ' . $producto->id_producto . ' ===');
+            Log::info('imagenes_adicionales_a_eliminar recibido:', [
+                'valor_raw' => $request->imagenes_adicionales_a_eliminar,
+                'valor_decodificado' => json_decode($request->imagenes_adicionales_a_eliminar, true)
+            ]);
+            
+            Log::info('eliminar_imagen_principal_producto: ' . $request->eliminar_imagen_principal_producto);
+            Log::info('eliminar_gif_producto: ' . $request->eliminar_gif_producto);
+            // ============ FIN LOGS ============
+
             $imagenesActuales = $producto->getNumeroImagenes();
             $nuevasImagenes = $request->hasFile('imagenes') ? count($request->file('imagenes')) : 0;
-            $imagenesAEliminar = $request->imagenes_a_eliminar ? count($request->imagenes_a_eliminar) : 0;
             
-            $espacioDisponible = $imagenesActuales - $imagenesAEliminar + $nuevasImagenes;
+            $imagenesAEliminar = [];
+            if ($request->has('imagenes_adicionales_a_eliminar') && !empty($request->imagenes_adicionales_a_eliminar)) {
+                $imagenesAEliminar = json_decode($request->imagenes_adicionales_a_eliminar, true);
+                if (!is_array($imagenesAEliminar)) {
+                    $imagenesAEliminar = [];
+                }
+            }
+            
+            Log::info('Imágenes a eliminar (parseadas):', $imagenesAEliminar);
+            
+            $espacioDisponible = $imagenesActuales - count($imagenesAEliminar) + $nuevasImagenes;
             
             if ($espacioDisponible > 8) {
                 return redirect()->back()
@@ -968,12 +1047,26 @@ class ProductoController extends Controller
                     ->with('swal_error', true);
             }
 
-            // Eliminar imágenes seleccionadas SOLO si se especifica
-            if ($request->has('imagenes_a_eliminar') && is_array($request->imagenes_a_eliminar) && count($request->imagenes_a_eliminar) > 0) {
-                $producto->eliminarImagenesAdicionalesEspecificas($request->imagenes_a_eliminar);
+            // ============ ELIMINAR IMÁGENES ADICIONALES CON MANEJO DE ERRORES ============
+            if (!empty($imagenesAEliminar) && is_array($imagenesAEliminar)) {
+                Log::info('Llamando a eliminarImagenesAdicionalesEspecificas con:', $imagenesAEliminar);
+                
+                try {
+                    $producto->eliminarImagenesAdicionalesEspecificas($imagenesAEliminar);
+                    Log::info('Imágenes adicionales eliminadas correctamente del producto ID: ' . $producto->id_producto);
+                    
+                    // Verificar después de eliminar
+                    $producto->refresh();
+                    Log::info('vImagenes_adicionales después de eliminar:', [
+                        'valor' => $producto->vImagenes_adicionales
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('ERROR en eliminarImagenesAdicionalesEspecificas: ' . $e->getMessage());
+                    Log::error('Trace: ' . $e->getTraceAsString());
+                    throw $e; // Re-lanzar para que el bloque catch principal lo maneje
+                }
             }
 
-            // Actualizar producto
             $updateData = [
                 'vCodigo_barras' => strtoupper($request->vCodigo_barras),
                 'vNombre' => $request->vNombre,
@@ -986,7 +1079,6 @@ class ProductoController extends Controller
                 'id_marca' => $request->id_marca,
                 'bActivo' => $request->has('bActivo') ? true : false,
                 
-                // Dimensiones
                 'dPeso' => ($request->dPeso !== null && $request->dPeso !== '') ? floatval($request->dPeso) : null,
                 'dLargo_cm' => ($request->dLargo_cm !== null && $request->dLargo_cm !== '') ? floatval($request->dLargo_cm) : null,
                 'dAncho_cm' => ($request->dAncho_cm !== null && $request->dAncho_cm !== '') ? floatval($request->dAncho_cm) : null,
@@ -994,7 +1086,6 @@ class ProductoController extends Controller
                 
                 'vClase_envio' => $request->vClase_envio ?: null,
                 
-                // MAPEO: descuento del formulario -> descuento en BD
                 'bTiene_descuento' => $request->has('bTiene_descuento') && $request->bTiene_descuento == '1' ? true : false,
                 'dPrecio_descuento' => $request->dPrecio_descuento ?: null,
                 'dFecha_inicio_descuento' => $request->dFecha_inicio_descuento ?: null,
@@ -1004,7 +1095,6 @@ class ProductoController extends Controller
 
             $producto->update($updateData);
 
-            // Sincronizar impuesto
             if ($request->has('id_impuesto')) {
                 if (!empty($request->id_impuesto)) {
                     $producto->impuestos()->sync([$request->id_impuesto]);
@@ -1014,25 +1104,38 @@ class ProductoController extends Controller
                 $producto->recalcularPrecioFinal();
             }
 
-            // Guardar imagen principal si se subió una nueva (ACTUALIZADO)
+            // Eliminar imagen principal si está marcada
+            if ($request->has('eliminar_imagen_principal_producto') && $request->eliminar_imagen_principal_producto == '1') {
+                $producto->eliminarImagenPrincipal();
+                Log::info('Imagen principal eliminada del producto ID: ' . $producto->id_producto);
+            }
+            
+            // Agregar nueva imagen principal
             if ($request->hasFile('imagen_principal')) {
                 $producto->guardarImagenPrincipal($request->file('imagen_principal'));
+                Log::info('Nueva imagen principal guardada para producto ID: ' . $producto->id_producto);
             }
 
-            // Guardar GIF si se subió uno nuevo (ACTUALIZADO)
+            // Eliminar GIF si está marcado
+            if ($request->has('eliminar_gif_producto') && $request->eliminar_gif_producto == '1') {
+                $producto->eliminarGif();
+                Log::info('GIF eliminado del producto ID: ' . $producto->id_producto);
+            }
+            
+            // Agregar nuevo GIF
             if ($request->hasFile('gif_producto')) {
                 $producto->guardarGif($request->file('gif_producto'));
+                Log::info('Nuevo GIF guardado para producto ID: ' . $producto->id_producto);
             }
 
-            // Guardar nuevas imágenes adicionales (ACTUALIZADO)
+            // Agregar nuevas imágenes adicionales
             if ($request->hasFile('imagenes') && count($request->file('imagenes')) > 0) {
                 $producto->guardarImagenesAdicionales($request->file('imagenes'));
+                Log::info('Nuevas imágenes adicionales guardadas para producto ID: ' . $producto->id_producto);
             }
 
-            // Sincronizar etiquetas
             $producto->etiquetas()->sync($request->etiquetas ?? []);
 
-            // Actualizar atributos del producto
             DB::table('tbl_producto_atributos')->where('id_producto', $producto->id_producto)->delete();
             
             if ($request->has('atributos')) {
@@ -1073,24 +1176,42 @@ class ProductoController extends Controller
                         $claseEnvio = 'estandar';
                     }
 
+                    $precioBase = $variacionData['dPrecio'] ?? $producto->dPrecio_venta;
+                    $tieneDescuento = isset($variacionData['bTiene_descuento']) && $variacionData['bTiene_descuento'] == '1';
+                    
+                    if ($tieneDescuento && isset($variacionData['dPrecio_descuento']) && $variacionData['dPrecio_descuento'] > 0) {
+                        $precioBase = $variacionData['dPrecio_descuento'];
+                    }
+                    
+                    $totalImpuestos = 0;
+                    $idImpuesto = $variacionData['id_impuesto'] ?? null;
+                    
+                    if ($idImpuesto) {
+                        $impuesto = Impuesto::find($idImpuesto);
+                        if ($impuesto) {
+                            $totalImpuestos = $precioBase * ($impuesto->dPorcentaje / 100);
+                        }
+                    } elseif ($producto->impuestos->count() > 0) {
+                        $impuestoPrincipal = $producto->impuestos->first();
+                        $totalImpuestos = $precioBase * ($impuestoPrincipal->dPorcentaje / 100);
+                    }
+                    
+                    $precioFinal = $precioBase + $totalImpuestos;
+
                     if (isset($variacionData['id_variacion'])) {
-                        // Actualizar variación existente
                         $variacion = ProductoVariacion::find($variacionData['id_variacion']);
                         if ($variacion && $variacion->id_producto == $producto->id_producto) {
                             $variacion->update([
                                 'vSKU' => strtoupper($variacionData['vSKU']),
                                 'dPrecio' => $variacionData['dPrecio'] ?? $producto->dPrecio_venta,
-                                
-                                // MAPEO para variaciones
                                 'dPrecio_descuento' => $variacionData['dPrecio_descuento'] ?? null,
+                                'dPrecio_final' => $precioFinal,
                                 'dFecha_inicio_descuento' => $variacionData['dFecha_inicio_descuento'] ?? null,
                                 'dFecha_fin_descuento' => $variacionData['dFecha_fin_descuento'] ?? null,
                                 'vMotivo_descuento' => $variacionData['vMotivo_descuento'] ?? null,
-                                'bTiene_descuento' => isset($variacionData['bTiene_descuento']) && $variacionData['bTiene_descuento'] == '1' ? 1 : 0,
-                                
+                                'bTiene_descuento' => $tieneDescuento ? 1 : 0,
                                 'iStock' => $variacionData['iStock'] ?? 0,
                                 
-                                // Dimensiones de variación
                                 'dPeso' => (isset($variacionData['dPeso']) && $variacionData['dPeso'] !== '') ? floatval($variacionData['dPeso']) : null,
                                 'dLargo_cm' => (isset($variacionData['dLargo_cm']) && $variacionData['dLargo_cm'] !== '') ? floatval($variacionData['dLargo_cm']) : null,
                                 'dAncho_cm' => (isset($variacionData['dAncho_cm']) && $variacionData['dAncho_cm'] !== '') ? floatval($variacionData['dAncho_cm']) : null,
@@ -1099,12 +1220,11 @@ class ProductoController extends Controller
                                 'vClase_envio' => $claseEnvio,
                                 'tDescripcion' => $variacionData['tDescripcion'] ?? null,
                                 'bActivo' => isset($variacionData['bActivo']) ? 1 : 0,
-                                'id_impuesto' => $variacionData['id_impuesto'] ?? null,
+                                'id_impuesto' => $idImpuesto,
                             ]);
 
                             $idsVariacionesProcesadas[] = $variacion->id_variacion;
 
-                            // Actualizar relación de atributos
                             $variacion->atributos()->delete();
                             
                             if (isset($variacionData['id_atributo']) && isset($variacionData['id_atributo_valor'])) {
@@ -1115,29 +1235,54 @@ class ProductoController extends Controller
                                 ]);
                             }
 
-                            // Actualizar imagen SOLO si se sube una nueva (ACTUALIZADO)
+                            // Gestión de imágenes de variación
+                            if (isset($variacionData['eliminar_imagen_principal']) && $variacionData['eliminar_imagen_principal'] == '1') {
+                                $variacion->eliminarImagenPrincipal();
+                                Log::info('Imagen principal eliminada de variación ID: ' . $variacion->id_variacion);
+                            }
+                            
                             if ($request->hasFile("variaciones.{$key}.imagen_principal")) {
                                 $variacion->guardarImagenPrincipal($request->file("variaciones.{$key}.imagen_principal"));
+                                Log::info('Nueva imagen principal guardada para variación ID: ' . $variacion->id_variacion);
                             }
                             
-                            // Actualizar GIF SOLO si se sube uno nuevo (ACTUALIZADO)
+                            if (isset($variacionData['eliminar_gif']) && $variacionData['eliminar_gif'] == '1') {
+                                $variacion->eliminarGif();
+                                Log::info('GIF eliminado de variación ID: ' . $variacion->id_variacion);
+                            }
+                            
                             if ($request->hasFile("variaciones.{$key}.gif")) {
                                 $variacion->guardarGif($request->file("variaciones.{$key}.gif"));
+                                Log::info('Nuevo GIF guardado para variación ID: ' . $variacion->id_variacion);
                             }
                             
-                            // Actualizar imágenes adicionales SOLO si se suben nuevas (ACTUALIZADO)
-                            if ($request->hasFile("variaciones.{$key}.imagenes_adicionales")) {
-                                $imagenes = $request->file("variaciones.{$key}.imagenes_adicionales");
-                                if (is_array($imagenes)) {
-                                    $variacion->guardarImagenesAdicionales($imagenes);
-                                } else {
-                                    $variacion->guardarImagenesAdicionales([$imagenes]);
+                            if (isset($variacionData['imagenes_a_eliminar']) && !empty($variacionData['imagenes_a_eliminar'])) {
+                                $imagenesAEliminarVar = json_decode($variacionData['imagenes_a_eliminar'], true);
+                                if (!empty($imagenesAEliminarVar)) {
+                                    try {
+                                        $variacion->eliminarImagenesAdicionalesEspecificas($imagenesAEliminarVar);
+                                        Log::info('Imágenes adicionales eliminadas de variación ID: ' . $variacion->id_variacion);
+                                    } catch (\Exception $e) {
+                                        Log::error('ERROR al eliminar imágenes adicionales de variación: ' . $e->getMessage());
+                                        throw $e;
+                                    }
                                 }
                             }
                             
-                            // Eliminar imagen SOLO si se marca explícitamente
-                            if (isset($variacionData['eliminar_imagen']) && $variacionData['eliminar_imagen'] == '1') {
-                                $variacion->eliminarImagenPrincipal();
+                            if ($request->hasFile("variaciones.{$key}.imagenes_adicionales")) {
+                                $imagenes = $request->file("variaciones.{$key}.imagenes_adicionales");
+                                if (!empty($imagenes)) {
+                                    if (!is_array($imagenes)) {
+                                        $imagenes = [$imagenes];
+                                    }
+                                    $imagenesValidas = array_filter($imagenes, function($file) {
+                                        return $file && $file->isValid();
+                                    });
+                                    if (!empty($imagenesValidas)) {
+                                        $variacion->guardarImagenesAdicionales($imagenesValidas);
+                                        Log::info('Nuevas imágenes adicionales guardadas para variación ID: ' . $variacion->id_variacion);
+                                    }
+                                }
                             }
                         }
                     } else {
@@ -1146,17 +1291,14 @@ class ProductoController extends Controller
                             'id_producto' => $producto->id_producto,
                             'vSKU' => strtoupper($variacionData['vSKU']),
                             'dPrecio' => $variacionData['dPrecio'] ?? $producto->dPrecio_venta,
-                            
-                            // MAPEO para nuevas variaciones
                             'dPrecio_descuento' => $variacionData['dPrecio_descuento'] ?? null,
+                            'dPrecio_final' => $precioFinal,
                             'dFecha_inicio_descuento' => $variacionData['dFecha_inicio_descuento'] ?? null,
                             'dFecha_fin_descuento' => $variacionData['dFecha_fin_descuento'] ?? null,
                             'vMotivo_descuento' => $variacionData['vMotivo_descuento'] ?? null,
-                            'bTiene_descuento' => isset($variacionData['bTiene_descuento']) && $variacionData['bTiene_descuento'] == '1' ? 1 : 0,
-                            
+                            'bTiene_descuento' => $tieneDescuento ? 1 : 0,
                             'iStock' => $variacionData['iStock'] ?? 0,
                             
-                            // Dimensiones de variación
                             'dPeso' => (isset($variacionData['dPeso']) && $variacionData['dPeso'] !== '') ? floatval($variacionData['dPeso']) : null,
                             'dLargo_cm' => (isset($variacionData['dLargo_cm']) && $variacionData['dLargo_cm'] !== '') ? floatval($variacionData['dLargo_cm']) : null,
                             'dAncho_cm' => (isset($variacionData['dAncho_cm']) && $variacionData['dAncho_cm'] !== '') ? floatval($variacionData['dAncho_cm']) : null,
@@ -1165,11 +1307,11 @@ class ProductoController extends Controller
                             'vClase_envio' => $claseEnvio,
                             'tDescripcion' => $variacionData['tDescripcion'] ?? null,
                             'bActivo' => isset($variacionData['bActivo']) ? 1 : 0,
-                            'id_impuesto' => $variacionData['id_impuesto'] ?? null,
+                            'id_impuesto' => $idImpuesto,
                         ]);
-
+                        
                         $idsVariacionesProcesadas[] = $variacion->id_variacion;
-
+                        
                         if (isset($variacionData['id_atributo']) && isset($variacionData['id_atributo_valor'])) {
                             VariacionAtributo::create([
                                 'id_variacion' => $variacion->id_variacion,
@@ -1177,7 +1319,8 @@ class ProductoController extends Controller
                                 'id_atributo_valor' => $variacionData['id_atributo_valor']
                             ]);
                         }
-
+                        
+                        // Guardar imágenes de la nueva variación
                         if ($request->hasFile("variaciones.{$key}.imagen_principal")) {
                             $variacion->guardarImagenPrincipal($request->file("variaciones.{$key}.imagen_principal"));
                         }
@@ -1188,16 +1331,22 @@ class ProductoController extends Controller
                         
                         if ($request->hasFile("variaciones.{$key}.imagenes_adicionales")) {
                             $imagenes = $request->file("variaciones.{$key}.imagenes_adicionales");
-                            if (is_array($imagenes)) {
-                                $variacion->guardarImagenesAdicionales($imagenes);
-                            } else {
-                                $variacion->guardarImagenesAdicionales([$imagenes]);
+                            if (!empty($imagenes)) {
+                                if (!is_array($imagenes)) {
+                                    $imagenes = [$imagenes];
+                                }
+                                $imagenesValidas = array_filter($imagenes, function($file) {
+                                    return $file && $file->isValid();
+                                });
+                                if (!empty($imagenesValidas)) {
+                                    $variacion->guardarImagenesAdicionales($imagenesValidas);
+                                }
                             }
                         }
                     }
                 }
 
-                // Eliminar variaciones que ya no están en el formulario
+                // Eliminar variaciones que ya no existen en el formulario
                 $variacionesAEliminar = array_diff($idsVariacionesExistentes, $idsVariacionesProcesadas);
                 foreach ($variacionesAEliminar as $idVariacion) {
                     $variacion = ProductoVariacion::find($idVariacion);
@@ -1205,11 +1354,14 @@ class ProductoController extends Controller
                         $variacion->eliminarTodasLasImagenes();
                         $variacion->atributos()->delete();
                         $variacion->delete();
+                        Log::info('Variación eliminada ID: ' . $idVariacion);
                     }
                 }
             }
 
             DB::commit();
+
+            Log::info('=== FIN ACTUALIZACIÓN PRODUCTO ID: ' . $producto->id_producto . ' ===');
 
             return redirect()->route('productos.show', $producto->id_producto)
                 ->with('success', 'Producto actualizado exitosamente.')
@@ -1227,7 +1379,7 @@ class ProductoController extends Controller
                 ->with('swal_error', true);
         }
     }
-
+    
     /**
      * Remove the specified resource from storage.
      */
@@ -1236,24 +1388,19 @@ class ProductoController extends Controller
         try {
             DB::beginTransaction();
 
-            // Eliminar imágenes de variaciones
             foreach ($producto->variaciones as $variacion) {
                 $variacion->eliminarTodasLasImagenes();
                 $variacion->atributos()->delete();
             }
 
-            // Eliminar variaciones
             $producto->variaciones()->delete();
 
-            // Eliminar imágenes principales
             $producto->eliminarTodasLasImagenes();
 
-            // Eliminar relaciones
             $producto->etiquetas()->detach();
             $producto->impuestos()->detach();
             DB::table('tbl_producto_atributos')->where('id_producto', $producto->id_producto)->delete();
 
-            // Eliminar producto
             $producto->delete();
             
             DB::commit();
@@ -1288,85 +1435,8 @@ class ProductoController extends Controller
         return view('productos.catalogo', compact('productos'));
     }
 
-    // ============ FUNCIONES PARA MANEJO DE IMÁGENES (AHORA USAN LOS MÉTODOS DEL MODELO) ============
+    // ============ FUNCIONES PARA ATRIBUTOS ============
 
-    /**
-     * Guardar imagen principal del producto - MANTENIDO POR COMPATIBILIDAD
-     */
-    private function guardarImagenPrincipal($producto, $imagen)
-    {
-        return $producto->guardarImagenPrincipal($imagen);
-    }
-
-    /**
-     * Guardar GIF del producto - MANTENIDO POR COMPATIBILIDAD
-     */
-    private function guardarGif($producto, $gif)
-    {
-        return $producto->guardarGif($gif);
-    }
-
-    /**
-     * Guardar imágenes adicionales del producto - MANTENIDO POR COMPATIBILIDAD
-     */
-    private function guardarImagenes($producto, $imagenes)
-    {
-        return $producto->guardarImagenesAdicionales($imagenes);
-    }
-
-    /**
-     * Eliminar imagen principal del producto - MANTENIDO POR COMPATIBILIDAD
-     */
-    private function eliminarImagenPrincipal($producto)
-    {
-        $producto->eliminarImagenPrincipal();
-    }
-
-    /**
-     * Eliminar GIF del producto - MANTENIDO POR COMPATIBILIDAD
-     */
-    private function eliminarGif($producto)
-    {
-        $producto->eliminarGif();
-    }
-
-    /**
-     * Eliminar imágenes específicas del producto - MANTENIDO POR COMPATIBILIDAD
-     */
-    private function eliminarImagenesEspecificas($producto, $imagenesAEliminar)
-    {
-        $producto->eliminarImagenesAdicionalesEspecificas($imagenesAEliminar);
-    }
-
-    /**
-     * Eliminar todas las imágenes del producto - MANTENIDO POR COMPATIBILIDAD
-     */
-    private function eliminarTodasLasImagenes($producto)
-    {
-        $producto->eliminarTodasLasImagenes();
-    }
-
-    /**
-     * Guardar imagen de variación - MANTENIDO POR COMPATIBILIDAD
-     */
-    private function guardarImagenVariacion($variacion, $imagen)
-    {
-        return $variacion->guardarImagenPrincipal($imagen);
-    }
-
-    /**
-     * Eliminar imagen de variación - MANTENIDO POR COMPATIBILIDAD
-     */
-    private function eliminarImagenVariacion($variacion)
-    {
-        $variacion->eliminarImagenPrincipal();
-    }
-
-    // ============ MÉTODOS PARA ATRIBUTOS ============
-
-    /**
-     * Show atributos page.
-     */
     public function atributos($id)
     {
         $producto = Producto::with(['variaciones.atributos.atributo', 'variaciones.atributos.valor'])
@@ -1375,14 +1445,10 @@ class ProductoController extends Controller
         return view('productos.atributos', compact('producto'));
     }
 
-    /**
-     * Show form to assign atributos.
-     */
     public function asignarAtributos($id)
     {
         $producto = Producto::with(['valoresAtributos.atributo'])->findOrFail($id);
         
-        // CORREGIDO: Cargar atributos con sus valores activos - SIN orderBy('iOrden')
         $atributos = Atributo::with(['valoresActivos' => function($query) {
             $query->where('bActivo', true);
         }])->where('bActivo', true)->get();
@@ -1390,9 +1456,6 @@ class ProductoController extends Controller
         return view('productos.asignar-atributos', compact('producto', 'atributos'));
     }
 
-    /**
-     * Save atributos assignment.
-     */
     public function guardarAtributos(Request $request, $id)
     {
         $producto = Producto::findOrFail($id);
@@ -1450,321 +1513,8 @@ class ProductoController extends Controller
         }
     }
 
-    // ============ MÉTODOS PARA VARIACIONES ============
+    // ============ MÉTODOS API PARA VERIFICACIÓN EN TIEMPO REAL ============
 
-    /**
-     * Show variaciones page.
-     */
-    public function variaciones()
-    {
-        $productos = Producto::with(['variaciones.atributos.valor', 'variaciones.atributos.atributo', 'marca', 'categoria'])
-            ->whereHas('variaciones')
-            ->orderBy('vNombre')
-            ->get();
-            
-        return view('productos.variaciones', compact('productos'));
-    }
-
-    // ============ MÉTODOS API PARA FORMULARIOS RÁPIDOS ============
-
-    /**
-     * Quick create categoria via AJAX.
-     */
-    public function quickCreateCategoria(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'vNombre' => 'required|max:100|unique:tbl_categorias,vNombre',
-            'vSlug' => 'required|max:100|unique:tbl_categorias,vSlug',
-            'id_categoria_padre' => 'nullable|exists:tbl_categorias,id_categoria',
-            'tDescripcion' => 'nullable|string',
-            'bActivo' => 'nullable|boolean'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error de validación',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        try {
-            $categoria = new Categoria();
-            $categoria->vNombre = $request->vNombre;
-            $categoria->vSlug = $request->vSlug;
-            $categoria->id_categoria_padre = $request->id_categoria_padre;
-            $categoria->tDescripcion = $request->tDescripcion;
-            $categoria->bActivo = $request->has('bActivo') ? $request->bActivo : true;
-            
-            $ultimoOrden = Categoria::where('id_categoria_padre', $request->id_categoria_padre)->max('iOrden');
-            $categoria->iOrden = $ultimoOrden ? $ultimoOrden + 1 : 0;
-            
-            $categoria->save();
-
-            return response()->json([
-                'success' => true,
-                'categoria' => $categoria,
-                'message' => 'Categoría creada exitosamente'
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error al crear categoría rápida: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al crear categoría: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Quick create marca via AJAX.
-     */
-    public function quickCreateMarca(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'vNombre' => 'required|max:100|unique:tbl_marcas,vNombre',
-            'tDescripcion' => 'nullable|string'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error de validación',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        try {
-            $marca = Marca::create([
-                'vNombre' => $request->vNombre,
-                'tDescripcion' => $request->tDescripcion ?? null
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'marca' => $marca,
-                'message' => 'Marca creada exitosamente'
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error al crear marca rápida: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al crear marca: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Quick create etiqueta via AJAX.
-     */
-    public function quickCreateEtiqueta(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'vNombre' => 'required|max:100|unique:tbl_etiquetas,vNombre',
-            'color' => 'nullable|max:7',
-            'tDescripcion' => 'nullable|string'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error de validación',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        try {
-            $etiqueta = Etiqueta::create([
-                'vNombre' => $request->vNombre,
-                'color' => $request->color ?? '#007bff',
-                'tDescripcion' => $request->tDescripcion ?? null
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'etiqueta' => $etiqueta,
-                'message' => 'Etiqueta creada exitosamente'
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error al crear etiqueta rápida: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al crear etiqueta: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Quick create atributo via AJAX.
-     */
-    public function quickCreateAtributo(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'vNombre' => 'required|max:100|unique:tbl_atributos,vNombre',
-            'vSlug' => 'nullable|max:100|unique:tbl_atributos,vSlug',
-            'tDescripcion' => 'nullable|string'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error de validación',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        try {
-            $atributo = new Atributo();
-            $atributo->vNombre = $request->vNombre;
-            $atributo->vSlug = $request->vSlug ?: Str::slug($request->vNombre);
-            $atributo->tDescripcion = $request->tDescripcion ?? null;
-            $atributo->bActivo = true;
-            $atributo->save();
-
-            return response()->json([
-                'success' => true,
-                'atributo' => $atributo,
-                'message' => 'Atributo creado exitosamente'
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error al crear atributo rápido: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al crear atributo: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Quick create valor de atributo via AJAX.
-     */
-    public function quickCreateValorAtributo(Request $request, $atributo_id)
-    {
-        $validator = Validator::make($request->all(), [
-            'vValor' => 'required|max:100',
-            'vSlug' => 'nullable|max:100',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error de validación',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        try {
-            $atributo = Atributo::findOrFail($atributo_id);
-            
-            $valor = new AtributoValor();
-            $valor->id_atributo = $atributo_id;
-            $valor->vValor = $request->vValor;
-            $valor->vSlug = $request->vSlug ?: Str::slug($request->vValor);
-            $valor->bActivo = true;
-            
-            $valor->save();
-
-            return response()->json([
-                'success' => true,
-                'valor' => $valor,
-                'message' => 'Valor creado exitosamente'
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error al crear valor de atributo rápido: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al crear valor: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    // ============ MÉTODOS API PARA OBTENER DATOS JSON ============
-
-    /**
-     * Get categorias in JSON format.
-     */
-    public function getJsonCategorias()
-    {
-        $categorias = Categoria::where('bActivo', true)
-            ->orderBy('vNombre')
-            ->get(['id_categoria', 'vNombre', 'id_categoria_padre', 'tDescripcion']);
-        
-        return response()->json([
-            'success' => true,
-            'categorias' => $categorias
-        ]);
-    }
-
-    /**
-     * Get marcas in JSON format.
-     */
-    public function getJsonMarcas()
-    {
-        $marcas = Marca::orderBy('vNombre')
-            ->get(['id_marca', 'vNombre', 'tDescripcion']);
-        
-        return response()->json([
-            'success' => true,
-            'marcas' => $marcas
-        ]);
-    }
-
-    /**
-     * Get etiquetas in JSON format.
-     */
-    public function getJsonEtiquetas()
-    {
-        $etiquetas = Etiqueta::orderBy('vNombre')
-            ->get(['id_etiqueta', 'vNombre', 'color', 'tDescripcion']);
-        
-        return response()->json([
-            'success' => true,
-            'etiquetas' => $etiquetas
-        ]);
-    }
-
-    /**
-     * Get atributos in JSON format.
-     */
-    public function getJsonAtributos()
-    {
-        // CORREGIDO: Cargar atributos con sus valores activos - SIN orderBy('iOrden')
-        $atributos = Atributo::with(['valoresActivos' => function($query) {
-            $query->where('bActivo', true);
-        }])->where('bActivo', true)
-        ->orderBy('vNombre')
-        ->get();
-        
-        return response()->json([
-            'success' => true,
-            'atributos' => $atributos
-        ]);
-    }
-
-    /**
-     * Get impuestos in JSON format.
-     */
-    public function getJsonImpuestos()
-    {
-        $impuestos = Impuesto::where('bActivo', true)
-            ->orderBy('vNombre')
-            ->get(['id_impuesto', 'vNombre', 'eTipo', 'dPorcentaje', 'tDescripcion']);
-        
-        return response()->json([
-            'success' => true,
-            'impuestos' => $impuestos
-        ]);
-    }
-
-    // ============ NUEVOS MÉTODOS PARA VERIFICACIÓN EN TIEMPO REAL ============
-
-    /**
-     * Verificar si un nombre de producto ya existe (para validación en tiempo real)
-     */
     public function verificarNombre(Request $request)
     {
         try {
@@ -1790,9 +1540,6 @@ class ProductoController extends Controller
         }
     }
 
-    /**
-     * Verificar si un SKU de producto ya existe (para validación en tiempo real)
-     */
     public function verificarSKU(Request $request)
     {
         try {

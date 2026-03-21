@@ -12,6 +12,8 @@ use App\Http\Controllers\AtributoController;
 use App\Http\Controllers\VariacionController;
 use App\Http\Controllers\ImpuestoController;
 use App\Http\Controllers\FavoritoInvitadoController;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\DB;
 
 
 // RUTA PRINCIPAL - redirige a la página de inicio real
@@ -224,3 +226,5 @@ Route::get('/debug-favoritos', function() {
         'usuario_temporal' => DB::table('tbl_usuarios_temporales')->where('session_id', Session::getId())->first(),
     ];
 });
+Route::post('/impuestos/init', [ImpuestoController::class, 'initMexicoTaxes'])->name('impuestos.init');
+Route::get('/productos/{producto}/edit', [ProductoController::class, 'edit'])->name('productos.edit');

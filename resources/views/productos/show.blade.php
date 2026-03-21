@@ -79,18 +79,8 @@
         $imagenesProducto = $producto->imagenes ?? [];
         $tieneVariaciones = $producto->tieneVariaciones();
         
-        // Calcular si el producto padre tiene descuento vigente
+        // Datos del producto usando los campos de la base de datos
         $productoTieneDescuento = $producto->tieneDescuentoActivo();
-        $precioBaseProducto = $productoTieneDescuento ? $producto->dPrecio_descuento : $producto->dPrecio_venta;
-        
-        // Calcular impuestos del producto padre
-        $totalImpuestosProducto = 0;
-        $detalleImpuestosProducto = [];
-        foreach($producto->impuestos as $impuesto) {
-            $montoImpuesto = $precioBaseProducto * ($impuesto->dPorcentaje / 100);
-            $totalImpuestosProducto += $montoImpuesto;
-            $detalleImpuestosProducto[] = $impuesto->vNombre . ': $' . number_format($montoImpuesto, 2);
-        }
         
         $productoData = [
             'id' => 'producto',
@@ -98,10 +88,8 @@
             'precio_original' => (float)$producto->dPrecio_venta,
             'precio_descuento' => (float)($producto->dPrecio_descuento ?? 0),
             'tiene_descuento' => $productoTieneDescuento,
-            'precio_base' => (float)$precioBaseProducto,
-            'total_impuestos' => (float)$totalImpuestosProducto,
-            'precio_final' => (float)($precioBaseProducto + $totalImpuestosProducto),
-            'detalle_impuestos' => $detalleImpuestosProducto,
+            'porcentaje_descuento' => $producto->porcentaje_descuento,
+            'precio_final' => (float)($producto->dPrecio_final ?? $producto->dPrecio_venta), // Usar dPrecio_final de la BD
             'stock' => (int)$producto->iStock,
             'tiene_variaciones' => $tieneVariaciones,
             'imagenes' => $imagenesProducto,
@@ -114,7 +102,7 @@
             'clase_envio' => $producto->vClase_envio,
         ];
 
-        // --- DATOS DE LAS VARIACIONES ---
+        // --- DATOS DE LAS VARIACIONES USANDO dPrecio_final ---
         $variacionesData = [];
         $atributosAgrupados = [];
         foreach ($producto->variaciones as $var) {
@@ -144,29 +132,15 @@
             
             // Calcular si la variación tiene descuento vigente
             $variacionTieneDescuento = $var->tieneDescuentoActivo();
-            $precioBaseVariacion = $variacionTieneDescuento ? $var->dPrecio_descuento : $var->dPrecio;
             
-            // Calcular impuestos de la variación
-            $impuestoVariacion = $var->impuesto ?? $producto->impuestos->first();
-            $totalImpuestosVariacion = 0;
-            $detalleImpuestosVariacion = [];
-            
-            if ($impuestoVariacion) {
-                $montoImpuesto = $precioBaseVariacion * ($impuestoVariacion->dPorcentaje / 100);
-                $totalImpuestosVariacion = $montoImpuesto;
-                $detalleImpuestosVariacion[] = $impuestoVariacion->vNombre . ': $' . number_format($montoImpuesto, 2);
-            }
-
             $variacionesData[$var->id_variacion] = [
                 'id' => $var->id_variacion,
                 'sku' => $var->vSKU,
                 'precio_original' => (float)$var->dPrecio,
                 'precio_descuento' => (float)($var->dPrecio_descuento ?? 0),
                 'tiene_descuento' => $variacionTieneDescuento,
-                'precio_base' => (float)$precioBaseVariacion,
-                'total_impuestos' => (float)$totalImpuestosVariacion,
-                'precio_final' => (float)($precioBaseVariacion + $totalImpuestosVariacion),
-                'detalle_impuestos' => $detalleImpuestosVariacion,
+                'porcentaje_descuento' => $var->porcentaje_descuento,
+                'precio_final' => (float)($var->dPrecio_final ?? $var->dPrecio), // Usar dPrecio_final de la BD
                 'stock' => (int)$var->iStock,
                 'atributos_texto' => $atributosTexto,
                 'atributos_mapa' => $atributosParaMapa,
@@ -206,6 +180,13 @@
                             @if($producto->bActivo)
                                 <span class="position-absolute top-0 start-0 badge bg-success mt-2 ms-2 px-3 py-2" style="z-index: 15;">
                                     <i class="fas fa-check-circle me-1"></i>Activo
+                                </span>
+                            @endif
+
+                            <!-- Badge de descuento en la imagen -->
+                            @if($productoTieneDescuento)
+                                <span class="position-absolute top-0 end-0 badge bg-danger mt-2 me-2 px-3 py-2" style="z-index: 15; font-size: 14px;">
+                                    <i class="fas fa-tag me-1"></i>-{{ $producto->porcentaje_descuento }}%
                                 </span>
                             @endif
 
@@ -286,7 +267,7 @@
             </div>
 
             <!-- SELECTOR DE VARIACIONES CON BOTONES POR ATRIBUTO -->
-            @if($producto->tieneVariaciones() && $producto->variaciones->count() > 0)
+            @if($tieneVariaciones && count($atributosAgrupados) > 0)
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white border-0 pt-4 px-4">
                     <h5 class="fw-bold mb-0">
@@ -336,92 +317,105 @@
                             <thead class="bg-light">
                                 <tr>
                                     <th class="py-3 px-3 rounded-start">Concepto</th>
-                                    <th class="py-3 px-3">Precio</th>
-                                    <th class="py-3 px-3 rounded-end">Impuestos</th>
+                                    <th class="py-3 px-3">Detalle</th>
+                                    <th class="py-3 px-3 rounded-end">Monto</th>
                                 </tr>
                             </thead>
                             <tbody id="tabla-precios-body">
                                 <!-- PRODUCTO PADRE (visible por defecto) -->
+                                @if($producto->dPrecio_compra)
                                 <tr id="producto-precio-compra-row">
                                     <td class="py-3 px-3">
                                         <strong>Precio de compra</strong>
                                     </td>
                                     <td class="py-3 px-3">
+                                        <span class="text-muted">Costo de adquisición</span>
+                                    </td>
+                                    <td class="py-3 px-3">
                                         <span class="fw-semibold" id="producto-precio-compra">${{ number_format($producto->dPrecio_compra, 2) }}</span>
                                     </td>
-                                    <td class="py-3 px-3 text-muted">-</td>
                                 </tr>
+                                @endif
+                                
                                 <tr id="producto-precio-venta-row">
                                     <td class="py-3 px-3">
                                         <strong>Precio de venta</strong>
-                                        @if($productoTieneDescuento)
-                                            <span class="badge bg-danger ms-2" id="producto-descuento-badge">Descuento activo</span>
-                                        @endif
-                                    </td>
-                                    <td class="py-3 px-3" id="producto-precio-container">
-                                        @if($productoTieneDescuento)
-                                            <span class="text-decoration-line-through text-muted me-2" id="producto-precio-original">
-                                                ${{ number_format($producto->dPrecio_venta, 2) }}
-                                            </span>
-                                            <span class="fw-bold text-danger" id="producto-precio-actual">
-                                                ${{ number_format($producto->dPrecio_descuento, 2) }}
-                                            </span>
-                                        @else
-                                            <span class="fw-bold" id="producto-precio-actual">${{ number_format($producto->dPrecio_venta, 2) }}</span>
-                                            <span id="producto-precio-original" style="display: none;"></span>
-                                        @endif
-                                    </td>
-                                    <td class="py-3 px-3" id="producto-impuestos-container">
-                                        +${{ number_format($totalImpuestosProducto, 2) }}
-                                        @if(count($detalleImpuestosProducto) > 0)
-                                            <br><small class="text-muted">{{ implode(' | ', $detalleImpuestosProducto) }}</small>
-                                        @endif
-                                    </td>
-                                </tr>
-                                <tr class="bg-light" id="producto-total-row">
-                                    <td class="py-3 px-3 rounded-start">
-                                        <strong class="text-primary">TOTAL (con impuestos)</strong>
                                     </td>
                                     <td class="py-3 px-3">
-                                        <span class="fw-bold text-primary fs-5" id="producto-precio-total">
-                                            ${{ number_format($precioBaseProducto + $totalImpuestosProducto, 2) }}
+                                        @if($productoTieneDescuento)
+                                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                                <span class="text-decoration-line-through text-muted me-2" id="producto-precio-original">
+                                                    ${{ number_format($producto->dPrecio_venta, 2) }}
+                                                </span>
+                                                <span class="fw-bold text-danger" id="producto-precio-con-descuento">
+                                                    ${{ number_format($producto->dPrecio_descuento, 2) }}
+                                                </span>
+                                                <span class="badge bg-danger" id="producto-descuento-badge">-{{ $producto->porcentaje_descuento }}%</span>
+                                            </div>
+                                        @else
+                                            <span class="fw-bold" id="producto-precio-base">${{ number_format($producto->dPrecio_venta, 2) }}</span>
+                                        @endif
+                                    </td>
+                                    <td class="py-3 px-3">
+                                        Precio base
+                                    </td>
+                                </tr>
+                                
+                                <tr class="bg-light fw-bold" id="producto-total-row">
+                                    <td class="py-3 px-3 rounded-start">
+                                        <span class="text-primary">PRECIO FINAL</span>
+                                    </td>
+                                    <td class="py-3 px-3">
+                                        <small class="text-muted">Precio que verá el cliente (con impuestos)</small>
+                                    </td>
+                                    <td class="py-3 px-3 rounded-end">
+                                        <span class="text-primary fs-5" id="producto-precio-total">
+                                            ${{ number_format($productoData['precio_final'], 2) }}
                                         </span>
                                     </td>
-                                    <td class="py-3 px-3 rounded-end"></td>
                                 </tr>
                                 
                                 <!-- VARIACIÓN (oculto por defecto) -->
+                                @if($producto->dPrecio_compra)
                                 <tr id="variacion-precio-compra-row" style="display: none;">
                                     <td class="py-3 px-3">
                                         <strong>Precio de compra (variación)</strong>
                                     </td>
                                     <td class="py-3 px-3">
+                                        <span class="text-muted">Costo de adquisición</span>
+                                    </td>
+                                    <td class="py-3 px-3">
                                         <span class="fw-semibold" id="variacion-precio-compra">$0.00</span>
                                     </td>
-                                    <td class="py-3 px-3 text-muted">-</td>
                                 </tr>
+                                @endif
+                                
                                 <tr id="variacion-precio-venta-row" style="display: none;">
                                     <td class="py-3 px-3">
                                         <strong>Precio de venta (variación)</strong>
-                                        <span class="badge bg-danger ms-2" id="variacion-descuento-badge" style="display: none;">Descuento activo</span>
                                     </td>
                                     <td class="py-3 px-3" id="variacion-precio-container">
-                                        <span class="text-decoration-line-through text-muted me-2" id="variacion-precio-original" style="display: none;"></span>
-                                        <span class="fw-bold" id="variacion-precio-actual">$0.00</span>
-                                    </td>
-                                    <td class="py-3 px-3" id="variacion-impuestos-container">
-                                        +$0.00
-                                        <br><small class="text-muted" id="variacion-detalle-impuestos"></small>
-                                    </td>
-                                </tr>
-                                <tr class="bg-light" id="variacion-total-row" style="display: none;">
-                                    <td class="py-3 px-3 rounded-start">
-                                        <strong class="text-primary">TOTAL variación (con impuestos)</strong>
+                                        <div class="d-flex align-items-center flex-wrap gap-2">
+                                            <span class="text-decoration-line-through text-muted me-2" id="variacion-precio-original" style="display: none;"></span>
+                                            <span class="fw-bold" id="variacion-precio-con-descuento">$0.00</span>
+                                            <span class="badge bg-danger" id="variacion-descuento-badge" style="display: none;">Descuento</span>
+                                        </div>
                                     </td>
                                     <td class="py-3 px-3">
-                                        <span class="fw-bold text-primary fs-5" id="variacion-precio-total">$0.00</span>
+                                        Precio base
                                     </td>
-                                    <td class="py-3 px-3 rounded-end"></td>
+                                </tr>
+                                
+                                <tr class="bg-light fw-bold" id="variacion-total-row" style="display: none;">
+                                    <td class="py-3 px-3 rounded-start">
+                                        <span class="text-primary">PRECIO FINAL (variación)</span>
+                                    </td>
+                                    <td class="py-3 px-3">
+                                        <small class="text-muted">Precio que verá el cliente (con impuestos)</small>
+                                    </td>
+                                    <td class="py-3 px-3 rounded-end">
+                                        <span class="text-primary fs-5" id="variacion-precio-total">$0.00</span>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -723,10 +717,8 @@ const zoomLens = document.getElementById('zoom-lens');
 function iniciarZoom() {
     if (!zoomContainer || !zoomImage || !zoomLens) return;
     
-    // Calcular la relación de zoom (2.5x más grande)
     const zoomRatio = 2.5;
     
-    // Crear imagen de zoom si no existe
     let zoomResult = document.getElementById('zoom-result');
     if (!zoomResult) {
         zoomResult = document.createElement('div');
@@ -751,7 +743,6 @@ function iniciarZoom() {
         zoomContainer.appendChild(zoomResult);
     }
     
-    // Evento mouseenter
     zoomContainer.addEventListener('mouseenter', function(e) {
         zoomActive = true;
         zoomLens.style.display = 'block';
@@ -760,13 +751,11 @@ function iniciarZoom() {
         actualizarZoom(e);
     });
     
-    // Evento mousemove
     zoomContainer.addEventListener('mousemove', function(e) {
         if (!zoomActive) return;
         actualizarZoom(e);
     });
     
-    // Evento mouseleave
     zoomContainer.addEventListener('mouseleave', function() {
         zoomActive = false;
         zoomLens.style.display = 'none';
@@ -777,46 +766,36 @@ function iniciarZoom() {
     function actualizarZoom(e) {
         const rect = zoomContainer.getBoundingClientRect();
         
-        // Posición del mouse relativa al contenedor (0 a 1)
         let x = (e.clientX - rect.left) / rect.width;
         let y = (e.clientY - rect.top) / rect.height;
         
-        // Limitar entre 0 y 1
         x = Math.max(0, Math.min(1, x));
         y = Math.max(0, Math.min(1, y));
         
-        // Tamaño de la lupa (150x150)
         const lensWidth = 150;
         const lensHeight = 150;
         
-        // Posición de la lupa (centrada en el mouse)
         let lensLeft = (e.clientX - rect.left) - lensWidth / 2;
         let lensTop = (e.clientY - rect.top) - lensHeight / 2;
         
-        // Limitar la lupa dentro del contenedor
         lensLeft = Math.max(0, Math.min(rect.width - lensWidth, lensLeft));
         lensTop = Math.max(0, Math.min(rect.height - lensHeight, lensTop));
         
-        // Posicionar la lupa
         zoomLens.style.left = lensLeft + 'px';
         zoomLens.style.top = lensTop + 'px';
         
-        // Calcular posición del fondo en el zoom result (inverso)
         const bgX = (lensLeft / (rect.width - lensWidth)) * 100;
         const bgY = (lensTop / (rect.height - lensHeight)) * 100;
         
-        // Actualizar el zoom result
         zoomResult.style.backgroundImage = `url('${zoomImage.src}')`;
         zoomResult.style.backgroundPosition = `${bgX}% ${bgY}%`;
         
-        // Actualizar transform de la imagen principal para efecto adicional
         const scale = 1.1 + (0.4 * (1 - Math.abs(x - 0.5) * 2));
         zoomImage.style.transform = `scale(${scale})`;
         zoomImage.style.transformOrigin = `${x * 100}% ${y * 100}%`;
     }
 }
 
-// Función para abrir modal con imagen ampliada
 function abrirModalImagen() {
     if (!imagenesActuales || imagenesActuales.length === 0) return;
     const modalImg = document.getElementById('imagenAmpliada');
@@ -825,14 +804,12 @@ function abrirModalImagen() {
     modal.show();
 }
 
-// Función para seleccionar imagen
 function seleccionarImagen(index) {
     if (!imagenesActuales || imagenesActuales.length === 0) return;
     currentImageIndex = index;
     actualizarImagenPrincipal();
 }
 
-// Función para cambiar imagen con flechas
 function cambiarImagen(direccion) {
     if (imagenesActuales.length <= 1) return;
     currentImageIndex += direccion;
@@ -844,7 +821,6 @@ function cambiarImagen(direccion) {
     actualizarImagenPrincipal();
 }
 
-// Función para actualizar imagen principal, miniaturas y contador
 function actualizarImagenPrincipal() {
     const mainImage = document.getElementById('mainImage');
     const miniaturas = document.querySelectorAll('.miniatura');
@@ -866,7 +842,6 @@ function actualizarImagenPrincipal() {
     if (mainImage && imagenesActuales[currentImageIndex]) {
         mainImage.src = imagenesActuales[currentImageIndex];
         
-        // Reiniciar zoom para la nueva imagen
         const zoomResult = document.getElementById('zoom-result');
         if (zoomResult) {
             zoomResult.style.backgroundImage = `url('${mainImage.src}')`;
@@ -900,7 +875,49 @@ function actualizarImagenPrincipal() {
     }
 }
 
-// Función para seleccionar valor de atributo - CON TOGGLE
+function actualizarMiniaturas() {
+    const miniaturasContainer = document.getElementById('miniaturas-container');
+    const imageCounter = document.getElementById('imageCounter');
+    const totalImagenesSpan = document.getElementById('total-imagenes');
+    
+    if (!miniaturasContainer) return;
+
+    miniaturasContainer.innerHTML = '';
+    
+    if (!imagenesActuales || imagenesActuales.length === 0) {
+        if (imageCounter) imageCounter.style.display = 'none';
+        return;
+    }
+    
+    if (imageCounter) imageCounter.style.display = 'block';
+    
+    imagenesActuales.forEach((imgUrl, index) => {
+        const div = document.createElement('div');
+        div.className = 'miniatura-item flex-shrink-0';
+        div.setAttribute('onclick', `seleccionarImagen(${index})`);
+        div.style.width = '70px';
+
+        const img = document.createElement('img');
+        img.src = imgUrl;
+        img.className = `img-thumbnail miniatura ${index === 0 ? 'activa' : ''}`;
+        img.style.cssText = 'width: 70px; height: 70px; object-fit: cover; cursor: pointer; border: 2px solid transparent; border-radius: 8px;';
+        img.alt = `Miniatura ${index + 1}`;
+        img.onerror = function() { this.src = 'https://via.placeholder.com/70x70?text=Error'; };
+        if (index === 0) img.style.borderColor = '#007bff';
+        div.appendChild(img);
+        miniaturasContainer.appendChild(div);
+    });
+
+    if (totalImagenesSpan) {
+        totalImagenesSpan.textContent = imagenesActuales.length;
+    }
+}
+
+function formatNumber(num, decimals = 2) {
+    if (num === null || num === undefined) return '0';
+    return parseFloat(num).toFixed(decimals).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+}
+
 function seleccionarValorAtributo(btn) {
     const atributoId = btn.getAttribute('data-atributo-id');
     const valorId = btn.getAttribute('data-valor-id');
@@ -934,7 +951,6 @@ function seleccionarValorAtributo(btn) {
     }
 }
 
-// Función para buscar y actualizar variación
 function buscarYActualizarVariacion() {
     if (Object.keys(atributosSeleccionados).length === 0) {
         restaurarProductoOriginal();
@@ -969,24 +985,27 @@ function buscarYActualizarVariacion() {
     }
 }
 
-// Función para aplicar datos de variación (ACTUALIZA TODOS LOS DATOS)
 function aplicarDatosVariacion(variacion) {
     console.log('Variación seleccionada:', variacion);
     
     // Ocultar filas del producto padre
+    @if($producto->dPrecio_compra)
     document.getElementById('producto-precio-compra-row').style.display = 'none';
+    @endif
     document.getElementById('producto-precio-venta-row').style.display = 'none';
     document.getElementById('producto-total-row').style.display = 'none';
     
     // Mostrar filas de la variación
+    @if($producto->dPrecio_compra)
     document.getElementById('variacion-precio-compra-row').style.display = 'table-row';
+    @endif
     document.getElementById('variacion-precio-venta-row').style.display = 'table-row';
     document.getElementById('variacion-total-row').style.display = 'table-row';
     
     // Actualizar título
     document.getElementById('precios-titulo').textContent = 'Información de Precios - Variación Seleccionada';
     
-    // ACTUALIZAR SKU (en el header)
+    // ACTUALIZAR SKU
     document.getElementById('producto-sku').textContent = variacion.sku;
     
     // ACTUALIZAR IMÁGENES
@@ -1001,30 +1020,29 @@ function aplicarDatosVariacion(variacion) {
     actualizarImagenPrincipal();
 
     // ACTUALIZAR PRECIOS DE VARIACIÓN
+    @if($producto->dPrecio_compra)
     document.getElementById('variacion-precio-compra').textContent = '$' + formatNumber(variacion.precio_original);
+    @endif
     
-    const precioActualSpan = document.getElementById('variacion-precio-actual');
+    const precioConDescuento = document.getElementById('variacion-precio-con-descuento');
     const precioOriginalSpan = document.getElementById('variacion-precio-original');
     const descuentoBadge = document.getElementById('variacion-descuento-badge');
     
     if (variacion.tiene_descuento && variacion.precio_descuento > 0 && variacion.precio_descuento < variacion.precio_original) {
         precioOriginalSpan.style.display = 'inline';
         precioOriginalSpan.textContent = '$' + formatNumber(variacion.precio_original);
-        precioActualSpan.className = 'fw-bold text-danger';
-        precioActualSpan.textContent = '$' + formatNumber(variacion.precio_descuento);
+        precioConDescuento.className = 'fw-bold text-danger';
+        precioConDescuento.textContent = '$' + formatNumber(variacion.precio_descuento);
         descuentoBadge.style.display = 'inline-block';
+        descuentoBadge.textContent = '-' + (variacion.porcentaje_descuento || '0') + '%';
     } else {
         precioOriginalSpan.style.display = 'none';
-        precioActualSpan.className = 'fw-bold';
-        precioActualSpan.textContent = '$' + formatNumber(variacion.precio_original);
+        precioConDescuento.className = 'fw-bold';
+        precioConDescuento.textContent = '$' + formatNumber(variacion.precio_original);
         descuentoBadge.style.display = 'none';
     }
     
-    // ACTUALIZAR IMPUESTOS
-    document.getElementById('variacion-impuestos-container').innerHTML = 
-        '+$' + formatNumber(variacion.total_impuestos) + 
-        (variacion.detalle_impuestos.length > 0 ? '<br><small class="text-muted">' + variacion.detalle_impuestos.join(' | ') + '</small>' : '');
-    
+    // ACTUALIZAR PRECIO FINAL (DIRECTAMENTE DE LA BD)
     document.getElementById('variacion-precio-total').textContent = '$' + formatNumber(variacion.precio_final);
 
     // ACTUALIZAR STOCK
@@ -1083,13 +1101,6 @@ function aplicarDatosVariacion(variacion) {
     }
 }
 
-// Función para formatear números con comas
-function formatNumber(num, decimals = 2) {
-    if (num === null || num === undefined) return '0';
-    return parseFloat(num).toFixed(decimals).replace(/\d(?=(\d{3})+\.)/g, '$&,');
-}
-
-// Función para restaurar datos del producto original
 function restaurarProductoOriginal() {
     document.querySelectorAll('.variacion-atributo-btn').forEach(b => {
         b.classList.remove('btn-primary', 'active');
@@ -1099,12 +1110,16 @@ function restaurarProductoOriginal() {
     variacionSeleccionadaId = null;
 
     // Mostrar filas del producto padre
+    @if($producto->dPrecio_compra)
     document.getElementById('producto-precio-compra-row').style.display = 'table-row';
+    @endif
     document.getElementById('producto-precio-venta-row').style.display = 'table-row';
     document.getElementById('producto-total-row').style.display = 'table-row';
     
     // Ocultar filas de la variación
+    @if($producto->dPrecio_compra)
     document.getElementById('variacion-precio-compra-row').style.display = 'none';
+    @endif
     document.getElementById('variacion-precio-venta-row').style.display = 'none';
     document.getElementById('variacion-total-row').style.display = 'none';
     
@@ -1120,7 +1135,7 @@ function restaurarProductoOriginal() {
     currentImageIndex = 0;
     actualizarImagenPrincipal();
 
-    // RESTAURAR STOCK DEL PRODUCTO PADRE
+    // RESTAURAR STOCK
     const stockDisplay = document.getElementById('producto-stock-display');
     stockDisplay.innerHTML = '';
     
@@ -1167,46 +1182,6 @@ function restaurarProductoOriginal() {
     }
 }
 
-// Función para actualizar miniaturas
-function actualizarMiniaturas() {
-    const miniaturasContainer = document.getElementById('miniaturas-container');
-    const imageCounter = document.getElementById('imageCounter');
-    const totalImagenesSpan = document.getElementById('total-imagenes');
-    
-    if (!miniaturasContainer) return;
-
-    miniaturasContainer.innerHTML = '';
-    
-    if (!imagenesActuales || imagenesActuales.length === 0) {
-        if (imageCounter) imageCounter.style.display = 'none';
-        return;
-    }
-    
-    if (imageCounter) imageCounter.style.display = 'block';
-    
-    imagenesActuales.forEach((imgUrl, index) => {
-        const div = document.createElement('div');
-        div.className = 'miniatura-item flex-shrink-0';
-        div.setAttribute('onclick', `seleccionarImagen(${index})`);
-        div.style.width = '70px';
-
-        const img = document.createElement('img');
-        img.src = imgUrl;
-        img.className = `img-thumbnail miniatura ${index === 0 ? 'activa' : ''}`;
-        img.style.cssText = 'width: 70px; height: 70px; object-fit: cover; cursor: pointer; border: 2px solid transparent; border-radius: 8px;';
-        img.alt = `Miniatura ${index + 1}`;
-        img.onerror = function() { this.src = 'https://via.placeholder.com/70x70?text=Error'; };
-        if (index === 0) img.style.borderColor = '#007bff';
-        div.appendChild(img);
-        miniaturasContainer.appendChild(div);
-    });
-
-    if (totalImagenesSpan) {
-        totalImagenesSpan.textContent = imagenesActuales.length;
-    }
-}
-
-// Función para mostrar notificación
 function showNotification(message, type = 'success') {
     Swal.fire({
         icon: type,
@@ -1218,7 +1193,6 @@ function showNotification(message, type = 'success') {
     });
 }
 
-// Función para eliminar producto
 function confirmDelete(id) {
     Swal.fire({
         title: '¿Eliminar producto?',
@@ -1243,19 +1217,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (imagenesActuales.length > 0) {
         currentImageIndex = 0;
         actualizarImagenPrincipal();
-        // Iniciar zoom después de que la imagen esté cargada
         setTimeout(iniciarZoom, 500);
     }
-
-    console.log('Producto data:', productoData);
-    console.log('Variaciones data:', variacionesData);
 
     document.addEventListener('keydown', function(e) {
         if (e.key === 'ArrowLeft') cambiarImagen(-1);
         else if (e.key === 'ArrowRight') cambiarImagen(1);
     });
     
-    // Reiniciar zoom cuando cambia el tamaño de la ventana
     window.addEventListener('resize', function() {
         const zoomResult = document.getElementById('zoom-result');
         if (zoomResult) zoomResult.remove();
@@ -1265,7 +1234,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
-/* Estilos para el zoom */
 .zoom-container {
     position: relative;
     width: 100%;
@@ -1309,7 +1277,6 @@ document.addEventListener('DOMContentLoaded', function() {
     background-color: white;
 }
 
-/* Responsive: ocultar zoom en pantallas pequeñas */
 @media (max-width: 1200px) {
     .zoom-result {
         width: 300px;
@@ -1326,12 +1293,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }
 
-/* Animación suave para la imagen al hacer zoom */
 .zoom-image {
     transition: transform 0.2s ease-out !important;
 }
 
-/* Estilo para el modal de imagen ampliada */
 #imagenModal .modal-content {
     background: transparent;
     border: none;
@@ -1346,7 +1311,6 @@ document.addEventListener('DOMContentLoaded', function() {
     opacity: 1;
 }
 
-/* Efecto hover en miniaturas */
 .miniatura-item {
     transition: transform 0.2s ease;
 }

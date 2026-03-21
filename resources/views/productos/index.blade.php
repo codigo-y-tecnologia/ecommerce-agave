@@ -41,7 +41,7 @@
                     <tr>
                         <th>SKU</th>
                         <th>Nombre</th>
-                        <th>Precio Venta</th>
+                        <th>Precio Final</th>
                         <th>Stock</th>
                         <th>Marca</th>
                         <th>Categoría</th>
@@ -51,19 +51,34 @@
                 </thead>
                 <tbody>
                     @foreach($productos as $producto)
+                    @php
+                        // Usar el precio final del PRODUCTO PADRE directamente de la base de datos
+                        $precioFinalProducto = $producto->dPrecio_final ?? $producto->dPrecio_venta;
+                    @endphp
                     <tr>
                         <td><span class="badge bg-secondary">{{ $producto->vCodigo_barras }}</span></td>
                         <td>{{ $producto->vNombre }}</td>
                         <td>
+                            <!-- SIEMPRE mostrar el precio final del producto padre -->
+                            <span class="fw-bold">${{ number_format($precioFinalProducto, 2) }}</span>
+                            
+                            @if($producto->tieneDescuentoActivo())
+                                <br>
+                                <small class="text-success">
+                                    <i class="fas fa-tag me-1"></i>-{{ $producto->porcentaje_descuento }}%
+                                </small>
+                            @endif
+                            
                             @if($producto->tieneVariaciones())
-                                ${{ $producto->rangoPrecios }}
-                            @else
-                                ${{ number_format($producto->dPrecio_venta, 2) }}
+                                <br>
+                                <small class="text-muted">
+                                    <i class="fas fa-cubes me-1"></i>Con variaciones
+                                </small>
                             @endif
                         </td>
                         <td>
-                            <span class="badge {{ $producto->iStock > 10 ? 'bg-success' : 'bg-warning' }}">
-                                {{ $producto->iStock }} unidades
+                            <span class="badge {{ $producto->iStock > 10 ? 'bg-success' : ($producto->iStock > 0 ? 'bg-warning' : 'bg-danger') }}">
+                                {{ number_format($producto->iStock) }} {{ $producto->iStock == 1 ? 'unidad' : 'unidades' }}
                             </span>
                         </td>
                         <td>{{ $producto->marca->vNombre ?? 'N/A' }}</td>
@@ -73,29 +88,36 @@
                                 {{ $producto->bActivo ? 'Activo' : 'Inactivo' }}
                             </span>
                         </td>
-                        <td>
-                            <div class="btn-group btn-group-sm">
-                                <a href="{{ route('productos.show', $producto) }}" class="btn btn-info" 
-                                   title="Ver detalles">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{{ route('productos.atributos', $producto) }}" class="btn btn-success" 
-                                   title="Gestionar atributos">
-                                    <i class="fas fa-tags"></i>
-                                </a>
-                                <a href="{{ route('productos.edit', $producto) }}" class="btn btn-warning" 
-                                   title="Editar">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <form action="{{ route('productos.destroy', $producto) }}" method="POST" 
-                                      class="d-inline" onsubmit="return confirmDelete()">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="btn btn-danger" title="Eliminar">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
+                       <td>
+                        <div class="btn-group btn-group-sm">
+                            <!-- Botón Ver detalles -->
+                            <a href="{{ route('productos.show', $producto->id_producto) }}" class="btn btn-info" 
+                            title="Ver detalles">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            
+                            <!-- Botón Gestionar atributos -->
+                            <a href="{{ route('productos.atributos', $producto->id_producto) }}" class="btn btn-success" 
+                            title="Gestionar atributos">
+                                <i class="fas fa-tags"></i>
+                            </a>
+                            
+                            <!-- Botón Editar - USANDO URL DIRECTA PARA ASEGURAR -->
+                            <a href="/productos/{{ $producto->id_producto }}/edit" class="btn btn-warning" 
+                            title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            
+                            <!-- Botón Eliminar -->
+                            <form action="{{ route('productos.destroy', $producto->id_producto) }}" method="POST" 
+                                class="d-inline" style="display: inline;">
+                                @csrf @method('DELETE')
+                                <button type="button" class="btn btn-danger" title="Eliminar" onclick="confirmDelete(event, this)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
                     </tr>
                     @endforeach
                 </tbody>
@@ -116,9 +138,71 @@
 @endsection
 
 @section('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-function confirmDelete() {
-    return confirm('¿Estás seguro de que deseas eliminar este producto? Esta acción no se puede deshacer.');
+function confirmDelete(event, button) {
+    event.preventDefault();
+    const form = button.closest('form');
+    
+    Swal.fire({
+        title: '¿Estás seguro?',
+        text: 'Esta acción no se puede deshacer. Se eliminarán todas las variaciones, imágenes y relaciones asociadas.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            form.submit();
+        }
+    });
+    
+    return false;
 }
+
+// Mostrar mensajes de sesión con SweetAlert
+document.addEventListener('DOMContentLoaded', function() {
+    @if(session('success'))
+        Swal.fire({
+            title: '¡Éxito!',
+            text: "{{ session('success') }}",
+            icon: 'success',
+            timer: 3000,
+            showConfirmButton: false
+        });
+    @endif
+    
+    @if(session('error'))
+        Swal.fire({
+            title: 'Error',
+            text: "{{ session('error') }}",
+            icon: 'error',
+            timer: 3000,
+            showConfirmButton: false
+        });
+    @endif
+    
+    @if(session('swal_success'))
+        Swal.fire({
+            title: '¡Éxito!',
+            text: "{{ session('success') ?? 'Operación exitosa' }}",
+            icon: 'success',
+            timer: 3000,
+            showConfirmButton: false
+        });
+    @endif
+    
+    @if(session('swal_error'))
+        Swal.fire({
+            title: 'Error',
+            text: "{{ session('error') ?? 'Error en la operación' }}",
+            icon: 'error',
+            timer: 3000,
+            showConfirmButton: false
+        });
+    @endif
+});
 </script>
 @endsection

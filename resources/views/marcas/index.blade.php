@@ -98,18 +98,58 @@
                 </table>
             </div>
             
-            <!-- Paginación -->
+            <!-- Paginación con tamaño pequeño -->
             @if($marcas->hasPages())
             <div class="d-flex justify-content-center mt-4">
-                {{ $marcas->appends(request()->query())->links() }}
+                <nav aria-label="Page navigation">
+                    <ul class="pagination pagination-sm">
+                        {{-- Previous Page Link --}}
+                        @if($marcas->onFirstPage())
+                            <li class="page-item disabled">
+                                <span class="page-link">&laquo;</span>
+                            </li>
+                        @else
+                            <li class="page-item">
+                                <a class="page-link" href="{{ $marcas->previousPageUrl() }}" rel="prev">&laquo;</a>
+                            </li>
+                        @endif
+
+                        {{-- Pagination Elements --}}
+                        @foreach($marcas->getUrlRange(1, $marcas->lastPage()) as $page => $url)
+                            @if($page == $marcas->currentPage())
+                                <li class="page-item active" aria-current="page">
+                                    <span class="page-link">{{ $page }}</span>
+                                </li>
+                            @else
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ $url }}">{{ $page }}</a>
+                                </li>
+                            @endif
+                        @endforeach
+
+                        {{-- Next Page Link --}}
+                        @if($marcas->hasMorePages())
+                            <li class="page-item">
+                                <a class="page-link" href="{{ $marcas->nextPageUrl() }}" rel="next">&raquo;</a>
+                            </li>
+                        @else
+                            <li class="page-item disabled">
+                                <span class="page-link">&raquo;</span>
+                            </li>
+                        @endif
+                    </ul>
+                </nav>
             </div>
             @endif
             
             <div class="mt-3 p-3 bg-light rounded">
-                <strong>Total:</strong> {{ $marcas->total() }} marcas
-                @if(request('search'))
-                    <span class="ms-3">(filtradas)</span>
-                @endif
+                <small class="text-muted">
+                    <strong>Total:</strong> {{ $marcas->total() }} marcas
+                    @if(request('search'))
+                        <span class="ms-3">(filtradas)</span>
+                    @endif
+                    <span class="ms-3">Página {{ $marcas->currentPage() }} de {{ $marcas->lastPage() }}</span>
+                </small>
             </div>
             
             @else

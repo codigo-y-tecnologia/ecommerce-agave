@@ -6,6 +6,7 @@ use App\Models\Marca;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class MarcaController extends Controller
 {
@@ -140,21 +141,22 @@ class MarcaController extends Controller
     /**
      * Creación rápida de marca desde AJAX
      */
-    public function quickCreate(Request $request)
+   public function quickCreate(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'vNombre' => 'required|max:100|unique:tbl_marcas,vNombre'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error de validación',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
         try {
+            $validator = Validator::make($request->all(), [
+                'vNombre' => 'required|max:100|unique:tbl_marcas,vNombre',
+                'tDescripcion' => 'nullable|string|max:500'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de validación',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
             $marca = Marca::create([
                 'vNombre' => $request->vNombre,
                 'tDescripcion' => $request->tDescripcion ?? null
@@ -162,17 +164,24 @@ class MarcaController extends Controller
 
             return response()->json([
                 'success' => true,
-                'marca' => $marca,
-                'message' => 'Marca creada exitosamente'
+                'message' => 'Marca creada exitosamente',
+                'marca' => [
+                    'id_marca' => $marca->id_marca,
+                    'vNombre' => $marca->vNombre,
+                    'tDescripcion' => $marca->tDescripcion
+                ]
             ]);
 
         } catch (\Exception $e) {
+            Log::error('Error al crear marca rápida: ' . $e->getMessage());
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Error al crear marca: ' . $e->getMessage()
+                'message' => 'Error al crear la marca: ' . $e->getMessage()
             ], 500);
         }
     }
+
 
     /**
      * Obtener marcas en formato JSON
