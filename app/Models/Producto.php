@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Builder;
 
 class Producto extends Model
@@ -88,12 +89,12 @@ class Producto extends Model
         'stock_formateado'
     ];
 
-    public function setBTieneOfertaAttribute($value)
+    public function setBTieneDescuentoAttribute($value)
     {
         if ($value === '1' || $value === 1 || $value === true || $value === 'on') {
-            $this->attributes['bTiene_oferta'] = true;
+            $this->attributes['bTiene_descuento'] = true;
         } else {
-            $this->attributes['bTiene_oferta'] = false;
+            $this->attributes['bTiene_descuento'] = false;
         }
     }
 
@@ -125,6 +126,66 @@ class Producto extends Model
         });
     }
 
+    // ============ MÉTODOS DE DESCUENTO ============
+
+    public function descuentoVigente(): bool
+    {
+        if (!$this->bTiene_descuento || $this->dPrecio_descuento === null || $this->dPrecio_descuento <= 0) {
+            return false;
+        }
+
+        $fechaActual = now()->toDateString();
+
+        if ($this->dFecha_inicio_descuento && $this->dFecha_fin_descuento) {
+            return $fechaActual >= $this->dFecha_inicio_descuento &&
+                $fechaActual <= $this->dFecha_fin_descuento;
+        }
+
+        if ($this->dFecha_inicio_descuento && !$this->dFecha_fin_descuento) {
+            return $fechaActual >= $this->dFecha_inicio_descuento;
+        }
+
+        if (!$this->dFecha_inicio_descuento && $this->dFecha_fin_descuento) {
+            return $fechaActual <= $this->dFecha_fin_descuento;
+        }
+
+        return true;
+    }
+
+    public function tieneDescuentoActivo()
+    {
+        return $this->descuentoVigente();
+    }
+
+    public function getPrecioActualAttribute()
+    {
+        if ($this->descuentoVigente()) {
+            return $this->dPrecio_descuento;
+        }
+        return $this->dPrecio_venta;
+    }
+
+    public function getPorcentajeDescuentoAttribute()
+    {
+        if ($this->descuentoVigente() && $this->dPrecio_descuento < $this->dPrecio_venta && $this->dPrecio_venta > 0) {
+            $descuento = (($this->dPrecio_venta - $this->dPrecio_descuento) / $this->dPrecio_venta) * 100;
+            return round($descuento);
+        }
+        return 0;
+    }
+
+    public function tieneDescuento()
+    {
+        return $this->descuentoVigente();
+    }
+
+    public function porcentajeDescuento()
+    {
+        return $this->porcentajeDescuento;
+    }
+
+    // ============ MÉTODOS DE CÁLCULO ============
+
     public function calcularPrecioFinal()
     {
         $precioBase = $this->attributes['dPrecio_venta'] ?? 0;
@@ -147,6 +208,11 @@ class Producto extends Model
     {
         $this->calcularPrecioFinal();
         $this->saveQuietly();
+    }
+
+    public function getPrecioFinalAttribute()
+    {
+        return $this->dPrecio_final ?? $this->dPrecio_venta;
     }
 
     // ============ ACCESORES PARA IMÁGENES ============
@@ -325,41 +391,161 @@ class Producto extends Model
             throw new \Exception('No se puede guardar imágenes sin ID de producto');
         }
 
-        $carpeta = 'products/' . $this->id_producto . '/adicionales';
-
-        if (!Storage::disk('public')->exists($carpeta)) {
-            Storage::disk('public')->makeDirectory($carpeta);
-        }
-
-        $imagenesExistentes = $this->vImagenes_adicionales ?? [];
-        $numeroInicio = count($imagenesExistentes);
-
-        $nuevasRutas = [];
-        $contador = 0;
-        $maxImagenes = 7;
-
         if (!is_array($imagenes)) {
             $imagenes = [$imagenes];
         }
 
-        foreach ($imagenes as $imagen) {
-            if (($numeroInicio + $contador) >= $maxImagenes) {
+        if (empty($imagenes)) {
+            return [];
+        }
+
+        $carpetaBase = 'products/' . $this->id_producto;
+        $carpetaAdicionales = $carpetaBase . '/adicionales';
+
+        if (!Storage::disk('public')->exists($carpetaAdicionales)) {
+            Storage::disk('public')->makeDirectory($carpetaAdicionales);
+        }
+
+        $imagenesExistentes = $this->vImagenes_adicionales ?? [];
+        if (!is_array($imagenesExistentes)) {
+            $imagenesExistentes = [];
+        }
+
+        $maxImagenes = 7;
+        $contador = count($imagenesExistentes);
+        $nuevasRutas = [];
+
+        foreach ($imagenes as $index => $imagen) {
+            if ($contador >= $maxImagenes) {
                 break;
             }
 
-            $extension = $imagen->getClientOriginalExtension();
-            $nombreArchivo = 'imagen_' . ($numeroInicio + $contador + 1) . '_' . time() . '_' . uniqid() . '.' . $extension;
-            $ruta = $imagen->storeAs($carpeta, $nombreArchivo, 'public');
-            $nuevasRutas[] = $ruta;
-            $contador++;
+            if (!$imagen || !$imagen->isValid()) {
+                continue;
+            }
+
+            try {
+                $extension = $imagen->getClientOriginalExtension();
+                $nombreArchivo = 'imagen_' . ($contador + 1) . '_' . time() . '_' . uniqid() . '.' . $extension;
+                $ruta = $imagen->storeAs($carpetaAdicionales, $nombreArchivo, 'public');
+
+                $nuevasRutas[] = $ruta;
+                $contador++;
+            } catch (\Exception $e) {
+                Log::error('Error al guardar imagen adicional: ' . $e->getMessage());
+            }
         }
 
-        $this->vImagenes_adicionales = array_merge($imagenesExistentes, $nuevasRutas);
+        $todasLasImagenes = array_merge($imagenesExistentes, $nuevasRutas);
+
+        $this->vImagenes_adicionales = $todasLasImagenes;
         $this->saveQuietly();
 
         return array_map(function ($ruta) {
             return Storage::url($ruta);
         }, $nuevasRutas);
+    }
+
+    /**
+     * Eliminar imágenes adicionales específicas
+     * 
+     * @param array|string $imagenesAEliminar Array con índices o nombres de archivo a eliminar
+     * @return bool
+     */
+    public function eliminarImagenesAdicionalesEspecificas($imagenesAEliminar)
+    {
+        Log::info('=== INICIO eliminarImagenesAdicionalesEspecificas ===');
+        Log::info('Producto ID: ' . $this->id_producto);
+
+        // Si es un string JSON, decodificarlo
+        if (is_string($imagenesAEliminar)) {
+            $imagenesAEliminar = json_decode($imagenesAEliminar, true);
+            Log::info('Decodificado JSON:', $imagenesAEliminar);
+        }
+
+        // Si no es un array o está vacío, retornar
+        if (!is_array($imagenesAEliminar) || empty($imagenesAEliminar)) {
+            Log::info('No hay imágenes para eliminar');
+            return true;
+        }
+
+        // Obtener las imágenes actuales del producto
+        $imagenesActuales = $this->vImagenes_adicionales;
+
+        // Asegurar que sea un array
+        if (!is_array($imagenesActuales)) {
+            $imagenesActuales = [];
+        }
+
+        Log::info('Imágenes actuales (' . count($imagenesActuales) . '):', $imagenesActuales);
+
+        if (empty($imagenesActuales)) {
+            Log::info('No hay imágenes actuales en el producto');
+            return true;
+        }
+
+        $nuevasImagenes = [];
+        $imagenesEliminadas = [];
+
+        // Recorrer todas las imágenes actuales
+        foreach ($imagenesActuales as $index => $ruta) {
+            $debeEliminar = false;
+            $nombreArchivo = basename($ruta);
+
+            // Verificar si esta imagen debe ser eliminada
+            foreach ($imagenesAEliminar as $item) {
+                // Caso 1: El item es un número (índice)
+                if (is_numeric($item) && (int)$item === $index) {
+                    $debeEliminar = true;
+                    Log::info("✓ Eliminar por ÍNDICE $index: $ruta");
+                    break;
+                }
+
+                // Caso 2: El item es el nombre del archivo
+                if (is_string($item) && ($item === $nombreArchivo || strpos($ruta, $item) !== false)) {
+                    $debeEliminar = true;
+                    Log::info("✓ Eliminar por NOMBRE '$item': $ruta");
+                    break;
+                }
+
+                // Caso 3: El item es un array con información
+                if (is_array($item)) {
+                    if (isset($item['filename']) && $item['filename'] === $nombreArchivo) {
+                        $debeEliminar = true;
+                        Log::info("✓ Eliminar por FILENAME: $ruta");
+                        break;
+                    }
+                    if (isset($item['id']) && is_numeric($item['id']) && (int)$item['id'] === $index) {
+                        $debeEliminar = true;
+                        Log::info("✓ Eliminar por ID {$item['id']}: $ruta");
+                        break;
+                    }
+                }
+            }
+
+            if ($debeEliminar) {
+                // Eliminar archivo físico
+                if (Storage::disk('public')->exists($ruta)) {
+                    Storage::disk('public')->delete($ruta);
+                    Log::info('Archivo eliminado: ' . $ruta);
+                } else {
+                    Log::warning('Archivo no encontrado: ' . $ruta);
+                }
+                $imagenesEliminadas[] = $ruta;
+            } else {
+                $nuevasImagenes[] = $ruta;
+            }
+        }
+
+        // Guardar la nueva lista de imágenes
+        $this->vImagenes_adicionales = $nuevasImagenes;
+        $this->saveQuietly();
+
+        Log::info('Imágenes eliminadas (' . count($imagenesEliminadas) . '):', $imagenesEliminadas);
+        Log::info('Imágenes restantes (' . count($nuevasImagenes) . '):', $nuevasImagenes);
+        Log::info('=== FIN eliminarImagenesAdicionalesEspecificas ===');
+
+        return true;
     }
 
     public function eliminarImagenPrincipal()
@@ -404,34 +590,6 @@ class Producto extends Model
         }
     }
 
-    public function eliminarImagenesAdicionalesEspecificas($nombresArchivos)
-    {
-        $carpeta = 'products/' . $this->id_producto . '/adicionales';
-        $imagenesActuales = $this->vImagenes_adicionales ?? [];
-
-        $nuevasImagenes = [];
-        foreach ($imagenesActuales as $ruta) {
-            $nombreArchivo = basename($ruta);
-            if (!in_array($nombreArchivo, $nombresArchivos)) {
-                $nuevasImagenes[] = $ruta;
-            } else {
-                if (Storage::disk('public')->exists($ruta)) {
-                    Storage::disk('public')->delete($ruta);
-                }
-            }
-        }
-
-        $this->vImagenes_adicionales = $nuevasImagenes;
-        $this->saveQuietly();
-
-        foreach ($nombresArchivos as $nombreArchivo) {
-            $rutaCompleta = $carpeta . '/' . $nombreArchivo;
-            if (Storage::disk('public')->exists($rutaCompleta)) {
-                Storage::disk('public')->delete($rutaCompleta);
-            }
-        }
-    }
-
     public function eliminarTodasLasImagenes()
     {
         $carpeta = 'products/' . $this->id_producto;
@@ -462,7 +620,14 @@ class Producto extends Model
         $total = 0;
         if ($this->vImagen_principal) $total++;
         if ($this->vGif) $total++;
-        $total += count($this->vImagenes_adicionales ?? []);
+
+        $adicionales = $this->vImagenes_adicionales;
+        if (is_string($adicionales)) {
+            $adicionales = json_decode($adicionales, true);
+        }
+        if (is_array($adicionales)) {
+            $total += count($adicionales);
+        }
         return $total;
     }
 
@@ -494,15 +659,11 @@ class Producto extends Model
             ->withPivot(['id_atributo_valor', 'dPrecio_extra']);
     }
 
-    public function productoAtributos()
-    {
-        return $this->hasMany(ProductoAtributo::class, 'id_producto');
-    }
-
     public function valoresAtributos()
     {
         return $this->belongsToMany(AtributoValor::class, 'tbl_producto_atributos', 'id_producto', 'id_atributo_valor')
-            ->withPivot(['id_atributo', 'dPrecio_extra']);
+            ->withPivot('dPrecio_extra')
+            ->with('atributo');
     }
 
     public function impuestos()
@@ -520,9 +681,6 @@ class Producto extends Model
         )->where('bActivo', 1);
     }
 
-    /**
-     * Calcula el precio de venta con impuestos incluidos.
-     */
     public function getPrecioConImpuestosAttribute()
     {
         $precio_base = $this->dPrecio_venta;
@@ -549,9 +707,6 @@ class Producto extends Model
         return $precio_base + $ieps + $iva;
     }
 
-    /**
-     * Calcula el monto total de impuestos (IVA + IEPS + otros) aplicados al producto.
-     */
     public function getMontoImpuestosAttribute()
     {
         $porcentajeTotal = $this->impuestos->sum('dPorcentaje');
@@ -596,16 +751,9 @@ class Producto extends Model
         return $precio_base + $ieps + $iva;
     }
 
-    //Relación con CarritoDetalle: Un producto puede estar en muchos carritos
     public function detalles()
     {
         return $this->hasMany(CarritoDetalle::class, 'id_producto', 'id_producto');
-    }
-
-    // Relación con StockReserva: Un producto puede tener muchas reservas de stock
-    public function stockReservas()
-    {
-        return $this->hasMany(StockReserva::class, 'id_producto');
     }
 
     public function favoritos()
@@ -621,6 +769,12 @@ class Producto extends Model
     public function variacionesActivas()
     {
         return $this->hasMany(ProductoVariacion::class, 'id_producto')->where('bActivo', true);
+    }
+
+    // Relación con StockReserva: Un producto puede tener muchas reservas de stock
+    public function stockReservas()
+    {
+        return $this->hasMany(StockReserva::class, 'id_producto');
     }
 
     // ============ MÉTODOS DE UTILIDAD ============
@@ -734,78 +888,7 @@ class Producto extends Model
         return $this->variaciones()->count() > 0;
     }
 
-    // ============ MÉTODOS DE OFERTA/DESCUENTO ============
-
-    public function ofertaVigente(): bool
-    {
-        if (!$this->bTiene_oferta || $this->dPrecio_oferta === null || $this->dPrecio_oferta <= 0) {
-            return false;
-        }
-
-        $fechaActual = now()->toDateString();
-
-        if ($this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
-            return $fechaActual >= $this->dFecha_inicio_oferta &&
-                $fechaActual <= $this->dFecha_fin_oferta;
-        }
-
-        if ($this->dFecha_inicio_oferta && !$this->dFecha_fin_oferta) {
-            return $fechaActual >= $this->dFecha_inicio_oferta;
-        }
-
-        if (!$this->dFecha_inicio_oferta && $this->dFecha_fin_oferta) {
-            return $fechaActual <= $this->dFecha_fin_oferta;
-        }
-
-        return true;
-    }
-
-    public function tieneDescuentoActivo()
-    {
-        return $this->ofertaVigente();
-    }
-
-    public function getPrecioActualAttribute()
-    {
-        if ($this->ofertaVigente()) {
-            return $this->dPrecio_oferta;
-        }
-        return $this->dPrecio_venta;
-    }
-
-    public function getPorcentajeDescuentoAttribute()
-    {
-        if ($this->ofertaVigente() && $this->dPrecio_oferta < $this->dPrecio_venta && $this->dPrecio_venta > 0) {
-            $descuento = (($this->dPrecio_venta - $this->dPrecio_oferta) / $this->dPrecio_venta) * 100;
-            return round($descuento);
-        }
-        return 0;
-    }
-
-    public function getOfertaBadgeAttribute()
-    {
-        if ($this->ofertaVigente()) {
-            return '<span class="badge bg-danger">-' . $this->porcentajeDescuento . '%</span>';
-        }
-        return '';
-    }
-
-    public function tieneDescuento()
-    {
-        return $this->ofertaVigente();
-    }
-
-    public function porcentajeDescuento()
-    {
-        return $this->porcentajeDescuento;
-    }
-
     // ============ MÉTODOS DE PRECIOS Y STOCK ============
-
-    public function getDPrecioVentaAttribute()
-    {
-        return $this->attributes['dPrecio_venta'];
-    }
 
     public function getRangoPreciosAttribute()
     {
@@ -814,12 +897,12 @@ class Producto extends Model
             $precioMax = $this->variacionesActivas()->max('dPrecio');
 
             if ($precioMin == $precioMax) {
-                return number_format($precioMin, 2);
+                return '$' . number_format($precioMin, 2);
             }
-            return number_format($precioMin, 2) . ' - ' . number_format($precioMax, 2);
+            return '$' . number_format($precioMin, 2) . ' - $' . number_format($precioMax, 2);
         }
 
-        return number_format($this->dPrecio_venta, 2);
+        return '$' . number_format($this->dPrecio_venta, 2);
     }
 
     public function getPrecioMostrarAttribute()
@@ -908,14 +991,6 @@ class Producto extends Model
         return null;
     }
 
-    public function getVolumenFormateadoAttribute()
-    {
-        if ($this->volumen) {
-            return number_format($this->volumen, 2) . ' cm³';
-        }
-        return 'No calculable';
-    }
-
     public function tieneDimensionesCompletas()
     {
         return $this->dLargo_cm && $this->dAncho_cm && $this->dAlto_cm;
@@ -937,36 +1012,12 @@ class Producto extends Model
         }
     }
 
-    public function getClaseEnvioBadgeAttribute()
-    {
-        switch ($this->vClase_envio) {
-            case 'estandar':
-                return '<span class="badge bg-primary">Estándar</span>';
-            case 'express':
-                return '<span class="badge bg-success">Express</span>';
-            case 'fragil':
-                return '<span class="badge bg-warning">Frágil</span>';
-            case 'grandes_dimensiones':
-                return '<span class="badge bg-danger">Grandes dimensiones</span>';
-            default:
-                return '<span class="badge bg-secondary">No especificada</span>';
-        }
-    }
-
     public function getPesoVolumetricoAttribute()
     {
         if ($this->volumen) {
             return $this->volumen / 5000;
         }
         return null;
-    }
-
-    public function getPesoVolumetricoFormateadoAttribute()
-    {
-        if ($this->peso_volumetrico) {
-            return number_format($this->peso_volumetrico, 3) . ' kg';
-        }
-        return 'No calculable';
     }
 
     public function getPesoFacturableAttribute()
@@ -977,18 +1028,7 @@ class Producto extends Model
         return max($pesoReal, $pesoVolumetrico);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Scopes
-    |--------------------------------------------------------------------------
-    */
-
-    public function scopeConStockDisponible(Builder $query): Builder
-    {
-        return $query->whereRaw(
-            '(iStock - iStock_reservado) > 0'
-        );
-    }
+    // ============ SCOPES ============
 
     public static function buscarPorNombreOSKU($busqueda)
     {
@@ -1014,6 +1054,13 @@ class Producto extends Model
     public function scopePorClaseEnvio($query, $clase)
     {
         return $query->where('vClase_envio', $clase);
+    }
+
+    public function scopeConStockDisponible(Builder $query): Builder
+    {
+        return $query->whereRaw(
+            '(iStock - iStock_reservado) > 0'
+        );
     }
 
     /*

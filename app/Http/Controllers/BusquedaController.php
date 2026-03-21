@@ -13,10 +13,8 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class BusquedaController extends Controller
 {
-    // Método para la página de inicio
     public function inicio()
     {
-        // 1. Productos destacados (los más recientes) - SOLO productos activos
         $productosDestacados = Producto::with([
             'categoria',
             'marca',
@@ -27,10 +25,8 @@ class BusquedaController extends Controller
             ->take(12)
             ->get();
 
-        // 2. Productos en descuento - INCLUYE productos y variaciones
         $productosDescuento = $this->obtenerItemsConDescuento(12);
 
-        // 3. Productos Recomendados - SOLO productos
         $productosRecomendados = Producto::with([
             'categoria',
             'marca',
@@ -41,7 +37,6 @@ class BusquedaController extends Controller
             ->take(8)
             ->get();
 
-        // 4. TODOS los items (productos + variaciones) para la sección principal
         $todosLosItems = $this->obtenerTodosLosItems();
 
         return view('inicio', compact(
@@ -52,14 +47,10 @@ class BusquedaController extends Controller
         ));
     }
 
-    /**
-     * Obtiene TODOS los items (productos y variaciones) para la página de inicio
-     */
     private function obtenerTodosLosItems()
     {
         $items = collect();
 
-        // 1. Obtener todos los productos activos
         $productos = Producto::with([
             'categoria',
             'marca',
@@ -70,13 +61,11 @@ class BusquedaController extends Controller
             ->get();
 
         foreach ($productos as $producto) {
-            // Agregar el producto padre como item independiente
             $productoClone = clone $producto;
             $productoClone->tipo_item = 'producto';
             $productoClone->item_id = $producto->id_producto;
             $items->push($productoClone);
 
-            // Agregar TODAS las variaciones activas de este producto como items independientes
             $variaciones = ProductoVariacion::with([
                 'productoPadre',
                 'productoPadre.categoria',
@@ -97,7 +86,6 @@ class BusquedaController extends Controller
             }
         }
 
-        // Ordenar por fecha de registro (más recientes primero)
         $items = $items->sortByDesc(function ($item) {
             if ($item->tipo_item === 'variacion') {
                 return $item->tFecha_registro ?? ($item->productoPadre ? $item->productoPadre->tFecha_registro : now());
@@ -105,7 +93,6 @@ class BusquedaController extends Controller
             return $item->tFecha_registro ?? now();
         })->values();
 
-        // Paginar manualmente
         $perPage = 12;
         $currentPage = request()->get('page', 1);
         $pagedData = $items->forPage($currentPage, $perPage);
@@ -119,15 +106,11 @@ class BusquedaController extends Controller
         );
     }
 
-    /**
-     * Obtiene productos y variaciones con descuento activo
-     */
     private function obtenerItemsConDescuento($limite = null)
     {
         $fechaActual = now()->toDateString();
         $itemsConDescuento = collect();
 
-        // 1. PRODUCTOS CON DESCUENTO
         $productosConDescuento = Producto::with([
             'categoria',
             'marca',
@@ -160,7 +143,6 @@ class BusquedaController extends Controller
             }
         }
 
-        // 2. VARIACIONES CON DESCUENTO
         $variacionesConDescuento = ProductoVariacion::with([
             'productoPadre',
             'productoPadre.categoria',
@@ -199,7 +181,6 @@ class BusquedaController extends Controller
             }
         }
 
-        // Ordenar por porcentaje de descuento
         $itemsConDescuento = $itemsConDescuento->sortByDesc(function ($item) {
             return $item->porcentaje_descuento_calculado ?? 0;
         })->values();
@@ -211,9 +192,6 @@ class BusquedaController extends Controller
         return $itemsConDescuento;
     }
 
-    /**
-     * Verifica si un producto tiene descuento activo
-     */
     private function tieneDescuentoActivoProducto($producto)
     {
         if (!$producto->bTiene_descuento || $producto->dPrecio_descuento === null || $producto->dPrecio_descuento <= 0) {
@@ -238,9 +216,6 @@ class BusquedaController extends Controller
         return true;
     }
 
-    /**
-     * Verifica si una variación tiene descuento activo
-     */
     private function tieneDescuentoActivoVariacion($variacion)
     {
         if (!$variacion->bTiene_descuento || $variacion->dPrecio_descuento === null || $variacion->dPrecio_descuento <= 0) {
@@ -265,9 +240,6 @@ class BusquedaController extends Controller
         return true;
     }
 
-    /**
-     * Calcula el porcentaje de descuento de un producto
-     */
     private function calcularPorcentajeDescuentoProducto($producto)
     {
         if (!$this->tieneDescuentoActivoProducto($producto) || $producto->dPrecio_venta <= 0) {
@@ -278,9 +250,6 @@ class BusquedaController extends Controller
         return round($descuento);
     }
 
-    /**
-     * Calcula el porcentaje de descuento de una variación
-     */
     private function calcularPorcentajeDescuentoVariacion($variacion)
     {
         if (!$this->tieneDescuentoActivoVariacion($variacion) || $variacion->dPrecio <= 0) {
@@ -298,9 +267,6 @@ class BusquedaController extends Controller
         $resultados = collect();
 
         if ($filtroDescuento) {
-            // ===== MODO DESCUENTO: SOLO items con descuento activo =====
-
-            // 1. PRODUCTOS CON DESCUENTO ACTIVO
             $productosConDescuento = Producto::with([
                 'categoria',
                 'marca',
@@ -313,7 +279,6 @@ class BusquedaController extends Controller
 
             foreach ($productosConDescuento as $producto) {
                 if ($this->tieneDescuentoActivoProducto($producto)) {
-                    // Aplicar filtros de búsqueda al producto
                     if ($this->productoCumpleFiltrosBasicos($producto, $request)) {
                         if ($request->con_stock != '1' || $producto->iStock > 0) {
                             $productoClone = clone $producto;
@@ -326,7 +291,6 @@ class BusquedaController extends Controller
                 }
             }
 
-            // 2. VARIACIONES CON DESCUENTO ACTIVO
             $variacionesConDescuento = ProductoVariacion::with([
                 'productoPadre',
                 'productoPadre.categoria',
@@ -338,17 +302,15 @@ class BusquedaController extends Controller
             ])
                 ->whereHas('productoPadre', function ($q) use ($request) {
                     $q->where('bActivo', true);
-                    // Aplicar filtros de categoría/marca/etiqueta al producto padre
                     $this->aplicarFiltrosAProductoPadre($q, $request);
                 })
                 ->where('bActivo', true)
-                ->where('bTiene_oferta', 1)
-                ->where('dPrecio_oferta', '>', 0)
+                ->where('bTiene_descuento', 1)
+                ->where('dPrecio_descuento', '>', 0)
                 ->get();
 
             foreach ($variacionesConDescuento as $variacion) {
                 if ($this->tieneDescuentoActivoVariacion($variacion)) {
-                    // Aplicar filtros de búsqueda a la variación
                     if ($this->variacionCumpleFiltrosBasicos($variacion, $request)) {
                         if ($request->con_stock != '1' || $variacion->iStock > 0) {
                             $variacion->tipo_item = 'variacion';
@@ -360,16 +322,12 @@ class BusquedaController extends Controller
                 }
             }
         } else {
-            // ===== MODO NORMAL: TODOS los items =====
-
-            // Obtener IDs de productos que cumplen los filtros básicos
             $productosQuery = Producto::with(['categoria', 'marca', 'etiquetas'])
                 ->where('bActivo', true);
 
             $this->aplicarFiltros($productosQuery, $request);
             $productosIds = $productosQuery->pluck('id_producto')->toArray();
 
-            // Obtener productos completos
             $productosPadre = Producto::with([
                 'categoria',
                 'marca',
@@ -379,7 +337,6 @@ class BusquedaController extends Controller
                 ->get();
 
             foreach ($productosPadre as $producto) {
-                // Agregar el producto padre
                 if ($this->productoCumpleFiltrosBasicos($producto, $request)) {
                     if ($request->con_stock != '1' || $producto->iStock > 0) {
                         $productoClone = clone $producto;
@@ -389,7 +346,6 @@ class BusquedaController extends Controller
                     }
                 }
 
-                // Obtener TODAS las variaciones activas de este producto
                 $variaciones = ProductoVariacion::with([
                     'productoPadre',
                     'atributos.atributo',
@@ -412,7 +368,6 @@ class BusquedaController extends Controller
             }
         }
 
-        // Eliminar duplicados (por si acaso)
         $resultados = $resultados->unique(function ($item) {
             if ($item->tipo_item === 'variacion') {
                 return 'var_' . $item->id_variacion;
@@ -420,10 +375,8 @@ class BusquedaController extends Controller
             return 'prod_' . $item->id_producto;
         });
 
-        // Aplicar ordenamiento
         $resultados = $this->aplicarOrdenamiento($resultados, $request->get('orden', 'nombre'));
 
-        // Paginación manual
         $perPage = 12;
         $currentPage = $request->get('page', 1);
         $pagedData = $resultados->forPage($currentPage, $perPage);
@@ -448,9 +401,6 @@ class BusquedaController extends Controller
         ));
     }
 
-    /**
-     * Aplica filtros a la consulta de productos padre (para variaciones en modo descuento)
-     */
     private function aplicarFiltrosAProductoPadre($query, $request)
     {
         if ($request->has('q') && !empty($request->q)) {
@@ -723,22 +673,5 @@ class BusquedaController extends Controller
         $sugerencias = collect($sugerencias)->sortByDesc('en_descuento')->sortByDesc('porcentaje')->take(10)->values()->toArray();
 
         return response()->json($sugerencias);
-    }
-
-    public function buscarProductos(Request $request)
-    {
-        $term = $request->get('term');
-
-        if (!$term || strlen($term) < 2) {
-            return response()->json([]);
-        }
-
-        $productos = Producto::where('bActivo', true)
-            ->where('vNombre', 'LIKE', "%{$term}%")
-            ->orWhere('tDescripcion_corta', 'LIKE', "%{$term}%")
-            ->take(10)
-            ->get(['id_producto', 'vNombre', 'dPrecio_venta', 'dPrecio_descuento', 'bTiene_descuento']);
-
-        return response()->json($productos);
     }
 }

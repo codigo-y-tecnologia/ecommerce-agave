@@ -33,15 +33,14 @@ class ImpuestoController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'vNombre' => 'required|max:100|unique:tbl_impuestos,vNombre',
-            'eTipo' => 'required|in:IVA,IEPS,OTRO',
+            'eTipo' => 'required|in:IVA,ISR,IEPS', // Permitir IEPS también
             'dPorcentaje' => 'required|numeric|min:0|max:100',
-            'tDescripcion' => 'nullable|string|max:255',
             'bActivo' => 'nullable|boolean'
         ], [
             'vNombre.required' => 'El nombre del impuesto es obligatorio',
             'vNombre.unique' => 'Ya existe un impuesto con este nombre',
             'eTipo.required' => 'Debes seleccionar un tipo de impuesto',
-            'eTipo.in' => 'El tipo de impuesto seleccionado no es válido',
+            'eTipo.in' => 'El tipo de impuesto debe ser IVA, ISR o IEPS',
             'dPorcentaje.required' => 'El porcentaje es obligatorio',
             'dPorcentaje.numeric' => 'El porcentaje debe ser un número válido',
             'dPorcentaje.min' => 'El porcentaje no puede ser negativo',
@@ -66,7 +65,6 @@ class ImpuestoController extends Controller
                 'vNombre' => $request->vNombre,
                 'eTipo' => $request->eTipo,
                 'dPorcentaje' => $request->dPorcentaje,
-                'tDescripcion' => $request->tDescripcion,
                 'bActivo' => $request->has('bActivo') ? true : false
             ]);
 
@@ -102,7 +100,7 @@ class ImpuestoController extends Controller
      */
     public function show(Impuesto $impuesto)
     {
-        $impuesto->load('productos');
+        $impuesto->load('productos', 'variaciones');
         return view('impuestos.show', compact('impuesto'));
     }
 
@@ -121,9 +119,8 @@ class ImpuestoController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'vNombre' => 'required|max:100|unique:tbl_impuestos,vNombre,' . $impuesto->id_impuesto . ',id_impuesto',
-            'eTipo' => 'required|in:IVA,IEPS,OTRO',
+            'eTipo' => 'required|in:IVA,ISR,IEPS',
             'dPorcentaje' => 'required|numeric|min:0|max:100',
-            'tDescripcion' => 'nullable|string|max:255',
             'bActivo' => 'nullable|boolean'
         ]);
 
@@ -138,11 +135,9 @@ class ImpuestoController extends Controller
                 'vNombre' => $request->vNombre,
                 'eTipo' => $request->eTipo,
                 'dPorcentaje' => $request->dPorcentaje,
-                'tDescripcion' => $request->tDescripcion,
                 'bActivo' => $request->has('bActivo') ? true : false
             ]);
 
-            // Recalcular precio final de todos los productos que usan este impuesto
             foreach ($impuesto->productos as $producto) {
                 $producto->recalcularPrecioFinal();
             }
@@ -164,10 +159,9 @@ class ImpuestoController extends Controller
     public function destroy(Impuesto $impuesto)
     {
         try {
-            // Verificar si tiene productos asociados
-            if ($impuesto->productos()->count() > 0) {
+            if ($impuesto->productos()->count() > 0 || $impuesto->variaciones()->count() > 0) {
                 return redirect()->back()
-                    ->with('error', 'No se puede eliminar el impuesto porque tiene productos asociados');
+                    ->with('error', 'No se puede eliminar el impuesto porque tiene productos o variaciones asociados');
             }
 
             $impuesto->delete();
@@ -183,49 +177,46 @@ class ImpuestoController extends Controller
     }
 
     /**
-     * Creación rápida desde AJAX (para el formulario de productos)
+     * Creación rápida desde AJAX
      */
     public function quickCreate(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'vNombre' => 'required|max:100|unique:tbl_impuestos,vNombre',
-            'eTipo' => 'required|in:IVA,IEPS,OTRO',
-            'dPorcentaje' => 'required|numeric|min:0|max:100',
-            'tDescripcion' => 'nullable|string|max:255',
-            'bActivo' => 'nullable|boolean'
+{
+    $validator = Validator::make($request->all(), [
+        'vNombre' => 'required|max:100',
+        'eTipo' => 'required|in:IVA,IEPS', // SOLO IVA e IEPS
+        'dPorcentaje' => 'required|numeric|min:0|max:100',
+        'bActivo' => 'nullable|boolean'
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error de validación',
+            'errors' => $validator->errors()
+        ], 422);
+    }
+
+    try {
+        $impuesto = Impuesto::create([
+            'vNombre' => $request->vNombre,
+            'eTipo' => $request->eTipo,
+            'dPorcentaje' => $request->dPorcentaje,
+            'bActivo' => $request->has('bActivo') ? true : false
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error de validación',
-                'errors' => $validator->errors()
-            ], 422);
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Impuesto creado exitosamente',
+            'impuesto' => $impuesto
+        ]);
 
-        try {
-            $impuesto = Impuesto::create([
-                'vNombre' => $request->vNombre,
-                'eTipo' => $request->eTipo,
-                'dPorcentaje' => $request->dPorcentaje,
-                'tDescripcion' => $request->tDescripcion,
-                'bActivo' => $request->has('bActivo') ? true : false
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Impuesto creado exitosamente',
-                'impuesto' => $impuesto
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error al crear impuesto rápido: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al crear impuesto: ' . $e->getMessage()
-            ], 500);
-        }
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error al crear impuesto: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     /**
      * Obtener impuestos en formato JSON
@@ -234,7 +225,7 @@ class ImpuestoController extends Controller
     {
         $impuestos = Impuesto::where('bActivo', true)
             ->orderBy('vNombre')
-            ->get(['id_impuesto', 'vNombre', 'eTipo', 'dPorcentaje', 'tDescripcion']);
+            ->get(['id_impuesto', 'vNombre', 'eTipo', 'dPorcentaje']);
 
         return response()->json([
             'success' => true,

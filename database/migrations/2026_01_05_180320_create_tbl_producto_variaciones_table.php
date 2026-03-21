@@ -16,6 +16,11 @@ return new class extends Migration
             $table->string('vNombre_variacion')->nullable();
             $table->decimal('dPrecio', 10, 2)->default(0.00);
             $table->decimal('dPrecio_adicional', 10, 2)->default(0.00);
+            $table->decimal('dPrecio_descuento', 10, 2)->nullable();
+            $table->date('dFecha_inicio_descuento')->nullable();
+            $table->date('dFecha_fin_descuento')->nullable();
+            $table->string('vMotivo_descuento', 255)->nullable();
+            $table->boolean('bTiene_descuento')->default(false);
             $table->integer('iStock_variacion')->default(0);
             $table->decimal('dPeso', 8, 2)->nullable()->comment('Peso en kg');
             $table->string('vClase_envio')->nullable();

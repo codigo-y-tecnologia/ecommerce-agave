@@ -71,7 +71,7 @@ class FavoritoInvitadoController extends Controller
 
             $favoritos = DB::table('tbl_favoritos_temporales')
                 ->where('session_id', $usuarioTemporal->session_id)
-                ->orderBy('tFecha_agregado', 'desc') // Cambiado de tFecha_creacion a tFecha_agregado
+                ->orderBy('tFecha_agregado', 'desc')
                 ->get();
 
             // Cargar datos de productos y variaciones
@@ -135,12 +135,12 @@ class FavoritoInvitadoController extends Controller
                     'message' => 'Producto eliminado de favoritos'
                 ]);
             } else {
-                // Agregar usando tFecha_agregado (el nombre correcto en la BD)
+                // Agregar usando tFecha_agregado
                 DB::table('tbl_favoritos_temporales')->insert([
                     'session_id' => $sessionId,
                     'id_producto' => $idProducto,
                     'id_variacion' => null,
-                    'tFecha_agregado' => DB::raw('NOW()') // Cambiado de tFecha_creacion a tFecha_agregado
+                    'tFecha_agregado' => DB::raw('NOW()')
                 ]);
 
                 return response()->json([
@@ -201,12 +201,12 @@ class FavoritoInvitadoController extends Controller
                     'message' => 'Variación eliminada de favoritos'
                 ]);
             } else {
-                // Agregar usando tFecha_agregado (el nombre correcto en la BD)
+                // Agregar usando tFecha_agregado
                 DB::table('tbl_favoritos_temporales')->insert([
                     'session_id' => $sessionId,
                     'id_producto' => $variacion->id_producto,
                     'id_variacion' => $idVariacion,
-                    'tFecha_agregado' => DB::raw('NOW()') // Cambiado de tFecha_creacion a tFecha_agregado
+                    'tFecha_agregado' => DB::raw('NOW()')
                 ]);
 
                 return response()->json([
@@ -349,7 +349,7 @@ class FavoritoInvitadoController extends Controller
                         'id_usuario' => $userId,
                         'id_producto' => $temp->id_producto,
                         'id_variacion' => $temp->id_variacion,
-                        'tFecha_agregado' => $temp->tFecha_agregado, // Ahora coincide el nombre
+                        'tFecha_agregado' => $temp->tFecha_agregado,
                         'bNotificado_stock' => 0,
                         'bNotificado_descuento' => 0
                     ]);

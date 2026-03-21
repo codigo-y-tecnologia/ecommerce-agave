@@ -58,7 +58,7 @@
         
         // Contar variaciones con descuento
         $variacionesConDescuento = $producto->variaciones->filter(function($v) {
-            return $v->tieneDescuentoActivo() && $v->dPrecio_oferta < $v->dPrecio;
+            return $v->tieneDescuentoActivo() && $v->dPrecio_descuento < $v->dPrecio;
         })->count();
     @endphp
 
@@ -103,7 +103,7 @@
                                     @php
                                         // Verificar si tiene descuento activo
                                         $tieneDescuento = $variacion->tieneDescuentoActivo();
-                                        $precioBase = $tieneDescuento ? $variacion->dPrecio_oferta : $variacion->dPrecio;
+                                        $precioBase = $tieneDescuento ? $variacion->dPrecio_descuento : $variacion->dPrecio;
                                         $porcentajeDescuento = $variacion->porcentaje_descuento;
                                         
                                         // Obtener imágenes
@@ -167,7 +167,7 @@
                                         $stockClass = $stockValue > 50 ? 'success' : ($stockValue > 10 ? 'warning' : 'danger');
                                         
                                         // Calcular ahorro para mostrar tooltip
-                                        $ahorro = $tieneDescuento ? ($variacion->dPrecio - $variacion->dPrecio_oferta) : 0;
+                                        $ahorro = $tieneDescuento ? ($variacion->dPrecio - $variacion->dPrecio_descuento) : 0;
                                     @endphp
                                     <tr>
                                         <td class="px-4">
@@ -185,7 +185,7 @@
                                                         </span>
                                                     @endif
                                                     
-                                                    @if($tieneDescuento && $variacion->dPrecio_oferta < $variacion->dPrecio)
+                                                    @if($tieneDescuento && $variacion->dPrecio_descuento < $variacion->dPrecio)
                                                         <span class="position-absolute top-0 start-0 badge bg-danger" style="z-index: 10; font-size: 10px;">
                                                             -{{ $porcentajeDescuento }}%
                                                         </span>
@@ -196,7 +196,7 @@
                                                      style="width: 60px; height: 60px; cursor: pointer;"
                                                      onclick="verImagenesVariacion({{ $variacion->id_variacion }}, '{{ $variacion->vSKU }}', [])">
                                                     <i class="fas fa-image text-muted fa-2x"></i>
-                                                    @if($tieneDescuento && $variacion->dPrecio_oferta < $variacion->dPrecio)
+                                                    @if($tieneDescuento && $variacion->dPrecio_descuento < $variacion->dPrecio)
                                                         <span class="position-absolute top-0 start-0 badge bg-danger" style="z-index: 10; font-size: 10px;">
                                                             -{{ $porcentajeDescuento }}%
                                                         </span>
@@ -225,31 +225,31 @@
                                             <div class="vstack gap-1">
                                                 <div class="d-flex align-items-center flex-wrap gap-1">
                                                     <span class="fw-bold">${{ number_format($variacion->dPrecio, 2) }}</span>
-                                                    @if($tieneDescuento && $variacion->dPrecio_oferta < $variacion->dPrecio)
+                                                    @if($tieneDescuento && $variacion->dPrecio_descuento < $variacion->dPrecio)
                                                         <span class="badge bg-danger">
                                                             -{{ $porcentajeDescuento }}%
                                                         </span>
                                                     @endif
                                                 </div>
                                                 
-                                                @if($tieneDescuento && $variacion->dPrecio_oferta < $variacion->dPrecio)
+                                                @if($tieneDescuento && $variacion->dPrecio_descuento < $variacion->dPrecio)
                                                     <div class="text-success small">
                                                         <i class="fas fa-tag me-1"></i>
                                                         <span class="fw-bold">Con descuento:</span> 
-                                                        <span class="text-danger">${{ number_format($variacion->dPrecio_oferta, 2) }}</span>
+                                                        <span class="text-danger">${{ number_format($variacion->dPrecio_descuento, 2) }}</span>
                                                     </div>
                                                     
-                                                    @if($variacion->vMotivo_oferta)
-                                                        <small class="text-muted" title="{{ $variacion->vMotivo_oferta }}">
-                                                            <i class="fas fa-comment me-1"></i>{{ Str::limit($variacion->vMotivo_oferta, 15) }}
+                                                    @if($variacion->vMotivo_descuento)
+                                                        <small class="text-muted" title="{{ $variacion->vMotivo_descuento }}">
+                                                            <i class="fas fa-comment me-1"></i>{{ Str::limit($variacion->vMotivo_descuento, 15) }}
                                                         </small>
                                                     @endif
                                                     
-                                                    @if($variacion->dFecha_inicio_oferta && $variacion->dFecha_fin_oferta)
+                                                    @if($variacion->dFecha_inicio_descuento && $variacion->dFecha_fin_descuento)
                                                         <small class="text-muted">
                                                             <i class="fas fa-calendar-alt me-1"></i>
-                                                            {{ \Carbon\Carbon::parse($variacion->dFecha_inicio_oferta)->format('d/m') }} - 
-                                                            {{ \Carbon\Carbon::parse($variacion->dFecha_fin_oferta)->format('d/m') }}
+                                                            {{ \Carbon\Carbon::parse($variacion->dFecha_inicio_descuento)->format('d/m') }} - 
+                                                            {{ \Carbon\Carbon::parse($variacion->dFecha_fin_descuento)->format('d/m') }}
                                                         </small>
                                                     @endif
                                                 @endif

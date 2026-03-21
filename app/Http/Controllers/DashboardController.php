@@ -14,7 +14,6 @@ class DashboardController extends Controller
     public function index()
     {
 
-        // 1. Productos destacados (los más recientes) - SOLO productos activos
         $productosDestacados = Producto::with([
             'categoria',
             'marca',
@@ -25,10 +24,8 @@ class DashboardController extends Controller
             ->take(12)
             ->get();
 
-        // 2. Productos en descuento - INCLUYE productos y variaciones
         $productosDescuento = $this->obtenerItemsConDescuento(12);
 
-        // 3. Productos Recomendados - SOLO productos
         $productosRecomendados = Producto::with([
             'categoria',
             'marca',
@@ -39,7 +36,6 @@ class DashboardController extends Controller
             ->take(8)
             ->get();
 
-        // 4. TODOS los items (productos + variaciones) para la sección principal
         $todosLosItems = $this->obtenerTodosLosItems();
 
         // Si el usuario está autenticado, lo redirigimos a su panel correspondiente
@@ -55,20 +51,19 @@ class DashboardController extends Controller
             }
 
             if ($user->hasRole('cliente')) {
-                return view('dashboards.cliente', compact('productosDestacados', 'productosDescuento', 'productosRecomendados', 'todosLosItems'));
+                return view('inicio', compact('productosDestacados', 'productosDescuento', 'productosRecomendados', 'todosLosItems'));
             }
 
             // Fallback de seguridad
-            return view('dashboards.cliente', compact('productosDestacados', 'productosDescuento', 'productosRecomendados', 'todosLosItems'));
+            return view('inicio', compact('productosDestacados', 'productosDescuento', 'productosRecomendados', 'todosLosItems'));
         }
 
         // Si no está autenticado, mostramos la vista pública (cliente como visitante)
-        return view('dashboards.cliente', compact('productosDestacados', 'productosDescuento', 'productosRecomendados', 'todosLosItems'));
+        return view('inicio', compact('productosDestacados', 'productosDescuento', 'productosRecomendados', 'todosLosItems'));
     }
 
     public function cliente()
     {
-        // 1. Productos destacados (los más recientes) - SOLO productos activos
         $productosDestacados = Producto::with([
             'categoria',
             'marca',
@@ -79,10 +74,8 @@ class DashboardController extends Controller
             ->take(12)
             ->get();
 
-        // 2. Productos en descuento - INCLUYE productos y variaciones
         $productosDescuento = $this->obtenerItemsConDescuento(12);
 
-        // 3. Productos Recomendados - SOLO productos
         $productosRecomendados = Producto::with([
             'categoria',
             'marca',
@@ -93,10 +86,9 @@ class DashboardController extends Controller
             ->take(8)
             ->get();
 
-        // 4. TODOS los items (productos + variaciones) para la sección principal
         $todosLosItems = $this->obtenerTodosLosItems();
 
-        return view('dashboards.cliente', compact('productosDestacados', 'productosDescuento', 'productosRecomendados', 'todosLosItems'));
+        return view('inicio', compact('productosDestacados', 'productosDescuento', 'productosRecomendados', 'todosLosItems'));
     }
 
     public function admin()
@@ -109,14 +101,10 @@ class DashboardController extends Controller
         return view('dashboards.superadmin');
     }
 
-    /**
-     * Obtiene TODOS los items (productos y variaciones) para la página de inicio
-     */
     private function obtenerTodosLosItems()
     {
         $items = collect();
 
-        // 1. Obtener todos los productos activos
         $productos = Producto::with([
             'categoria',
             'marca',
@@ -127,13 +115,11 @@ class DashboardController extends Controller
             ->get();
 
         foreach ($productos as $producto) {
-            // Agregar el producto padre como item independiente
             $productoClone = clone $producto;
             $productoClone->tipo_item = 'producto';
             $productoClone->item_id = $producto->id_producto;
             $items->push($productoClone);
 
-            // Agregar TODAS las variaciones activas de este producto como items independientes
             $variaciones = ProductoVariacion::with([
                 'productoPadre',
                 'productoPadre.categoria',
@@ -154,7 +140,6 @@ class DashboardController extends Controller
             }
         }
 
-        // Ordenar por fecha de registro (más recientes primero)
         $items = $items->sortByDesc(function ($item) {
             if ($item->tipo_item === 'variacion') {
                 return $item->tFecha_registro ?? ($item->productoPadre ? $item->productoPadre->tFecha_registro : now());
@@ -162,7 +147,6 @@ class DashboardController extends Controller
             return $item->tFecha_registro ?? now();
         })->values();
 
-        // Paginar manualmente
         $perPage = 12;
         $currentPage = request()->get('page', 1);
         $pagedData = $items->forPage($currentPage, $perPage);
@@ -176,15 +160,11 @@ class DashboardController extends Controller
         );
     }
 
-    /**
-     * Obtiene productos y variaciones con descuento activo
-     */
     private function obtenerItemsConDescuento($limite = null)
     {
         $fechaActual = now()->toDateString();
         $itemsConDescuento = collect();
 
-        // 1. PRODUCTOS CON DESCUENTO
         $productosConDescuento = Producto::with([
             'categoria',
             'marca',
@@ -217,7 +197,6 @@ class DashboardController extends Controller
             }
         }
 
-        // 2. VARIACIONES CON DESCUENTO
         $variacionesConDescuento = ProductoVariacion::with([
             'productoPadre',
             'productoPadre.categoria',
@@ -231,18 +210,18 @@ class DashboardController extends Controller
                 $q->where('bActivo', true);
             })
             ->where('bActivo', true)
-            ->where('bTiene_oferta', 1)
-            ->where('dPrecio_oferta', '>', 0)
+            ->where('bTiene_descuento', 1)
+            ->where('dPrecio_descuento', '>', 0)
             ->where(function ($query) use ($fechaActual) {
                 $query->where(function ($q) use ($fechaActual) {
-                    $q->whereNull('dFecha_fin_oferta')
-                        ->orWhere('dFecha_fin_oferta', '>=', $fechaActual);
+                    $q->whereNull('dFecha_fin_descuento')
+                        ->orWhere('dFecha_fin_descuento', '>=', $fechaActual);
                 });
             })
             ->where(function ($query) use ($fechaActual) {
                 $query->where(function ($q) use ($fechaActual) {
-                    $q->whereNull('dFecha_inicio_oferta')
-                        ->orWhere('dFecha_inicio_oferta', '<=', $fechaActual);
+                    $q->whereNull('dFecha_inicio_descuento')
+                        ->orWhere('dFecha_inicio_descuento', '<=', $fechaActual);
                 });
             })
             ->get();
@@ -256,7 +235,6 @@ class DashboardController extends Controller
             }
         }
 
-        // Ordenar por porcentaje de descuento
         $itemsConDescuento = $itemsConDescuento->sortByDesc(function ($item) {
             return $item->porcentaje_descuento_calculado ?? 0;
         })->values();
@@ -268,9 +246,6 @@ class DashboardController extends Controller
         return $itemsConDescuento;
     }
 
-    /**
-     * Verifica si un producto tiene descuento activo
-     */
     private function tieneDescuentoActivoProducto($producto)
     {
         if (!$producto->bTiene_descuento || $producto->dPrecio_descuento === null || $producto->dPrecio_descuento <= 0) {
@@ -295,36 +270,30 @@ class DashboardController extends Controller
         return true;
     }
 
-    /**
-     * Verifica si una variación tiene descuento activo
-     */
     private function tieneDescuentoActivoVariacion($variacion)
     {
-        if (!$variacion->bTiene_oferta || $variacion->dPrecio_oferta === null || $variacion->dPrecio_oferta <= 0) {
+        if (!$variacion->bTiene_descuento || $variacion->dPrecio_descuento === null || $variacion->dPrecio_descuento <= 0) {
             return false;
         }
 
         $fechaActual = now()->toDateString();
 
-        if ($variacion->dFecha_inicio_oferta && $variacion->dFecha_fin_oferta) {
-            return $fechaActual >= $variacion->dFecha_inicio_oferta &&
-                $fechaActual <= $variacion->dFecha_fin_oferta;
+        if ($variacion->dFecha_inicio_descuento && $variacion->dFecha_fin_descuento) {
+            return $fechaActual >= $variacion->dFecha_inicio_descuento &&
+                $fechaActual <= $variacion->dFecha_fin_descuento;
         }
 
-        if ($variacion->dFecha_inicio_oferta && !$variacion->dFecha_fin_oferta) {
-            return $fechaActual >= $variacion->dFecha_inicio_oferta;
+        if ($variacion->dFecha_inicio_descuento && !$variacion->dFecha_fin_descuento) {
+            return $fechaActual >= $variacion->dFecha_inicio_descuento;
         }
 
-        if (!$variacion->dFecha_inicio_oferta && $variacion->dFecha_inicio_oferta) {
-            return $fechaActual <= $variacion->dFecha_fin_oferta;
+        if (!$variacion->dFecha_inicio_descuento && $variacion->dFecha_fin_descuento) {
+            return $fechaActual <= $variacion->dFecha_fin_descuento;
         }
 
         return true;
     }
 
-    /**
-     * Calcula el porcentaje de descuento de un producto
-     */
     private function calcularPorcentajeDescuentoProducto($producto)
     {
         if (!$this->tieneDescuentoActivoProducto($producto) || $producto->dPrecio_venta <= 0) {
@@ -335,16 +304,13 @@ class DashboardController extends Controller
         return round($descuento);
     }
 
-    /**
-     * Calcula el porcentaje de descuento de una variación
-     */
     private function calcularPorcentajeDescuentoVariacion($variacion)
     {
         if (!$this->tieneDescuentoActivoVariacion($variacion) || $variacion->dPrecio <= 0) {
             return 0;
         }
 
-        $descuento = (($variacion->dPrecio - $variacion->dPrecio_oferta) / $variacion->dPrecio) * 100;
+        $descuento = (($variacion->dPrecio - $variacion->dPrecio_descuento) / $variacion->dPrecio) * 100;
         return round($descuento);
     }
 }

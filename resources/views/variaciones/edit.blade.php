@@ -20,10 +20,53 @@
     </div>
 
     @php
-        // Verificar si la variación tiene descuento activo para mostrar información
         $tieneDescuentoActivo = $variacion->tieneDescuentoActivo();
         $porcentajeDescuento = $variacion->porcentaje_descuento;
+        
+        $imagenesAdicionales = $variacion->imagenesRegistradas()
+            ->where('eTipo', 'adicional')
+            ->orderBy('iOrden')
+            ->get();
+        $totalImagenesActuales = $imagenesAdicionales->count();
+        
+        $imagenesExistentesData = [];
+        foreach($imagenesAdicionales as $imagen) {
+            $imagenesExistentesData[] = [
+                'id' => $imagen->id_variacion_imagen,
+                'url' => $imagen->url,
+                'filename' => basename($imagen->vRuta),
+                'ruta' => $imagen->vRuta
+            ];
+        }
     @endphp
+
+    <!-- Barra de progreso de tamaño total de archivos -->
+    <div class="alert alert-info py-2 mb-3" id="sizeInfo">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <i class="fas fa-camera me-1"></i>
+                <strong>Total de archivos multimedia:</strong> 
+                <span id="total-imagenes">{{ $totalImagenesActuales + ($variacion->imagen_principal_url ? 1 : 0) + ($variacion->gif_url ? 1 : 0) }}</span> archivos
+            </div>
+            <div class="col-md-6">
+                <strong>Tamaño total:</strong>
+                <span id="total-size">0 KB</span>
+                <span class="text-muted ms-2">(Máx: 50MB)</span>
+            </div>
+        </div>
+        <div class="row mt-2">
+            <div class="col-12">
+                <div class="progress" style="height: 8px;">
+                    <div id="size-progress-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-warning" id="limiteArchivosMsg" style="display: none;">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>¡Atención!</strong> Has excedido el límite de tamaño total de archivos (50MB).
+    </div>
 
     <form action="{{ route('variaciones.update', ['producto_id' => $producto->id_producto, 'variacion_id' => $variacion->id_variacion]) }}" 
           method="POST" enctype="multipart/form-data" id="variacionForm">
@@ -42,11 +85,11 @@
                             <div class="alert alert-success mb-3">
                                 <i class="fas fa-tag me-2"></i>
                                 <strong>¡Esta variación tiene un descuento activo del {{ $porcentajeDescuento }}%!</strong>
-                                @if($variacion->vMotivo_oferta)
-                                    <br><small>Motivo: {{ $variacion->vMotivo_oferta }}</small>
+                                @if($variacion->vMotivo_descuento)
+                                    <br><small>Motivo: {{ $variacion->vMotivo_descuento }}</small>
                                 @endif
-                                @if($variacion->dFecha_inicio_oferta && $variacion->dFecha_fin_oferta)
-                                    <br><small>Período: {{ \Carbon\Carbon::parse($variacion->dFecha_inicio_oferta)->format('d/m/Y') }} - {{ \Carbon\Carbon::parse($variacion->dFecha_fin_oferta)->format('d/m/Y') }}</small>
+                                @if($variacion->dFecha_inicio_descuento && $variacion->dFecha_fin_descuento)
+                                    <br><small>Período: {{ \Carbon\Carbon::parse($variacion->dFecha_inicio_descuento)->format('d/m/Y') }} - {{ \Carbon\Carbon::parse($variacion->dFecha_fin_descuento)->format('d/m/Y') }}</small>
                                 @endif
                             </div>
                         @endif
@@ -57,23 +100,26 @@
                                     <label for="vSKU" class="form-label fw-bold">
                                         SKU <span class="text-danger">*</span>
                                     </label>
-                                    <input type="text" 
-                                           name="vSKU" 
-                                           id="vSKU" 
-                                           class="form-control @error('vSKU') is-invalid @enderror"
-                                           value="{{ old('vSKU', $variacion->vSKU) }}" 
-                                           maxlength="50" 
-                                           required
-                                           oninput="validarSKU(this)"
-                                           pattern="[A-Za-z0-9\-]+"
-                                           title="Solo letras, números y guiones (máximo 50 caracteres)"
-                                           autocomplete="off"
-                                           data-original-sku="{{ $variacion->vSKU }}">
+                                    <div class="position-relative">
+                                        <input type="text" 
+                                               name="vSKU" 
+                                               id="vSKU" 
+                                               class="form-control @error('vSKU') is-invalid @enderror"
+                                               value="{{ old('vSKU', $variacion->vSKU) }}" 
+                                               maxlength="25" 
+                                               required
+                                               oninput="validarSKU(this); verificarSKUVariacionLocal(this)"
+                                               pattern="[A-Za-z0-9\-]+"
+                                               title="Solo letras, números y guiones (máximo 25 caracteres)"
+                                               autocomplete="off"
+                                               data-original-sku="{{ $variacion->vSKU }}">
+                                        <div id="sku-error" class="invalid-feedback" style="display: none;"></div>
+                                    </div>
                                     @error('vSKU')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                     <small class="form-text text-muted">
-                                        Ej: AGAVE001-ROJO, MEZCAL2024-VERDE (máximo 50 caracteres, solo letras, números y guiones)
+                                        Ej: AGAVE001-ROJO, MEZCAL2024-VERDE (máximo 25 caracteres, solo letras, números y guiones)
                                     </small>
                                 </div>
                             </div>
@@ -149,19 +195,19 @@
                             </div>
                         </div>
 
-                        <!-- CAMPOS DE OFERTA/DESCUENTO -->
+                        <!-- CAMPOS DE DESCUENTO -->
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group mb-3">
                                     <label class="form-label fw-bold">
-                                        <i class="fas fa-percentage me-1"></i>Oferta/Descuento Especial
+                                        <i class="fas fa-percentage me-1"></i>Descuento Especial
                                     </label>
                                     <div class="form-check form-switch">
-                                        <input type="checkbox" name="bTiene_oferta" id="bTiene_oferta" 
+                                        <input type="checkbox" name="bTiene_descuento" id="bTiene_descuento" 
                                                class="form-check-input" value="1"
-                                               {{ old('bTiene_oferta', $variacion->bTiene_oferta) ? 'checked' : '' }}
-                                               onchange="toggleOfertaFields()">
-                                        <label class="form-check-label" for="bTiene_oferta">
+                                               {{ old('bTiene_descuento', $variacion->bTiene_descuento) ? 'checked' : '' }}
+                                               onchange="toggleDescuentoFields()">
+                                        <label class="form-check-label" for="bTiene_descuento">
                                             Activar descuento para esta variación
                                         </label>
                                     </div>
@@ -172,28 +218,28 @@
                             </div>
                         </div>
 
-                        <!-- CAMPOS DE OFERTA/DESCUENTO (SIEMPRE VISIBLES SEGÚN EL ESTADO GUARDADO) -->
-                        <div id="ofertaFields" style="display: {{ old('bTiene_oferta', $variacion->bTiene_oferta) ? 'block' : 'none' }};">
+                        <!-- CAMPOS DE DESCUENTO -->
+                        <div id="descuentoFields" style="display: {{ old('bTiene_descuento', $variacion->bTiene_descuento) ? 'block' : 'none' }};">
                             <div class="row">
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
-                                        <label for="dPrecio_oferta" class="form-label fw-bold">
+                                        <label for="dPrecio_descuento" class="form-label fw-bold">
                                             Precio de descuento <span class="text-danger">*</span>
                                         </label>
                                         <div class="input-group">
                                             <span class="input-group-text">$</span>
                                             <input type="text" 
-                                                   name="dPrecio_oferta" 
-                                                   id="dPrecio_oferta" 
-                                                   class="form-control @error('dPrecio_oferta') is-invalid @enderror"
-                                                   value="{{ old('dPrecio_oferta', $variacion->dPrecio_oferta ? number_format($variacion->dPrecio_oferta, 2, '.', '') : '') }}" 
-                                                   oninput="validarPrecio(this); validarPrecioOfertaInstantaneo(this); actualizarPrecioFinal();"
-                                                   onblur="validarPrecioOferta()"
+                                                   name="dPrecio_descuento" 
+                                                   id="dPrecio_descuento" 
+                                                   class="form-control @error('dPrecio_descuento') is-invalid @enderror"
+                                                   value="{{ old('dPrecio_descuento', $variacion->dPrecio_descuento ? number_format($variacion->dPrecio_descuento, 2, '.', '') : '') }}" 
+                                                   oninput="validarPrecio(this); validarPrecioDescuentoInstantaneo(this); actualizarPrecioFinal();"
+                                                   onblur="validarPrecioDescuento()"
                                                    placeholder="0.00"
                                                    autocomplete="off">
                                         </div>
-                                        <div id="error-precio-oferta" class="invalid-feedback" style="display: none;"></div>
-                                        @error('dPrecio_oferta')
+                                        <div id="error-precio-descuento" class="invalid-feedback" style="display: none;"></div>
+                                        @error('dPrecio_descuento')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                         <small class="form-text text-muted">Debe ser menor al precio de venta</small>
@@ -202,17 +248,17 @@
                                 
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
-                                        <label for="dFecha_inicio_oferta" class="form-label fw-bold">
+                                        <label for="dFecha_inicio_descuento" class="form-label fw-bold">
                                             Fecha inicio <span class="text-danger">*</span>
                                         </label>
                                         <input type="date" 
-                                               name="dFecha_inicio_oferta" 
-                                               id="dFecha_inicio_oferta" 
-                                               class="form-control @error('dFecha_inicio_oferta') is-invalid @enderror"
-                                               value="{{ old('dFecha_inicio_oferta', $variacion->dFecha_inicio_oferta ? \Carbon\Carbon::parse($variacion->dFecha_inicio_oferta)->format('Y-m-d') : '') }}"
-                                               onchange="validarFechasOferta()"
+                                               name="dFecha_inicio_descuento" 
+                                               id="dFecha_inicio_descuento" 
+                                               class="form-control @error('dFecha_inicio_descuento') is-invalid @enderror"
+                                               value="{{ old('dFecha_inicio_descuento', $variacion->dFecha_inicio_descuento ? \Carbon\Carbon::parse($variacion->dFecha_inicio_descuento)->format('Y-m-d') : '') }}"
+                                               onchange="validarFechasDescuento()"
                                                autocomplete="off">
-                                        @error('dFecha_inicio_oferta')
+                                        @error('dFecha_inicio_descuento')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
@@ -220,18 +266,18 @@
                                 
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
-                                        <label for="dFecha_fin_oferta" class="form-label fw-bold">
+                                        <label for="dFecha_fin_descuento" class="form-label fw-bold">
                                             Fecha fin <span class="text-danger">*</span>
                                         </label>
                                         <input type="date" 
-                                               name="dFecha_fin_oferta" 
-                                               id="dFecha_fin_oferta" 
-                                               class="form-control @error('dFecha_fin_oferta') is-invalid @enderror"
-                                               value="{{ old('dFecha_fin_oferta', $variacion->dFecha_fin_oferta ? \Carbon\Carbon::parse($variacion->dFecha_fin_oferta)->format('Y-m-d') : '') }}"
-                                               onchange="validarFechasOferta()"
+                                               name="dFecha_fin_descuento" 
+                                               id="dFecha_fin_descuento" 
+                                               class="form-control @error('dFecha_fin_descuento') is-invalid @enderror"
+                                               value="{{ old('dFecha_fin_descuento', $variacion->dFecha_fin_descuento ? \Carbon\Carbon::parse($variacion->dFecha_fin_descuento)->format('Y-m-d') : '') }}"
+                                               onchange="validarFechasDescuento()"
                                                autocomplete="off">
-                                        <div id="error-fechas-oferta" class="invalid-feedback" style="display: none;"></div>
-                                        @error('dFecha_fin_oferta')
+                                        <div id="error-fechas-descuento" class="invalid-feedback" style="display: none;"></div>
+                                        @error('dFecha_fin_descuento')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
@@ -241,18 +287,18 @@
                             <div class="row">
                                 <div class="col-md-12">
                                     <div class="form-group mb-3">
-                                        <label for="vMotivo_oferta" class="form-label fw-bold">
+                                        <label for="vMotivo_descuento" class="form-label fw-bold">
                                             Motivo del descuento
                                         </label>
                                         <input type="text" 
-                                               name="vMotivo_oferta" 
-                                               id="vMotivo_oferta" 
-                                               class="form-control @error('vMotivo_oferta') is-invalid @enderror"
-                                               value="{{ old('vMotivo_oferta', $variacion->vMotivo_oferta) }}"
+                                               name="vMotivo_descuento" 
+                                               id="vMotivo_descuento" 
+                                               class="form-control @error('vMotivo_descuento') is-invalid @enderror"
+                                               value="{{ old('vMotivo_descuento', $variacion->vMotivo_descuento) }}"
                                                maxlength="255"
                                                placeholder="Ej: Liquidación de temporada, Black Friday, etc."
                                                autocomplete="off">
-                                        @error('vMotivo_oferta')
+                                        @error('vMotivo_descuento')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                         <small class="form-text text-muted">Opcional: Razón del descuento</small>
@@ -286,7 +332,6 @@
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                     <small class="form-text text-muted">Máximo: 999.999 kg (3 dígitos enteros, 3 decimales)</small>
-                                    <div id="error-dPeso" class="invalid-feedback d-block" style="display: none;"></div>
                                 </div>
                             </div>
                             
@@ -313,7 +358,6 @@
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                     <small class="form-text text-muted">Máximo: 999.99 cm (3 dígitos enteros, 2 decimales)</small>
-                                    <div id="error-dLargo_cm" class="invalid-feedback d-block" style="display: none;"></div>
                                 </div>
                             </div>
                             
@@ -340,7 +384,6 @@
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                     <small class="form-text text-muted">Máximo: 999.99 cm (3 dígitos enteros, 2 decimales)</small>
-                                    <div id="error-dAncho_cm" class="invalid-feedback d-block" style="display: none;"></div>
                                 </div>
                             </div>
                             
@@ -367,7 +410,6 @@
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                     <small class="form-text text-muted">Máximo: 999.99 cm (3 dígitos enteros, 2 decimales)</small>
-                                    <div id="error-dAlto_cm" class="invalid-feedback d-block" style="display: none;"></div>
                                 </div>
                             </div>
                         </div>
@@ -381,7 +423,7 @@
                                     </label>
                                     <select name="vClase_envio" id="vClase_envio" 
                                             class="form-select @error('vClase_envio') is-invalid @enderror">
-                                        <option value="">Seleccionar clase de envío</option>
+                                        <option value="">-- Heredar del producto --</option>
                                         <option value="estandar" {{ old('vClase_envio', $variacion->vClase_envio) == 'estandar' ? 'selected' : '' }}>Estándar</option>
                                         <option value="express" {{ old('vClase_envio', $variacion->vClase_envio) == 'express' ? 'selected' : '' }}>Express</option>
                                         <option value="fragil" {{ old('vClase_envio', $variacion->vClase_envio) == 'fragil' ? 'selected' : '' }}>Frágil</option>
@@ -441,6 +483,7 @@
                                                 <option value="{{ $impuesto->id_impuesto }}" 
                                                         data-porcentaje="{{ $impuesto->dPorcentaje }}"
                                                         data-tipo="{{ $impuesto->eTipo }}"
+                                                        data-nombre="{{ $impuesto->vNombre }}"
                                                         {{ old('id_impuesto', $variacion->id_impuesto) == $impuesto->id_impuesto ? 'selected' : '' }}>
                                                     {{ $impuesto->vNombre }} ({{ $impuesto->eTipo }} - {{ number_format($impuesto->dPorcentaje, 2) }}%)
                                                 </option>
@@ -521,6 +564,20 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="alert alert-light text-dark p-3" id="detalle-impuesto-info">
+                                    @if($variacion->impuesto)
+                                        <strong>Cálculo de {{ $variacion->impuesto->vNombre }}:</strong><br>
+                                        Precio base: ${{ number_format($variacion->precio_actual, 2) }}<br>
+                                        {{ $variacion->impuesto->vNombre }} ({{ $variacion->impuesto->dPorcentaje }}%): +${{ number_format($variacion->total_impuesto, 2) }}<br>
+                                        <strong>Total: ${{ number_format($variacion->precio_final, 2) }}</strong>
+                                    @else
+                                        Precio final: ${{ number_format($variacion->precio_actual, 2) }} (Sin impuestos)
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -539,7 +596,6 @@
                             </div>
                             
                             @php
-                                // Obtener los valores seleccionados actualmente
                                 $valoresSeleccionados = [];
                                 foreach($variacion->atributos as $atributoRel) {
                                     $valoresSeleccionados[$atributoRel->id_atributo] = $atributoRel->id_atributo_valor;
@@ -561,6 +617,8 @@
                                                        value="{{ $valor->id_atributo_valor }}"
                                                        class="form-check-input atributo-radio"
                                                        data-atributo-id="{{ $valor->atributo->id_atributo }}"
+                                                       data-atributo-nombre="{{ $nombreAtributo }}"
+                                                       data-valor-nombre="{{ $valor->vValor }}"
                                                        {{ $selected ? 'checked' : '' }}
                                                        required
                                                        autocomplete="off">
@@ -603,7 +661,6 @@
                                 <i class="fas fa-star text-warning me-1"></i>Imagen Principal
                             </label>
                             
-                            <!-- Imagen actual si existe -->
                             @php
                                 $imagenPrincipalActual = $variacion->imagen_principal_url;
                             @endphp
@@ -614,7 +671,8 @@
                                         <img src="{{ $imagenPrincipalActual }}" 
                                              class="img-thumbnail" 
                                              style="max-width: 150px; max-height: 150px; object-fit: contain;"
-                                             alt="Imagen principal actual">
+                                             alt="Imagen principal actual"
+                                             id="current_principal_img">
                                         <div class="mt-2">
                                             <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarImagenPrincipal()">
                                                 <i class="fas fa-trash me-1"></i>Eliminar imagen actual
@@ -640,7 +698,6 @@
                                 @endif
                             </small>
                             
-                            <!-- Preview de nueva imagen principal -->
                             <div id="preview_principal_container" class="mt-2" style="display: none;">
                                 <div class="border rounded p-2 text-center bg-light">
                                     <img id="preview_principal_img" src="#" 
@@ -662,7 +719,6 @@
                                 <i class="fas fa-file-image text-success me-1"></i>GIF Animado (Opcional)
                             </label>
                             
-                            <!-- GIF actual si existe -->
                             @php
                                 $gifActual = $variacion->gif_url;
                             @endphp
@@ -673,7 +729,8 @@
                                         <img src="{{ $gifActual }}" 
                                              class="img-thumbnail" 
                                              style="max-width: 150px; max-height: 150px; object-fit: contain;"
-                                             alt="GIF actual">
+                                             alt="GIF actual"
+                                             id="current_gif_img">
                                         <div class="mt-2">
                                             <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarGif()">
                                                 <i class="fas fa-trash me-1"></i>Eliminar GIF actual
@@ -699,7 +756,6 @@
                                 @endif
                             </small>
                             
-                            <!-- Preview de nuevo GIF -->
                             <div id="preview_gif_container" class="mt-2" style="display: none;">
                                 <div class="border rounded p-2 text-center bg-light">
                                     <img id="preview_gif" src="#" 
@@ -721,15 +777,6 @@
                                 <i class="fas fa-images me-1"></i>Imágenes Adicionales (Máximo 7)
                             </label>
                             
-                            <!-- Mostrar imágenes adicionales existentes -->
-                            @php
-                                $imagenesAdicionales = $variacion->imagenesRegistradas()
-                                    ->where('eTipo', 'adicional')
-                                    ->orderBy('iOrden')
-                                    ->get();
-                                $totalImagenesActuales = $imagenesAdicionales->count();
-                            @endphp
-                            
                             @if($imagenesAdicionales && $imagenesAdicionales->count() > 0)
                                 <div id="existing-images-container" class="mb-3">
                                     <label class="form-label small text-muted">Imágenes actuales ({{ $totalImagenesActuales }}):</label>
@@ -738,12 +785,12 @@
                                             @php
                                                 $nombreArchivo = basename($imagen->vRuta);
                                             @endphp
-                                            <div class="col-6 col-md-4 mb-2 existing-image-item" data-id="{{ $imagen->id_variacion_imagen }}" data-filename="{{ $nombreArchivo }}">
+                                            <div class="col-6 col-md-4 mb-2 existing-image-item" data-id="{{ $imagen->id_variacion_imagen }}" data-filename="{{ $nombreArchivo }}" data-ruta="{{ $imagen->vRuta }}">
                                                 <div class="card border position-relative">
                                                     <button type="button" 
                                                             class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1"
                                                             style="width: 24px; height: 24px; padding: 0; border-radius: 50%; z-index: 10;"
-                                                            onclick="marcarImagenParaEliminar(this, '{{ $imagen->id_variacion_imagen }}', '{{ $nombreArchivo }}')">
+                                                            onclick="eliminarImagenAdicionalExistente(event, this, '{{ $imagen->id_variacion_imagen }}', '{{ addslashes($nombreArchivo) }}')">
                                                         <i class="fas fa-times"></i>
                                                     </button>
                                                     <img src="{{ $imagen->url }}" 
@@ -753,6 +800,7 @@
                                                          onerror="this.onerror=null; this.src='https://via.placeholder.com/80x80?text=Error';">
                                                     <div class="card-body p-1 text-center">
                                                         <small class="text-muted d-block" style="font-size: 10px;">Imagen {{ $index + 1 }}</small>
+                                                        <small class="text-muted d-block" style="font-size: 8px;">{{ Str::limit($nombreArchivo, 15) }}</small>
                                                     </div>
                                                 </div>
                                             </div>
@@ -923,29 +971,23 @@
     padding: 1rem;
 }
 
-/* Estilos para sección de oferta */
-#ofertaFields {
+/* Estilos para sección de descuento */
+#descuentoFields {
     transition: all 0.3s ease;
 }
 
 /* Estilo para imágenes marcadas para eliminar */
-.existing-image-item.marcado-eliminar {
+.existing-image-item.eliminada {
     opacity: 0.5;
     filter: grayscale(100%);
     position: relative;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    display: none !important;
 }
 
-.existing-image-item.marcado-eliminar::after {
-    content: '✓';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 40px;
-    color: #dc3545;
-    font-weight: bold;
-    z-index: 20;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+.position-relative {
+    position: relative !important;
 }
 
 /* Responsive */
@@ -968,59 +1010,85 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-// Variables globales para imágenes
+// ============ DATOS EXISTENTES PARA VALIDACIÓN ============
+const productosExistentes = @json(\App\Models\Producto::select('vCodigo_barras as sku')->get()->map(function($p) {
+    return $p->sku;
+})->values());
+
+const variacionesExistentes = @json(\App\Models\ProductoVariacion::where('id_variacion', '!=', $variacion->id_variacion)
+    ->select('vSKU as sku')
+    ->get()
+    ->map(function($v) {
+        return $v->sku;
+    })->values());
+
+const skusProductosExistentes = new Set(productosExistentes);
+const skusVariacionesExistentes = new Set(variacionesExistentes);
+
+// ============ VARIABLES GLOBALES ============
 let imagenPrincipalFile = null;
 let gifFile = null;
 let selectedImages = [];
 let imageCounter = 0;
-let imagenesAEliminar = []; // Array para almacenar objetos con id y filename a eliminar
+let maxTotalSize = 50 * 1024 * 1024;
+let limiteExcedido = false;
+let imagenesAEliminar = [];
 
-// ==================== VALIDACIONES ====================
+// ============ FUNCIONES DE VALIDACIÓN ============
+
+function verificarSKUVariacionLocal(input) {
+    const sku = input.value.trim();
+    let errorDiv = document.getElementById('sku-error');
+    const originalSku = input.getAttribute('data-original-sku') || '';
+    
+    if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.id = 'sku-error';
+        errorDiv.className = 'invalid-feedback';
+        errorDiv.style.display = 'none';
+        input.parentNode.appendChild(errorDiv);
+    }
+    
+    if (sku === '' || sku === originalSku) {
+        input.classList.remove('is-invalid');
+        errorDiv.style.display = 'none';
+        errorDiv.textContent = '';
+        return true;
+    }
+    
+    if (skusProductosExistentes.has(sku)) {
+        input.classList.add('is-invalid');
+        errorDiv.textContent = `⚠️ Ya existe un producto con el SKU "${sku}".`;
+        errorDiv.style.display = 'block';
+        return false;
+    }
+    
+    if (skusVariacionesExistentes.has(sku)) {
+        input.classList.add('is-invalid');
+        errorDiv.textContent = `⚠️ Ya existe una variación con el SKU "${sku}".`;
+        errorDiv.style.display = 'block';
+        return false;
+    }
+    
+    input.classList.remove('is-invalid');
+    errorDiv.style.display = 'none';
+    errorDiv.textContent = '';
+    return true;
+}
 
 function validarSKU(input) {
-    // Guardar posición del cursor
     const cursorPos = input.selectionStart;
-    
-    // Permitir letras, números y guiones
     let valor = input.value.replace(/[^A-Za-z0-9\-]/g, '');
-    
-    // Limitar a 50 caracteres (igual que la BD)
-    if (valor.length > 50) {
-        valor = valor.substring(0, 50);
-    }
-    
-    // Convertir a mayúsculas automáticamente
+    if (valor.length > 25) valor = valor.substring(0, 25);
     valor = valor.toUpperCase();
     
-    // Actualizar el valor si cambió
     if (input.value !== valor) {
         input.value = valor;
-        // Restaurar posición del cursor
-        setTimeout(() => {
-            input.setSelectionRange(cursorPos, cursorPos);
-        }, 0);
+        setTimeout(() => input.setSelectionRange(cursorPos, cursorPos), 0);
     }
     
-    // Validar que no esté vacío
-    if (input.value.trim() === '') {
-        input.classList.add('is-invalid');
-        
-        // Crear o actualizar mensaje de error
-        let errorDiv = document.getElementById('error-sku-vacio');
-        if (!errorDiv) {
-            errorDiv = document.createElement('div');
-            errorDiv.className = 'invalid-feedback d-block';
-            errorDiv.id = 'error-sku-vacio';
-            input.parentNode.appendChild(errorDiv);
-        }
-        errorDiv.textContent = 'El SKU no puede estar vacío';
-    } else {
-        input.classList.remove('is-invalid');
-        const errorDiv = document.getElementById('error-sku-vacio');
-        if (errorDiv) {
-            errorDiv.remove();
-        }
-    }
+    if (input.value.trim() === '') input.classList.add('is-invalid');
+    else input.classList.remove('is-invalid');
 }
 
 function validarPrecio(input) {
@@ -1032,33 +1100,19 @@ function validarPrecio(input) {
         return;
     }
     
-    // Eliminar todo excepto números y un punto decimal
     value = value.replace(/[^0-9.]/g, '');
-    
-    // Verificar que no haya más de un punto decimal
     const puntos = value.split('.').length - 1;
     if (puntos > 1) {
         const partes = value.split('.');
         value = partes[0] + '.' + partes.slice(1).join('');
     }
-    
-    // Eliminar múltiples puntos seguidos
     value = value.replace(/\.{2,}/g, '.');
+    if (value.startsWith('.')) value = '0' + value;
     
-    // Si comienza con punto, agregar 0 al inicio
-    if (value.startsWith('.')) {
-        value = '0' + value;
-    }
-    
-    // Limitar a máximo 7 dígitos enteros (9,999,999.99)
     const partesNumero = value.split('.');
-    const parteEntera = partesNumero[0];
-    
-    if (parteEntera.length > 7) {
-        value = parteEntera.substring(0, 7) + (partesNumero[1] ? '.' + partesNumero[1] : '');
+    if (partesNumero[0].length > 7) {
+        value = partesNumero[0].substring(0, 7) + (partesNumero[1] ? '.' + partesNumero[1] : '');
     }
-    
-    // Limitar decimales a máximo 2
     if (value.includes('.')) {
         const partes = value.split('.');
         if (partes[1].length > 2) {
@@ -1067,109 +1121,82 @@ function validarPrecio(input) {
         }
     }
     
-    // Solo actualizar si el valor cambió
     if (input.value !== value) {
         const oldValue = input.value;
         input.value = value;
-        
         const cursorDiff = value.length - oldValue.length;
         const newCursorPos = Math.max(0, Math.min(value.length, cursorPos + cursorDiff));
-        setTimeout(() => {
-            input.setSelectionRange(newCursorPos, newCursorPos);
-        }, 0);
+        setTimeout(() => input.setSelectionRange(newCursorPos, newCursorPos), 0);
     }
     
-    // Limpiar error específico del input
-    limpiarErrorPrecio(input);
+    input.classList.remove('is-invalid');
     
-    // Mostrar error si el número es muy grande
     if (value) {
         const numero = parseFloat(value);
         if (!isNaN(numero) && numero > 9999999.99) {
             input.classList.add('is-invalid');
-            mostrarErrorPrecio(input, 'El precio máximo es 9,999,999.99');
         }
     }
     
-    // Validaciones específicas
-    if (input.id === 'dPrecio_oferta') {
-        validarPrecioOfertaInstantaneo(input);
-    }
-    
+    if (input.id === 'dPrecio_descuento') validarPrecioDescuentoInstantaneo(input);
     actualizarPrecioFinal();
 }
 
-// Función para mostrar error de precio
-function mostrarErrorPrecio(input, mensaje) {
-    const errorId = `error-${input.id}-limite`;
-    const errorElement = document.getElementById(errorId);
-    if (errorElement) {
-        errorElement.remove();
-    }
-    
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'invalid-feedback d-block precio-error';
-    errorDiv.textContent = mensaje;
-    errorDiv.id = errorId;
-    
-    input.parentNode.appendChild(errorDiv);
-}
-
-// Función para limpiar error de precio
-function limpiarErrorPrecio(input) {
-    const errorId = `error-${input.id}-limite`;
-    const errorElement = document.getElementById(errorId);
-    if (errorElement) {
-        errorElement.remove();
-    }
-    input.classList.remove('is-invalid');
-}
-
-function validarPrecioOfertaInstantaneo(input) {
-    const tieneOferta = document.getElementById('bTiene_oferta');
-    if (!tieneOferta || !tieneOferta.checked) return true;
+function validarPrecioDescuentoInstantaneo(input) {
+    const tieneDescuento = document.getElementById('bTiene_descuento');
+    if (!tieneDescuento || !tieneDescuento.checked) return true;
     
     const precioVenta = parseFloat(document.getElementById('dPrecio').value) || 0;
-    const precioOferta = parseFloat(input.value) || 0;
-    const errorDiv = document.getElementById('error-precio-oferta');
+    const precioDescuento = parseFloat(input.value) || 0;
+    const errorDiv = document.getElementById('error-precio-descuento');
     
-    if (precioOferta >= precioVenta && precioOferta > 0 && input.value !== '') {
+    if (precioDescuento >= precioVenta && precioDescuento > 0 && input.value !== '') {
         input.classList.add('is-invalid');
-        errorDiv.style.display = 'block';
-        errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
+        if (errorDiv) {
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
+        }
         return false;
     } else {
         input.classList.remove('is-invalid');
-        errorDiv.style.display = 'none';
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+        }
         return true;
     }
 }
 
-function validarPrecioOferta() {
-    const tieneOferta = document.getElementById('bTiene_oferta');
-    if (!tieneOferta || !tieneOferta.checked) return true;
+function validarPrecioDescuento() {
+    const tieneDescuento = document.getElementById('bTiene_descuento');
+    if (!tieneDescuento || !tieneDescuento.checked) return true;
     
     const precioVenta = parseFloat(document.getElementById('dPrecio').value) || 0;
-    const precioOferta = parseFloat(document.getElementById('dPrecio_oferta').value) || 0;
-    const input = document.getElementById('dPrecio_oferta');
-    const errorDiv = document.getElementById('error-precio-oferta');
+    const precioDescuento = parseFloat(document.getElementById('dPrecio_descuento').value) || 0;
+    const input = document.getElementById('dPrecio_descuento');
+    const errorDiv = document.getElementById('error-precio-descuento');
     
-    if (precioOferta >= precioVenta && precioOferta > 0) {
+    if (precioDescuento >= precioVenta && precioDescuento > 0) {
         input.classList.add('is-invalid');
-        errorDiv.style.display = 'block';
-        errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
+        if (errorDiv) {
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
+        }
         return false;
     } else {
         input.classList.remove('is-invalid');
-        errorDiv.style.display = 'none';
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+        }
         return true;
     }
 }
 
-function validarFechasOferta() {
-    const fechaInicio = document.getElementById('dFecha_inicio_oferta');
-    const fechaFin = document.getElementById('dFecha_fin_oferta');
-    const errorDiv = document.getElementById('error-fechas-oferta');
+function validarFechasDescuento() {
+    const fechaInicio = document.getElementById('dFecha_inicio_descuento');
+    const fechaFin = document.getElementById('dFecha_fin_descuento');
+    const errorDiv = document.getElementById('error-fechas-descuento');
     
     if (!fechaInicio || !fechaFin) return true;
     
@@ -1179,12 +1206,17 @@ function validarFechasOferta() {
         
         if (fin < inicio) {
             fechaFin.classList.add('is-invalid');
-            errorDiv.style.display = 'block';
-            errorDiv.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio';
+            if (errorDiv) {
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio';
+            }
             return false;
         } else {
             fechaFin.classList.remove('is-invalid');
-            errorDiv.style.display = 'none';
+            if (errorDiv) {
+                errorDiv.style.display = 'none';
+                errorDiv.textContent = '';
+            }
             return true;
         }
     }
@@ -1192,280 +1224,107 @@ function validarFechasOferta() {
 }
 
 function validarStock(input) {
-    // Remover cualquier caracter que no sea número
     input.value = input.value.replace(/[^0-9]/g, '');
-    
-    // Limitar a máximo 6 dígitos
-    if (input.value.length > 6) {
-        input.value = input.value.substring(0, 6);
-    }
-    
-    // Validar que sea mayor o igual a 0
-    if (input.value && parseInt(input.value) < 0) {
-        input.value = '0';
-    }
-    
-    // Remover ceros a la izquierda (excepto si es solo "0")
-    if (input.value.length > 1 && input.value.startsWith('0')) {
-        input.value = input.value.replace(/^0+/, '');
-    }
-    
-    // Si está vacío, poner 0
-    if (input.value === '') {
-        input.value = '0';
-    }
-    
+    if (input.value.length > 6) input.value = input.value.substring(0, 6);
+    if (input.value && parseInt(input.value) < 0) input.value = '0';
+    if (input.value.length > 1 && input.value.startsWith('0')) input.value = input.value.replace(/^0+/, '');
+    if (input.value === '') input.value = '0';
     input.classList.remove('is-invalid');
 }
 
-// ==================== VALIDACIONES DE DIMENSIONES ====================
-
 function validarPeso(input) {
     let value = input.value;
-    const cursorPos = input.selectionStart;
-    
-    if (value === '') {
-        limpiarErrorDimension(input);
-        return;
-    }
-    
-    // Solo números y punto decimal
+    if (value === '') return;
     value = value.replace(/[^0-9.]/g, '');
-    
-    // Un solo punto decimal
     const puntos = value.split('.').length - 1;
     if (puntos > 1) {
         const partes = value.split('.');
         value = partes[0] + '.' + partes.slice(1).join('');
     }
-    
-    // Eliminar múltiples puntos
-    value = value.replace(/\.{2,}/g, '.');
-    
-    // Agregar 0 si empieza con punto
-    if (value.startsWith('.')) {
-        value = '0' + value;
-    }
-    
-    // Limitar decimales a máximo 3
+    if (value.startsWith('.')) value = '0' + value;
     if (value.includes('.')) {
         const partes = value.split('.');
         if (partes[1].length > 3) {
             partes[1] = partes[1].substring(0, 3);
             value = partes[0] + '.' + partes[1];
         }
-    }
-    
-    // Limitar parte entera a máximo 3 dígitos
-    if (value.includes('.')) {
-        const partes = value.split('.');
-        if (partes[0].length > 3) {
-            partes[0] = partes[0].substring(0, 3);
-            value = partes[0] + '.' + partes[1];
-        }
+        if (partes[0].length > 3) value = partes[0].substring(0, 3) + '.' + partes[1];
     } else {
-        if (value.length > 3) {
-            value = value.substring(0, 3);
-        }
+        if (value.length > 3) value = value.substring(0, 3);
     }
+    input.value = value;
     
-    if (input.value !== value) {
-        const oldValue = input.value;
-        input.value = value;
-        
-        const cursorDiff = value.length - oldValue.length;
-        const newCursorPos = Math.max(0, Math.min(value.length, cursorPos + cursorDiff));
-        setTimeout(() => {
-            input.setSelectionRange(newCursorPos, newCursorPos);
-        }, 0);
-    }
-    
-    // Limpiar error primero
-    limpiarErrorDimension(input);
-    
-    // Validar que no exceda 999.999 kg
     if (value) {
         const numero = parseFloat(value);
         if (!isNaN(numero) && numero > 999.999) {
             input.classList.add('is-invalid');
-            mostrarErrorDimension(input, 'El peso máximo es 999.999 kg');
+        } else {
+            input.classList.remove('is-invalid');
         }
     }
 }
 
 function validarDimensionCm(input) {
     let value = input.value;
-    const cursorPos = input.selectionStart;
-    
-    if (value === '') {
-        limpiarErrorDimension(input);
-        return;
-    }
-    
-    // Solo números y punto decimal
+    if (value === '') return;
     value = value.replace(/[^0-9.]/g, '');
-    
-    // Un solo punto decimal
     const puntos = value.split('.').length - 1;
     if (puntos > 1) {
         const partes = value.split('.');
         value = partes[0] + '.' + partes.slice(1).join('');
     }
-    
-    // Eliminar múltiples puntos
-    value = value.replace(/\.{2,}/g, '.');
-    
-    // Agregar 0 si empieza con punto
-    if (value.startsWith('.')) {
-        value = '0' + value;
-    }
-    
-    // Limitar decimales a máximo 2
+    if (value.startsWith('.')) value = '0' + value;
     if (value.includes('.')) {
         const partes = value.split('.');
         if (partes[1].length > 2) {
             partes[1] = partes[1].substring(0, 2);
             value = partes[0] + '.' + partes[1];
         }
-    }
-    
-    // Limitar parte entera a máximo 3 dígitos
-    if (value.includes('.')) {
-        const partes = value.split('.');
-        if (partes[0].length > 3) {
-            partes[0] = partes[0].substring(0, 3);
-            value = partes[0] + '.' + partes[1];
-        }
+        if (partes[0].length > 3) value = partes[0].substring(0, 3) + '.' + partes[1];
     } else {
-        if (value.length > 3) {
-            value = value.substring(0, 3);
-        }
+        if (value.length > 3) value = value.substring(0, 3);
     }
+    input.value = value;
     
-    if (input.value !== value) {
-        const oldValue = input.value;
-        input.value = value;
-        
-        const cursorDiff = value.length - oldValue.length;
-        const newCursorPos = Math.max(0, Math.min(value.length, cursorPos + cursorDiff));
-        setTimeout(() => {
-            input.setSelectionRange(newCursorPos, newCursorPos);
-        }, 0);
-    }
-    
-    // Limpiar error primero
-    limpiarErrorDimension(input);
-    
-    // Validar que no exceda 999.99 cm
     if (value) {
         const numero = parseFloat(value);
         if (!isNaN(numero) && numero > 999.99) {
             input.classList.add('is-invalid');
-            mostrarErrorDimension(input, 'La dimensión máxima es 999.99 cm');
+        } else {
+            input.classList.remove('is-invalid');
         }
     }
-}
-
-// Función para mostrar error de dimensiones
-function mostrarErrorDimension(input, mensaje) {
-    const errorId = `error-${input.id}`;
-    let errorElement = document.getElementById(errorId);
-    
-    if (!errorElement) {
-        errorElement = document.createElement('div');
-        errorElement.className = 'invalid-feedback d-block';
-        errorElement.id = errorId;
-        input.parentNode.appendChild(errorElement);
-    }
-    
-    errorElement.textContent = mensaje;
-    input.classList.add('is-invalid');
-}
-
-// Función para limpiar error de dimensiones
-function limpiarErrorDimension(input) {
-    const errorId = `error-${input.id}`;
-    const errorElement = document.getElementById(errorId);
-    if (errorElement) {
-        errorElement.textContent = '';
-    }
-    input.classList.remove('is-invalid');
 }
 
 function formatearPeso(input) {
     let value = input.value;
-    
-    if (!value || value === '.' || value.endsWith('.')) {
-        return;
-    }
-    
+    if (!value || value === '.' || value.endsWith('.')) return;
     let num = parseFloat(value);
     if (isNaN(num)) {
         input.value = '';
         return;
     }
-    
-    if (num > 999.999) {
-        num = 999.999;
-    }
-    
+    if (num > 999.999) num = 999.999;
     input.value = num.toString();
-    
-    // Asegurar que tenga el formato correcto (máx 3 decimales)
-    if (input.value.includes('.')) {
-        const partes = input.value.split('.');
-        if (partes[1].length > 3) {
-            input.value = partes[0] + '.' + partes[1].substring(0, 3);
-        }
-    }
 }
 
 function formatearDimensionCm(input) {
     let value = input.value;
-    
-    if (!value || value === '.' || value.endsWith('.')) {
-        return;
-    }
-    
+    if (!value || value === '.' || value.endsWith('.')) return;
     let num = parseFloat(value);
     if (isNaN(num)) {
         input.value = '';
         return;
     }
-    
-    if (num > 999.99) {
-        num = 999.99;
-    }
-    
+    if (num > 999.99) num = 999.99;
     input.value = num.toString();
-    
-    // Asegurar que tenga el formato correcto (máx 2 decimales)
-    if (input.value.includes('.')) {
-        const partes = input.value.split('.');
-        if (partes[1].length > 2) {
-            input.value = partes[0] + '.' + partes[1].substring(0, 2);
-        }
-    }
 }
 
 function permitirBorrado(e) {
-    const teclasPermitidas = [
-        'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
-        'Home', 'End', 'Tab', 'Enter'
-    ];
-    
-    if (e.ctrlKey || e.metaKey) {
-        return true;
-    }
-    
-    if (teclasPermitidas.includes(e.key)) {
-        return true;
-    }
-    
-    if (e.key >= '0' && e.key <= '9') {
-        return true;
-    }
-    
+    const teclasPermitidas = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Tab', 'Enter'];
+    if (e.ctrlKey || e.metaKey) return true;
+    if (teclasPermitidas.includes(e.key)) return true;
+    if (e.key >= '0' && e.key <= '9') return true;
     if (e.key === '.') {
         if (e.target.value.includes('.')) {
             e.preventDefault();
@@ -1473,108 +1332,174 @@ function permitirBorrado(e) {
         }
         return true;
     }
-    
     e.preventDefault();
     return false;
 }
 
-// ==================== FUNCIONES PARA OFERTA/DESCUENTO ====================
+// ==================== FUNCIONES PARA DESCUENTO ====================
 
-function toggleOfertaFields() {
-    const ofertaFields = document.getElementById('ofertaFields');
-    const tieneOferta = document.getElementById('bTiene_oferta').checked;
-    const precioOferta = document.getElementById('dPrecio_oferta');
-    const fechaInicio = document.getElementById('dFecha_inicio_oferta');
-    const fechaFin = document.getElementById('dFecha_fin_oferta');
+function toggleDescuentoFields() {
+    const descuentoFields = document.getElementById('descuentoFields');
+    const tieneDescuento = document.getElementById('bTiene_descuento').checked;
+    const precioDescuento = document.getElementById('dPrecio_descuento');
+    const fechaInicio = document.getElementById('dFecha_inicio_descuento');
+    const fechaFin = document.getElementById('dFecha_fin_descuento');
     
-    if (tieneOferta) {
-        ofertaFields.style.display = 'block';
-        precioOferta.required = true;
+    if (tieneDescuento) {
+        descuentoFields.style.display = 'block';
+        precioDescuento.required = true;
         fechaInicio.required = true;
         fechaFin.required = true;
-        
         setTimeout(() => {
-            validarPrecioOferta();
+            validarPrecioDescuento();
             actualizarPrecioFinal();
         }, 100);
     } else {
-        ofertaFields.style.display = 'none';
-        precioOferta.required = false;
+        descuentoFields.style.display = 'none';
+        precioDescuento.required = false;
         fechaInicio.required = false;
         fechaFin.required = false;
-        
-        precioOferta.classList.remove('is-invalid');
-        document.getElementById('error-precio-oferta').style.display = 'none';
+        precioDescuento.classList.remove('is-invalid');
+        const errorDiv = document.getElementById('error-precio-descuento');
+        if (errorDiv) errorDiv.style.display = 'none';
         fechaFin.classList.remove('is-invalid');
-        document.getElementById('error-fechas-oferta').style.display = 'none';
-        
+        const errorFechas = document.getElementById('error-fechas-descuento');
+        if (errorFechas) errorFechas.style.display = 'none';
         actualizarPrecioFinal();
     }
 }
 
-// ==================== FUNCIÓN DE CÁLCULO DE IMPUESTO Y PRECIO FINAL ====================
+// ==================== FUNCIÓN DE CÁLCULO DE IMPUESTO ====================
 
 function actualizarPrecioFinal() {
     const precioInput = document.getElementById('dPrecio');
-    const tieneOferta = document.getElementById('bTiene_oferta')?.checked;
-    const precioOfertaInput = document.getElementById('dPrecio_oferta');
+    const tieneDescuento = document.getElementById('bTiene_descuento')?.checked;
+    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
     const impuestoSelect = document.getElementById('id_impuesto');
     
     if (!precioInput) return;
     
-    // Determinar qué precio usar (original o con descuento)
     let precioBase = parseFloat(precioInput.value) || 0;
     let precioOriginal = precioBase;
+    let descuentoActivo = false;
     
-    if (tieneOferta && precioOfertaInput && precioOfertaInput.value) {
-        const precioOferta = parseFloat(precioOfertaInput.value) || 0;
-        if (precioOferta > 0 && precioOferta < precioBase) {
-            precioBase = precioOferta;
+    if (tieneDescuento && precioDescuentoInput && precioDescuentoInput.value) {
+        const fechaHoy = new Date();
+        fechaHoy.setHours(0, 0, 0, 0);
+        const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
+        const fechaFinInput = document.getElementById('dFecha_fin_descuento');
+        let fechaInicio = null, fechaFin = null;
+        if (fechaInicioInput?.value) fechaInicio = new Date(fechaInicioInput.value + 'T00:00:00');
+        if (fechaFinInput?.value) fechaFin = new Date(fechaFinInput.value + 'T23:59:59');
+        const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
+        
+        let aplicar = false;
+        if (fechaInicio && fechaFin) aplicar = fechaHoy >= fechaInicio && fechaHoy <= fechaFin;
+        else if (fechaInicio && !fechaFin) aplicar = fechaHoy >= fechaInicio;
+        else if (!fechaInicio && fechaFin) aplicar = fechaHoy <= fechaFin;
+        else aplicar = true;
+        
+        if (aplicar && precioDescuento > 0 && precioDescuento < precioBase) {
+            precioBase = precioDescuento;
+            descuentoActivo = true;
         }
     }
     
-    // Mostrar precio base
     document.getElementById('precio-base-display').textContent = '$' + precioBase.toFixed(2);
-    
-    // Mostrar precio original si hay descuento
     const precioOriginalDisplay = document.getElementById('precio-original-display');
-    if (tieneOferta && precioBase < precioOriginal) {
-        precioOriginalDisplay.style.display = 'block';
-        precioOriginalDisplay.textContent = 'Precio original: $' + precioOriginal.toFixed(2);
-    } else {
-        precioOriginalDisplay.style.display = 'none';
+    if (precioOriginalDisplay) {
+        if (tieneDescuento && precioDescuentoInput?.value && descuentoActivo) {
+            precioOriginalDisplay.style.display = 'block';
+            precioOriginalDisplay.innerHTML = `<span class="text-decoration-line-through">$${precioOriginal.toFixed(2)}</span><span class="badge bg-danger ms-2">¡DESCUENTO!</span>`;
+        } else {
+            precioOriginalDisplay.style.display = 'none';
+        }
     }
     
-    // Obtener impuesto seleccionado
-    let totalImpuestos = 0;
-    let porcentaje = 0;
-    let nombreImpuesto = '';
-    
+    let totalImpuestos = 0, porcentaje = 0, nombreImpuesto = '';
     if (impuestoSelect && impuestoSelect.value) {
         const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
         porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
-        nombreImpuesto = selectedOption.text.split('(')[0].trim();
-        
+        nombreImpuesto = selectedOption.dataset.nombre || selectedOption.text.split('(')[0].trim();
         totalImpuestos = precioBase * (porcentaje / 100);
     }
     
     const precioFinal = precioBase + totalImpuestos;
-    
-    // Mostrar resultados
-    document.getElementById('total-impuestos-display').textContent = '$' + totalImpuestos.toFixed(2);
+    document.getElementById('total-impuestos-display').textContent = '+$' + totalImpuestos.toFixed(2);
     document.getElementById('precio-final-total-display').textContent = '$' + precioFinal.toFixed(2);
     document.getElementById('precio-final-display').textContent = '$' + precioFinal.toFixed(2);
     
     if (porcentaje > 0) {
-        document.getElementById('porcentaje-impuestos-display').textContent = porcentaje.toFixed(2) + '%';
-        document.getElementById('detalle-impuesto-display').textContent = `${nombreImpuesto}: ${porcentaje.toFixed(2)}% ($${totalImpuestos.toFixed(2)})`;
+        document.getElementById('porcentaje-impuestos-display').textContent = `+${porcentaje.toFixed(2)}% (${nombreImpuesto})`;
+        document.getElementById('detalle-impuesto-display').textContent = `${nombreImpuesto}: ${porcentaje.toFixed(2)}% (+$${totalImpuestos.toFixed(2)})`;
+        const detalleInfo = document.getElementById('detalle-impuesto-info');
+        if (detalleInfo) {
+            detalleInfo.innerHTML = `<strong>Cálculo de ${nombreImpuesto}:</strong><br>Precio base: $${precioBase.toFixed(2)}<br>${nombreImpuesto} (${porcentaje}%): +$${totalImpuestos.toFixed(2)}<br><strong>Total: $${precioFinal.toFixed(2)}</strong>`;
+        }
     } else {
         document.getElementById('porcentaje-impuestos-display').textContent = '0%';
         document.getElementById('detalle-impuesto-display').textContent = 'Sin impuesto';
+        const detalleInfo = document.getElementById('detalle-impuesto-info');
+        if (detalleInfo) detalleInfo.innerHTML = `Precio final: $${precioBase.toFixed(2)} (Sin impuestos)`;
     }
 }
 
 // ==================== FUNCIONES PARA IMÁGENES ====================
+
+function calcularTamañoTotal() {
+    let total = 0;
+    if (imagenPrincipalFile) total += imagenPrincipalFile.size;
+    if (gifFile) total += gifFile.size;
+    selectedImages.forEach(img => { total += img.file.size; });
+    return total;
+}
+
+function actualizarBarraProgresoTamaño() {
+    const totalSize = calcularTamañoTotal();
+    const maxSize = 50 * 1024 * 1024;
+    const porcentaje = (totalSize / maxSize) * 100;
+    const progressBar = document.getElementById('size-progress-bar');
+    const totalSizeSpan = document.getElementById('total-size');
+    const totalImagenesSpan = document.getElementById('total-imagenes');
+    const limiteMsg = document.getElementById('limiteArchivosMsg');
+    
+    if (totalSizeSpan) {
+        if (totalSize < 1024) totalSizeSpan.textContent = totalSize + ' B';
+        else if (totalSize < 1024 * 1024) totalSizeSpan.textContent = (totalSize / 1024).toFixed(2) + ' KB';
+        else totalSizeSpan.textContent = (totalSize / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+    
+    if (progressBar) {
+        progressBar.style.width = Math.min(porcentaje, 100) + '%';
+        if (porcentaje > 90) {
+            progressBar.classList.remove('bg-success');
+            progressBar.classList.add('bg-danger');
+        } else if (porcentaje > 70) {
+            progressBar.classList.remove('bg-success', 'bg-danger');
+            progressBar.classList.add('bg-warning');
+        } else {
+            progressBar.classList.remove('bg-warning', 'bg-danger');
+            progressBar.classList.add('bg-success');
+        }
+    }
+    
+    if (totalImagenesSpan) {
+        let total = (imagenPrincipalFile ? 1 : 0) + (gifFile ? 1 : 0) + selectedImages.length;
+        const imagenesActualesCount = {{ $totalImagenesActuales }};
+        total += imagenesActualesCount - imagenesAEliminar.length;
+        totalImagenesSpan.textContent = total;
+    }
+    
+    if (totalSize > maxSize) {
+        limiteExcedido = true;
+        if (limiteMsg) limiteMsg.style.display = 'block';
+        document.getElementById('btnSubmit').disabled = true;
+    } else {
+        limiteExcedido = false;
+        if (limiteMsg) limiteMsg.style.display = 'none';
+        document.getElementById('btnSubmit').disabled = false;
+    }
+}
 
 function previewImagenPrincipal(input) {
     const previewContainer = document.getElementById('preview_principal_container');
@@ -1582,50 +1507,36 @@ function previewImagenPrincipal(input) {
     
     if (input.files && input.files[0]) {
         const file = input.files[0];
-        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-        
-        if (!validTypes.includes(file.type)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Formato no válido',
-                text: 'La imagen principal solo acepta formatos JPG, JPEG y PNG'
-            });
+        if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
+            Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'La imagen principal solo acepta formatos JPG, JPEG y PNG' });
             input.value = '';
             return;
         }
-        
         if (file.size > 5 * 1024 * 1024) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Archivo demasiado grande',
-                text: 'La imagen principal no puede exceder los 5MB'
-            });
+            Swal.fire({ icon: 'error', title: 'Archivo demasiado grande', text: 'La imagen principal no puede exceder los 5MB' });
             input.value = '';
             return;
         }
-        
         imagenPrincipalFile = file;
         const reader = new FileReader();
-        
         reader.onload = function(e) {
             previewImg.src = e.target.result;
             previewContainer.style.display = 'block';
-        }
-        
-        reader.readAsDataURL(input.files[0]);
+            actualizarBarraProgresoTamaño();
+        };
+        reader.readAsDataURL(file);
     } else {
         previewContainer.style.display = 'none';
         imagenPrincipalFile = null;
+        actualizarBarraProgresoTamaño();
     }
 }
 
 function cancelarImagenPrincipal() {
-    const input = document.getElementById('imagen_principal');
-    const previewContainer = document.getElementById('preview_principal_container');
-    
-    input.value = '';
-    previewContainer.style.display = 'none';
+    document.getElementById('imagen_principal').value = '';
+    document.getElementById('preview_principal_container').style.display = 'none';
     imagenPrincipalFile = null;
+    actualizarBarraProgresoTamaño();
 }
 
 function eliminarImagenPrincipal() {
@@ -1642,14 +1553,8 @@ function eliminarImagenPrincipal() {
         if (result.isConfirmed) {
             document.getElementById('eliminar_imagen_principal').value = '1';
             document.getElementById('current_principal_container').style.display = 'none';
-            
-            Swal.fire({
-                title: 'Imagen marcada para eliminar',
-                text: 'La imagen será eliminada al guardar los cambios.',
-                icon: 'info',
-                timer: 2000,
-                showConfirmButton: false
-            });
+            actualizarBarraProgresoTamaño();
+            Swal.fire({ title: 'Imagen marcada para eliminar', text: 'La imagen será eliminada al guardar los cambios.', icon: 'info', timer: 2000, showConfirmButton: false });
         }
     });
 }
@@ -1660,49 +1565,36 @@ function previewGif(input) {
     
     if (input.files && input.files[0]) {
         const file = input.files[0];
-        
         if (file.type !== 'image/gif') {
-            Swal.fire({
-                icon: 'error',
-                title: 'Formato no válido',
-                text: 'El campo GIF solo acepta archivos con formato GIF'
-            });
+            Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'El campo GIF solo acepta archivos con formato GIF' });
             input.value = '';
             return;
         }
-        
         if (file.size > 10 * 1024 * 1024) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Archivo demasiado grande',
-                text: 'El GIF no puede exceder los 10MB'
-            });
+            Swal.fire({ icon: 'error', title: 'Archivo demasiado grande', text: 'El GIF no puede exceder los 10MB' });
             input.value = '';
             return;
         }
-        
         gifFile = file;
         const reader = new FileReader();
-        
         reader.onload = function(e) {
             previewImg.src = e.target.result;
             previewContainer.style.display = 'block';
-        }
-        
-        reader.readAsDataURL(input.files[0]);
+            actualizarBarraProgresoTamaño();
+        };
+        reader.readAsDataURL(file);
     } else {
         previewContainer.style.display = 'none';
         gifFile = null;
+        actualizarBarraProgresoTamaño();
     }
 }
 
 function cancelarGif() {
-    const input = document.getElementById('gif');
-    const previewContainer = document.getElementById('preview_gif_container');
-    
-    input.value = '';
-    previewContainer.style.display = 'none';
+    document.getElementById('gif').value = '';
+    document.getElementById('preview_gif_container').style.display = 'none';
     gifFile = null;
+    actualizarBarraProgresoTamaño();
 }
 
 function eliminarGif() {
@@ -1719,11 +1611,53 @@ function eliminarGif() {
         if (result.isConfirmed) {
             document.getElementById('eliminar_gif').value = '1';
             document.getElementById('current_gif_container').style.display = 'none';
+            actualizarBarraProgresoTamaño();
+            Swal.fire({ title: 'GIF marcado para eliminar', text: 'El GIF será eliminado al guardar los cambios.', icon: 'info', timer: 2000, showConfirmButton: false });
+        }
+    });
+}
+
+// Función para eliminar imagen adicional existente (eliminación directa, sin marcado)
+function eliminarImagenAdicionalExistente(event, btn, imagenId, nombreArchivo) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    Swal.fire({
+        title: '¿Eliminar imagen?',
+        text: 'Esta acción eliminará esta imagen adicional de la variación.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const container = btn.closest('.existing-image-item');
+            
+            // Agregar el ID a la lista de imágenes a eliminar
+            if (!imagenesAEliminar.some(item => item.id == imagenId)) {
+                imagenesAEliminar.push({ id: parseInt(imagenId), filename: nombreArchivo });
+            }
+            
+            // Actualizar el input oculto
+            document.getElementById('imagenes_a_eliminar').value = JSON.stringify(imagenesAEliminar);
+            
+            // Ocultar la imagen
+            if (container) {
+                container.classList.add('eliminada');
+                container.style.display = 'none';
+            }
+            
+            // Actualizar contadores
+            actualizarBarraProgresoTamaño();
             
             Swal.fire({
-                title: 'GIF marcado para eliminar',
-                text: 'El GIF será eliminado al guardar los cambios.',
-                icon: 'info',
+                title: '¡Imagen marcada para eliminar!',
+                text: 'La imagen será eliminada al guardar los cambios.',
+                icon: 'success',
                 timer: 2000,
                 showConfirmButton: false
             });
@@ -1731,152 +1665,65 @@ function eliminarGif() {
     });
 }
 
-function marcarImagenParaEliminar(btn, imagenId, nombreArchivo) {
-    const container = btn.closest('.existing-image-item');
-    
-    if (container.classList.contains('marcado-eliminar')) {
-        // Desmarcar
-        container.classList.remove('marcado-eliminar');
-        
-        // Eliminar de imagenesAEliminar
-        if (imagenId) {
-            const idx = imagenesAEliminar.findIndex(item => item.id === imagenId);
-            if (idx > -1) {
-                imagenesAEliminar.splice(idx, 1);
-            }
-        } else if (nombreArchivo) {
-            const idx = imagenesAEliminar.findIndex(item => item.filename === nombreArchivo);
-            if (idx > -1) {
-                imagenesAEliminar.splice(idx, 1);
-            }
-        }
-    } else {
-        // Marcar
-        container.classList.add('marcado-eliminar');
-        
-        // Agregar a imagenesAEliminar
-        if (imagenId) {
-            if (!imagenesAEliminar.some(item => item.id === imagenId)) {
-                imagenesAEliminar.push({ id: imagenId, filename: nombreArchivo });
-            }
-        } else if (nombreArchivo) {
-            if (!imagenesAEliminar.some(item => item.filename === nombreArchivo)) {
-                imagenesAEliminar.push({ filename: nombreArchivo });
-            }
-        }
-    }
-    
-    // Actualizar el input oculto con los datos a eliminar
-    document.getElementById('imagenes_a_eliminar').value = JSON.stringify(imagenesAEliminar);
-    
-    console.log('Imágenes marcadas para eliminar:', imagenesAEliminar);
-}
-
 function handleImageSelection(event) {
     const files = event.target.files;
-    
-    // Si no hay archivos seleccionados (usuario canceló), NO hacer nada
     if (!files || files.length === 0) {
-        console.log('Usuario canceló la selección de imágenes - no se realizan cambios');
-        // Limpiar el input para que no quede con referencia a archivos no seleccionados
         event.target.value = '';
         return;
     }
     
     const maxFiles = 7;
     const currentCount = selectedImages.length;
+    const existingCount = {{ $totalImagenesActuales }};
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const tamanioActual = calcularTamañoTotal();
+    let nuevoTamanio = tamanioActual;
+    for (let i = 0; i < files.length; i++) nuevoTamanio += files[i].size;
     
-    // Verificar límite total
-    if (currentCount + files.length > maxFiles) {
+    if (nuevoTamanio > maxTotalSize) {
         Swal.fire({
             icon: 'warning',
-            title: 'Límite de imágenes',
-            text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales. Ya tienes ${currentCount} seleccionadas.`
+            title: 'Límite de tamaño excedido',
+            html: `<div class="text-center"><p>Si agregas estos archivos, excederás el límite de 50MB.</p><p class="mb-0"><strong>Tamaño actual:</strong> ${(tamanioActual / (1024 * 1024)).toFixed(2)}MB</p><p><strong>Tamaño con nuevos archivos:</strong> ${(nuevoTamanio / (1024 * 1024)).toFixed(2)}MB</p></div>`,
+            confirmButtonText: 'Entendido'
         });
         event.target.value = '';
         return;
     }
     
-    let archivosAgregados = 0;
-    let archivosRechazados = [];
+    const imagenesNoEliminadas = existingCount - imagenesAEliminar.length;
+    if (imagenesNoEliminadas + currentCount + files.length > 7) {
+        Swal.fire({ icon: 'warning', title: 'Límite de imágenes', text: `No puedes tener más de 7 imágenes adicionales en total.` });
+        event.target.value = '';
+        return;
+    }
     
+    let archivosAgregados = 0;
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        if (!validTypes.includes(file.type)) continue;
+        if (file.size > 5 * 1024 * 1024) continue;
+        if (selectedImages.some(img => img.file.name === file.name && img.file.size === file.size)) continue;
         
-        // Validar formato
-        if (!validTypes.includes(file.type)) {
-            archivosRechazados.push(`"${file.name}" (formato no válido)`);
-            continue;
-        }
-        
-        // Validar tamaño
-        if (file.size > 5 * 1024 * 1024) {
-            archivosRechazados.push(`"${file.name}" (excede 5MB)`);
-            continue;
-        }
-        
-        // Verificar duplicados
-        if (isImageDuplicate(file)) {
-            archivosRechazados.push(`"${file.name}" (archivo duplicado)`);
-            continue;
-        }
-        
-        // Si pasa todas las validaciones, agregarlo
         const imageId = 'img_' + Date.now() + '_' + imageCounter++;
         const preview = URL.createObjectURL(file);
-        
-        selectedImages.push({
-            id: imageId,
-            file: file,
-            preview: preview,
-            name: file.name,
-            size: file.size
-        });
+        selectedImages.push({ id: imageId, file: file, preview: preview, name: file.name, size: file.size });
         archivosAgregados++;
     }
     
-    // Mostrar mensaje de archivos rechazados si los hay
-    if (archivosRechazados.length > 0) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Algunos archivos no se pudieron agregar',
-            html: `<ul style="text-align: left;">${archivosRechazados.map(msg => `<li>${msg}</li>`).join('')}</ul>`,
-            confirmButtonText: 'Entendido'
-        });
-    }
-    
-    // Si se agregaron archivos, actualizar la interfaz
     if (archivosAgregados > 0) {
-        const totalImagenesActuales = {{ $totalImagenesActuales ?? 0 }};
+        const totalImagenesActuales = {{ $totalImagenesActuales }};
         document.getElementById('new-images-count').textContent = selectedImages.length;
-        document.getElementById('selected-images-count').innerHTML = 
-            `${totalImagenesActuales} imágenes actuales + <span id="new-images-count">${selectedImages.length}</span> nuevas`;
+        document.getElementById('selected-images-count').innerHTML = `${totalImagenesActuales} imágenes actuales + <span id="new-images-count">${selectedImages.length}</span> nuevas`;
         renderSelectedImages();
-        
-        Swal.fire({
-            icon: 'success',
-            title: 'Imágenes agregadas',
-            text: `Se agregaron ${archivosAgregados} imagen(es) correctamente. Total nuevas: ${selectedImages.length}`,
-            timer: 2000,
-            showConfirmButton: false
-        });
+        actualizarBarraProgresoTamaño();
+        if (selectedImages.length > 0) document.getElementById('btn-limpiar-imagenes').style.display = 'inline-block';
+        Swal.fire({ icon: 'success', title: 'Imágenes agregadas', text: `Se agregaron ${archivosAgregados} imagen(es) correctamente.`, timer: 2000, showConfirmButton: false });
     }
-    
-    // IMPORTANTE: Limpiar el input para permitir seleccionar los mismos archivos nuevamente si es necesario
     event.target.value = '';
 }
 
-function isImageDuplicate(newFile) {
-    return selectedImages.some(img => 
-        img.file.name === newFile.name && 
-        img.file.size === newFile.size && 
-        img.file.lastModified === newFile.lastModified
-    );
-}
-
 function removeSelectedImage(imageId) {
-    // Mostrar confirmación antes de eliminar
     Swal.fire({
         title: '¿Eliminar imagen?',
         text: 'Esta acción eliminará la imagen de la selección actual.',
@@ -1889,24 +1736,15 @@ function removeSelectedImage(imageId) {
     }).then((result) => {
         if (result.isConfirmed) {
             const image = selectedImages.find(img => img.id === imageId);
-            if (image && image.preview) {
-                URL.revokeObjectURL(image.preview);
-            }
+            if (image && image.preview) URL.revokeObjectURL(image.preview);
             selectedImages = selectedImages.filter(img => img.id !== imageId);
-            
-            const totalImagenesActuales = {{ $totalImagenesActuales ?? 0 }};
+            const totalImagenesActuales = {{ $totalImagenesActuales }};
             document.getElementById('new-images-count').textContent = selectedImages.length;
-            document.getElementById('selected-images-count').innerHTML = 
-                `${totalImagenesActuales} imágenes actuales + <span id="new-images-count">${selectedImages.length}</span> nuevas`;
+            document.getElementById('selected-images-count').innerHTML = `${totalImagenesActuales} imágenes actuales + <span id="new-images-count">${selectedImages.length}</span> nuevas`;
             renderSelectedImages();
-            
-            Swal.fire({
-                icon: 'success',
-                title: 'Imagen eliminada',
-                text: 'La imagen se ha eliminado de la selección.',
-                timer: 1500,
-                showConfirmButton: false
-            });
+            actualizarBarraProgresoTamaño();
+            if (selectedImages.length === 0) document.getElementById('btn-limpiar-imagenes').style.display = 'none';
+            Swal.fire({ icon: 'success', title: 'Imagen eliminada', text: 'La imagen se ha eliminado de la selección.', timer: 1500, showConfirmButton: false });
         }
     });
 }
@@ -1915,91 +1753,61 @@ function renderSelectedImages() {
     const container = document.getElementById('selected-images-container');
     const noMsg = document.getElementById('no-imagenes-msg');
     const btnLimpiar = document.getElementById('btn-limpiar-imagenes');
-    
     if (!container) return;
-    
     container.innerHTML = '';
     
     if (selectedImages.length === 0) {
-        if (noMsg) {
-            noMsg.style.display = 'block';
-            noMsg.innerHTML = '<i class="fas fa-info-circle me-1"></i><small>No hay nuevas imágenes seleccionadas</small>';
-        }
-        if (btnLimpiar) {
-            btnLimpiar.style.display = 'none';
-        }
+        if (noMsg) { noMsg.style.display = 'block'; noMsg.innerHTML = '<i class="fas fa-info-circle me-1"></i><small>No hay nuevas imágenes seleccionadas</small>'; }
+        if (btnLimpiar) btnLimpiar.style.display = 'none';
         return;
     }
     
     if (noMsg) noMsg.style.display = 'none';
-    if (btnLimpiar) {
-        btnLimpiar.style.display = 'inline-block';
-    }
+    if (btnLimpiar) btnLimpiar.style.display = 'inline-block';
     
     selectedImages.forEach((image, index) => {
         const col = document.createElement('div');
         col.className = 'col-6 col-md-4 mb-2';
-        
         const card = document.createElement('div');
         card.className = 'card border image-preview-card position-relative';
-        
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1 remove-btn';
         btn.style.cssText = 'width: 24px; height: 24px; padding: 0; border-radius: 50%; z-index: 10;';
-        btn.onclick = function(e) { 
-            e.preventDefault();
-            e.stopPropagation();
-            removeSelectedImage(image.id); 
-        };
-        
+        btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); removeSelectedImage(image.id); };
         const btnIcon = document.createElement('i');
         btnIcon.className = 'fas fa-times';
         btn.appendChild(btnIcon);
-        
         const img = document.createElement('img');
         img.src = image.preview;
         img.className = 'card-img-top';
         img.style.cssText = 'height: 80px; object-fit: contain; background: #f8f9fa; padding: 4px;';
-        img.alt = 'Imagen ' + (index + 1);
-        
         const cardBody = document.createElement('div');
         cardBody.className = 'card-body p-1 text-center';
-        
         const small1 = document.createElement('small');
         small1.className = 'text-muted d-block';
         small1.style.cssText = 'font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
         small1.textContent = image.file.name.length > 15 ? image.file.name.substring(0, 15) + '...' : image.file.name;
-        
         const small2 = document.createElement('small');
         small2.className = 'text-muted d-block';
         small2.style.fontSize = '9px';
         let sizeText = '';
-        if (image.file.size < 1024) {
-            sizeText = image.file.size + ' B';
-        } else if (image.file.size < 1024 * 1024) {
-            sizeText = (image.file.size / 1024).toFixed(2) + ' KB';
-        } else {
-            sizeText = (image.file.size / (1024 * 1024)).toFixed(2) + ' MB';
-        }
+        if (image.file.size < 1024) sizeText = image.file.size + ' B';
+        else if (image.file.size < 1024 * 1024) sizeText = (image.file.size / 1024).toFixed(2) + ' KB';
+        else sizeText = (image.file.size / (1024 * 1024)).toFixed(2) + ' MB';
         small2.textContent = sizeText;
-        
         cardBody.appendChild(small1);
         cardBody.appendChild(small2);
-        
         card.appendChild(btn);
         card.appendChild(img);
         card.appendChild(cardBody);
-        
         col.appendChild(card);
         container.appendChild(col);
     });
 }
 
-// Función para limpiar todas las imágenes seleccionadas
 function limpiarTodasLasImagenes() {
     if (selectedImages.length === 0) return;
-    
     Swal.fire({
         title: '¿Limpiar todas las imágenes nuevas?',
         text: 'Esta acción eliminará todas las imágenes adicionales recién seleccionadas.',
@@ -2011,263 +1819,153 @@ function limpiarTodasLasImagenes() {
         cancelButtonText: 'Cancelar'
     }).then((result) => {
         if (result.isConfirmed) {
-            // Liberar objetos URL
-            selectedImages.forEach(img => {
-                if (img.preview) URL.revokeObjectURL(img.preview);
-            });
-            
+            selectedImages.forEach(img => { if (img.preview) URL.revokeObjectURL(img.preview); });
             selectedImages = [];
-            const totalImagenesActuales = {{ $totalImagenesActuales ?? 0 }};
+            const totalImagenesActuales = {{ $totalImagenesActuales }};
             document.getElementById('new-images-count').textContent = '0';
-            document.getElementById('selected-images-count').innerHTML = 
-                `${totalImagenesActuales} imágenes actuales + <span id="new-images-count">0</span> nuevas`;
+            document.getElementById('selected-images-count').innerHTML = `${totalImagenesActuales} imágenes actuales + <span id="new-images-count">0</span> nuevas`;
             renderSelectedImages();
-            
-            Swal.fire({
-                icon: 'success',
-                title: 'Imágenes limpiadas',
-                text: 'Todas las imágenes nuevas han sido eliminadas.',
-                timer: 1500,
-                showConfirmButton: false
-            });
+            actualizarBarraProgresoTamaño();
+            document.getElementById('btn-limpiar-imagenes').style.display = 'none';
+            Swal.fire({ icon: 'success', title: 'Imágenes limpiadas', text: 'Todas las imágenes nuevas han sido eliminadas.', timer: 1500, showConfirmButton: false });
         }
     });
 }
 
-// ============ NUEVA FUNCIÓN PARA PREPARAR EL FORMULARIO ANTES DE ENVIAR ============
+// ==================== FUNCIÓN PARA ENVÍO DEL FORMULARIO ====================
 
 function prepararFormularioParaEnvio(event) {
     event.preventDefault();
     
+    const skuInput = document.getElementById('vSKU');
+    if (!verificarSKUVariacionLocal(skuInput)) {
+        Swal.fire({ icon: 'error', title: 'Error de validación', text: 'El SKU ya está registrado en otro producto o variación.' });
+        return false;
+    }
+    
+    const precioInput = document.getElementById('dPrecio');
+    const stockInput = document.getElementById('iStock');
+    if (!precioInput.value.trim()) { Swal.fire({ icon: 'error', title: 'Error', text: 'El precio de venta es obligatorio.' }); precioInput.classList.add('is-invalid'); return false; }
+    if (!stockInput.value.trim()) { Swal.fire({ icon: 'error', title: 'Error', text: 'El stock es obligatorio.' }); stockInput.classList.add('is-invalid'); return false; }
+    
+    const atributosRadios = document.querySelectorAll('.atributo-radio');
+    const atributosPorGrupo = {};
+    atributosRadios.forEach(radio => { if (radio.checked) atributosPorGrupo[radio.dataset.atributoId] = true; });
+    const gruposAtributos = new Set();
+    atributosRadios.forEach(radio => gruposAtributos.add(radio.dataset.atributoId));
+    let atributosFaltantes = [];
+    gruposAtributos.forEach(atributoId => {
+        if (!atributosPorGrupo[atributoId]) {
+            const container = document.querySelector(`.atributo-container input[data-atributo-id="${atributoId}"]`).closest('.atributo-container');
+            const nombreAtributo = container?.querySelector('.fw-bold')?.innerText || 'Atributo';
+            atributosFaltantes.push(nombreAtributo);
+            container?.classList.add('border-danger');
+        }
+    });
+    if (atributosFaltantes.length > 0) {
+        Swal.fire({ icon: 'error', title: 'Error', html: `Debes seleccionar un valor para los siguientes atributos:<br><br>${atributosFaltantes.join(', ')}` });
+        return false;
+    }
+    
+    const tieneDescuento = document.getElementById('bTiene_descuento');
+    if (tieneDescuento && tieneDescuento.checked) {
+        if (!validarPrecioDescuento()) { Swal.fire({ icon: 'error', title: 'Error', text: 'El precio de descuento debe ser menor que el precio de venta.' }); return false; }
+        if (!validarFechasDescuento()) { Swal.fire({ icon: 'error', title: 'Error', text: 'La fecha de fin no puede ser anterior a la fecha de inicio.' }); return false; }
+    }
+    
     const form = document.getElementById('variacionForm');
     const formData = new FormData(form);
-    
-    // Agregar método PUT para Laravel
     formData.append('_method', 'PUT');
     
-    // Limpiar cualquier campo de archivo existente para evitar duplicados
     const fileInputs = form.querySelectorAll('input[type="file"][name^="imagenes_adicionales"]');
-    fileInputs.forEach(input => {
-        formData.delete(input.name);
-    });
+    fileInputs.forEach(input => formData.delete(input.name));
     
-    // Agregar las imágenes adicionales seleccionadas al FormData
-    selectedImages.forEach((image, index) => {
-        formData.append(`imagenes_adicionales[${index}]`, image.file);
-    });
+    selectedImages.forEach((image, index) => formData.append(`imagenes_adicionales[${index}]`, image.file));
+    if (imagenPrincipalFile) formData.set('imagen_principal', imagenPrincipalFile);
+    if (gifFile) formData.set('gif', gifFile);
+    if (imagenesAEliminar.length > 0) formData.set('imagenes_a_eliminar', JSON.stringify(imagenesAEliminar));
     
-    // También asegurar que la imagen principal y GIF se envíen
-    if (imagenPrincipalFile) {
-        formData.set('imagen_principal', imagenPrincipalFile);
-    }
+    Swal.fire({ title: 'Actualizando variación...', text: 'Por favor espera', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
     
-    if (gifFile) {
-        formData.set('gif', gifFile);
-    }
-    
-    // Agregar las imágenes a eliminar
-    if (imagenesAEliminar.length > 0) {
-        formData.set('imagenes_a_eliminar', JSON.stringify(imagenesAEliminar));
-    }
-    
-    // Verificar qué se está enviando (para depuración)
-    console.log('Enviando formulario con:');
-    console.log('- Imagen principal:', imagenPrincipalFile ? imagenPrincipalFile.name : 'ninguna');
-    console.log('- GIF:', gifFile ? gifFile.name : 'ninguno');
-    console.log('- Imágenes adicionales nuevas:', selectedImages.length);
-    console.log('- Imágenes a eliminar:', imagenesAEliminar.length);
-    
-    // Enviar el formulario con fetch
     fetch(form.action, {
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+            'Accept': 'application/json'
         }
     })
     .then(response => {
         if (response.redirected) {
             window.location.href = response.url;
         } else if (response.ok) {
-            return response.text();
+            return response.json();
         } else {
-            throw new Error('Error en la respuesta del servidor');
+            return response.json().then(err => { throw err; });
         }
     })
     .then(data => {
-        if (data && data.includes('variaciones.show')) {
-            window.location.reload();
+        Swal.close();
+        if (data && data.redirect) {
+            window.location.href = data.redirect;
+        } else if (data && data.success) {
+            window.location.href = '{{ route("variaciones.show", $producto->id_producto) }}';
+        } else {
+            window.location.href = '{{ route("variaciones.show", $producto->id_producto) }}';
         }
     })
     .catch(error => {
+        Swal.close();
         console.error('Error:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Hubo un problema al enviar el formulario. Por favor intenta de nuevo.'
-        });
+        let errorMessage = 'Hubo un problema al actualizar la variación.';
+        if (error.errors) {
+            errorMessage = Object.values(error.errors).flat().join('<br>');
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        Swal.fire({ icon: 'error', title: 'Error', html: errorMessage });
     });
     
     return false;
 }
 
-// ==================== VALIDACIÓN DEL FORMULARIO ====================
+// ==================== INICIALIZACIÓN ====================
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Obtener el SKU original
-    const skuInput = document.getElementById('vSKU');
-    const originalSku = skuInput ? skuInput.dataset.originalSku : '';
-    
-    // Inicializar toggle de oferta
-    if (document.getElementById('bTiene_oferta') && document.getElementById('bTiene_oferta').checked) {
-        toggleOfertaFields();
-    }
-    
-    // Inicializar cálculo de precio final
+    if (document.getElementById('bTiene_descuento') && document.getElementById('bTiene_descuento').checked) toggleDescuentoFields();
     actualizarPrecioFinal();
-    
-    // Event listeners para calcular precio final cuando cambian los valores
     document.getElementById('dPrecio').addEventListener('input', actualizarPrecioFinal);
-    document.getElementById('dPrecio_oferta').addEventListener('input', actualizarPrecioFinal);
     document.getElementById('id_impuesto').addEventListener('change', actualizarPrecioFinal);
     
-    // Validación en tiempo real de atributos
     document.querySelectorAll('.atributo-radio').forEach(radio => {
         radio.addEventListener('change', function() {
             const container = this.closest('.atributo-container');
             if (container) {
                 container.classList.remove('border-danger');
                 const errorExistente = container.querySelector('.error-atributo');
-                if (errorExistente) {
-                    errorExistente.remove();
-                }
+                if (errorExistente) errorExistente.remove();
             }
         });
     });
     
-    // Prevenir que el navegador guarde valores del autocomplete
-    document.querySelectorAll('input, select, textarea').forEach(element => {
-        element.setAttribute('autocomplete', 'off');
-    });
+    document.querySelectorAll('input, select, textarea').forEach(element => element.setAttribute('autocomplete', 'off'));
     
-    // Reemplazar el envío normal del formulario con nuestra función personalizada
     const form = document.getElementById('variacionForm');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            let erroresCriticos = false;
-            
-            // 1. Validar campos obligatorios
-            const camposObligatorios = [
-                {id: 'vSKU', nombre: 'SKU'},
-                {id: 'dPrecio', nombre: 'Precio'},
-                {id: 'iStock', nombre: 'Stock'}
-            ];
-            
-            camposObligatorios.forEach(campo => {
-                const elemento = document.getElementById(campo.id);
-                if (!elemento.value.trim()) {
-                    elemento.classList.add('is-invalid');
-                    erroresCriticos = true;
-                }
-            });
-            
-            // 2. Validar atributos
-            let atributosValidos = true;
-            const atributosContainers = document.querySelectorAll('.atributo-container');
-            
-            atributosContainers.forEach(container => {
-                const radioButtons = container.querySelectorAll('.atributo-radio');
-                let seleccionado = false;
-                
-                radioButtons.forEach(radio => {
-                    if (radio.checked) {
-                        seleccionado = true;
-                    }
-                });
-                
-                if (!seleccionado) {
-                    atributosValidos = false;
-                    container.classList.add('border-danger');
-                    
-                    const errorExistente = container.querySelector('.error-atributo');
-                    if (!errorExistente) {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'error-atributo text-danger small mt-1';
-                        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle me-1"></i> Selecciona un valor`;
-                        container.appendChild(errorDiv);
-                    }
-                }
-            });
-            
-            if (!atributosValidos) {
-                erroresCriticos = true;
-            }
-            
-            // 3. Validar precio de oferta si está activo
-            if (document.getElementById('bTiene_oferta') && document.getElementById('bTiene_oferta').checked) {
-                if (!validarPrecioOferta()) {
-                    erroresCriticos = true;
-                }
-                if (!validarFechasOferta()) {
-                    erroresCriticos = true;
-                }
-            }
-            
-            // 4. Actualizar input de imágenes a eliminar
-            if (imagenesAEliminar.length > 0) {
-                document.getElementById('imagenes_a_eliminar').value = JSON.stringify(imagenesAEliminar);
-            }
-            
-            // Si hay errores críticos, prevenir envío
-            if (erroresCriticos) {
-                e.preventDefault();
-                
-                Swal.fire({
-                    icon: "error",
-                    title: "Oops...",
-                    text: "Por favor corrige los errores en el formulario.",
-                    position: "center"
-                });
-                return false;
-            }
-            
-            // Si no hay errores, usar nuestra función personalizada para enviar
-            e.preventDefault();
-            prepararFormularioParaEnvio(e);
-            
-            return false;
-        });
-    }
+    if (form) form.addEventListener('submit', prepararFormularioParaEnvio);
+    
+    actualizarBarraProgresoTamaño();
 });
 
-// Mostrar mensaje SweetAlert2 después de actualizar exitosamente
 @if(session('success'))
-Swal.fire({
-    title: "¡Actualizado!",
-    text: "{{ session('success') }}",
-    icon: "success",
-    draggable: true,
-    position: "center",
-    timer: 3000,
-    showConfirmButton: false
-});
+Swal.fire({ title: "¡Actualizado!", text: "{{ session('success') }}", icon: "success", timer: 3000, showConfirmButton: false });
 @endif
 
-// Mostrar mensaje SweetAlert2 si hay error
 @if(session('error') || $errors->any())
 @php
     $errorMessage = session('error');
-    if (!$errorMessage && $errors->any()) {
-        $errorMessage = 'Por favor corrige los errores en el formulario.';
-    }
+    if (!$errorMessage && $errors->any()) $errorMessage = 'Por favor corrige los errores en el formulario.';
 @endphp
-Swal.fire({
-    icon: "error",
-    title: "Oops...",
-    text: "{{ $errorMessage }}",
-    position: "center",
-    draggable: true
-});
+Swal.fire({ icon: "error", title: "Oops...", text: "{{ $errorMessage }}", draggable: true });
 @endif
 </script>
 @endpush

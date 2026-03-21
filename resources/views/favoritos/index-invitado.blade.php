@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mis Favoritos (Invitado) - Ecommerce Agave</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -232,6 +233,7 @@
         .eliminar-favorito-btn:hover {
             background: white;
             transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
 
         .favorito-info {
@@ -285,6 +287,7 @@
         .favorito-actions {
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         .btn {
@@ -301,6 +304,7 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
+            min-width: 120px;
         }
 
         .btn-primary {
@@ -310,6 +314,16 @@
 
         .btn-primary:hover {
             background: linear-gradient(45deg, #5a67d8, #6b46c1);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
             transform: translateY(-2px);
         }
 
@@ -323,16 +337,7 @@
             transform: translateY(-2px);
         }
 
-        .btn-success {
-            background: #28a745;
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #218838;
-        }
-
-        .badge-oferta {
+        .badge-descuento {
             position: absolute;
             top: 15px;
             left: 15px;
@@ -442,8 +447,22 @@
             background: #e74c3c;
         }
 
+        .single-notification.success {
+            background: #2ecc71;
+        }
+
         .single-notification.info {
             background: #3498db;
+        }
+
+        .toast-icon {
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .toast-message {
+            flex: 1;
+            line-height: 1.4;
         }
 
         @media (max-width: 768px) {
@@ -465,15 +484,19 @@
             .nav-links {
                 gap: 15px;
             }
+            
+            .favorito-actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
         }
 
         @media (max-width: 480px) {
             .favoritos-grid {
                 grid-template-columns: 1fr;
-            }
-            
-            .favorito-actions {
-                flex-direction: column;
             }
             
             .nav-links {
@@ -485,6 +508,11 @@
             .nav-links li a {
                 display: block;
                 padding: 5px 0;
+            }
+            
+            .badge-variacion {
+                font-size: 9px;
+                padding: 2px 6px;
             }
         }
     </style>
@@ -558,7 +586,6 @@
                         $esVariacion = !is_null($favorito->id_variacion);
                         
                         if ($esVariacion) {
-                            // Necesitamos obtener datos de la variación desde la base de datos
                             $variacion = DB::table('tbl_producto_variaciones')
                                 ->where('id_variacion', $favorito->id_variacion)
                                 ->first();
@@ -569,11 +596,10 @@
                                 
                             $nombreProducto = $producto->vNombre;
                             $precio = $variacion->dPrecio;
-                            $precioOferta = $variacion->dPrecio_oferta;
-                            $tieneDescuento = $variacion->bTiene_oferta && $variacion->dPrecio_oferta > 0;
+                            $precioDescuento = $variacion->dPrecio_descuento;
+                            $tieneDescuento = $variacion->bTiene_descuento && $variacion->dPrecio_descuento > 0;
                             $stock = $variacion->iStock;
                             
-                            // Obtener atributos de la variación
                             $atributos = DB::table('tbl_variacion_atributos as va')
                                 ->join('tbl_atributo_valores as av', 'va.id_atributo_valor', '=', 'av.id_atributo_valor')
                                 ->where('va.id_variacion', $favorito->id_variacion)
@@ -583,12 +609,14 @@
                             $atributosTexto = $atributos->pluck('vValor')->implode(' - ');
                             $nombreCompleto = $nombreProducto . ($atributosTexto ? ' - ' . $atributosTexto : '');
                             
-                            // Obtener imágenes
                             $imagenPrincipal = $variacion->vImagen ? Storage::url($variacion->vImagen) : null;
                             $imagenes = [];
                             if ($imagenPrincipal) $imagenes[] = $imagenPrincipal;
                             
                             $url = route('productos.show.public', [$producto->id_producto, 'variacion' => $favorito->id_variacion]);
+                            
+                            $impuesto = DB::table('tbl_impuestos')->where('id_impuesto', $variacion->id_impuesto)->first();
+                            $porcentajeImpuesto = $impuesto ? $impuesto->dPorcentaje : 0;
                         } else {
                             $producto = DB::table('tbl_productos')
                                 ->where('id_producto', $favorito->id_producto)
@@ -596,21 +624,28 @@
                                 
                             $nombreCompleto = $producto->vNombre;
                             $precio = $producto->dPrecio_venta;
-                            $precioOferta = $producto->dPrecio_descuento;
+                            $precioDescuento = $producto->dPrecio_descuento;
                             $tieneDescuento = $producto->bTiene_descuento && $producto->dPrecio_descuento > 0;
                             $stock = $producto->iStock;
                             
-                            // Obtener imágenes
                             $imagenes = [];
                             if ($producto->vImagen_principal) {
                                 $imagenes[] = Storage::url($producto->vImagen_principal);
                             }
                             
                             $url = route('productos.show.public', $producto->id_producto);
+                            
+                            $impuestosProducto = DB::table('tbl_producto_impuestos')
+                                ->join('tbl_impuestos', 'tbl_producto_impuestos.id_impuesto', '=', 'tbl_impuestos.id_impuesto')
+                                ->where('tbl_producto_impuestos.id_producto', $producto->id_producto)
+                                ->select('tbl_impuestos.dPorcentaje')
+                                ->get();
+                            $porcentajeImpuesto = $impuestosProducto->sum('dPorcentaje');
                         }
                         
-                        $precioActual = $tieneDescuento ? $precioOferta : $precio;
-                        $porcentajeDescuento = $tieneDescuento ? round((($precio - $precioOferta) / $precio) * 100) : 0;
+                        $precioBase = $tieneDescuento ? $precioDescuento : $precio;
+                        $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
+                        $porcentajeDescuento = $tieneDescuento ? round((($precio - $precioDescuento) / $precio) * 100) : 0;
                         
                         $stockClass = $stock > 10 ? 'stock-disponible' : ($stock > 0 ? 'stock-bajo' : 'sin-stock');
                         $stockMessage = $stock > 10 
@@ -636,8 +671,8 @@
                                 <i class="fas fa-user"></i> Invitado
                             </div>
 
-                            @if($tieneDescuento)
-                                <div class="badge-oferta">
+                            @if($tieneDescuento && $porcentajeDescuento > 0)
+                                <div class="badge-descuento">
                                     -{{ $porcentajeDescuento }}%
                                 </div>
                             @endif
@@ -663,12 +698,12 @@
                             </h3>
                             
                             <div class="favorito-precio">
-                                @if($tieneDescuento)
+                                @if($tieneDescuento && $porcentajeDescuento > 0)
                                     <span style="text-decoration: line-through; color: #999; font-size: 16px; margin-right: 8px;">
                                         ${{ number_format($precio, 2) }}
                                     </span>
                                 @endif
-                                ${{ number_format($precioActual, 2) }}
+                                ${{ number_format($precioFinal, 2) }}
                             </div>
 
                             <div class="favorito-stock {{ $stockClass }}">
@@ -676,10 +711,15 @@
                             </div>
 
                             <div class="favorito-actions">
-                                <a href="{{ $url }}" class="btn btn-primary">
+                                <a href="javascript:void(0)" 
+                                   class="btn btn-success" 
+                                   onclick="event.stopPropagation(); agregarAlCarrito({{ $favorito->id_producto }}, {{ $esVariacion ? $favorito->id_variacion : 'null' }})">
+                                    <span>🛒</span> Agregar al carrito
+                                </a>
+                                <a href="{{ $url }}" class="btn btn-primary" onclick="event.stopPropagation();">
                                     <span>👁️</span> Ver Producto
                                 </a>
-                                <button class="btn btn-danger" onclick="eliminarFavoritoTemporal({{ $favorito->id_producto }}, {{ $esVariacion ? $favorito->id_variacion : 'null' }})">
+                                <button class="btn btn-danger" onclick="event.stopPropagation(); eliminarFavoritoTemporal({{ $favorito->id_producto }}, {{ $esVariacion ? $favorito->id_variacion : 'null' }})">
                                     <span>🗑️</span> Eliminar
                                 </button>
                             </div>
@@ -710,16 +750,70 @@
     </div>
 
     <script>
-        let currentNotification = null;
-        let notificationTimeout = null;
+        // Configuración global
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        let notificacionTimeout = null;
+        let notificacionActual = null;
 
-        function eliminarFavoritoTemporal(productoId, variacionId = null) {
-            if (!confirm('¿Eliminar de favoritos?')) return;
+        // Función para eliminar notificación
+        function removerNotificacion() {
+            if (notificacionActual) {
+                notificacionActual.classList.remove('show');
+                setTimeout(() => {
+                    if (notificacionActual?.parentNode) {
+                        notificacionActual.parentNode.removeChild(notificacionActual);
+                    }
+                    notificacionActual = null;
+                }, 300);
+            }
+            if (notificacionTimeout) {
+                clearTimeout(notificacionTimeout);
+                notificacionTimeout = null;
+            }
+        }
+
+        // Función para mostrar notificación
+        function mostrarNotificacion(mensaje, tipo = 'success') {
+            removerNotificacion();
             
-            // Encontrar la tarjeta específica
-            let selector = variacionId 
-                ? `[data-id="${variacionId}"][data-tipo="variacion"]`
-                : `[data-id="${productoId}"][data-tipo="producto"]`;
+            const notificacion = document.createElement('div');
+            notificacion.className = `single-notification ${tipo}`;
+            
+            let emoji = tipo === 'success' ? '✅' : tipo === 'error' ? '❌' : 'ℹ️';
+            
+            notificacion.innerHTML = `
+                <span class="toast-icon">${emoji}</span>
+                <span class="toast-message">${mensaje}</span>
+            `;
+            
+            document.body.appendChild(notificacion);
+            notificacionActual = notificacion;
+            
+            setTimeout(() => notificacion.classList.add('show'), 10);
+            
+            notificacionTimeout = setTimeout(() => {
+                if (notificacion.classList.contains('show')) {
+                    notificacion.classList.remove('show');
+                    setTimeout(() => {
+                        if (notificacion.parentNode) {
+                            notificacion.parentNode.removeChild(notificacion);
+                        }
+                        notificacionActual = null;
+                        notificacionTimeout = null;
+                    }, 400);
+                }
+            }, 3000);
+        }
+
+        // Función para eliminar favorito temporal (CORREGIDA)
+        function eliminarFavoritoTemporal(productoId, variacionId = null) {
+            // Encontrar la tarjeta
+            let selector = '';
+            if (variacionId && variacionId !== 'null') {
+                selector = `[data-id="${variacionId}"][data-tipo="variacion"]`;
+            } else {
+                selector = `[data-id="${productoId}"][data-tipo="producto"]`;
+            }
             
             const card = document.querySelector(selector) || 
                         document.querySelector(`[id*="prod-${productoId}"]`);
@@ -729,20 +823,29 @@
                 card.style.transform = 'scale(0.95)';
             }
 
+            // Preparar datos para enviar
+            const datos = {
+                id_producto: productoId
+            };
+            
+            if (variacionId && variacionId !== 'null') {
+                datos.id_variacion = variacionId;
+            }
+
+            // Hacer la petición fetch
             fetch('{{ route("favoritos.invitado.destroy") }}', {
                 method: 'DELETE',
                 headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'X-CSRF-TOKEN': csrfToken,
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 },
-                body: JSON.stringify({
-                    id_producto: productoId,
-                    id_variacion: variacionId
-                })
+                body: JSON.stringify(datos)
             })
             .then(response => {
-                if (!response.ok) throw new Error('Error en la respuesta');
+                if (!response.ok) {
+                    throw new Error('Error en la respuesta del servidor');
+                }
                 return response.json();
             })
             .then(data => {
@@ -751,20 +854,20 @@
                         card.style.transform = 'scale(0.8)';
                         card.style.opacity = '0';
                         setTimeout(() => {
-                            if (card && card.parentNode) {
+                            if (card?.parentNode) {
                                 card.remove();
-                                updateFavoritosCount();
+                                actualizarContadorFavoritos();
                                 
                                 if (document.querySelectorAll('.favorito-card').length === 0) {
-                                    location.reload();
+                                    setTimeout(() => location.reload(), 500);
                                 }
                             }
                         }, 300);
                     }
                     
-                    showNotification('Producto eliminado de favoritos', 'success');
+                    mostrarNotificacion('Producto eliminado de favoritos', 'success');
                 } else {
-                    showNotification('Error al eliminar', 'error');
+                    mostrarNotificacion('Error al eliminar', 'error');
                     if (card) {
                         card.style.opacity = '1';
                         card.style.transform = 'scale(1)';
@@ -773,7 +876,7 @@
             })
             .catch(error => {
                 console.error('Error:', error);
-                showNotification('Error de conexión', 'error');
+                mostrarNotificacion('Error de conexión', 'error');
                 if (card) {
                     card.style.opacity = '1';
                     card.style.transform = 'scale(1)';
@@ -781,75 +884,72 @@
             });
         }
 
-        function removeNotification() {
-            if (currentNotification) {
-                currentNotification.classList.remove('show');
-                setTimeout(() => {
-                    if (currentNotification && currentNotification.parentNode) {
-                        currentNotification.parentNode.removeChild(currentNotification);
+        // Función para actualizar contador
+        function actualizarContadorFavoritos() {
+            const cards = document.querySelectorAll('.favorito-card').length;
+            const contadorElement = document.querySelector('.favoritos-count');
+            const contadorContainer = document.querySelector('.favoritos-count-container p');
+            
+            if (contadorElement) {
+                contadorElement.textContent = cards;
+            }
+            
+            if (contadorContainer) {
+                contadorContainer.innerHTML = `Favoritos temporales: <span class="favoritos-count">${cards}</span>`;
+            }
+        }
+
+        // Función para agregar al carrito
+        function agregarAlCarrito(productoId, variacionId = null) {
+            @auth
+                fetch('/carrito/agregar', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        producto_id: productoId,
+                        variacion_id: variacionId,
+                        cantidad: 1
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        mostrarNotificacion('Producto agregado al carrito', 'success');
+                    } else {
+                        mostrarNotificacion(data.message || 'Error al agregar', 'error');
                     }
-                    currentNotification = null;
-                }, 300);
-            }
-            
-            if (notificationTimeout) {
-                clearTimeout(notificationTimeout);
-                notificationTimeout = null;
-            }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    mostrarNotificacion('Error de conexión', 'error');
+                });
+            @else
+                const redirectUrl = new URL('{{ route("login") }}');
+                redirectUrl.searchParams.set('from_carrito', 'true');
+                redirectUrl.searchParams.set('redirect', window.location.href);
+                window.location.href = redirectUrl.toString();
+            @endauth
         }
 
-        function showNotification(message, type = 'success') {
-            removeNotification();
-            
-            const notification = document.createElement('div');
-            notification.className = `single-notification ${type}`;
-            
-            let emoji = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
-            
-            notification.innerHTML = `
-                <span style="font-size: 20px;">${emoji}</span>
-                <span>${message}</span>
-            `;
-            
-            document.body.appendChild(notification);
-            currentNotification = notification;
-            
-            setTimeout(() => notification.classList.add('show'), 10);
-            
-            notificationTimeout = setTimeout(() => {
-                if (notification.classList.contains('show')) {
-                    notification.classList.remove('show');
-                    setTimeout(() => {
-                        if (notification.parentNode) {
-                            notification.parentNode.removeChild(notification);
-                        }
-                        currentNotification = null;
-                        notificationTimeout = null;
-                    }, 400);
-                }
-            }, 3000);
-        }
-
-        function updateFavoritosCount() {
-            const remainingCards = document.querySelectorAll('.favorito-card').length;
-            const countElement = document.querySelector('.favoritos-count');
-            if (countElement) {
-                countElement.textContent = remainingCards;
-            }
-            
-            const countContainer = document.querySelector('.favoritos-count-container p');
-            if (countContainer) {
-                countContainer.innerHTML = `Favoritos temporales: <span class="favoritos-count">${remainingCards}</span>`;
-            }
-        }
-
+        // Inicialización
         document.addEventListener('DOMContentLoaded', function() {
-            const buttons = document.querySelectorAll('.favorito-card button, .favorito-card a');
-            buttons.forEach(button => {
-                button.addEventListener('click', function(e) {
+            // Prevenir propagación en botones
+            const botones = document.querySelectorAll('.favorito-card button, .favorito-card a');
+            botones.forEach(boton => {
+                boton.addEventListener('click', function(e) {
                     e.stopPropagation();
                 });
             });
+            
+            // Enfoque en búsqueda para escritorio
+            if (window.innerWidth > 768) {
+                const searchInput = document.querySelector('.barra-busqueda-principal input');
+                if (searchInput) searchInput.focus();
+            }
         });
     </script>
 </body>

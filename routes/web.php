@@ -503,10 +503,10 @@ Route::middleware(['auth', 'permission:gestionar_tienda'])->group(function () {
         ->name('admin.settings.config');
 
     Route::resource('impuestos', ImpuestoController::class);
-    Route::resource('impuestos', ImpuestosController::class);
     Route::post('/impuestos/quick-create', [ImpuestoController::class, 'quickCreate'])->name('impuestos.quick-create');
     Route::get('/impuestos/json', [ImpuestoController::class, 'getJson'])->name('impuestos.json');
-
+    Route::post('/impuestos/init', [ImpuestoController::class, 'initMexicoTaxes'])->name('impuestos.init');
+    Route::get('/productos/{producto}/edit', [ProductoController::class, 'edit'])->name('productos.edit');
 
     Route::resource('ventas', VentaController::class)->except(['create', 'store', 'destroy']);
 

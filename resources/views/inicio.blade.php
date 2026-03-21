@@ -97,6 +97,14 @@
             text-decoration: underline;
         }
 
+        .nav-links li a.favorito-link {
+            color: #495057;
+        }
+
+        .nav-links li a.favorito-link:hover {
+            color: #667eea;
+        }
+
         .nav-links li button {
             font-size: clamp(0.85rem, 2.5vw, 1rem);
             background: none;
@@ -106,20 +114,9 @@
             font-weight: bold;
         }
 
-        .btn-invitado {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white !important;
-            padding: 8px 15px;
-            border-radius: 25px;
-            font-weight: bold;
-            display: inline-block;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .btn-invitado:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.4);
-            text-decoration: none !important;
+        .nav-links li button:hover {
+            color: #667eea;
+            text-decoration: underline;
         }
 
         /* Barra de búsqueda */
@@ -381,6 +378,30 @@
         .sin-stock {
             color: #dc3545;
             font-weight: bold;
+        }
+
+        /* Botón agregar al carrito */
+        .btn-agregar-carrito {
+            width: 100%;
+            padding: 8px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .btn-agregar-carrito:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-agregar-carrito:active {
+            transform: translateY(0);
         }
 
         .badge-descuento {
@@ -906,14 +927,14 @@
 </head>
 <body>
     <header>
-        <h1>Ecommerce Agave</h1>
+        <h1>{{ config('tienda.nombre_tienda') }}</h1>
         <p>Encuentra los mejores productos de agave y mezcal</p>
     </header>
 
     <!-- Mostrar bienvenida al usuario si está autenticado -->
     @auth
     <div class="user-welcome">
-        <p>¡Hola {{ Auth::user()->vNombre }}! 👋 Bienvenido a Ecommerce Agave</p>
+        <p>¡Hola {{ Auth::user()->vNombre }}! 👋 Bienvenido a {{ config('tienda.nombre_tienda') }}</p>
     </div>
     @endauth
 
@@ -923,23 +944,20 @@
             <ul class="nav-links">
                 <li><a href="{{ route('home') }}">Inicio</a></li>
                 <li><a href="{{ route('busqueda.resultados') }}">Todos los Productos</a></li>
-                <li><a href="{{ route('carrito.index') }}">Mi Carrito</a></li>
                 <li><a href="{{ route('busqueda.resultados', ['en_descuento' => '1']) }}" style="color: #dc3545; font-weight: bold;" id="link-descuento">🔥 En Descuento</a></li>
                 <li>
                     @auth
-                        <a href="{{ route('favoritos.index') }}" style="color: #495057; font-weight: bold;">❤️ Mis Favoritos</a>
+                        <a href="{{ route('favoritos.index') }}" class="favorito-link">❤️ Mis Favoritos</a>
                     @else
-                        <a href="{{ route('favoritos.invitado.index') }}" class="btn-invitado">
-                            <i class="fas fa-user me-1"></i> Mis Favoritos
-                        </a>
+                        <a href="{{ route('favoritos.invitado.index') }}" class="favorito-link">❤️ Mis Favoritos</a>
                     @endauth
                 </li>
                 @auth
-                    <li><a href="">Mi Carrito</a></li>
+                    <li><a href="#">Mi Carrito</a></li>
                     <li>
                         <form method="POST" action="{{ route('logout') }}" style="display:inline;">
                             @csrf
-                            <button type="submit" style="background: none; border: none; color: #495057; cursor: pointer; font-weight: bold; font-size: 16px;">Cerrar Sesión</button>
+                            <button type="submit">Cerrar Sesión</button>
                         </form>
                     </li>
                 @else
@@ -974,7 +992,7 @@
 
     <!-- Banner de bienvenida -->
     <div class="banner-inicio">
-        <h2>¡Bienvenido a Ecommerce Agave!</h2>
+        <h2>¡Bienvenido a {{ config('tienda.nombre_tienda') }}!</h2>
         <p>Descubre nuestra exclusiva selección de productos de agave y mezcal</p>
         <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
             <a href="{{ route('busqueda.resultados') }}" class="btn-banner">Explorar Productos</a>
@@ -997,7 +1015,7 @@
                     if ($esVariacion) {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio;
-                        $precioDescuento = $item->dPrecio_oferta;
+                        $precioDescuento = $item->dPrecio_descuento;
                         $stock = $item->iStock;
                         $nombreProducto = $item->productoPadre->vNombre;
                         $nombreCompleto = $nombreProducto . ' - ' . $item->getAtributosTexto();
@@ -1010,13 +1028,14 @@
                         $atributosCompletos = $item->getAtributosCompletosTexto();
                         $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vSKU;
-                        $motivoOferta = $item->vMotivo_oferta ?? '';
-                        $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
-                        $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
+                        $motivoDescuento = $item->vMotivo_descuento ?? '';
+                        $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
+                        $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
+                        $porcentajeImpuesto = $item->porcentaje_impuesto ?? 0;
                     } else {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio_venta;
-                        $precioDescuento = $item->dPrecio_oferta;
+                        $precioDescuento = $item->dPrecio_descuento;
                         $stock = $item->iStock;
                         $nombreProducto = $item->vNombre;
                         $nombreCompleto = $nombreProducto;
@@ -1029,16 +1048,18 @@
                         $atributosCompletos = '';
                         $marca = $item->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vCodigo_barras;
-                        $motivoOferta = $item->vMotivo_oferta ?? '';
-                        $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
-                        $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
+                        $motivoDescuento = $item->vMotivo_descuento ?? '';
+                        $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
+                        $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
+                        $porcentajeImpuesto = $item->porcentaje_impuestos ?? 0;
                     }
                     
-                    $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                    $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                    $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
                     $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
                     
-                    $envioGratis = $precioActual >= 150;
-                    $costoEnvio = 50;
+                    $envioGratis = $precioFinal >= config('tienda.envio_gratis_desde');
+                    $costoEnvio = config('tienda.costo_de_envio');
                     
                     $estaBajoStock = $stock > 0 && $stock <= 10;
                 @endphp
@@ -1056,10 +1077,10 @@
                         </button>
 
                         @if($tieneDescuento && $porcentajeDescuento > 0)
-                            <div class="badge-descuento-rojo" title="{{ $motivoOferta ?: 'Descuento especial' }}">
+                            <div class="badge-descuento-rojo" title="{{ $motivoDescuento ?: 'Descuento especial' }}">
                                 -{{ $porcentajeDescuento }}% OFF
-                                @if($motivoOferta)
-                                    <br><small style="font-size: 8px;">{{ Str::limit($motivoOferta, 15) }}</small>
+                                @if($motivoDescuento)
+                                    <br><small style="font-size: 8px;">{{ Str::limit($motivoDescuento, 15) }}</small>
                                 @endif
                             </div>
                         @elseif($estaBajoStock)
@@ -1090,13 +1111,13 @@
                             @if($tieneDescuento && $porcentajeDescuento > 0)
                                 <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
                                 <div style="display: flex; align-items: center; flex-wrap: wrap;">
-                                    <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
+                                    <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                     <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                 </div>
                                 
-                                @if($motivoOferta && $esVariacion)
-                                    <div class="motivo-descuento" title="{{ $motivoOferta }}">
-                                        <i class="fas fa-tag"></i> {{ Str::limit($motivoOferta, 25) }}
+                                @if($motivoDescuento && $esVariacion)
+                                    <div class="motivo-descuento" title="{{ $motivoDescuento }}">
+                                        <i class="fas fa-tag"></i> {{ Str::limit($motivoDescuento, 25) }}
                                     </div>
                                 @endif
                                 
@@ -1106,7 +1127,7 @@
                                     </div>
                                 @endif
                             @else
-                                <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
+                                <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                             @endif
                         </div>
 
@@ -1130,6 +1151,15 @@
                             @else
                                 ❌ Sin stock
                             @endif
+                        </div>
+
+                        <!-- Agregar al carrito -->
+                        <div class="agregar-carrito-container" style="margin: 10px 0;">
+                            <button type="button" 
+                                    class="btn-agregar-carrito" 
+                                    onclick="event.stopPropagation(); agregarAlCarrito({{ $productoId }}, {{ $variacionId ?? 'null' }})">
+                                <i class="fas fa-shopping-cart"></i> Agregar al carrito
+                            </button>
                         </div>
 
                         <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
@@ -1163,7 +1193,7 @@
                         if ($esVariacion) {
                             $tieneDescuento = $item->tieneDescuentoActivo();
                             $precioOriginal = $item->dPrecio;
-                            $precioDescuento = $item->dPrecio_oferta;
+                            $precioDescuento = $item->dPrecio_descuento;
                             $stock = $item->iStock;
                             $nombreProducto = $item->productoPadre->vNombre;
                             $nombreCompleto = $nombreProducto . ' - ' . $item->getAtributosTexto();
@@ -1176,13 +1206,14 @@
                             $atributosCompletos = $item->getAtributosCompletosTexto();
                             $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
                             $sku = $item->vSKU;
-                            $motivoOferta = $item->vMotivo_oferta ?? '';
-                            $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
-                            $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
+                            $motivoDescuento = $item->vMotivo_descuento ?? '';
+                            $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
+                            $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
+                            $porcentajeImpuesto = $item->porcentaje_impuesto ?? 0;
                         } else {
                             $tieneDescuento = $item->tieneDescuentoActivo();
                             $precioOriginal = $item->dPrecio_venta;
-                            $precioDescuento = $item->dPrecio_oferta;
+                            $precioDescuento = $item->dPrecio_descuento;
                             $stock = $item->iStock;
                             $nombreProducto = $item->vNombre;
                             $nombreCompleto = $nombreProducto;
@@ -1195,16 +1226,18 @@
                             $atributosCompletos = '';
                             $marca = $item->marca->vNombre ?? 'Marca genérica';
                             $sku = $item->vCodigo_barras;
-                            $motivoOferta = $item->vMotivo_oferta ?? '';
-                            $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
-                            $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
+                            $motivoDescuento = $item->vMotivo_descuento ?? '';
+                            $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
+                            $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
+                            $porcentajeImpuesto = $item->porcentaje_impuestos ?? 0;
                         }
                         
-                        $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                        $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                        $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
                         $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
                         
-                        $envioGratis = $precioActual >= 150;
-                        $costoEnvio = 50;
+                        $envioGratis = $precioFinal >= config('tienda.envio_gratis_desde');
+                        $costoEnvio = config('tienda.costo_de_envio');
                         
                         $estaBajoStock = $stock > 0 && $stock <= 10;
                     @endphp
@@ -1221,10 +1254,10 @@
                             </button>
 
                             @if($tieneDescuento && $porcentajeDescuento > 0)
-                                <div class="badge-descuento-rojo" title="{{ $motivoOferta ?: 'Descuento especial' }}">
+                                <div class="badge-descuento-rojo" title="{{ $motivoDescuento ?: 'Descuento especial' }}">
                                     -{{ $porcentajeDescuento }}%
-                                    @if($motivoOferta)
-                                        <br><small style="font-size: 8px;">{{ Str::limit($motivoOferta, 15) }}</small>
+                                    @if($motivoDescuento)
+                                        <br><small style="font-size: 8px;">{{ Str::limit($motivoDescuento, 15) }}</small>
                                     @endif
                                 </div>
                             @elseif($estaBajoStock)
@@ -1255,13 +1288,13 @@
                                 @if($tieneDescuento && $porcentajeDescuento > 0)
                                     <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
                                     <div style="display: flex; align-items: center; flex-wrap: wrap;">
-                                        <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
+                                        <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                         <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                     </div>
                                     
-                                    @if($motivoOferta && $esVariacion)
-                                        <div class="motivo-descuento" title="{{ $motivoOferta }}">
-                                            <i class="fas fa-tag"></i> {{ Str::limit($motivoOferta, 25) }}
+                                    @if($motivoDescuento && $esVariacion)
+                                        <div class="motivo-descuento" title="{{ $motivoDescuento }}">
+                                            <i class="fas fa-tag"></i> {{ Str::limit($motivoDescuento, 25) }}
                                         </div>
                                     @endif
                                     
@@ -1271,7 +1304,7 @@
                                         </div>
                                     @endif
                                 @else
-                                    <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
+                                    <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                 @endif
                             </div>
 
@@ -1295,6 +1328,15 @@
                                 @else
                                     ❌ Sin stock
                                 @endif
+                            </div>
+
+                            <!-- Agregar al carrito -->
+                            <div class="agregar-carrito-container" style="margin: 10px 0;">
+                                <button type="button" 
+                                        class="btn-agregar-carrito" 
+                                        onclick="event.stopPropagation(); agregarAlCarrito({{ $productoId }}, {{ $variacionId ?? 'null' }})">
+                                    <i class="fas fa-shopping-cart"></i> Agregar al carrito
+                                </button>
                             </div>
 
                             <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
@@ -1322,7 +1364,7 @@
                     if ($esVariacion) {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio;
-                        $precioDescuento = $item->dPrecio_oferta;
+                        $precioDescuento = $item->dPrecio_descuento;
                         $stock = $item->iStock;
                         $nombreProducto = $item->productoPadre->vNombre;
                         $nombreCompleto = $nombreProducto . ' - ' . $item->getAtributosTexto();
@@ -1335,13 +1377,14 @@
                         $atributosCompletos = $item->getAtributosCompletosTexto();
                         $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vSKU;
-                        $motivoOferta = $item->vMotivo_oferta ?? '';
-                        $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
-                        $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
+                        $motivoDescuento = $item->vMotivo_descuento ?? '';
+                        $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
+                        $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
+                        $porcentajeImpuesto = $item->porcentaje_impuesto ?? 0;
                     } else {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio_venta;
-                        $precioDescuento = $item->dPrecio_oferta;
+                        $precioDescuento = $item->dPrecio_descuento;
                         $stock = $item->iStock;
                         $nombreProducto = $item->vNombre;
                         $nombreCompleto = $nombreProducto;
@@ -1354,16 +1397,18 @@
                         $atributosCompletos = '';
                         $marca = $item->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vCodigo_barras;
-                        $motivoOferta = $item->vMotivo_oferta ?? '';
-                        $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
-                        $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
+                        $motivoDescuento = $item->vMotivo_descuento ?? '';
+                        $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
+                        $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
+                        $porcentajeImpuesto = $item->porcentaje_impuestos ?? 0;
                     }
                     
-                    $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                    $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                    $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
                     $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
                     
-                    $envioGratis = $precioActual >= 150;
-                    $costoEnvio = 50;
+                    $envioGratis = $precioFinal >= config('tienda.envio_gratis_desde');
+                    $costoEnvio = config('tienda.costo_de_envio');
                 @endphp
                 
                 <div class="producto-card" onclick="window.location.href='{{ $url }}'">
@@ -1382,7 +1427,7 @@
                         </button>
 
                         @if($tieneDescuento && $porcentajeDescuento > 0)
-                            <div class="badge-descuento-rojo" title="{{ $motivoOferta ?: 'Descuento especial' }}">
+                            <div class="badge-descuento-rojo" title="{{ $motivoDescuento ?: 'Descuento especial' }}">
                                 -{{ $porcentajeDescuento }}%
                             </div>
                         @endif
@@ -1409,13 +1454,13 @@
                             @if($tieneDescuento && $porcentajeDescuento > 0)
                                 <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
                                 <div style="display: flex; align-items: center; flex-wrap: wrap;">
-                                    <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
+                                    <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                     <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                 </div>
                                 
-                                @if($motivoOferta && $esVariacion)
-                                    <div class="motivo-descuento" title="{{ $motivoOferta }}">
-                                        <i class="fas fa-tag"></i> {{ Str::limit($motivoOferta, 25) }}
+                                @if($motivoDescuento && $esVariacion)
+                                    <div class="motivo-descuento" title="{{ $motivoDescuento }}">
+                                        <i class="fas fa-tag"></i> {{ Str::limit($motivoDescuento, 25) }}
                                     </div>
                                 @endif
                                 
@@ -1425,7 +1470,7 @@
                                     </div>
                                 @endif
                             @else
-                                <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
+                                <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                             @endif
                         </div>
 
@@ -1443,6 +1488,15 @@
                             @else
                                 ❌ Sin stock
                             @endif
+                        </div>
+
+                        <!-- Agregar al carrito -->
+                        <div class="agregar-carrito-container" style="margin: 10px 0;">
+                            <button type="button" 
+                                    class="btn-agregar-carrito" 
+                                    onclick="event.stopPropagation(); agregarAlCarrito({{ $productoId }}, {{ $variacionId ?? 'null' }})">
+                                <i class="fas fa-shopping-cart"></i> Agregar al carrito
+                            </button>
                         </div>
 
                         <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
@@ -1470,7 +1524,7 @@
                     if ($esVariacion) {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio;
-                        $precioDescuento = $item->dPrecio_oferta;
+                        $precioDescuento = $item->dPrecio_descuento;
                         $stock = $item->iStock;
                         $nombreProducto = $item->productoPadre->vNombre;
                         $nombreCompleto = $nombreProducto . ' - ' . $item->getAtributosTexto();
@@ -1483,13 +1537,14 @@
                         $atributosCompletos = $item->getAtributosCompletosTexto();
                         $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vSKU;
-                        $motivoOferta = $item->vMotivo_oferta ?? '';
-                        $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
-                        $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
+                        $motivoDescuento = $item->vMotivo_descuento ?? '';
+                        $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
+                        $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
+                        $porcentajeImpuesto = $item->porcentaje_impuesto ?? 0;
                     } else {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio_venta;
-                        $precioDescuento = $item->dPrecio_oferta;
+                        $precioDescuento = $item->dPrecio_descuento;
                         $stock = $item->iStock;
                         $nombreProducto = $item->vNombre;
                         $nombreCompleto = $nombreProducto;
@@ -1502,16 +1557,18 @@
                         $atributosCompletos = '';
                         $marca = $item->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vCodigo_barras;
-                        $motivoOferta = $item->vMotivo_oferta ?? '';
-                        $fechaInicio = $item->dFecha_inicio_oferta ? \Carbon\Carbon::parse($item->dFecha_inicio_oferta)->format('d/m') : '';
-                        $fechaFin = $item->dFecha_fin_oferta ? \Carbon\Carbon::parse($item->dFecha_fin_oferta)->format('d/m') : '';
+                        $motivoDescuento = $item->vMotivo_descuento ?? '';
+                        $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
+                        $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
+                        $porcentajeImpuesto = $item->porcentaje_impuestos ?? 0;
                     }
                     
-                    $precioActual = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                    $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                    $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
                     $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
                     
-                    $envioGratis = $precioActual >= 150;
-                    $costoEnvio = 50;
+                    $envioGratis = $precioFinal >= config('tienda.envio_gratis_desde');
+                    $costoEnvio = config('tienda.costo_de_envio');
                     
                     $estaBajoStock = $stock > 0 && $stock <= 10;
                 @endphp
@@ -1528,10 +1585,10 @@
                         </button>
 
                         @if($tieneDescuento && $porcentajeDescuento > 0)
-                            <div class="badge-descuento-rojo" title="{{ $motivoOferta ?: 'Descuento especial' }}">
+                            <div class="badge-descuento-rojo" title="{{ $motivoDescuento ?: 'Descuento especial' }}">
                                 -{{ $porcentajeDescuento }}% OFF
-                                @if($motivoOferta)
-                                    <br><small style="font-size: 8px;">{{ Str::limit($motivoOferta, 15) }}</small>
+                                @if($motivoDescuento)
+                                    <br><small style="font-size: 8px;">{{ Str::limit($motivoDescuento, 15) }}</small>
                                 @endif
                             </div>
                         @elseif($estaBajoStock)
@@ -1562,13 +1619,13 @@
                             @if($tieneDescuento && $porcentajeDescuento > 0)
                                 <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
                                 <div style="display: flex; align-items: center; flex-wrap: wrap;">
-                                    <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
+                                    <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                     <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                 </div>
                                 
-                                @if($motivoOferta && $esVariacion)
-                                    <div class="motivo-descuento" title="{{ $motivoOferta }}">
-                                        <i class="fas fa-tag"></i> {{ Str::limit($motivoOferta, 25) }}
+                                @if($motivoDescuento && $esVariacion)
+                                    <div class="motivo-descuento" title="{{ $motivoDescuento }}">
+                                        <i class="fas fa-tag"></i> {{ Str::limit($motivoDescuento, 25) }}
                                     </div>
                                 @endif
                                 
@@ -1578,7 +1635,7 @@
                                     </div>
                                 @endif
                             @else
-                                <span class="precio-actual">${{ number_format($precioActual, 2) }} <small>sin interés</small></span>
+                                <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                             @endif
                         </div>
 
@@ -1602,6 +1659,15 @@
                             @else
                                 ❌ Sin stock
                             @endif
+                        </div>
+
+                        <!-- Agregar al carrito -->
+                        <div class="agregar-carrito-container" style="margin: 10px 0;">
+                            <button type="button" 
+                                    class="btn-agregar-carrito" 
+                                    onclick="event.stopPropagation(); agregarAlCarrito({{ $productoId }}, {{ $variacionId ?? 'null' }})">
+                                <i class="fas fa-shopping-cart"></i> Agregar al carrito
+                            </button>
                         </div>
 
                         <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
@@ -1880,6 +1946,42 @@
                 button.classList.add('inactivo');
                 button.innerHTML = '🤍';
             }
+        }
+
+        function agregarAlCarrito(productoId, variacionId = null) {
+            @auth
+                fetch('/carrito/agregar', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        producto_id: productoId,
+                        variacion_id: variacionId,
+                        cantidad: 1
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('✅ Producto agregado al carrito', 'success');
+                    } else {
+                        showNotification('❌ ' + (data.message || 'Error al agregar'), 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('❌ Error de conexión', 'error');
+                });
+            @else
+                // Redirigir a login para invitados
+                const redirectUrl = new URL('{{ route("login") }}');
+                redirectUrl.searchParams.set('from_carrito', 'true');
+                redirectUrl.searchParams.set('redirect', window.location.href);
+                window.location.href = redirectUrl.toString();
+            @endauth
         }
 
         document.addEventListener('DOMContentLoaded', function() {

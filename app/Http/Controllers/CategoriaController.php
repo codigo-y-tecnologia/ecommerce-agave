@@ -6,6 +6,8 @@ use App\Models\Categoria;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class CategoriaController extends Controller
 {
@@ -378,46 +380,61 @@ class CategoriaController extends Controller
     /**
      * Creación rápida de categoría desde AJAX
      */
+
     public function quickCreate(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'vNombre' => 'required|max:100|unique:tbl_categorias,vNombre',
-            'vSlug' => 'required|max:100|unique:tbl_categorias,vSlug',
-            'id_categoria_padre' => 'nullable|exists:tbl_categorias,id_categoria',
-            'tDescripcion' => 'nullable|string',
-            'bActivo' => 'nullable|boolean'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error de validación',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
         try {
-            $categoria = new Categoria();
-            $categoria->vNombre = $request->vNombre;
-            $categoria->vSlug = $request->vSlug;
-            $categoria->id_categoria_padre = $request->id_categoria_padre;
-            $categoria->tDescripcion = $request->tDescripcion;
-            $categoria->bActivo = $request->has('bActivo') ? $request->bActivo : true;
+            $validator = Validator::make($request->all(), [
+                'vNombre' => 'required|max:100|unique:tbl_categorias,vNombre',
+                'vSlug' => 'required|max:100|unique:tbl_categorias,vSlug',
+                'id_categoria_padre' => 'nullable|exists:tbl_categorias,id_categoria',
+                'tDescripcion' => 'nullable|string',
+                'bActivo' => 'nullable|boolean',
+                'vImagen' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048'
+            ]);
 
-            $ultimoOrden = Categoria::where('id_categoria_padre', $request->id_categoria_padre)->max('iOrden');
-            $categoria->iOrden = $ultimoOrden ? $ultimoOrden + 1 : 0;
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de validación',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
 
-            $categoria->save();
+            $categoriaData = [
+                'vNombre' => $request->vNombre,
+                'vSlug' => $request->vSlug,
+                'tDescripcion' => $request->tDescripcion,
+                'id_categoria_padre' => $request->id_categoria_padre,
+                'bActivo' => $request->has('bActivo') ? true : false,
+            ];
+
+            if ($request->hasFile('vImagen')) {
+                $imagen = $request->file('vImagen');
+                $nombreImagen = 'categoria_' . time() . '_' . uniqid() . '.' . $imagen->getClientOriginalExtension();
+                $ruta = $imagen->storeAs('categorias', $nombreImagen, 'public');
+                $categoriaData['vImagen'] = $ruta;
+            }
+
+            $categoria = Categoria::create($categoriaData);
 
             return response()->json([
                 'success' => true,
-                'categoria' => $categoria,
-                'message' => 'Categoría creada exitosamente'
+                'message' => 'Categoría creada exitosamente',
+                'categoria' => [
+                    'id_categoria' => $categoria->id_categoria,
+                    'vNombre' => $categoria->vNombre,
+                    'vSlug' => $categoria->vSlug,
+                    'id_categoria_padre' => $categoria->id_categoria_padre,
+                    'bActivo' => $categoria->bActivo,
+                ]
             ]);
         } catch (\Exception $e) {
+            Log::error('Error al crear categoría rápida: ' . $e->getMessage());
+
             return response()->json([
                 'success' => false,
-                'message' => 'Error al crear categoría: ' . $e->getMessage()
+                'message' => 'Error al crear la categoría: ' . $e->getMessage()
             ], 500);
         }
     }

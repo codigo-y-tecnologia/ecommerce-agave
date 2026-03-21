@@ -19,6 +19,34 @@
         </div>
     </div>
 
+    <!-- Barra de progreso de tamaño total de archivos -->
+    <div class="alert alert-info py-2 mb-3" id="sizeInfo" style="display: none;">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <i class="fas fa-camera me-1"></i>
+                <strong>Total de archivos multimedia:</strong> 
+                <span id="total-imagenes">0</span> archivos
+            </div>
+            <div class="col-md-6">
+                <strong>Tamaño total:</strong>
+                <span id="total-size">0 KB</span>
+                <span class="text-muted ms-2">(Máx: 50MB)</span>
+            </div>
+        </div>
+        <div class="row mt-2">
+            <div class="col-12">
+                <div class="progress" style="height: 8px;">
+                    <div id="size-progress-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-warning" id="limiteArchivosMsg" style="display: none;">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>¡Atención!</strong> Has excedido el límite de tamaño total de archivos (50MB).
+    </div>
+
     <form action="{{ route('variaciones.store', $producto->id_producto) }}" method="POST" enctype="multipart/form-data" id="variacionForm">
         @csrf
         
@@ -36,25 +64,26 @@
                                     <label for="vSKU" class="form-label fw-bold">
                                         SKU <span class="text-danger">*</span>
                                     </label>
-                                    <input type="text" name="vSKU" id="vSKU" 
-                                           class="form-control @error('vSKU') is-invalid @enderror"
-                                           value="{{ old('vSKU') }}" 
-                                           maxlength="22" 
-                                           required
-                                           oninput="validarSKU(this)"
-                                           pattern="[A-Za-z0-9\-]+"
-                                           title="Solo letras, números y guiones (máximo 22 caracteres)"
-                                           autocomplete="off">
+                                    <div class="position-relative">
+                                        <input type="text" name="vSKU" id="vSKU" 
+                                               class="form-control @error('vSKU') is-invalid @enderror"
+                                               value="{{ old('vSKU') }}" 
+                                               maxlength="25" 
+                                               required
+                                               oninput="validarSKU(this); verificarSKUVariacionLocal(this)"
+                                               pattern="[A-Za-z0-9\-]+"
+                                               title="Solo letras, números y guiones (máximo 25 caracteres)"
+                                               autocomplete="off">
+                                        <div id="sku-error" class="invalid-feedback" style="display: none;"></div>
+                                    </div>
                                     @error('vSKU')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                     <small class="form-text text-muted">
-                                        Ej: AGAVE001-ROJO, MEZCAL2024-VERDE (máximo 22 caracteres, solo letras, números y guiones)
+                                        Ej: AGAVE001-ROJO, MEZCAL2024-VERDE (máximo 25 caracteres, solo letras, números y guiones)
                                     </small>
                                 </div>
                             </div>
-                            
-                            <!-- ELIMINADO: Campo Nombre de la variación -->
                         </div>
 
                         <div class="row">
@@ -133,43 +162,43 @@
                                         <i class="fas fa-percentage me-1"></i>Descuento Especial
                                     </label>
                                     <div class="form-check form-switch">
-                                        <input type="checkbox" name="bTiene_oferta" id="bTiene_oferta" 
+                                        <input type="checkbox" name="bTiene_descuento" id="bTiene_descuento" 
                                                class="form-check-input" value="1"
-                                               {{ old('bTiene_oferta') ? 'checked' : '' }}
-                                               onchange="toggleOfertaFields()">
-                                        <label class="form-check-label" for="bTiene_oferta">
+                                               {{ old('bTiene_descuento') ? 'checked' : '' }}
+                                               onchange="toggleDescuentoFields()">
+                                        <label class="form-check-label" for="bTiene_descuento">
                                             Activar Descuento para esta variación
                                         </label>
                                     </div>
                                     <small class="form-text text-muted">
-                                        Permite establecer un precio de Descuento por tiempo limitado
+                                        Permite establecer un precio de descuento por tiempo limitado
                                     </small>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- CAMPOS DE OFERTA (OCULTOS INICIALMENTE) -->
-                        <div id="ofertaFields" style="display: none;">
+                        <!-- CAMPOS DE DESCUENTO (OCULTOS INICIALMENTE) -->
+                        <div id="descuentoFields" style="display: {{ old('bTiene_descuento') ? 'block' : 'none' }};">
                             <div class="row">
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
-                                        <label for="dPrecio_oferta" class="form-label fw-bold">
+                                        <label for="dPrecio_descuento" class="form-label fw-bold">
                                             Precio de Descuento <span class="text-danger">*</span>
                                         </label>
                                         <div class="input-group">
                                             <span class="input-group-text">$</span>
                                             <input type="text" 
-                                                   name="dPrecio_oferta" 
-                                                   id="dPrecio_oferta" 
-                                                   class="form-control @error('dPrecio_oferta') is-invalid @enderror"
-                                                   value="{{ old('dPrecio_oferta') }}" 
-                                                   oninput="validarPrecio(this); validarPrecioOfertaInstantaneo(this); actualizarPrecioFinal();"
-                                                   onblur="validarPrecioOferta()"
+                                                   name="dPrecio_descuento" 
+                                                   id="dPrecio_descuento" 
+                                                   class="form-control @error('dPrecio_descuento') is-invalid @enderror"
+                                                   value="{{ old('dPrecio_descuento') }}" 
+                                                   oninput="validarPrecio(this); validarPrecioDescuentoInstantaneo(this); actualizarPrecioFinal();"
+                                                   onblur="validarPrecioDescuento()"
                                                    placeholder="0.00"
                                                    autocomplete="off">
                                         </div>
-                                        <div id="error-precio-oferta" class="invalid-feedback" style="display: none;"></div>
-                                        @error('dPrecio_oferta')
+                                        <div id="error-precio-descuento" class="invalid-feedback" style="display: none;"></div>
+                                        @error('dPrecio_descuento')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                         <small class="form-text text-muted">Debe ser menor al precio de venta</small>
@@ -178,17 +207,17 @@
                                 
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
-                                        <label for="dFecha_inicio_oferta" class="form-label fw-bold">
+                                        <label for="dFecha_inicio_descuento" class="form-label fw-bold">
                                             Fecha inicio <span class="text-danger">*</span>
                                         </label>
                                         <input type="date" 
-                                               name="dFecha_inicio_oferta" 
-                                               id="dFecha_inicio_oferta" 
-                                               class="form-control @error('dFecha_inicio_oferta') is-invalid @enderror"
-                                               value="{{ old('dFecha_inicio_oferta') }}"
-                                               onchange="validarFechasOferta()"
+                                               name="dFecha_inicio_descuento" 
+                                               id="dFecha_inicio_descuento" 
+                                               class="form-control @error('dFecha_inicio_descuento') is-invalid @enderror"
+                                               value="{{ old('dFecha_inicio_descuento') }}"
+                                               onchange="validarFechasDescuento()"
                                                autocomplete="off">
-                                        @error('dFecha_inicio_oferta')
+                                        @error('dFecha_inicio_descuento')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
@@ -196,18 +225,18 @@
                                 
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
-                                        <label for="dFecha_fin_oferta" class="form-label fw-bold">
+                                        <label for="dFecha_fin_descuento" class="form-label fw-bold">
                                             Fecha fin <span class="text-danger">*</span>
                                         </label>
                                         <input type="date" 
-                                               name="dFecha_fin_oferta" 
-                                               id="dFecha_fin_oferta" 
-                                               class="form-control @error('dFecha_fin_oferta') is-invalid @enderror"
-                                               value="{{ old('dFecha_fin_oferta') }}"
-                                               onchange="validarFechasOferta()"
+                                               name="dFecha_fin_descuento" 
+                                               id="dFecha_fin_descuento" 
+                                               class="form-control @error('dFecha_fin_descuento') is-invalid @enderror"
+                                               value="{{ old('dFecha_fin_descuento') }}"
+                                               onchange="validarFechasDescuento()"
                                                autocomplete="off">
-                                        <div id="error-fechas-oferta" class="invalid-feedback" style="display: none;"></div>
-                                        @error('dFecha_fin_oferta')
+                                        <div id="error-fechas-descuento" class="invalid-feedback" style="display: none;"></div>
+                                        @error('dFecha_fin_descuento')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
@@ -217,18 +246,18 @@
                             <div class="row">
                                 <div class="col-md-12">
                                     <div class="form-group mb-3">
-                                        <label for="vMotivo_oferta" class="form-label fw-bold">
-                                            Motivo de la oferta
+                                        <label for="vMotivo_descuento" class="form-label fw-bold">
+                                            Motivo del descuento
                                         </label>
                                         <input type="text" 
-                                               name="vMotivo_oferta" 
-                                               id="vMotivo_oferta" 
-                                               class="form-control @error('vMotivo_oferta') is-invalid @enderror"
-                                               value="{{ old('vMotivo_oferta') }}"
+                                               name="vMotivo_descuento" 
+                                               id="vMotivo_descuento" 
+                                               class="form-control @error('vMotivo_descuento') is-invalid @enderror"
+                                               value="{{ old('vMotivo_descuento') }}"
                                                maxlength="255"
                                                placeholder="Ej: Liquidación de temporada, Black Friday, etc."
                                                autocomplete="off">
-                                        @error('vMotivo_oferta')
+                                        @error('vMotivo_descuento')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
@@ -356,7 +385,7 @@
                                     </label>
                                     <select name="vClase_envio" id="vClase_envio" 
                                             class="form-select @error('vClase_envio') is-invalid @enderror">
-                                        <option value="">Seleccionar clase de envío</option>
+                                        <option value="">-- Heredar del producto --</option>
                                         <option value="estandar" {{ old('vClase_envio') == 'estandar' ? 'selected' : '' }}>Estándar</option>
                                         <option value="express" {{ old('vClase_envio') == 'express' ? 'selected' : '' }}>Express</option>
                                         <option value="fragil" {{ old('vClase_envio') == 'fragil' ? 'selected' : '' }}>Frágil</option>
@@ -371,6 +400,7 @@
                                         @else
                                             Producto padre: <strong>Sin clase de envío definida</strong>
                                         @endif
+                                        <br>Dejar vacío para usar la del producto padre.
                                     </small>
                                 </div>
                             </div>
@@ -416,6 +446,7 @@
                                                 <option value="{{ $impuesto->id_impuesto }}" 
                                                         data-porcentaje="{{ $impuesto->dPorcentaje }}"
                                                         data-tipo="{{ $impuesto->eTipo }}"
+                                                        data-nombre="{{ $impuesto->vNombre }}"
                                                         {{ old('id_impuesto') == $impuesto->id_impuesto ? 'selected' : '' }}>
                                                     {{ $impuesto->vNombre }} ({{ $impuesto->eTipo }} - {{ number_format($impuesto->dPorcentaje, 2) }}%)
                                                 </option>
@@ -451,7 +482,7 @@
                             <div class="col-md-4">
                                 <div class="card bg-white text-dark">
                                     <div class="card-body text-center">
-                                        <h6 class="text-muted">Precio base (con oferta aplicada)</h6>
+                                        <h6 class="text-muted">Precio base (con descuento aplicado)</h6>
                                         <h3 class="fw-bold" id="precio-base-display">$0.00</h3>
                                         <small class="text-muted" id="precio-original-display" style="display: none;"></small>
                                     </div>
@@ -463,6 +494,7 @@
                                         <h6 class="text-muted">Impuesto</h6>
                                         <h3 class="fw-bold" id="total-impuestos-display">$0.00</h3>
                                         <small id="porcentaje-impuestos-display">0%</small>
+                                        <small class="d-block text-muted" id="detalle-impuesto-breakdown"></small>
                                     </div>
                                 </div>
                             </div>
@@ -473,6 +505,13 @@
                                         <h2 class="fw-bold" id="precio-final-total-display">$0.00</h2>
                                         <small>Este es el precio que verá el cliente</small>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="alert alert-light text-dark p-3" id="detalle-impuesto-info">
+                                    Selecciona un impuesto para ver el cálculo detallado
                                 </div>
                             </div>
                         </div>
@@ -505,6 +544,8 @@
                                                        value="{{ $valor->id_atributo_valor }}"
                                                        class="form-check-input atributo-radio"
                                                        data-atributo-id="{{ $valor->atributo->id_atributo }}"
+                                                       data-atributo-nombre="{{ $nombreAtributo }}"
+                                                       data-valor-nombre="{{ $valor->vValor }}"
                                                        {{ old('atributos.' . $valor->atributo->id_atributo) == $valor->id_atributo_valor ? 'checked' : '' }}
                                                        required
                                                        autocomplete="off">
@@ -760,8 +801,8 @@
     padding: 1rem;
 }
 
-/* Estilos para sección de oferta */
-#ofertaFields {
+/* Estilos para sección de descuento */
+#descuentoFields {
     transition: all 0.3s ease;
 }
 
@@ -777,6 +818,10 @@
         max-height: 120px !important;
     }
 }
+
+.position-relative {
+    position: relative !important;
+}
 </style>
 @endpush
 
@@ -784,33 +829,88 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-// Variables globales para imágenes
+// ============ DATOS EXISTENTES PARA VALIDACIÓN ============
+// SKUs de productos existentes
+const productosExistentes = @json(\App\Models\Producto::select('vCodigo_barras as sku')->get()->map(function($p) {
+    return $p->sku;
+})->values());
+
+// SKUs de variaciones existentes
+const variacionesExistentes = @json(\App\Models\ProductoVariacion::select('vSKU as sku')->get()->map(function($v) {
+    return $v->sku;
+})->values());
+
+// Crear sets para búsqueda rápida
+const skusProductosExistentes = new Set(productosExistentes);
+const skusVariacionesExistentes = new Set(variacionesExistentes);
+
+// ============ VARIABLES GLOBALES ============
 let imagenPrincipalFile = null;
 let gifFile = null;
 let selectedImages = [];
 let imageCounter = 0;
+let maxTotalSize = 50 * 1024 * 1024; // 50MB en bytes
+let limiteExcedido = false;
 
-// ==================== VALIDACIONES ====================
+// ============ FUNCIONES DE VALIDACIÓN ============
+
+function verificarSKUVariacionLocal(input) {
+    const sku = input.value.trim();
+    let errorDiv = document.getElementById('sku-error');
+    
+    if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.id = 'sku-error';
+        errorDiv.className = 'invalid-feedback';
+        errorDiv.style.display = 'none';
+        input.parentNode.appendChild(errorDiv);
+    }
+    
+    if (sku === '') {
+        input.classList.remove('is-invalid');
+        errorDiv.style.display = 'none';
+        errorDiv.textContent = '';
+        return true;
+    }
+    
+    // Verificar contra SKUs de productos
+    if (skusProductosExistentes.has(sku)) {
+        input.classList.add('is-invalid');
+        errorDiv.textContent = `⚠️ Ya existe un producto con el SKU "${sku}".`;
+        errorDiv.style.display = 'block';
+        return false;
+    }
+    
+    // Verificar contra SKUs de variaciones existentes
+    if (skusVariacionesExistentes.has(sku)) {
+        input.classList.add('is-invalid');
+        errorDiv.textContent = `⚠️ Ya existe una variación con el SKU "${sku}".`;
+        errorDiv.style.display = 'block';
+        return false;
+    }
+    
+    input.classList.remove('is-invalid');
+    errorDiv.style.display = 'none';
+    errorDiv.textContent = '';
+    return true;
+}
 
 function validarSKU(input) {
-    // Guardar posición del cursor
-    const cursorPos = input.selectionStart;
-    
     // Permitir letras, números y guiones
     let valor = input.value.replace(/[^A-Za-z0-9\-]/g, '');
     
-    // Limitar a 50 caracteres (igual que la BD)
-    if (valor.length > 50) {
-        valor = valor.substring(0, 50);
+    // Limitar a 25 caracteres
+    if (valor.length > 25) {
+        valor = valor.substring(0, 25);
     }
     
     // Convertir a mayúsculas automáticamente
     valor = valor.toUpperCase();
     
-    // Actualizar el valor si cambió
+    // Actualizar el valor
     if (input.value !== valor) {
+        const cursorPos = input.selectionStart;
         input.value = valor;
-        // Restaurar posición del cursor
         setTimeout(() => {
             input.setSelectionRange(cursorPos, cursorPos);
         }, 0);
@@ -819,22 +919,8 @@ function validarSKU(input) {
     // Validar que no esté vacío
     if (input.value.trim() === '') {
         input.classList.add('is-invalid');
-        
-        // Crear o actualizar mensaje de error
-        let errorDiv = document.getElementById('error-sku-vacio');
-        if (!errorDiv) {
-            errorDiv = document.createElement('div');
-            errorDiv.className = 'invalid-feedback d-block';
-            errorDiv.id = 'error-sku-vacio';
-            input.parentNode.appendChild(errorDiv);
-        }
-        errorDiv.textContent = 'El SKU no puede estar vacío';
     } else {
         input.classList.remove('is-invalid');
-        const errorDiv = document.getElementById('error-sku-vacio');
-        if (errorDiv) {
-            errorDiv.remove();
-        }
     }
 }
 
@@ -907,14 +993,13 @@ function validarPrecio(input) {
     }
     
     // Validaciones específicas
-    if (input.id === 'dPrecio_oferta') {
-        validarPrecioOfertaInstantaneo(input);
+    if (input.id === 'dPrecio_descuento') {
+        validarPrecioDescuentoInstantaneo(input);
     }
     
     actualizarPrecioFinal();
 }
 
-// Función para mostrar error de precio
 function mostrarErrorPrecio(input, mensaje) {
     const errorId = `error-${input.id}-limite`;
     const errorElement = document.getElementById(errorId);
@@ -930,7 +1015,6 @@ function mostrarErrorPrecio(input, mensaje) {
     input.parentNode.appendChild(errorDiv);
 }
 
-// Función para limpiar error de precio
 function limpiarErrorPrecio(input) {
     const errorId = `error-${input.id}-limite`;
     const errorElement = document.getElementById(errorId);
@@ -940,51 +1024,61 @@ function limpiarErrorPrecio(input) {
     input.classList.remove('is-invalid');
 }
 
-function validarPrecioOfertaInstantaneo(input) {
-    const tieneOferta = document.getElementById('bTiene_oferta');
-    if (!tieneOferta || !tieneOferta.checked) return true;
+function validarPrecioDescuentoInstantaneo(input) {
+    const tieneDescuento = document.getElementById('bTiene_descuento');
+    if (!tieneDescuento || !tieneDescuento.checked) return true;
     
     const precioVenta = parseFloat(document.getElementById('dPrecio').value) || 0;
-    const precioOferta = parseFloat(input.value) || 0;
-    const errorDiv = document.getElementById('error-precio-oferta');
+    const precioDescuento = parseFloat(input.value) || 0;
+    const errorDiv = document.getElementById('error-precio-descuento');
     
-    if (precioOferta >= precioVenta && precioOferta > 0 && input.value !== '') {
+    if (precioDescuento >= precioVenta && precioDescuento > 0 && input.value !== '') {
         input.classList.add('is-invalid');
-        errorDiv.style.display = 'block';
-        errorDiv.textContent = 'El precio de oferta debe ser menor que el precio de venta';
+        if (errorDiv) {
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
+        }
         return false;
     } else {
         input.classList.remove('is-invalid');
-        errorDiv.style.display = 'none';
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+        }
         return true;
     }
 }
 
-function validarPrecioOferta() {
-    const tieneOferta = document.getElementById('bTiene_oferta');
-    if (!tieneOferta || !tieneOferta.checked) return true;
+function validarPrecioDescuento() {
+    const tieneDescuento = document.getElementById('bTiene_descuento');
+    if (!tieneDescuento || !tieneDescuento.checked) return true;
     
     const precioVenta = parseFloat(document.getElementById('dPrecio').value) || 0;
-    const precioOferta = parseFloat(document.getElementById('dPrecio_oferta').value) || 0;
-    const input = document.getElementById('dPrecio_oferta');
-    const errorDiv = document.getElementById('error-precio-oferta');
+    const precioDescuento = parseFloat(document.getElementById('dPrecio_descuento').value) || 0;
+    const input = document.getElementById('dPrecio_descuento');
+    const errorDiv = document.getElementById('error-precio-descuento');
     
-    if (precioOferta >= precioVenta && precioOferta > 0) {
+    if (precioDescuento >= precioVenta && precioDescuento > 0) {
         input.classList.add('is-invalid');
-        errorDiv.style.display = 'block';
-        errorDiv.textContent = 'El precio de oferta debe ser menor que el precio de venta';
+        if (errorDiv) {
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta';
+        }
         return false;
     } else {
         input.classList.remove('is-invalid');
-        errorDiv.style.display = 'none';
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+        }
         return true;
     }
 }
 
-function validarFechasOferta() {
-    const fechaInicio = document.getElementById('dFecha_inicio_oferta');
-    const fechaFin = document.getElementById('dFecha_fin_oferta');
-    const errorDiv = document.getElementById('error-fechas-oferta');
+function validarFechasDescuento() {
+    const fechaInicio = document.getElementById('dFecha_inicio_descuento');
+    const fechaFin = document.getElementById('dFecha_fin_descuento');
+    const errorDiv = document.getElementById('error-fechas-descuento');
     
     if (!fechaInicio || !fechaFin) return true;
     
@@ -994,12 +1088,17 @@ function validarFechasOferta() {
         
         if (fin < inicio) {
             fechaFin.classList.add('is-invalid');
-            errorDiv.style.display = 'block';
-            errorDiv.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio';
+            if (errorDiv) {
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio';
+            }
             return false;
         } else {
             fechaFin.classList.remove('is-invalid');
-            errorDiv.style.display = 'none';
+            if (errorDiv) {
+                errorDiv.style.display = 'none';
+                errorDiv.textContent = '';
+            }
             return true;
         }
     }
@@ -1181,7 +1280,6 @@ function validarDimensionCm(input) {
     }
 }
 
-// Función para mostrar error de dimensiones
 function mostrarErrorDimension(input, mensaje) {
     const errorId = `error-${input.id}`;
     let errorElement = document.getElementById(errorId);
@@ -1197,7 +1295,6 @@ function mostrarErrorDimension(input, mensaje) {
     input.classList.add('is-invalid');
 }
 
-// Función para limpiar error de dimensiones
 function limpiarErrorDimension(input) {
     const errorId = `error-${input.id}`;
     const errorElement = document.getElementById(errorId);
@@ -1293,35 +1390,37 @@ function permitirBorrado(e) {
     return false;
 }
 
-// ==================== FUNCIONES PARA OFERTA ====================
+// ==================== FUNCIONES PARA DESCUENTO ====================
 
-function toggleOfertaFields() {
-    const ofertaFields = document.getElementById('ofertaFields');
-    const tieneOferta = document.getElementById('bTiene_oferta').checked;
-    const precioOferta = document.getElementById('dPrecio_oferta');
-    const fechaInicio = document.getElementById('dFecha_inicio_oferta');
-    const fechaFin = document.getElementById('dFecha_fin_oferta');
+function toggleDescuentoFields() {
+    const descuentoFields = document.getElementById('descuentoFields');
+    const tieneDescuento = document.getElementById('bTiene_descuento').checked;
+    const precioDescuento = document.getElementById('dPrecio_descuento');
+    const fechaInicio = document.getElementById('dFecha_inicio_descuento');
+    const fechaFin = document.getElementById('dFecha_fin_descuento');
     
-    if (tieneOferta) {
-        ofertaFields.style.display = 'block';
-        precioOferta.required = true;
+    if (tieneDescuento) {
+        descuentoFields.style.display = 'block';
+        precioDescuento.required = true;
         fechaInicio.required = true;
         fechaFin.required = true;
         
         setTimeout(() => {
-            validarPrecioOferta();
+            validarPrecioDescuento();
             actualizarPrecioFinal();
         }, 100);
     } else {
-        ofertaFields.style.display = 'none';
-        precioOferta.required = false;
+        descuentoFields.style.display = 'none';
+        precioDescuento.required = false;
         fechaInicio.required = false;
         fechaFin.required = false;
         
-        precioOferta.classList.remove('is-invalid');
-        document.getElementById('error-precio-oferta').style.display = 'none';
+        precioDescuento.classList.remove('is-invalid');
+        const errorDiv = document.getElementById('error-precio-descuento');
+        if (errorDiv) errorDiv.style.display = 'none';
         fechaFin.classList.remove('is-invalid');
-        document.getElementById('error-fechas-oferta').style.display = 'none';
+        const errorFechas = document.getElementById('error-fechas-descuento');
+        if (errorFechas) errorFechas.style.display = 'none';
         
         actualizarPrecioFinal();
     }
@@ -1331,33 +1430,69 @@ function toggleOfertaFields() {
 
 function actualizarPrecioFinal() {
     const precioInput = document.getElementById('dPrecio');
-    const tieneOferta = document.getElementById('bTiene_oferta')?.checked;
-    const precioOfertaInput = document.getElementById('dPrecio_oferta');
+    const tieneDescuento = document.getElementById('bTiene_descuento')?.checked;
+    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
     const impuestoSelect = document.getElementById('id_impuesto');
     
     if (!precioInput) return;
     
-    // Determinar qué precio usar (original o con oferta)
+    // Determinar qué precio usar (original o con descuento)
     let precioBase = parseFloat(precioInput.value) || 0;
     let precioOriginal = precioBase;
     
-    if (tieneOferta && precioOfertaInput && precioOfertaInput.value) {
-        const precioOferta = parseFloat(precioOfertaInput.value) || 0;
-        if (precioOferta > 0 && precioOferta < precioBase) {
-            precioBase = precioOferta;
+    // Verificar si el descuento está activo HOY
+    let descuentoActivo = false;
+    if (tieneDescuento && precioDescuentoInput && precioDescuentoInput.value) {
+        const fechaHoy = new Date();
+        fechaHoy.setHours(0, 0, 0, 0);
+        
+        const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
+        const fechaFinInput = document.getElementById('dFecha_fin_descuento');
+        
+        let fechaInicio = null;
+        let fechaFin = null;
+        
+        if (fechaInicioInput && fechaInicioInput.value) {
+            fechaInicio = new Date(fechaInicioInput.value + 'T00:00:00');
+        }
+        if (fechaFinInput && fechaFinInput.value) {
+            fechaFin = new Date(fechaFinInput.value + 'T23:59:59');
+        }
+        
+        const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
+        
+        let aplicarDescuento = false;
+        if (fechaInicio && fechaFin) {
+            aplicarDescuento = fechaHoy >= fechaInicio && fechaHoy <= fechaFin;
+        } else if (fechaInicio && !fechaFin) {
+            aplicarDescuento = fechaHoy >= fechaInicio;
+        } else if (!fechaInicio && fechaFin) {
+            aplicarDescuento = fechaHoy <= fechaFin;
+        } else {
+            aplicarDescuento = true;
+        }
+        
+        if (aplicarDescuento && precioDescuento > 0 && precioDescuento < precioBase) {
+            precioBase = precioDescuento;
+            descuentoActivo = true;
         }
     }
     
     // Mostrar precio base
     document.getElementById('precio-base-display').textContent = '$' + precioBase.toFixed(2);
     
-    // Mostrar precio original si hay oferta
+    // Mostrar precio original si hay descuento
     const precioOriginalDisplay = document.getElementById('precio-original-display');
-    if (tieneOferta && precioBase < precioOriginal) {
-        precioOriginalDisplay.style.display = 'block';
-        precioOriginalDisplay.textContent = 'Precio original: $' + precioOriginal.toFixed(2);
-    } else {
-        precioOriginalDisplay.style.display = 'none';
+    if (precioOriginalDisplay) {
+        if (tieneDescuento && precioDescuentoInput?.value && descuentoActivo) {
+            precioOriginalDisplay.style.display = 'block';
+            precioOriginalDisplay.innerHTML = `
+                <span class="text-decoration-line-through">$${precioOriginal.toFixed(2)}</span>
+                <span class="badge bg-danger ms-2">¡DESCUENTO!</span>
+            `;
+        } else {
+            precioOriginalDisplay.style.display = 'none';
+        }
     }
     
     // Obtener impuesto seleccionado
@@ -1368,7 +1503,7 @@ function actualizarPrecioFinal() {
     if (impuestoSelect && impuestoSelect.value) {
         const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
         porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
-        nombreImpuesto = selectedOption.text.split('(')[0].trim();
+        nombreImpuesto = selectedOption.dataset.nombre || selectedOption.text.split('(')[0].trim();
         
         totalImpuestos = precioBase * (porcentaje / 100);
     }
@@ -1376,20 +1511,108 @@ function actualizarPrecioFinal() {
     const precioFinal = precioBase + totalImpuestos;
     
     // Mostrar resultados
-    document.getElementById('total-impuestos-display').textContent = '$' + totalImpuestos.toFixed(2);
+    document.getElementById('total-impuestos-display').textContent = '+$' + totalImpuestos.toFixed(2);
     document.getElementById('precio-final-total-display').textContent = '$' + precioFinal.toFixed(2);
     document.getElementById('precio-final-display').textContent = '$' + precioFinal.toFixed(2);
     
     if (porcentaje > 0) {
-        document.getElementById('porcentaje-impuestos-display').textContent = porcentaje.toFixed(2) + '%';
-        document.getElementById('detalle-impuesto-display').textContent = `${nombreImpuesto}: ${porcentaje.toFixed(2)}% ($${totalImpuestos.toFixed(2)})`;
+        document.getElementById('porcentaje-impuestos-display').textContent = `+${porcentaje.toFixed(2)}% (${nombreImpuesto})`;
+        document.getElementById('detalle-impuesto-display').textContent = `${nombreImpuesto}: ${porcentaje.toFixed(2)}% (+$${totalImpuestos.toFixed(2)})`;
+        
+        const detalleInfo = document.getElementById('detalle-impuesto-info');
+        if (detalleInfo) {
+            let html = `<strong>Cálculo de ${nombreImpuesto}:</strong><br>`;
+            html += `Precio base: $${precioBase.toFixed(2)}<br>`;
+            html += `${nombreImpuesto} (${porcentaje}%): +$${totalImpuestos.toFixed(2)}<br>`;
+            html += `<strong>Total: $${precioFinal.toFixed(2)}</strong>`;
+            detalleInfo.innerHTML = html;
+        }
     } else {
         document.getElementById('porcentaje-impuestos-display').textContent = '0%';
         document.getElementById('detalle-impuesto-display').textContent = 'Sin impuesto';
+        
+        const detalleInfo = document.getElementById('detalle-impuesto-info');
+        if (detalleInfo) {
+            detalleInfo.innerHTML = `Precio final: $${precioBase.toFixed(2)} (Sin impuestos)`;
+        }
     }
 }
 
 // ==================== FUNCIONES PARA IMÁGENES ====================
+
+function calcularTamañoTotal() {
+    let total = 0;
+    
+    if (imagenPrincipalFile) total += imagenPrincipalFile.size;
+    if (gifFile) total += gifFile.size;
+    
+    selectedImages.forEach(img => {
+        total += img.file.size;
+    });
+    
+    return total;
+}
+
+function actualizarBarraProgresoTamaño() {
+    const totalSize = calcularTamañoTotal();
+    const maxSize = 50 * 1024 * 1024;
+    const porcentaje = (totalSize / maxSize) * 100;
+    const progressBar = document.getElementById('size-progress-bar');
+    const totalSizeSpan = document.getElementById('total-size');
+    const totalImagenesSpan = document.getElementById('total-imagenes');
+    const limiteMsg = document.getElementById('limiteArchivosMsg');
+    const sizeInfo = document.getElementById('sizeInfo');
+    
+    // Mostrar/ocultar la barra si hay archivos
+    if (totalSize > 0) {
+        if (sizeInfo) sizeInfo.style.display = 'block';
+    } else {
+        if (sizeInfo) sizeInfo.style.display = 'none';
+    }
+    
+    if (totalSizeSpan) {
+        if (totalSize < 1024) {
+            totalSizeSpan.textContent = totalSize + ' B';
+        } else if (totalSize < 1024 * 1024) {
+            totalSizeSpan.textContent = (totalSize / 1024).toFixed(2) + ' KB';
+        } else {
+            totalSizeSpan.textContent = (totalSize / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+    }
+    
+    if (progressBar) {
+        progressBar.style.width = Math.min(porcentaje, 100) + '%';
+        
+        if (porcentaje > 90) {
+            progressBar.classList.remove('bg-success');
+            progressBar.classList.add('bg-danger');
+        } else if (porcentaje > 70) {
+            progressBar.classList.remove('bg-success', 'bg-danger');
+            progressBar.classList.add('bg-warning');
+        } else {
+            progressBar.classList.remove('bg-warning', 'bg-danger');
+            progressBar.classList.add('bg-success');
+        }
+    }
+    
+    // Actualizar contador de imágenes
+    if (totalImagenesSpan) {
+        let total = (imagenPrincipalFile ? 1 : 0) + (gifFile ? 1 : 0) + selectedImages.length;
+        totalImagenesSpan.textContent = total;
+    }
+    
+    if (totalSize > maxSize) {
+        limiteExcedido = true;
+        if (limiteMsg) limiteMsg.style.display = 'block';
+        const btnSubmit = document.getElementById('btnSubmit');
+        if (btnSubmit) btnSubmit.disabled = true;
+    } else {
+        limiteExcedido = false;
+        if (limiteMsg) limiteMsg.style.display = 'none';
+        const btnSubmit = document.getElementById('btnSubmit');
+        if (btnSubmit) btnSubmit.disabled = false;
+    }
+}
 
 function previewImagenPrincipal(input) {
     const previewContainer = document.getElementById('preview_principal_container');
@@ -1425,9 +1648,14 @@ function previewImagenPrincipal(input) {
         reader.onload = function(e) {
             previewImg.src = e.target.result;
             previewContainer.style.display = 'block';
+            actualizarBarraProgresoTamaño();
         }
         
         reader.readAsDataURL(input.files[0]);
+    } else {
+        previewContainer.style.display = 'none';
+        imagenPrincipalFile = null;
+        actualizarBarraProgresoTamaño();
     }
 }
 
@@ -1438,6 +1666,7 @@ function cancelarImagenPrincipal() {
     input.value = '';
     previewContainer.style.display = 'none';
     imagenPrincipalFile = null;
+    actualizarBarraProgresoTamaño();
 }
 
 function previewGif(input) {
@@ -1473,12 +1702,14 @@ function previewGif(input) {
         reader.onload = function(e) {
             previewImg.src = e.target.result;
             previewContainer.style.display = 'block';
+            actualizarBarraProgresoTamaño();
         }
         
         reader.readAsDataURL(input.files[0]);
     } else {
         previewContainer.style.display = 'none';
         gifFile = null;
+        actualizarBarraProgresoTamaño();
     }
 }
 
@@ -1489,17 +1720,13 @@ function cancelarGif() {
     input.value = '';
     previewContainer.style.display = 'none';
     gifFile = null;
+    actualizarBarraProgresoTamaño();
 }
-
-// ============ FUNCIÓN PARA MANEJO DE IMÁGENES ADICIONALES ============
 
 function handleImageSelection(event) {
     const files = event.target.files;
     
-    // Si no hay archivos seleccionados (usuario canceló), NO hacer nada
     if (!files || files.length === 0) {
-        console.log('Usuario canceló la selección de imágenes - no se realizan cambios');
-        // Limpiar el input para que no quede con referencia a archivos no seleccionados
         event.target.value = '';
         return;
     }
@@ -1508,7 +1735,29 @@ function handleImageSelection(event) {
     const currentCount = selectedImages.length;
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     
-    // Verificar límite total
+    const tamanioActual = calcularTamañoTotal();
+    let nuevoTamanio = tamanioActual;
+    for (let i = 0; i < files.length; i++) {
+        nuevoTamanio += files[i].size;
+    }
+    
+    if (nuevoTamanio > maxTotalSize) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de tamaño excedido',
+            html: `
+                <div class="text-center">
+                    <p>Si agregas estos archivos, excederás el límite de 50MB.</p>
+                    <p class="mb-0"><strong>Tamaño actual:</strong> ${(tamanioActual / (1024 * 1024)).toFixed(2)}MB</p>
+                    <p><strong>Tamaño con nuevos archivos:</strong> ${(nuevoTamanio / (1024 * 1024)).toFixed(2)}MB</p>
+                </div>
+            `,
+            confirmButtonText: 'Entendido'
+        });
+        event.target.value = '';
+        return;
+    }
+    
     if (currentCount + files.length > maxFiles) {
         Swal.fire({
             icon: 'warning',
@@ -1520,30 +1769,22 @@ function handleImageSelection(event) {
     }
     
     let archivosAgregados = 0;
-    let archivosRechazados = [];
     
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         
-        // Validar formato
         if (!validTypes.includes(file.type)) {
-            archivosRechazados.push(`"${file.name}" (formato no válido)`);
             continue;
         }
         
-        // Validar tamaño
         if (file.size > 5 * 1024 * 1024) {
-            archivosRechazados.push(`"${file.name}" (excede 5MB)`);
             continue;
         }
         
-        // Verificar duplicados
         if (isImageDuplicate(file)) {
-            archivosRechazados.push(`"${file.name}" (archivo duplicado)`);
             continue;
         }
         
-        // Si pasa todas las validaciones, agregarlo
         const imageId = 'img_' + Date.now() + '_' + imageCounter++;
         const preview = URL.createObjectURL(file);
         
@@ -1557,31 +1798,16 @@ function handleImageSelection(event) {
         archivosAgregados++;
     }
     
-    // Mostrar mensaje de archivos rechazados si los hay
-    if (archivosRechazados.length > 0) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Algunos archivos no se pudieron agregar',
-            html: `<ul style="text-align: left;">${archivosRechazados.map(msg => `<li>${msg}</li>`).join('')}</ul>`,
-            confirmButtonText: 'Entendido'
-        });
-    }
-    
-    // Si se agregaron archivos, actualizar la interfaz
     if (archivosAgregados > 0) {
         document.getElementById('selected-images-count').textContent = selectedImages.length + ' archivos';
         renderSelectedImages();
+        actualizarBarraProgresoTamaño();
         
-        Swal.fire({
-            icon: 'success',
-            title: 'Imágenes agregadas',
-            text: `Se agregaron ${archivosAgregados} imagen(es) correctamente. Total: ${selectedImages.length}`,
-            timer: 2000,
-            showConfirmButton: false
-        });
+        if (selectedImages.length > 0) {
+            document.getElementById('btn-limpiar-imagenes').style.display = 'inline-block';
+        }
     }
     
-    // IMPORTANTE: Limpiar el input para permitir seleccionar los mismos archivos nuevamente si es necesario
     event.target.value = '';
 }
 
@@ -1594,7 +1820,6 @@ function isImageDuplicate(newFile) {
 }
 
 function removeSelectedImage(imageId) {
-    // Mostrar confirmación antes de eliminar
     Swal.fire({
         title: '¿Eliminar imagen?',
         text: 'Esta acción eliminará la imagen de la selección actual.',
@@ -1615,6 +1840,11 @@ function removeSelectedImage(imageId) {
             const count = selectedImages.length;
             document.getElementById('selected-images-count').textContent = count + ' archivos';
             renderSelectedImages();
+            actualizarBarraProgresoTamaño();
+            
+            if (count === 0) {
+                document.getElementById('btn-limpiar-imagenes').style.display = 'none';
+            }
             
             Swal.fire({
                 icon: 'success',
@@ -1712,7 +1942,6 @@ function renderSelectedImages() {
     });
 }
 
-// Función para limpiar todas las imágenes seleccionadas
 function limpiarTodasLasImagenes() {
     if (selectedImages.length === 0) return;
     
@@ -1727,7 +1956,6 @@ function limpiarTodasLasImagenes() {
         cancelButtonText: 'Cancelar'
     }).then((result) => {
         if (result.isConfirmed) {
-            // Liberar objetos URL
             selectedImages.forEach(img => {
                 if (img.preview) URL.revokeObjectURL(img.preview);
             });
@@ -1735,6 +1963,8 @@ function limpiarTodasLasImagenes() {
             selectedImages = [];
             document.getElementById('selected-images-count').textContent = '0 archivos';
             renderSelectedImages();
+            actualizarBarraProgresoTamaño();
+            document.getElementById('btn-limpiar-imagenes').style.display = 'none';
             
             Swal.fire({
                 icon: 'success',
@@ -1747,26 +1977,110 @@ function limpiarTodasLasImagenes() {
     });
 }
 
-// ============ NUEVA FUNCIÓN PARA PREPARAR EL FORMULARIO ANTES DE ENVIAR ============
+// ==================== FUNCIÓN PARA PREPARAR FORMULARIO ====================
 
 function prepararFormularioParaEnvio(event) {
     event.preventDefault();
     
+    // Validar SKU antes de enviar
+    const skuInput = document.getElementById('vSKU');
+    if (!verificarSKUVariacionLocal(skuInput)) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error de validación',
+            text: 'El SKU ya está registrado en otro producto o variación.'
+        });
+        return false;
+    }
+    
+    // Validar campos obligatorios
+    const precioInput = document.getElementById('dPrecio');
+    const stockInput = document.getElementById('iStock');
+    
+    if (!precioInput.value.trim()) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'El precio de venta es obligatorio.'
+        });
+        precioInput.classList.add('is-invalid');
+        return false;
+    }
+    
+    if (!stockInput.value.trim()) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'El stock es obligatorio.'
+        });
+        stockInput.classList.add('is-invalid');
+        return false;
+    }
+    
+    // Validar atributos
+    const atributosRadios = document.querySelectorAll('.atributo-radio');
+    const atributosPorGrupo = {};
+    
+    atributosRadios.forEach(radio => {
+        const atributoId = radio.dataset.atributoId;
+        if (radio.checked) {
+            atributosPorGrupo[atributoId] = true;
+        }
+    });
+    
+    const gruposAtributos = new Set();
+    atributosRadios.forEach(radio => {
+        gruposAtributos.add(radio.dataset.atributoId);
+    });
+    
+    let atributosFaltantes = [];
+    gruposAtributos.forEach(atributoId => {
+        if (!atributosPorGrupo[atributoId]) {
+            const container = document.querySelector(`.atributo-container input[data-atributo-id="${atributoId}"]`).closest('.atributo-container');
+            const nombreAtributo = container?.querySelector('.fw-bold')?.innerText || 'Atributo';
+            atributosFaltantes.push(nombreAtributo);
+            container?.classList.add('border-danger');
+        }
+    });
+    
+    if (atributosFaltantes.length > 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            html: `Debes seleccionar un valor para los siguientes atributos:<br><br>${atributosFaltantes.join(', ')}`
+        });
+        return false;
+    }
+    
+    // Validar descuento
+    const tieneDescuento = document.getElementById('bTiene_descuento');
+    if (tieneDescuento && tieneDescuento.checked) {
+        if (!validarPrecioDescuento()) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'El precio de descuento debe ser menor que el precio de venta.'
+            });
+            return false;
+        }
+        if (!validarFechasDescuento()) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'La fecha de fin no puede ser anterior a la fecha de inicio.'
+            });
+            return false;
+        }
+    }
+    
     const form = document.getElementById('variacionForm');
     const formData = new FormData(form);
-    
-    // Limpiar cualquier campo de archivo existente para evitar duplicados
-    const fileInputs = form.querySelectorAll('input[type="file"][name^="imagenes_adicionales"]');
-    fileInputs.forEach(input => {
-        formData.delete(input.name);
-    });
     
     // Agregar las imágenes adicionales seleccionadas al FormData
     selectedImages.forEach((image, index) => {
         formData.append(`imagenes_adicionales[${index}]`, image.file);
     });
     
-    // También asegurar que la imagen principal y GIF se envíen
     if (imagenPrincipalFile) {
         formData.set('imagen_principal', imagenPrincipalFile);
     }
@@ -1775,58 +2089,71 @@ function prepararFormularioParaEnvio(event) {
         formData.set('gif', gifFile);
     }
     
-    // Verificar qué se está enviando (para depuración)
-    console.log('Enviando formulario con:');
-    console.log('- Imagen principal:', imagenPrincipalFile ? imagenPrincipalFile.name : 'ninguna');
-    console.log('- GIF:', gifFile ? gifFile.name : 'ninguno');
-    console.log('- Imágenes adicionales:', selectedImages.length);
+    Swal.fire({
+        title: 'Guardando variación...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
     
-    // Enviar el formulario con fetch
     fetch(form.action, {
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+            'Accept': 'application/json'
         }
     })
     .then(response => {
         if (response.redirected) {
             window.location.href = response.url;
         } else if (response.ok) {
-            return response.text();
+            return response.json();
         } else {
-            throw new Error('Error en la respuesta del servidor');
+            return response.json().then(err => { throw err; });
         }
     })
     .then(data => {
-        if (data && data.includes('variaciones.show')) {
-            window.location.reload();
+        Swal.close();
+        if (data && data.redirect) {
+            window.location.href = data.redirect;
+        } else {
+            window.location.href = '{{ route("variaciones.show", $producto->id_producto) }}';
         }
     })
     .catch(error => {
+        Swal.close();
         console.error('Error:', error);
+        
+        let errorMessage = 'Hubo un problema al guardar la variación.';
+        if (error.errors) {
+            errorMessage = Object.values(error.errors).flat().join('<br>');
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'Hubo un problema al enviar el formulario. Por favor intenta de nuevo.'
+            html: errorMessage
         });
     });
     
     return false;
 }
 
-// ==================== VALIDACIÓN DEL FORMULARIO ====================
+// ==================== INICIALIZACIÓN ====================
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar toggle de oferta
-    if (document.getElementById('bTiene_oferta') && document.getElementById('bTiene_oferta').checked) {
-        toggleOfertaFields();
+    // Inicializar toggle de descuento
+    if (document.getElementById('bTiene_descuento') && document.getElementById('bTiene_descuento').checked) {
+        toggleDescuentoFields();
     }
     
     // Inicializar cálculo de precio final
     actualizarPrecioFinal();
     
-    // Event listeners para calcular precio final cuando cambian los valores
+    // Event listeners para calcular precio final
     document.getElementById('dPrecio').addEventListener('input', actualizarPrecioFinal);
     document.getElementById('id_impuesto').addEventListener('change', actualizarPrecioFinal);
     
@@ -1849,89 +2176,14 @@ document.addEventListener('DOMContentLoaded', function() {
         element.setAttribute('autocomplete', 'off');
     });
     
-    // Reemplazar el envío normal del formulario con nuestra función personalizada
+    // Reemplazar el envío normal del formulario
     const form = document.getElementById('variacionForm');
     if (form) {
-        form.addEventListener('submit', function(e) {
-            let erroresCriticos = false;
-            
-            // 1. Validar campos obligatorios
-            const camposObligatorios = [
-                {id: 'vSKU', nombre: 'SKU'},
-                {id: 'dPrecio', nombre: 'Precio'},
-                {id: 'iStock', nombre: 'Stock'}
-            ];
-            
-            camposObligatorios.forEach(campo => {
-                const elemento = document.getElementById(campo.id);
-                if (!elemento.value.trim()) {
-                    elemento.classList.add('is-invalid');
-                    erroresCriticos = true;
-                }
-            });
-            
-            // 2. Validar atributos
-            let atributosValidos = true;
-            const atributosContainers = document.querySelectorAll('.atributo-container');
-            
-            atributosContainers.forEach(container => {
-                const radioButtons = container.querySelectorAll('.atributo-radio');
-                let seleccionado = false;
-                
-                radioButtons.forEach(radio => {
-                    if (radio.checked) {
-                        seleccionado = true;
-                    }
-                });
-                
-                if (!seleccionado) {
-                    atributosValidos = false;
-                    container.classList.add('border-danger');
-                    
-                    const errorExistente = container.querySelector('.error-atributo');
-                    if (!errorExistente) {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'error-atributo text-danger small mt-1';
-                        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle me-1"></i> Selecciona un valor`;
-                        container.appendChild(errorDiv);
-                    }
-                }
-            });
-            
-            if (!atributosValidos) {
-                erroresCriticos = true;
-            }
-            
-            // 3. Validar precio de oferta si está activo
-            if (document.getElementById('bTiene_oferta') && document.getElementById('bTiene_oferta').checked) {
-                if (!validarPrecioOferta()) {
-                    erroresCriticos = true;
-                }
-                if (!validarFechasOferta()) {
-                    erroresCriticos = true;
-                }
-            }
-            
-            // Si hay errores críticos, prevenir envío
-            if (erroresCriticos) {
-                e.preventDefault();
-                
-                Swal.fire({
-                    icon: "error",
-                    title: "Oops...",
-                    text: "Por favor corrige los errores en el formulario.",
-                    position: "center"
-                });
-                return false;
-            }
-            
-            // Si no hay errores, usar nuestra función personalizada para enviar
-            e.preventDefault();
-            prepararFormularioParaEnvio(e);
-            
-            return false;
-        });
+        form.addEventListener('submit', prepararFormularioParaEnvio);
     }
+    
+    // Inicializar barra de progreso
+    actualizarBarraProgresoTamaño();
 });
 
 // Mostrar mensaje SweetAlert2 después de crear exitosamente
