@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('admin.productos.administrar-productos')
 
 @section('title', 'Variación - ' . $variacion->vSKU)
 

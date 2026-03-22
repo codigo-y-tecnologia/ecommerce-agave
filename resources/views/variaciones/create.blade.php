@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('admin.productos.administrar-productos')
 
 @section('title', 'Nueva Variación - ' . $producto->vNombre)
 @section('content')

@@ -951,6 +951,7 @@
                 <li><a href="{{ route('home') }}">Inicio</a></li>
                 <li><a href="{{ route('busqueda.resultados') }}">Todos los Productos</a></li>
                 <li><a href="{{ route('busqueda.resultados', ['en_descuento' => '1']) }}" style="color: #dc3545; font-weight: bold;" id="link-descuento">🔥 En Descuento</a></li>
+                <li><a href="{{ route('carrito.index') }}">🛒 Mi Carrito</a></li>
                 <li>
                     @auth
                         <a href="{{ route('favoritos.index') }}" class="favorito-link">❤️ Mis Favoritos</a>
@@ -960,7 +961,6 @@
                     @endauth
                 </li>
                 @auth
-                    <li><a href="#">Mi Carrito</a></li>
                     <li>
                         <form method="POST" action="{{ route('logout') }}" style="display:inline;">
                             @csrf
@@ -1956,7 +1956,6 @@
         }
 
         function agregarAlCarrito(productoId, variacionId = null) {
-            @auth
                 fetch('/carrito/agregar', {
                     method: 'POST',
                     headers: {
@@ -1982,13 +1981,6 @@
                     console.error('Error:', error);
                     showNotification('❌ Error de conexión', 'error');
                 });
-            @else
-                // Redirigir a login para invitados
-                const redirectUrl = new URL('{{ route("login") }}');
-                redirectUrl.searchParams.set('from_carrito', 'true');
-                redirectUrl.searchParams.set('redirect', window.location.href);
-                window.location.href = redirectUrl.toString();
-            @endauth
         }
 
         document.addEventListener('DOMContentLoaded', function() {
