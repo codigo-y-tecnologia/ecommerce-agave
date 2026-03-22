@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Ecommerce Agave - Inicio</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <style>
         * {
             margin: 0;
@@ -117,6 +119,10 @@
         .nav-links li button:hover {
             color: #667eea;
             text-decoration: underline;
+        }
+
+        .consultar-pedido {
+            margin-right: 15px;
         }
 
         /* Barra de búsqueda */
@@ -949,6 +955,7 @@
                     @auth
                         <a href="{{ route('favoritos.index') }}" class="favorito-link">❤️ Mis Favoritos</a>
                     @else
+                    <a class="consultar-pedido" href="{{ route('consulta.pedido.form') }}"><i class="bi bi-search"></i>Consultar pedido</a>
                         <a href="{{ route('favoritos.invitado.index') }}" class="favorito-link">❤️ Mis Favoritos</a>
                     @endauth
                 </li>
