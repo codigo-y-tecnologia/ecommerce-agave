@@ -68,6 +68,7 @@ Route::get('/inicio-real', [BusquedaController::class, 'inicio'])->name('inicio.
 
 // Rutas públicas para el carrito de compras
 Route::get('/carrito', [CarritoController::class, 'index'])->name('carrito.index');
+Route::post('/carrito/agregar', [CarritoController::class, 'agregar'])->name('carrito.agregar');
 Route::post('/carrito/{producto}', [CarritoController::class, 'store'])->name('carrito.store');
 Route::put('/carrito/{detalle}', [CarritoController::class, 'update'])->name('carrito.update');
 Route::delete('/carrito/{detalle}', [CarritoController::class, 'destroy'])->name('carrito.destroy');

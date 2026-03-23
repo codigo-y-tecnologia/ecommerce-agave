@@ -58,7 +58,16 @@
         @forelse($detalles as $detalle)
         <tr>
             <!-- Producto -->
-            <td>{{ $detalle->producto->vNombre }}</td>
+            <td>
+    {{ $detalle->producto->vNombre }}
+
+    @if($detalle->vNombre_variacion)
+        <br>
+        <small class="text-muted">
+            {{ $detalle->vNombre_variacion }}
+        </small>
+    @endif
+</td>
 
             <!-- Precio unitario -->
             <td>

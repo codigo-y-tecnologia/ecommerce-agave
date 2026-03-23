@@ -256,7 +256,14 @@
 
                         @endphp
                         <tr>
-                            <td>{{ $producto->vNombre }}</td>
+                            <td>{{ $producto->vNombre }}
+                                @if($detalle->vNombre_variacion)
+                                    <br>
+                                    <small class="text-muted">
+                                        {{ $detalle->vNombre_variacion }}
+                                    </small>
+                                @endif
+                            </td>
 
                             <td class="text-center">{{ $cantidad }}</td>
 

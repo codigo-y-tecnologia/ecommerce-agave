@@ -37,18 +37,25 @@ class CheckoutController extends Controller
 
         // VALIDACIÓN DE STOCK EN CHECKOUT 
         foreach ($carrito->detalles as $detalle) {
-            $producto = $detalle->producto;
 
-            if ($producto->iStock <= 0) {
-                return redirect()
-                    ->route('carrito.index')
-                    ->with('warning', "El producto {$producto->vNombre} está agotado. Debes retirarlo del carrito.");
+            if ($detalle->variacion) {
+                $stock = $detalle->variacion->iStock;
+                $nombre = $detalle->producto->vNombre . ' (' . $detalle->variacion->getAtributosTexto() . ')';
+            } else {
+                $stock = $detalle->producto->iStock;
+                $nombre = $detalle->producto->vNombre;
             }
 
-            if ($detalle->iCantidad > $producto->iStock) {
+            if ($stock <= 0) {
                 return redirect()
                     ->route('carrito.index')
-                    ->with('warning', "La cantidad de {$producto->vNombre} excede las unidades disponibles. Solo quedan {$producto->iStock}.");
+                    ->with('warning', "El producto {$nombre} está agotado.");
+            }
+
+            if ($detalle->iCantidad > $stock) {
+                return redirect()
+                    ->route('carrito.index')
+                    ->with('warning', "La cantidad de {$nombre} excede el stock disponible. Solo quedan {$stock}.");
             }
         }
 

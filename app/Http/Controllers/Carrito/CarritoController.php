@@ -6,8 +6,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Carrito;
-use App\Models\CarritoDetalle;
-use App\Models\Producto;
+use App\Models\{CarritoDetalle, Producto, ProductoVariacion};
 use App\Helpers\CarritoHelper;
 
 class CarritoController extends Controller
@@ -18,7 +17,7 @@ class CarritoController extends Controller
     public function index()
     {
         $carrito = CarritoHelper::carritoActual()
-            ->load('detalles.producto');
+            ->load('detalles.producto', 'detalles.variacion.atributos.valor');
 
         $mensajes = [];
 
@@ -59,14 +58,6 @@ class CarritoController extends Controller
                 ? 'Tu carrito está vacío.'
                 : null,
         ]);
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
     }
 
     /**
@@ -140,19 +131,161 @@ class CarritoController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Agregar producto al carrito via AJAX (responde JSON, sin redirección).
+     * Soporta producto simple y variaciones.
      */
-    public function show(string $id)
+    public function agregar(Request $request)
     {
-        //
-    }
+        $request->validate([
+            'producto_id'  => 'required|integer',
+            'variacion_id' => 'nullable|integer',
+            'cantidad'     => 'required|integer|min:1',
+        ]);
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
+        $productoId  = $request->producto_id;
+        $variacionId = $request->variacion_id;
+        $cantidad    = (int) $request->cantidad;
+
+        // CASO 1: VARIACIÓN
+        if ($variacionId) {
+            $variacion = ProductoVariacion::with('productoPadre')
+                ->where('id_variacion', $variacionId)
+                ->where('bActivo', true)
+                ->first();
+
+            if (!$variacion) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Variación no encontrada.'
+                ], 404);
+            }
+
+            if ($variacion->iStock <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Esta variación está agotada.'
+                ]);
+            }
+
+            if ($cantidad > $variacion->iStock) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Solo hay {$variacion->iStock} disponibles"
+                ]);
+            }
+
+            $precio = $variacion->dPrecio_final;
+
+            $carrito = CarritoHelper::carritoActual();
+
+            $detalle = CarritoDetalle::where('id_carrito', $carrito->id_carrito)
+                ->where('id_producto', $variacion->id_producto)
+                ->where('id_variacion', $variacionId)
+                ->first();
+
+            if ($detalle) {
+                $nuevaCantidad = $detalle->iCantidad + $cantidad;
+
+                if ($nuevaCantidad > $variacion->iStock) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Solo hay {$variacion->iStock} unidades disponibles."
+                    ]);
+                }
+
+                $detalle->iCantidad = $nuevaCantidad;
+                $detalle->save();
+            } else {
+                if ($cantidad > $variacion->iStock) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Solo hay {$variacion->iStock} unidades disponibles."
+                    ]);
+                }
+
+                CarritoDetalle::create([
+                    'id_carrito'       => $carrito->id_carrito,
+                    'id_producto'      => $variacion->id_producto,
+                    'id_variacion'     => $variacionId,
+                    'vNombre_variacion' => $variacion->getAtributosTexto(),
+                    'iCantidad'        => $cantidad,
+                    'dPrecio_unitario' => $precio,
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Producto agregado al carrito.'
+            ]);
+        }
+
+        //CASO 2: PRODUCTO SIMPLE 
+        $producto = Producto::find($productoId);
+
+        if (!$producto || !$producto->bActivo) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Producto no encontrado.'
+            ], 404);
+        }
+
+        if ($producto->iStock <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este producto está agotado.'
+            ]);
+        }
+
+        if ($cantidad > $producto->iStock) {
+            return response()->json([
+                'success' => false,
+                'message' => "Solo hay {$producto->iStock} disponibles"
+            ]);
+        }
+
+        $precioProducto = $producto->dPrecio_final;
+
+        $carrito = CarritoHelper::carritoActual();
+
+        $detalle = CarritoDetalle::where('id_carrito', $carrito->id_carrito)
+            ->where('id_producto', $producto->id_producto)
+            ->whereNull('id_variacion')
+            ->first();
+
+        if ($detalle) {
+            $nuevaCantidad = $detalle->iCantidad + $cantidad;
+
+            if ($nuevaCantidad > $producto->iStock) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Solo hay {$producto->iStock} unidades disponibles."
+                ]);
+            }
+
+            $detalle->iCantidad = $nuevaCantidad;
+            $detalle->save();
+        } else {
+            if ($cantidad > $producto->iStock) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Solo hay {$producto->iStock} unidades disponibles."
+                ]);
+            }
+
+            CarritoDetalle::create([
+                'id_carrito'       => $carrito->id_carrito,
+                'id_producto'      => $producto->id_producto,
+                'id_variacion'     => null,
+                'vNombre_variacion' => null,
+                'iCantidad'        => $cantidad,
+                'dPrecio_unitario' => $precioProducto,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Producto agregado al carrito.'
+        ]);
     }
 
     /**
@@ -170,15 +303,40 @@ class CarritoController extends Controller
             ->where('id_carrito', $carrito->id_carrito)
             ->firstOrFail();
 
-        $producto = $detalle->producto;
         $cantidadSolicitada = (int) $request->cantidad;
 
-        // Validar stock disponible
-        if ($cantidadSolicitada > $producto->iStock) {
-            return redirect()->back()->with(
-                'warning',
-                "No puedes agregar {$cantidadSolicitada} unidades. Solo hay {$producto->iStock} disponibles."
-            );
+        // Determinar stock según si es variación o producto simple
+        if ($detalle->id_variacion) {
+
+            $variacion = $detalle->variacion;
+
+            if (!$variacion || !$variacion->bActivo) {
+                return redirect()->back()->with('warning', 'La variación ya no está disponible.');
+            }
+
+            if ($variacion->iStock <= 0) {
+                return redirect()->back()->with('warning', 'Esta variación ya no tiene stock disponible.');
+            }
+
+            if ($cantidadSolicitada > $variacion->iStock) {
+                return redirect()->back()->with(
+                    'warning',
+                    "Solo hay {$variacion->iStock} unidades disponibles para esta variación."
+                );
+            }
+        } else {
+            $producto = $detalle->producto;
+
+            if (!$producto || $producto->iStock <= 0) {
+                return redirect()->back()->with('warning', 'Este producto ya no tiene stock disponible.');
+            }
+
+            if ($cantidadSolicitada > $producto->iStock) {
+                return redirect()->back()->with(
+                    'warning',
+                    "No puedes agregar {$cantidadSolicitada} unidades. Solo hay {$producto->iStock} disponibles."
+                );
+            }
         }
 
         $detalle->iCantidad = $cantidadSolicitada;

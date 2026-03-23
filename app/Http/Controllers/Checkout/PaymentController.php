@@ -909,6 +909,8 @@ class PaymentController extends Controller
             PedidoDetalle::create([
                 'id_pedido' => $pedido->id_pedido,
                 'id_producto' => $detalle->id_producto,
+                'id_variacion' => $detalle->id_variacion,
+                'vNombre_variacion' => $detalle->vNombre_variacion,
                 'iCantidad' => $detalle->cantidad,
                 'dPrecio_unitario' => $detalle->precio_unitario,
             ]);
@@ -928,6 +930,8 @@ class PaymentController extends Controller
             DetalleVenta::create([
                 'id_venta' => $venta->id_venta,
                 'id_producto' => $detalle->id_producto,
+                'id_variacion' => $detalle->id_variacion,
+                'vNombre_variacion' => $detalle->vNombre_variacion,
                 'iCantidad' => $detalle->cantidad,
                 'dPrecio_unitario' => $detalle->precio_unitario,
             ]);

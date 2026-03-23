@@ -2,7 +2,7 @@
 
 namespace App\Services\Stock;
 
-use App\Models\{Carrito, Producto, StockReserva};
+use App\Models\{Carrito, Producto, StockReserva, ProductoVariacion};
 use Illuminate\Support\Facades\DB;
 use Exception;
 
@@ -24,17 +24,38 @@ class ConsumirReservaService
 
             foreach ($reservas as $reserva) {
 
-                $producto = Producto::lockForUpdate()
-                    ->find($reserva->id_producto);
+                if ($reserva->id_variacion) {
+                    // ── VARIACIÓN ──
+                    $variacion = ProductoVariacion::lockForUpdate()
+                        ->find($reserva->id_variacion);
 
-                if (! $producto) {
-                    throw new Exception('Producto no encontrado');
+                    if (!$variacion) {
+                        throw new Exception("Variación no encontrada al consumir reserva (id: {$reserva->id_variacion})");
+                    }
+
+                    // El stock ya fue decrementado al reservar,
+                    // aquí solo nos aseguramos de que no quede negativo
+                    if ($variacion->iStock < 0) {
+                        $variacion->iStock = 0;
+                        $variacion->save();
+                    }
+
+                    // No hay iStock_reservado en variaciones, nada más que limpiar
+
+                } else {
+
+                    $producto = Producto::lockForUpdate()
+                        ->find($reserva->id_producto);
+
+                    if (! $producto) {
+                        throw new Exception('Producto no encontrado');
+                    }
+
+                    // 🔽 Consumir definitivamente
+                    $producto->iStock_reservado -= $reserva->cantidad;
+                    $producto->iStock     -= $reserva->cantidad;
+                    $producto->save();
                 }
-
-                // 🔽 Consumir definitivamente
-                $producto->iStock_reservado -= $reserva->cantidad;
-                $producto->iStock     -= $reserva->cantidad;
-                $producto->save();
             }
 
             // 📦 Marcar carrito como convertido

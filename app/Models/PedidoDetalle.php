@@ -8,11 +8,13 @@ class PedidoDetalle extends Model
 {
     protected $table = 'tbl_pedido_detalles';
     protected $primaryKey = 'id_item';
-    public $timestamps = false; 
+    public $timestamps = false;
 
     protected $fillable = [
         'id_pedido',
         'id_producto',
+        'id_variacion',
+        'vNombre_variacion',
         'iCantidad',
         'dPrecio_unitario',
     ];

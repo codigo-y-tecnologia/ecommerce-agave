@@ -10,7 +10,7 @@ class CarritoDetalle extends Model
     protected $primaryKey = 'id_detalle_carrito';
     public $timestamps = false;
 
-    protected $fillable = ['id_carrito', 'id_producto', 'iCantidad', 'dPrecio_unitario'];
+    protected $fillable = ['id_carrito', 'id_producto', 'id_variacion', 'vNombre_variacion', 'iCantidad', 'dPrecio_unitario'];
 
     // CLAVE
     protected $touches = ['carrito'];
@@ -28,6 +28,12 @@ class CarritoDetalle extends Model
     public function producto()
     {
         return $this->belongsTo(Producto::class, 'id_producto', 'id_producto');
+    }
+
+    // Relación con producto variaciones
+    public function variacion()
+    {
+        return $this->belongsTo(ProductoVariacion::class, 'id_variacion');
     }
 
     // Accessors para simplificar en vistas y controladores

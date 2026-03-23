@@ -9,13 +9,15 @@ class DetalleVenta extends Model
 {
     use HasFactory;
 
-    protected $table = 'tbl_detalle_ventas';  
+    protected $table = 'tbl_detalle_ventas';
     protected $primaryKey = 'id_detalle_venta';
     public $timestamps = false;
 
     protected $fillable = [
         'id_venta',
         'id_producto',
+        'id_variacion',
+        'vNombre_variacion',
         'iCantidad',
         'dPrecio_unitario',
         'dSubtotal',

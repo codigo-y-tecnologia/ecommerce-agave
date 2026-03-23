@@ -9,6 +9,7 @@ class LiberarReservaPorCarritoService
     public function ejecutar($carrito): void
     {
         StockReserva::where('id_carrito', $carrito->id_carrito)
+            ->lockForUpdate()
             ->get()
             ->each(
                 fn($reserva) =>
