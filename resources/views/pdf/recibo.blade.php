@@ -62,7 +62,15 @@
     <tbody>
         @foreach($pedido->detalles as $det)
             <tr>
-                <td>{{ $det->producto->vNombre }}</td>
+                <td>{{ $det->producto->vNombre }}
+
+                    @if($det->vNombre_variacion)
+                        <br>
+                        <small class="text-muted">
+                            {{ $det->vNombre_variacion }}
+                        </small>
+                    @endif
+                </td>
                 <td>{{ $det->iCantidad }}</td>
                 <td class="text-right">${{ number_format($det->dPrecio_unitario, 2) }}</td>
                 <td class="text-right">

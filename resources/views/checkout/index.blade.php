@@ -210,50 +210,8 @@
                         @php
                             $producto = $detalle->producto;
                             $cantidad = $detalle->cantidad;
-                            $precio_unitario = $producto->dPrecio_final;
-                            $subtotalProducto = $precio_unitario * $cantidad;
-                            /*
-                            // Precio base del producto sin impuestos
-                            $precio_base = $producto->dPrecio_venta;
-
-                            // Obtener impuestos activos
-                            $impuestos = $producto->impuestos->where('bActivo', 1);
-
-                            $ieps = 0;
-                            $iva = 0;
-
-                            $desglose = [];
-
-                            // Calcular IEPS primero
-                            foreach ($impuestos as $imp) {
-                                if ($imp->eTipo === 'IEPS') {
-                                    $ieps = $precio_base * ($imp->dPorcentaje / 100);
-                                }
-                            }
-
-                            // Calcular IVA después (sobre base + IEPS)
-                            foreach ($impuestos as $imp) {
-                                if ($imp->eTipo === 'IVA') {
-                                    $iva = ($precio_base + $ieps) * ($imp->dPorcentaje / 100);
-                                }
-                            }
-
-                            // Crear desglose visual
-                            foreach ($impuestos as $imp) {
-                                $desglose[] = "{$imp->eTipo} ({$imp->dPorcentaje}%)";
-                            }
-
-                            // Impuestos unitarios
-                            $impuestos_unitarios = $ieps + $iva;
-
-                            // Precio final unitario
-                            $precio_final_unitario = $precio_base + $ieps + $iva;
-
-                            // Totales multiplicados por cantidad
-                            $impuestosTotales = $impuestos_unitarios * $cantidad;
-                            $subtotalProducto = $precio_final_unitario * $cantidad;
-                            */
-
+                            $precio_unitario = $detalle->dPrecio_unitario;
+                            $subtotalProducto = $detalle->dSubtotal;
                         @endphp
                         <tr>
                             <td>{{ $producto->vNombre }}
@@ -271,14 +229,6 @@
                             <td class="text-end">
                                 ${{ number_format($precio_unitario, 2) }}
                             </td>
-
-                            {{-- Impuestos (IEPS + IVA) --}}
-                            {{-- <td class="text-end">
-                                <small class="text-muted d-block">{{ implode(', ', $desglose) }}</small>
-                                ${{ number_format($impuestosTotales, 2) }}
-                            </td> --}}
-
-                            {{-- Subtotal final (precio base + ieps + iva) * cantidad --}}
                             <td class="text-end fw-bold">
                                 ${{ number_format($subtotalProducto, 2) }}
                             </td>
@@ -297,10 +247,6 @@
                                 <span><strong>Subtotal:</strong></span>
                                 <span>${{ number_format($subtotal, 2) }}</span>
                             </div>
-                            {{-- <div class="d-flex justify-content-between mb-2">
-                                <span><strong>Impuestos:</strong></span>
-                                <span>${{ number_format($totalImpuestos, 2) }}</span>
-                            </div> --}}
                             <div class="d-flex justify-content-between mb-2" id="envio-linea">
                                 <span><strong>Envío:</strong></span>
                                 <span>

@@ -107,7 +107,15 @@
                 @endphp
 
                 <tr>
-                    <td>{{ $producto->vNombre }}</td>
+                    <td>{{ $producto->vNombre }}
+
+                        @if($det->vNombre_variacion)
+                        <br>
+                        <small class="text-muted">
+                            {{ $det->vNombre_variacion }}
+                        </small>
+                    @endif
+                    </td>
                     <td class="text-center">{{ $det->iCantidad }}</td>
                     <td class="text-end">${{ number_format($precio, 2) }}</td>
                     <td class="text-end">${{ number_format($subtotalProducto, 2) }}</td>

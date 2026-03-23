@@ -40,7 +40,7 @@ class CheckoutController extends Controller
 
             if ($detalle->variacion) {
                 $stock = $detalle->variacion->iStock;
-                $nombre = $detalle->producto->vNombre . ' (' . $detalle->variacion->getAtributosTexto() . ')';
+                $nombre = $detalle->producto->vNombre . ' (' . $detalle->vNombre_variacion . ')';
             } else {
                 $stock = $detalle->producto->iStock;
                 $nombre = $detalle->producto->vNombre;

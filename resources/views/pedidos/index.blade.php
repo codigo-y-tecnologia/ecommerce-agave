@@ -146,6 +146,13 @@
                         <a href="{{ route('productos.show.public', $producto->id_producto) }}"
                            class="fw-semibold text-decoration-none">
                             {{ $producto->vNombre }}
+
+                             @if($detallePrincipal->vNombre_variacion)
+                            <br>
+                            <small class="text-muted">
+                                {{ $detallePrincipal->vNombre_variacion }}
+                            </small>
+                        @endif
                         </a>
 
                         @if($pedido->detalles->count() > 1)

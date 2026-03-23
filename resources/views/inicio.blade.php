@@ -101,6 +101,7 @@
 
         .nav-links li a.favorito-link {
             color: #495057;
+            margin-right: 15px;
         }
 
         .nav-links li a.favorito-link:hover {
@@ -122,6 +123,10 @@
         }
 
         .consultar-pedido {
+            margin-right: 15px;
+        }
+
+        .mis-pedidos {
             margin-right: 15px;
         }
 
@@ -954,7 +959,15 @@
                 <li><a href="{{ route('carrito.index') }}">🛒 Mi Carrito</a></li>
                 <li>
                     @auth
+                    @role('cliente')
                         <a href="{{ route('favoritos.index') }}" class="favorito-link">❤️ Mis Favoritos</a>
+                        <a class="mis-pedidos" href="{{ route('pedidos.index') }}">
+                        📦 Mis Pedidos
+                    </a>
+                    <a class="mi-perfil" href="{{ route('perfil.index') }}">
+                        👤 Perfil
+                    </a>
+                    @endrole
                     @else
                     <a class="consultar-pedido" href="{{ route('consulta.pedido.form') }}"><i class="bi bi-search"></i>Consultar pedido</a>
                         <a href="{{ route('favoritos.invitado.index') }}" class="favorito-link">❤️ Mis Favoritos</a>

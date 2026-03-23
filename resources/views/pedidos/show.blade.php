@@ -155,6 +155,13 @@ Tu solicitud fue aprobada y el reembolso fue procesado.
                 <a href="{{ route('productos.show.public', $producto->id_producto) }}"
                    class="fw-semibold text-decoration-none">
                     {{ $producto->vNombre }}
+
+                     @if($det->vNombre_variacion)
+                    <br>
+                    <small class="text-muted">
+                        {{ $det->vNombre_variacion }}
+                    </small>
+                @endif
                 </a>
             @else
                 <span class="text-muted">Producto no disponible</span>
