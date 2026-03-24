@@ -59,7 +59,6 @@
                         <td><span class="badge bg-secondary">{{ $producto->vCodigo_barras }}</span></td>
                         <td>{{ $producto->vNombre }}</td>
                         <td>
-                            <!-- SIEMPRE mostrar el precio final del producto padre -->
                             <span class="fw-bold">${{ number_format($precioFinalProducto, 2) }}</span>
                             
                             @if($producto->tieneDescuentoActivo())
@@ -88,36 +87,33 @@
                                 {{ $producto->bActivo ? 'Activo' : 'Inactivo' }}
                             </span>
                         </td>
-                       <td>
-                        <div class="btn-group btn-group-sm">
-                            <!-- Botón Ver detalles -->
-                            <a href="{{ route('productos.show', $producto->id_producto) }}" class="btn btn-info" 
-                            title="Ver detalles">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            
-                            <!-- Botón Gestionar atributos -->
-                            <a href="{{ route('productos.atributos', $producto->id_producto) }}" class="btn btn-success" 
-                            title="Gestionar atributos">
-                                <i class="fas fa-tags"></i>
-                            </a>
-                            
-                            <!-- Botón Editar - USANDO URL DIRECTA PARA ASEGURAR -->
-                            <a href="/productos/{{ $producto->id_producto }}/edit" class="btn btn-warning" 
-                            title="Editar">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            
-                            <!-- Botón Eliminar -->
-                            <form action="{{ route('productos.destroy', $producto->id_producto) }}" method="POST" 
-                                class="d-inline" style="display: inline;">
-                                @csrf @method('DELETE')
-                                <button type="button" class="btn btn-danger" title="Eliminar" onclick="confirmDelete(event, this)">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <!-- Botón Ver detalles -->
+                                <a href="{{ route('productos.show', $producto->id_producto) }}" class="btn btn-info" title="Ver detalles">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                
+                                <!-- Botón Gestionar atributos -->
+                                <a href="{{ route('productos.atributos', $producto->id_producto) }}" class="btn btn-success" title="Gestionar atributos">
+                                    <i class="fas fa-tags"></i>
+                                </a>
+                                
+                                <!-- Botón Editar -->
+                                <a href="{{ route('productos.edit', $producto->id_producto) }}" class="btn btn-warning" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                
+                                <!-- Botón Eliminar -->
+                                <form action="{{ route('productos.destroy', $producto->id_producto) }}" method="POST" class="d-inline" onsubmit="return confirmDelete(event, this)">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-danger btn-sm" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
                     </tr>
                     @endforeach
                 </tbody>
@@ -140,9 +136,8 @@
 @section('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-function confirmDelete(event, button) {
+function confirmDelete(event, form) {
     event.preventDefault();
-    const form = button.closest('form');
     
     Swal.fire({
         title: '¿Estás seguro?',

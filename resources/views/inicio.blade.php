@@ -294,21 +294,35 @@
         }
 
         .precio-actual small {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 400;
             color: #666;
-            margin-left: 4px;
         }
 
         .descuento-badge {
             background: #00a650;
             color: white;
-            padding: 3px 6px;
+            padding: 2px 6px;
             border-radius: 4px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             margin-left: 8px;
             display: inline-block;
+        }
+
+        .ahorro-info {
+            background-color: #e8f5e9;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 11px;
+            color: #2e7d32;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        .ahorro-info i {
+            font-size: 10px;
+            margin-right: 2px;
         }
 
         .motivo-descuento {
@@ -1054,9 +1068,18 @@
                         $porcentajeImpuesto = $item->porcentaje_impuestos ?? 0;
                     }
                     
+                    // PRECIO BASE (con descuento si aplica)
                     $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                    
+                    // PRECIO FINAL (con impuesto)
                     $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
+                    
+                    // PRECIO ORIGINAL CON IMPUESTO (para mostrar el ahorro)
+                    $precioOriginalConImpuesto = $precioOriginal + ($precioOriginal * $porcentajeImpuesto / 100);
+                    
+                    // Porcentaje de descuento real
                     $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
+                    $ahorroTotal = $precioOriginalConImpuesto - $precioFinal;
                     
                     $envioGratis = $precioFinal >= 150;
                     $costoEnvio = 50;
@@ -1109,18 +1132,21 @@
 
                         <div class="precio-container">
                             @if($tieneDescuento && $porcentajeDescuento > 0)
-                                <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
+                                <span class="precio-original">${{ number_format($precioOriginalConImpuesto, 2) }}</span>
                                 <div style="display: flex; align-items: center; flex-wrap: wrap;">
                                     <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                     <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                 </div>
-                                
+                                @if($ahorroTotal > 0)
+                                    <div class="ahorro-info">
+                                        <i class="fas fa-piggy-bank"></i> Ahorras ${{ number_format($ahorroTotal, 2) }}
+                                    </div>
+                                @endif
                                 @if($motivoDescuento && $esVariacion)
                                     <div class="motivo-descuento" title="{{ $motivoDescuento }}">
                                         <i class="fas fa-tag"></i> {{ Str::limit($motivoDescuento, 25) }}
                                     </div>
                                 @endif
-                                
                                 @if($fechaInicio && $fechaFin)
                                     <div class="periodo-descuento">
                                         <i class="fas fa-calendar-alt"></i> {{ $fechaInicio }} - {{ $fechaFin }}
@@ -1232,9 +1258,17 @@
                             $porcentajeImpuesto = $item->porcentaje_impuestos ?? 0;
                         }
                         
+                        // PRECIO BASE (con descuento si aplica)
                         $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                        
+                        // PRECIO FINAL (con impuesto)
                         $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
+                        
+                        // PRECIO ORIGINAL CON IMPUESTO (para mostrar el ahorro)
+                        $precioOriginalConImpuesto = $precioOriginal + ($precioOriginal * $porcentajeImpuesto / 100);
+                        
                         $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
+                        $ahorroTotal = $precioOriginalConImpuesto - $precioFinal;
                         
                         $envioGratis = $precioFinal >= 150;
                         $costoEnvio = 50;
@@ -1286,18 +1320,21 @@
 
                             <div class="precio-container">
                                 @if($tieneDescuento && $porcentajeDescuento > 0)
-                                    <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
+                                    <span class="precio-original">${{ number_format($precioOriginalConImpuesto, 2) }}</span>
                                     <div style="display: flex; align-items: center; flex-wrap: wrap;">
                                         <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                         <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                     </div>
-                                    
+                                    @if($ahorroTotal > 0)
+                                        <div class="ahorro-info">
+                                            <i class="fas fa-piggy-bank"></i> Ahorras ${{ number_format($ahorroTotal, 2) }}
+                                        </div>
+                                    @endif
                                     @if($motivoDescuento && $esVariacion)
                                         <div class="motivo-descuento" title="{{ $motivoDescuento }}">
                                             <i class="fas fa-tag"></i> {{ Str::limit($motivoDescuento, 25) }}
                                         </div>
                                     @endif
-                                    
                                     @if($fechaInicio && $fechaFin)
                                         <div class="periodo-descuento">
                                             <i class="fas fa-calendar-alt"></i> {{ $fechaInicio }} - {{ $fechaFin }}
@@ -1403,9 +1440,17 @@
                         $porcentajeImpuesto = $item->porcentaje_impuestos ?? 0;
                     }
                     
+                    // PRECIO BASE (con descuento si aplica)
                     $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                    
+                    // PRECIO FINAL (con impuesto)
                     $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
+                    
+                    // PRECIO ORIGINAL CON IMPUESTO
+                    $precioOriginalConImpuesto = $precioOriginal + ($precioOriginal * $porcentajeImpuesto / 100);
+                    
                     $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
+                    $ahorroTotal = $precioOriginalConImpuesto - $precioFinal;
                     
                     $envioGratis = $precioFinal >= 150;
                     $costoEnvio = 50;
@@ -1452,18 +1497,21 @@
 
                         <div class="precio-container">
                             @if($tieneDescuento && $porcentajeDescuento > 0)
-                                <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
+                                <span class="precio-original">${{ number_format($precioOriginalConImpuesto, 2) }}</span>
                                 <div style="display: flex; align-items: center; flex-wrap: wrap;">
                                     <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                     <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                 </div>
-                                
+                                @if($ahorroTotal > 0)
+                                    <div class="ahorro-info">
+                                        <i class="fas fa-piggy-bank"></i> Ahorras ${{ number_format($ahorroTotal, 2) }}
+                                    </div>
+                                @endif
                                 @if($motivoDescuento && $esVariacion)
                                     <div class="motivo-descuento" title="{{ $motivoDescuento }}">
                                         <i class="fas fa-tag"></i> {{ Str::limit($motivoDescuento, 25) }}
                                     </div>
                                 @endif
-                                
                                 @if($fechaInicio && $fechaFin)
                                     <div class="periodo-descuento">
                                         <i class="fas fa-calendar-alt"></i> {{ $fechaInicio }} - {{ $fechaFin }}
@@ -1563,9 +1611,17 @@
                         $porcentajeImpuesto = $item->porcentaje_impuestos ?? 0;
                     }
                     
+                    // PRECIO BASE (con descuento si aplica)
                     $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                    
+                    // PRECIO FINAL (con impuesto)
                     $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
+                    
+                    // PRECIO ORIGINAL CON IMPUESTO
+                    $precioOriginalConImpuesto = $precioOriginal + ($precioOriginal * $porcentajeImpuesto / 100);
+                    
                     $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
+                    $ahorroTotal = $precioOriginalConImpuesto - $precioFinal;
                     
                     $envioGratis = $precioFinal >= 150;
                     $costoEnvio = 50;
@@ -1617,18 +1673,21 @@
 
                         <div class="precio-container">
                             @if($tieneDescuento && $porcentajeDescuento > 0)
-                                <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
+                                <span class="precio-original">${{ number_format($precioOriginalConImpuesto, 2) }}</span>
                                 <div style="display: flex; align-items: center; flex-wrap: wrap;">
                                     <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                     <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                 </div>
-                                
+                                @if($ahorroTotal > 0)
+                                    <div class="ahorro-info">
+                                        <i class="fas fa-piggy-bank"></i> Ahorras ${{ number_format($ahorroTotal, 2) }}
+                                    </div>
+                                @endif
                                 @if($motivoDescuento && $esVariacion)
                                     <div class="motivo-descuento" title="{{ $motivoDescuento }}">
                                         <i class="fas fa-tag"></i> {{ Str::limit($motivoDescuento, 25) }}
                                     </div>
                                 @endif
-                                
                                 @if($fechaInicio && $fechaFin)
                                     <div class="periodo-descuento">
                                         <i class="fas fa-calendar-alt"></i> {{ $fechaInicio }} - {{ $fechaFin }}
@@ -1827,7 +1886,6 @@
                             localStorage.setItem('last_favorito_time', Date.now());
                         }
                     } else {
-                        // Revertir cambios si hubo error
                         revertirEstadoFavorito(button, estabaActivo);
                         showNotification('❌ ' + (data.message || 'Error al gestionar favoritos'), 'error');
                     }
@@ -1849,7 +1907,6 @@
                     ? `/favoritos-invitado/check/${productoId}/${variacionId}`
                     : `/favoritos-invitado/check/${productoId}`;
                 
-                // Verificar estado actual
                 fetch(checkUrl, {
                     method: 'GET',
                     headers: {
@@ -1865,7 +1922,6 @@
                 })
                 .then(checkData => {
                     if (checkData.success) {
-                        // Proceder con el toggle
                         const toggleUrl = variacionId 
                             ? `/favoritos-invitado/toggle-variacion/${variacionId}`
                             : `/favoritos-invitado/toggle-producto/${productoId}`;
@@ -1976,7 +2032,6 @@
                     showNotification('❌ Error de conexión', 'error');
                 });
             @else
-                // Redirigir a login para invitados
                 const redirectUrl = new URL('{{ route("login") }}');
                 redirectUrl.searchParams.set('from_carrito', 'true');
                 redirectUrl.searchParams.set('redirect', window.location.href);
@@ -1985,7 +2040,6 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            // Prevenir propagación en botones
             const buttons = document.querySelectorAll('.producto-card button, .producto-card a');
             buttons.forEach(button => {
                 button.addEventListener('click', function(e) {
@@ -1993,7 +2047,6 @@
                 });
             });
 
-            // Links de descuento
             const linkDescuento = document.getElementById('link-descuento');
             if (linkDescuento) {
                 linkDescuento.addEventListener('click', function(e) {
@@ -2010,20 +2063,17 @@
                 });
             }
 
-            // Auto-focus en búsqueda para desktop
             if (window.innerWidth > 768) {
                 const searchInput = document.querySelector('.barra-busqueda-principal input[type="text"]');
                 if (searchInput) searchInput.focus();
             }
 
-            // Verificar acciones recientes de localStorage
             const lastAction = localStorage.getItem('last_favorito_action');
             const lastId = localStorage.getItem('last_favorito_id');
             const lastTipo = localStorage.getItem('last_favorito_tipo');
             const lastTime = localStorage.getItem('last_favorito_time');
             
             if (lastAction && lastId && lastTime && (Date.now() - lastTime) < 5000) {
-                // Buscar el botón correspondiente
                 let selector;
                 if (lastTipo === 'variacion') {
                     selector = `[data-variacion="${lastId}"]`;
@@ -2047,7 +2097,6 @@
                 }
             }
             
-            // Limpiar localStorage después de 5 segundos
             setTimeout(() => {
                 localStorage.removeItem('last_favorito_action');
                 localStorage.removeItem('last_favorito_id');

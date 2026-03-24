@@ -27,13 +27,13 @@ class InicioController extends Controller
             $productosRecomendados = $this->getProductosRecomendados(8);
             
             // Obtener todos los productos con paginación (productos sin variaciones + variaciones)
-            $todosLosProductos = $this->getTodosLosProductos(12);
+            $todosLosItems = $this->getTodosLosProductos(12);
             
             return view('inicio', compact(
                 'productosDescuento', 
                 'productosDestacados', 
                 'productosRecomendados',
-                'todosLosProductos'
+                'todosLosItems'
             ));
             
         } catch (\Exception $e) {
@@ -43,13 +43,13 @@ class InicioController extends Controller
             $productosDescuento = collect([]);
             $productosDestacados = collect([]);
             $productosRecomendados = collect([]);
-            $todosLosProductos = collect([]);
+            $todosLosItems = collect([]);
             
             return view('inicio', compact(
                 'productosDescuento', 
                 'productosDestacados', 
                 'productosRecomendados',
-                'todosLosProductos'
+                'todosLosItems'
             ))->with('error', 'Error al cargar los productos. Intenta más tarde.');
         }
     }
@@ -71,35 +71,59 @@ class InicioController extends Controller
                 $query->whereNull('dFecha_fin_descuento')
                     ->orWhere('dFecha_fin_descuento', '>=', now()->toDateString());
             })
+            ->where(function($query) {
+                $query->whereNull('dFecha_inicio_descuento')
+                    ->orWhere('dFecha_inicio_descuento', '<=', now()->toDateString());
+            })
+            ->where('dPrecio_descuento', '>', 0)
+            ->where('dPrecio_descuento', '<', DB::raw('dPrecio_venta'))
             ->with(['categoria', 'marca', 'etiquetas', 'impuestos'])
             ->get();
             
         foreach ($productos as $producto) {
-            $producto->tipo_item = 'producto';
-            $producto->item_id = $producto->id_producto;
-            $items->push($producto);
+            if ($producto->tieneDescuentoActivo()) {
+                $producto->tipo_item = 'producto';
+                $producto->item_id = $producto->id_producto;
+                $items->push($producto);
+            }
         }
         
         // Variaciones con descuento
         $variaciones = ProductoVariacion::whereHas('producto', function($query) {
                 $query->where('bActivo', true);
             })
+            ->where('bActivo', true)
             ->where('bTiene_descuento', true)
             ->where(function($query) {
                 $query->whereNull('dFecha_fin_descuento')
                     ->orWhere('dFecha_fin_descuento', '>=', now()->toDateString());
             })
+            ->where(function($query) {
+                $query->whereNull('dFecha_inicio_descuento')
+                    ->orWhere('dFecha_inicio_descuento', '<=', now()->toDateString());
+            })
+            ->where('dPrecio_descuento', '>', 0)
+            ->where('dPrecio_descuento', '<', DB::raw('dPrecio'))
             ->with(['producto.categoria', 'producto.marca', 'producto.etiquetas', 'impuesto', 'atributos.valor'])
             ->get();
             
         foreach ($variaciones as $variacion) {
-            $variacion->tipo_item = 'variacion';
-            $variacion->item_id = $variacion->id_variacion;
-            $items->push($variacion);
+            if ($variacion->tieneDescuentoActivo()) {
+                $variacion->tipo_item = 'variacion';
+                $variacion->item_id = $variacion->id_variacion;
+                $items->push($variacion);
+            }
         }
         
-        // Mezclar y tomar hasta el límite
-        return $items->shuffle()->take($limit);
+        // Ordenar por mayor porcentaje de descuento
+        $items = $items->sortByDesc(function($item) {
+            if ($item->tipo_item === 'variacion') {
+                return $item->porcentaje_descuento;
+            }
+            return $item->porcentajeDescuento;
+        });
+        
+        return $items->take($limit);
     }
     
     /**
