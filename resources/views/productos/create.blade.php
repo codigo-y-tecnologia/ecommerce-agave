@@ -586,17 +586,18 @@
                 </div>
 
                 <div class="row">
-                    <!-- IMAGEN PRINCIPAL -->
+                   <!-- IMAGEN PRINCIPAL -->
                     <div class="col-md-6">
                         <div class="form-group mb-3">
                             <label for="imagen_principal" class="form-label fw-bold">
                                 <i class="fas fa-star text-warning me-1"></i>Imagen Principal <span class="text-danger">*</span>
                             </label>
                             <input type="file" name="imagen_principal" id="imagen_principal" 
-                                   class="form-control @error('imagen_principal') is-invalid @enderror" 
-                                   accept="image/jpeg,image/jpg,image/png"
-                                   required
-                                   onchange="previewImagenPrincipal(this)">
+                                class="form-control @error('imagen_principal') is-invalid @enderror" 
+                                accept="image/jpeg,image/jpg,image/png"
+                                onchange="previewImagenPrincipal(this)">
+                            <!-- Campo hidden para saber si se eliminó la imagen -->
+                            <input type="hidden" name="eliminar_imagen_principal" id="eliminar_imagen_principal" value="0">
                             @error('imagen_principal')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -609,9 +610,9 @@
                             <div id="preview_principal_container" class="mt-2" style="display: none;">
                                 <div class="border rounded p-2 text-center bg-light">
                                     <img id="preview_principal_img" src="#" 
-                                         class="img-thumbnail" 
-                                         style="max-width: 200px; max-height: 200px; object-fit: contain;"
-                                         alt="Preview imagen principal">
+                                        class="img-thumbnail" 
+                                        style="max-width: 200px; max-height: 200px; object-fit: contain;"
+                                        alt="Preview imagen principal">
                                     <div class="mt-2">
                                         <small class="text-muted d-block">Imagen principal (portada)</small>
                                         <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarImagenPrincipal()">
@@ -2530,58 +2531,33 @@ function actualizarPrecioFinalVariacion(valorKey) {
 
 function calcularTamañoTotal() {
     let total = 0;
-    
     if (imagenPrincipalFile) total += imagenPrincipalFile.size;
     if (gifFile) total += gifFile.size;
-    
-    selectedImages.forEach(img => {
-        total += img.file.size;
-    });
+    selectedImages.forEach(img => total += img.file.size);
     
     Object.keys(imagenesVariacion).forEach(valorKey => {
-        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
-            imagenesVariacion[valorKey].imagenes.forEach(img => {
-                total += img.file.size;
-            });
+        if (imagenesVariacion[valorKey].imagenes) {
+            imagenesVariacion[valorKey].imagenes.forEach(img => total += img.file.size);
         }
     });
-    
     return total;
 }
+
 
 function actualizarBarraProgresoTamaño() {
     const totalSize = calcularTamañoTotal();
     const porcentaje = (totalSize / maxTotalSize) * 100;
     const progressBar = document.getElementById('size-progress-bar');
     const totalSizeSpan = document.getElementById('total-size');
-    const limiteMsg = document.getElementById('limiteArchivosMsg');
     
     if (totalSizeSpan) {
-        if (totalSize < 1024) {
-            totalSizeSpan.textContent = totalSize + ' B';
-        } else if (totalSize < 1024 * 1024) {
-            totalSizeSpan.textContent = (totalSize / 1024).toFixed(2) + ' KB';
-        } else {
-            totalSizeSpan.textContent = (totalSize / (1024 * 1024)).toFixed(2) + ' MB';
-        }
+        totalSizeSpan.textContent = totalSize > 1024 * 1024 ? 
+            (totalSize / (1024 * 1024)).toFixed(2) + ' MB' : 
+            (totalSize / 1024).toFixed(2) + ' KB';
     }
-    
-    if (progressBar) {
-        progressBar.style.width = Math.min(porcentaje, 100) + '%';
-    }
-    
-    if (totalSize > maxTotalSize) {
-        limiteExcedido = true;
-        if (limiteMsg) limiteMsg.style.display = 'block';
-        const btnSubmit = document.getElementById('btnSubmit');
-        if (btnSubmit) btnSubmit.disabled = true;
-    } else {
-        limiteExcedido = false;
-        if (limiteMsg) limiteMsg.style.display = 'none';
-        const btnSubmit = document.getElementById('btnSubmit');
-        if (btnSubmit) btnSubmit.disabled = false;
-    }
+    if (progressBar) progressBar.style.width = Math.min(porcentaje, 100) + '%';
 }
+
 
 function actualizarContadorImagenes() {
     const totalImagenesSpan = document.getElementById('total-imagenes');
@@ -2590,60 +2566,299 @@ function actualizarContadorImagenes() {
     let total = (imagenPrincipalFile ? 1 : 0) + (gifFile ? 1 : 0) + selectedImages.length;
     
     Object.keys(imagenesVariacion).forEach(valorKey => {
-        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
-            total += imagenesVariacion[valorKey].imagenes.length;
-        }
+        if (imagenesVariacion[valorKey].imagenes) total += imagenesVariacion[valorKey].imagenes.length;
     });
     
     totalImagenesSpan.textContent = total;
 }
 
+// ============ FUNCIONES DE IMÁGENES DEL PRODUCTO PRINCIPAL ============
+
 function previewImagenPrincipal(input) {
     const previewContainer = document.getElementById('preview_principal_container');
     const previewImg = document.getElementById('preview_principal_img');
+    const hiddenEliminar = document.getElementById('eliminar_imagen_principal');
     
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-        
-        if (!validTypes.includes(file.type)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Formato no válido',
-                text: 'La imagen principal solo acepta formatos JPG, JPEG y PNG'
-            });
-            input.value = '';
-            return;
-        }
-        
-        if (file.size > 5 * 1024 * 1024) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Archivo demasiado grande',
-                text: 'La imagen principal no puede exceder los 5MB'
-            });
-            input.value = '';
-            return;
-        }
-        
-        imagenPrincipalFile = file;
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-            if (previewImg) previewImg.src = e.target.result;
-            if (previewContainer) previewContainer.style.display = 'block';
-            actualizarBarraProgresoTamaño();
-            actualizarContadorImagenes();
-        }
-        
-        reader.readAsDataURL(input.files[0]);
-    } else {
-        if (previewContainer) previewContainer.style.display = 'none';
-        imagenPrincipalFile = null;
+    // Si el usuario NO seleccionó un archivo (canceló), NO HACER NADA
+    if (!input.files || input.files.length === 0) {
+        console.log('Canceló selección - manteniendo imagen actual');
+        input.value = '';
+        // No tocar imagenPrincipalFile
+        // No tocar el preview
+        return;
+    }
+    
+    const file = input.files[0];
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    
+    if (!validTypes.includes(file.type)) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Formato no válido',
+            text: 'La imagen principal solo acepta formatos JPG, JPEG y PNG'
+        });
+        input.value = '';
+        return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Archivo demasiado grande',
+            text: 'La imagen principal no puede exceder los 5MB'
+        });
+        input.value = '';
+        return;
+    }
+    
+    // SOLO si hay archivo válido, actualizamos todo
+    imagenPrincipalFile = file;
+    
+    // Resetear el campo hidden (no eliminar)
+    if (hiddenEliminar) hiddenEliminar.value = '0';
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        if (previewImg) previewImg.src = e.target.result;
+        if (previewContainer) previewContainer.style.display = 'block';
         actualizarBarraProgresoTamaño();
         actualizarContadorImagenes();
     }
+    reader.readAsDataURL(file);
 }
+
+function cancelarImagenPrincipal() {
+    const input = document.getElementById('imagen_principal');
+    const previewContainer = document.getElementById('preview_principal_container');
+    const hiddenEliminar = document.getElementById('eliminar_imagen_principal');
+    
+    // Limpiar input
+    if (input) input.value = '';
+    
+    // Ocultar preview
+    if (previewContainer) previewContainer.style.display = 'none';
+    
+    // ELIMINAR la imagen
+    imagenPrincipalFile = null;
+    
+    // Marcar que se eliminó la imagen
+    if (hiddenEliminar) hiddenEliminar.value = '1';
+    
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+}
+
+// ============ FUNCIONES DE GIF ============
+
+function previewGif(input) {
+    const previewContainer = document.getElementById('preview_gif_container');
+    const previewImg = document.getElementById('preview_gif');
+    
+    if (!input.files || input.files.length === 0) {
+        console.log('Canceló selección de GIF - manteniendo GIF actual');
+        input.value = '';
+        return;
+    }
+    
+    const file = input.files[0];
+    
+    if (file.type !== 'image/gif') {
+        Swal.fire({
+            icon: 'error',
+            title: 'Formato no válido',
+            text: 'El campo GIF solo acepta archivos con formato GIF'
+        });
+        input.value = '';
+        return;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Archivo demasiado grande',
+            text: 'El GIF no puede exceder los 10MB'
+        });
+        input.value = '';
+        return;
+    }
+    
+    gifFile = file;
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        if (previewImg) previewImg.src = e.target.result;
+        if (previewContainer) previewContainer.style.display = 'block';
+        actualizarBarraProgresoTamaño();
+        actualizarContadorImagenes();
+    }
+    reader.readAsDataURL(file);
+}
+
+function cancelarGif() {
+    const input = document.getElementById('gif_producto');
+    const previewContainer = document.getElementById('preview_gif_container');
+    
+    if (input) input.value = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+    gifFile = null;
+    
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+}
+
+// ============ FUNCIONES DE IMÁGENES ADICIONALES ============
+
+function handleImageSelection(event) {
+    const input = event.target;
+    const files = input.files;
+    const maxFiles = 7;
+    const currentCount = selectedImages.length;
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    
+    // Si canceló, NO hacer nada
+    if (!files || files.length === 0) {
+        console.log('Canceló selección de imágenes adicionales');
+        input.value = '';
+        return;
+    }
+    
+    const tamanioActual = calcularTamañoTotal();
+    let nuevoTamanio = tamanioActual;
+    for (let i = 0; i < files.length; i++) {
+        nuevoTamanio += files[i].size;
+    }
+    
+    if (nuevoTamanio > maxTotalSize) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de tamaño excedido',
+            html: `<p>Si agregas estos archivos, excederás el límite de 50MB.</p>`
+        });
+        input.value = '';
+        return;
+    }
+    
+    if (currentCount + files.length > maxFiles) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de imágenes',
+            text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales.`
+        });
+        input.value = '';
+        return;
+    }
+    
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        if (!validTypes.includes(file.type)) continue;
+        if (file.size > 5 * 1024 * 1024) continue;
+        if (isImageDuplicate(file)) continue;
+        
+        const imageId = 'img_' + Date.now() + '_' + imageCounter++;
+        const preview = URL.createObjectURL(file);
+        
+        selectedImages.push({
+            id: imageId,
+            file: file,
+            preview: preview,
+            name: file.name,
+            size: file.size
+        });
+    }
+    
+    const countSpan = document.getElementById('selected-images-count');
+    if (countSpan) countSpan.textContent = selectedImages.length + ' archivos';
+    
+    renderSelectedImages();
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+    input.value = '';
+}
+
+function removeSelectedImage(imageId) {
+    const image = selectedImages.find(img => img.id === imageId);
+    if (image && image.preview) {
+        URL.revokeObjectURL(image.preview);
+    }
+    selectedImages = selectedImages.filter(img => img.id !== imageId);
+    
+    const countSpan = document.getElementById('selected-images-count');
+    if (countSpan) countSpan.textContent = selectedImages.length + ' archivos';
+    renderSelectedImages();
+    actualizarContadorImagenes();
+    actualizarBarraProgresoTamaño();
+}
+
+function isImageDuplicate(newFile) {
+    return selectedImages.some(img => 
+        img.file.name === newFile.name && 
+        img.file.size === newFile.size
+    );
+}
+
+function renderSelectedImages() {
+    const container = document.getElementById('selected-images-container');
+    const noMsg = document.getElementById('no-imagenes-msg');
+    
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (selectedImages.length === 0) {
+        if (noMsg) noMsg.style.display = 'block';
+        return;
+    }
+    
+    if (noMsg) noMsg.style.display = 'none';
+    
+    selectedImages.forEach((image, index) => {
+        const col = document.createElement('div');
+        col.className = 'col-6 col-md-3 mb-3';
+        
+        const card = document.createElement('div');
+        card.className = 'card border position-relative';
+        
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1';
+        btn.style.cssText = 'width: 28px; height: 28px; padding: 0; border-radius: 50%; z-index: 10;';
+        btn.onclick = function(e) { 
+            e.preventDefault();
+            removeSelectedImage(image.id); 
+        };
+        btn.innerHTML = '<i class="fas fa-times"></i>';
+        
+        const img = document.createElement('img');
+        img.src = image.preview;
+        img.className = 'card-img-top';
+        img.style.cssText = 'height: 120px; object-fit: contain; background: #f8f9fa; padding: 8px;';
+        
+        const cardBody = document.createElement('div');
+        cardBody.className = 'card-body p-2 text-center';
+        
+        const small1 = document.createElement('small');
+        small1.className = 'text-muted d-block';
+        small1.textContent = image.file.name.length > 20 ? image.file.name.substring(0, 20) + '...' : image.file.name;
+        
+        const small2 = document.createElement('small');
+        small2.className = 'text-muted d-block';
+        let sizeText = image.file.size < 1024 ? image.file.size + ' B' : 
+                      (image.file.size / 1024).toFixed(2) + ' KB';
+        small2.textContent = sizeText;
+        
+        cardBody.appendChild(small1);
+        cardBody.appendChild(small2);
+        
+        card.appendChild(btn);
+        card.appendChild(img);
+        card.appendChild(cardBody);
+        
+        col.appendChild(card);
+        container.appendChild(col);
+    });
+}
+
 
 function cancelarImagenPrincipal() {
     const input = document.getElementById('imagen_principal');
@@ -2660,46 +2875,47 @@ function previewGif(input) {
     const previewContainer = document.getElementById('preview_gif_container');
     const previewImg = document.getElementById('preview_gif');
     
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        
-        if (file.type !== 'image/gif') {
-            Swal.fire({
-                icon: 'error',
-                title: 'Formato no válido',
-                text: 'El campo GIF solo acepta archivos con formato GIF'
-            });
-            input.value = '';
-            return;
-        }
-        
-        if (file.size > 10 * 1024 * 1024) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Archivo demasiado grande',
-                text: 'El GIF no puede exceder los 10MB'
-            });
-            input.value = '';
-            return;
-        }
-        
-        gifFile = file;
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-            if (previewImg) previewImg.src = e.target.result;
-            if (previewContainer) previewContainer.style.display = 'block';
-            actualizarBarraProgresoTamaño();
-            actualizarContadorImagenes();
-        }
-        
-        reader.readAsDataURL(input.files[0]);
-    } else {
-        if (previewContainer) previewContainer.style.display = 'none';
-        gifFile = null;
+    // IMPORTANTE: Si no hay archivos seleccionados, NO hacer nada (mantener GIF actual)
+    if (!input.files || input.files.length === 0) {
+        console.log('No se seleccionó ningún archivo, manteniendo GIF actual');
+        // NO hacer nada - el GIF actual permanece
+        return;
+    }
+    
+    const file = input.files[0];
+    
+    if (file.type !== 'image/gif') {
+        Swal.fire({
+            icon: 'error',
+            title: 'Formato no válido',
+            text: 'El campo GIF solo acepta archivos con formato GIF'
+        });
+        input.value = '';
+        return;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Archivo demasiado grande',
+            text: 'El GIF no puede exceder los 10MB'
+        });
+        input.value = '';
+        return;
+    }
+    
+    // Solo actualizar si hay un archivo válido seleccionado
+    gifFile = file;
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        if (previewImg) previewImg.src = e.target.result;
+        if (previewContainer) previewContainer.style.display = 'block';
         actualizarBarraProgresoTamaño();
         actualizarContadorImagenes();
     }
+    
+    reader.readAsDataURL(file);
 }
 
 function cancelarGif() {
@@ -2714,14 +2930,17 @@ function cancelarGif() {
 }
 
 function handleImageSelection(event) {
-    const files = event.target.files;
+    const input = event.target;
+    const files = input.files;
     const maxFiles = 7;
     const currentCount = selectedImages.length;
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     
+    // IMPORTANTE: Si el usuario canceló la selección (no eligió archivos), NO hacer nada
     if (!files || files.length === 0) {
-        event.target.value = '';
-        return;
+        console.log('Usuario canceló selección de imágenes - manteniendo imágenes actuales');
+        input.value = ''; // Limpiar el input
+        return; // NO eliminar las imágenes adicionales existentes
     }
     
     const tamanioActual = calcularTamañoTotal();
@@ -2744,7 +2963,7 @@ function handleImageSelection(event) {
             `,
             confirmButtonText: 'Entendido'
         });
-        event.target.value = '';
+        input.value = '';
         return;
     }
     
@@ -2754,7 +2973,7 @@ function handleImageSelection(event) {
             title: 'Límite de imágenes',
             text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales. Ya tienes ${currentCount} seleccionadas.`
         });
-        event.target.value = '';
+        input.value = '';
         return;
     }
     
@@ -2799,7 +3018,8 @@ function handleImageSelection(event) {
         actualizarContadorImagenes();
     }
     
-    event.target.value = '';
+    // Limpiar el input para permitir seleccionar más archivos después
+    input.value = '';
 }
 
 function isImageDuplicate(newFile) {
@@ -2898,8 +3118,8 @@ function renderSelectedImages() {
 
 function validarTamañoTotalAntesDeEnviar() {
     const totalSize = calcularTamañoTotal();
-    const maxSize = 50 * 1024 * 1024;
     
+    // IMPORTANTE: Verificar que la imagen principal NO sea null
     if (!imagenPrincipalFile) {
         Swal.fire({
             icon: 'error',
@@ -2909,11 +3129,11 @@ function validarTamañoTotalAntesDeEnviar() {
         return false;
     }
     
-    if (totalSize > maxSize) {
+    if (totalSize > maxTotalSize) {
         Swal.fire({
             icon: 'error',
             title: 'Archivos demasiado grandes',
-            text: `El tamaño total de los archivos (${(totalSize / (1024 * 1024)).toFixed(2)}MB) excede el límite de 50MB.`
+            text: `El tamaño total (${(totalSize / (1024 * 1024)).toFixed(2)}MB) excede el límite de 50MB.`
         });
         return false;
     }
@@ -3173,7 +3393,7 @@ function actualizarPestanasValores() {
                 <input type="hidden" name="variaciones[${valorKey}][vNombre_variacion]" 
                        value="${valor.atributoNombre}: ${valor.nombre}">
 
-                <!-- SECCIÓN DE IMÁGENES DE LA VARIACIÓN -->
+               <!-- SECCIÓN DE IMÁGENES DE LA VARIACIÓN -->
                 <div class="card mb-4 border-primary">
                     <div class="card-header bg-primary text-white py-2">
                         <h6 class="mb-0"><i class="fas fa-images me-2"></i>Imágenes de la Variación</h6>
@@ -3187,17 +3407,25 @@ function actualizarPestanasValores() {
                                         <i class="fas fa-star text-warning me-1"></i>Imagen Principal
                                     </label>
                                     <input type="file" 
-                                           name="variaciones[${valorKey}][imagen_principal]" 
-                                           id="img_principal_${valorKey}" 
-                                           class="form-control"
-                                           accept="image/jpeg,image/jpg,image/png"
-                                           onchange="previewImagenPrincipalVariacion(this, 'preview_principal_${valorKey}')">
+                                        name="variaciones[${valorKey}][imagen_principal]" 
+                                        id="img_principal_${valorKey}" 
+                                        class="form-control"
+                                        accept="image/jpeg,image/jpg,image/png"
+                                        onchange="previewImagenPrincipalVariacion(this, 'preview_principal_${valorKey}')">
                                     <small class="form-text text-muted">
                                         JPG, JPEG, PNG. Máx: 5MB
                                     </small>
+                                    
+                                    <!-- Preview con botón para quitar imagen -->
                                     <div id="preview_principal_${valorKey}" class="mt-2" style="display: none;">
                                         <div class="border rounded p-2 text-center bg-light">
                                             <img src="#" class="img-thumbnail" style="max-width: 150px; max-height: 150px; object-fit: contain;">
+                                            <div class="mt-2">
+                                                <small class="text-muted d-block">Imagen principal de variación</small>
+                                                <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarImagenPrincipalVariacion('${valorKey}')">
+                                                    <i class="fas fa-times me-1"></i>Quitar imagen
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -3210,17 +3438,25 @@ function actualizarPestanasValores() {
                                         <i class="fas fa-file-image text-success me-1"></i>GIF Animado
                                     </label>
                                     <input type="file" 
-                                           name="variaciones[${valorKey}][gif]" 
-                                           id="gif_${valorKey}" 
-                                           class="form-control"
-                                           accept="image/gif"
-                                           onchange="previewGifVariacion(this, 'preview_gif_${valorKey}')">
+                                        name="variaciones[${valorKey}][gif]" 
+                                        id="gif_${valorKey}" 
+                                        class="form-control"
+                                        accept="image/gif"
+                                        onchange="previewGifVariacion(this, 'preview_gif_${valorKey}')">
                                     <small class="form-text text-muted">
                                         GIF. Máx: 10MB
                                     </small>
+                                    
+                                    <!-- Preview con botón para quitar GIF -->
                                     <div id="preview_gif_${valorKey}" class="mt-2" style="display: none;">
                                         <div class="border rounded p-2 text-center bg-light">
                                             <img src="#" class="img-thumbnail" style="max-width: 150px; max-height: 150px; object-fit: contain;">
+                                            <div class="mt-2">
+                                                <small class="text-muted d-block">GIF de variación</small>
+                                                <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarGifVariacion('${valorKey}')">
+                                                    <i class="fas fa-times me-1"></i>Quitar GIF
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -3233,18 +3469,21 @@ function actualizarPestanasValores() {
                                         <i class="fas fa-images me-1"></i>Imágenes Adicionales (Máx 7)
                                     </label>
                                     <input type="file" 
-                                           name="variaciones[${valorKey}][imagenes_adicionales][]" 
-                                           id="imagenes_adicionales_${valorKey}" 
-                                           class="form-control"
-                                           multiple
-                                           accept="image/jpeg,image/jpg,image/png,image/webp"
-                                           onchange="handleImagenesAdicionalesVariacion(event, '${valorKey}')">
+                                        name="variaciones[${valorKey}][imagenes_adicionales][]" 
+                                        id="imagenes_adicionales_${valorKey}" 
+                                        class="form-control"
+                                        multiple
+                                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                                        onchange="handleImagenesAdicionalesVariacion(event, '${valorKey}')">
                                     <small class="form-text text-muted">
                                         JPG, JPEG, PNG, WEBP. Máx: 5MB c/u
                                     </small>
                                     <div id="container_adicionales_${valorKey}" class="row mt-2"></div>
-                                    <div class="mt-2">
+                                    <div class="mt-2 d-flex justify-content-between align-items-center">
                                         <span class="badge bg-info" id="count_adicionales_${valorKey}">0 seleccionadas</span>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelarTodasImagenesAdicionalesVariacion('${valorKey}')" style="display: none;" id="btn_eliminar_todas_${valorKey}">
+                                            <i class="fas fa-trash-alt me-1"></i>Eliminar todas
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -3639,6 +3878,116 @@ function actualizarPestanasValores() {
     // Cargar impuestos en los selects de las nuevas variaciones
     setTimeout(cargarImpuestosEnVariaciones, 200);
 }
+// ============ FUNCIONES PARA ELIMINAR IMÁGENES DE VARIACIONES ============
+
+function cancelarImagenPrincipalVariacion(valorKey) {
+    const input = document.getElementById(`img_principal_${valorKey}`);
+    const previewContainer = document.getElementById(`preview_principal_${valorKey}`);
+    
+    // Limpiar el input y ocultar preview
+    if (input) input.value = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+    
+    // Eliminar la imagen principal del objeto global
+    if (imagenesVariacion[valorKey]) {
+        delete imagenesVariacion[valorKey].imagenPrincipal;
+    }
+    
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+}
+
+function cancelarGifVariacion(valorKey) {
+    const input = document.getElementById(`gif_${valorKey}`);
+    const previewContainer = document.getElementById(`preview_gif_${valorKey}`);
+    
+    // Limpiar el input y ocultar preview
+    if (input) input.value = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+    
+    // Eliminar el GIF del objeto global
+    if (imagenesVariacion[valorKey]) {
+        delete imagenesVariacion[valorKey].gif;
+    }
+    
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+}
+
+function cancelarTodasImagenesAdicionalesVariacion(valorKey) {
+    // Confirmar antes de eliminar
+    Swal.fire({
+        title: '¿Eliminar todas las imágenes?',
+        text: 'Esta acción eliminará todas las imágenes adicionales de esta variación.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar todas',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Liberar URLs de objeto
+            if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+                imagenesVariacion[valorKey].imagenes.forEach(img => {
+                    if (img.preview) {
+                        URL.revokeObjectURL(img.preview);
+                    }
+                });
+                imagenesVariacion[valorKey].imagenes = [];
+            }
+            
+            // Renderizar contenedor vacío
+            renderImagenesAdicionalesVariacion(valorKey);
+            
+            // Actualizar contador
+            const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
+            if (countSpan) countSpan.textContent = '0 seleccionadas';
+            
+            // Ocultar botón de eliminar todas si no hay imágenes
+            const btnEliminarTodas = document.getElementById(`btn_eliminar_todas_${valorKey}`);
+            if (btnEliminarTodas) btnEliminarTodas.style.display = 'none';
+            
+            actualizarBarraProgresoTamaño();
+            actualizarContadorImagenes();
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Imágenes eliminadas',
+                text: 'Todas las imágenes adicionales han sido eliminadas.',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        }
+    });
+}
+
+function eliminarImagenAdicionalVariacion(valorKey, imageId) {
+    if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+        const image = imagenesVariacion[valorKey].imagenes.find(img => img.id === imageId);
+        if (image && image.preview) {
+            URL.revokeObjectURL(image.preview);
+        }
+        
+        imagenesVariacion[valorKey].imagenes = imagenesVariacion[valorKey].imagenes.filter(img => img.id !== imageId);
+        
+        renderImagenesAdicionalesVariacion(valorKey);
+        
+        const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
+        if (countSpan) {
+            countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
+        }
+        
+        // Mostrar/ocultar botón "Eliminar todas"
+        const btnEliminarTodas = document.getElementById(`btn_eliminar_todas_${valorKey}`);
+        if (btnEliminarTodas) {
+            btnEliminarTodas.style.display = imagenesVariacion[valorKey].imagenes.length > 0 ? 'inline-block' : 'none';
+        }
+        
+        actualizarBarraProgresoTamaño();
+        actualizarContadorImagenes();
+    }
+} 
 
 function generarSkuSugerido(productoSku, combinacion) {
     let sku = productoSku || 'PROD';
@@ -3798,30 +4147,244 @@ function actualizarSelectsImpuestosVariaciones(impuesto) {
 
 function previewImagenPrincipalVariacion(input, previewId) {
     const previewContainer = document.getElementById(previewId);
+    const valorKey = obtenerValorKeyDesdePreviewId(previewId);
     
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!input.files || input.files.length === 0) {
+        console.log('Canceló selección - manteniendo imagen actual de variación');
+        input.value = '';
+        return;
+    }
+    
+    const file = input.files[0];
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    
+    if (!validTypes.includes(file.type)) {
+        Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'Solo JPG, JPEG, PNG' });
+        input.value = '';
+        return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+        Swal.fire({ icon: 'error', title: 'Archivo demasiado grande', text: 'Máximo 5MB' });
+        input.value = '';
+        return;
+    }
+    
+    if (valorKey) {
+        if (!imagenesVariacion[valorKey]) imagenesVariacion[valorKey] = { imagenes: [] };
+        imagenesVariacion[valorKey].imagenPrincipal = file;
         
-        if (!validTypes.includes(file.type)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Formato no válido',
-                text: 'La imagen principal solo acepta formatos JPG, JPEG y PNG'
-            });
-            input.value = '';
-            return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (previewContainer) {
+                const img = previewContainer.querySelector('img');
+                if (img) img.src = e.target.result;
+                previewContainer.style.display = 'block';
+            }
+            actualizarBarraProgresoTamaño();
+            actualizarContadorImagenes();
         }
+        reader.readAsDataURL(file);
+    }
+}
+
+function cancelarImagenPrincipalVariacion(valorKey) {
+    const input = document.getElementById(`img_principal_${valorKey}`);
+    const previewContainer = document.getElementById(`preview_principal_${valorKey}`);
+    
+    if (input) input.value = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+    if (imagenesVariacion[valorKey]) delete imagenesVariacion[valorKey].imagenPrincipal;
+    
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+}
+
+function previewGifVariacion(input, previewId) {
+    const previewContainer = document.getElementById(previewId);
+    const valorKey = obtenerValorKeyDesdePreviewId(previewId);
+    
+    if (!input.files || input.files.length === 0) {
+        console.log('Canceló selección - manteniendo GIF actual de variación');
+        input.value = '';
+        return;
+    }
+    
+    const file = input.files[0];
+    
+    if (file.type !== 'image/gif') {
+        Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'Solo archivos GIF' });
+        input.value = '';
+        return;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) {
+        Swal.fire({ icon: 'error', title: 'Archivo demasiado grande', text: 'Máximo 10MB' });
+        input.value = '';
+        return;
+    }
+    
+    if (valorKey) {
+        if (!imagenesVariacion[valorKey]) imagenesVariacion[valorKey] = { imagenes: [] };
+        imagenesVariacion[valorKey].gif = file;
         
-        if (file.size > 5 * 1024 * 1024) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Archivo demasiado grande',
-                text: 'La imagen principal no puede exceder los 5MB'
-            });
-            input.value = '';
-            return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (previewContainer) {
+                const img = previewContainer.querySelector('img');
+                if (img) img.src = e.target.result;
+                previewContainer.style.display = 'block';
+            }
+            actualizarBarraProgresoTamaño();
+            actualizarContadorImagenes();
         }
+        reader.readAsDataURL(file);
+    }
+}
+
+
+function cancelarGifVariacion(valorKey) {
+    const input = document.getElementById(`gif_${valorKey}`);
+    const previewContainer = document.getElementById(`preview_gif_${valorKey}`);
+    
+    if (input) input.value = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+    if (imagenesVariacion[valorKey]) delete imagenesVariacion[valorKey].gif;
+    
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+}
+
+function handleImagenesAdicionalesVariacion(event, valorKey) {
+    const input = event.target;
+    const files = Array.from(input.files);
+    const maxFiles = 7;
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    
+    if (files.length === 0) {
+        console.log('Canceló selección - manteniendo imágenes actuales de variación');
+        input.value = '';
+        return;
+    }
+    
+    if (!imagenesVariacion[valorKey]) imagenesVariacion[valorKey] = { imagenes: [] };
+    
+    if (imagenesVariacion[valorKey].imagenes.length + files.length > maxFiles) {
+        Swal.fire({ icon: 'warning', title: 'Límite', text: `Máximo ${maxFiles} imágenes adicionales` });
+        input.value = '';
+        return;
+    }
+    
+    files.forEach(file => {
+        if (!validTypes.includes(file.type)) return;
+        if (file.size > 5 * 1024 * 1024) return;
+        
+        const imageId = 'var_img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const preview = URL.createObjectURL(file);
+        
+        imagenesVariacion[valorKey].imagenes.push({
+            id: imageId,
+            file: file,
+            preview: preview,
+            name: file.name,
+            size: file.size
+        });
+    });
+    
+    renderImagenesAdicionalesVariacion(valorKey);
+    const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
+    if (countSpan) countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+    input.value = '';
+}
+
+function eliminarImagenAdicionalVariacion(valorKey, imageId) {
+    if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+        const image = imagenesVariacion[valorKey].imagenes.find(img => img.id === imageId);
+        if (image && image.preview) URL.revokeObjectURL(image.preview);
+        
+        imagenesVariacion[valorKey].imagenes = imagenesVariacion[valorKey].imagenes.filter(img => img.id !== imageId);
+        
+        renderImagenesAdicionalesVariacion(valorKey);
+        
+        const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
+        if (countSpan) countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
+        
+        actualizarBarraProgresoTamaño();
+        actualizarContadorImagenes();
+    }
+}
+
+
+function cancelarTodasImagenesAdicionalesVariacion(valorKey) {
+    if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+        imagenesVariacion[valorKey].imagenes.forEach(img => {
+            if (img.preview) {
+                URL.revokeObjectURL(img.preview);
+            }
+        });
+        imagenesVariacion[valorKey].imagenes = [];
+    }
+    
+    renderImagenesAdicionalesVariacion(valorKey);
+    
+    const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
+    if (countSpan) countSpan.textContent = '0 seleccionadas';
+    
+    const btnEliminarTodas = document.getElementById(`btn_eliminar_todas_${valorKey}`);
+    if (btnEliminarTodas) btnEliminarTodas.style.display = 'none';
+    
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+}
+
+function obtenerValorKeyDesdePreviewId(previewId) {
+    const parts = previewId.split('_');
+    if (parts.length >= 3) {
+        return parts.slice(2).join('_');
+    }
+    return null;
+}
+
+function previewGifVariacion(input, previewId) {
+    const previewContainer = document.getElementById(previewId);
+    
+    // IMPORTANTE: Si el usuario canceló la selección, NO hacer nada
+    if (!input.files || input.files.length === 0) {
+        console.log('Usuario canceló selección de GIF de variación');
+        input.value = '';
+        return; // NO eliminar el GIF existente
+    }
+    
+    const file = input.files[0];
+    
+    if (file.type !== 'image/gif') {
+        Swal.fire({
+            icon: 'error',
+            title: 'Formato no válido',
+            text: 'Solo se permiten archivos GIF'
+        });
+        input.value = '';
+        return;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Archivo demasiado grande',
+            text: 'El GIF no puede exceder los 10MB'
+        });
+        input.value = '';
+        return;
+    }
+    
+    const valorKey = obtenerValorKeyDesdePreviewId(previewId);
+    if (valorKey) {
+        if (!imagenesVariacion[valorKey]) {
+            imagenesVariacion[valorKey] = { imagenes: [] };
+        }
+        imagenesVariacion[valorKey].gif = file;
         
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -3836,11 +4399,234 @@ function previewImagenPrincipalVariacion(input, previewId) {
             actualizarContadorImagenes();
         }
         reader.readAsDataURL(file);
-    } else {
-        if (previewContainer) previewContainer.style.display = 'none';
-        actualizarBarraProgresoTamaño();
-        actualizarContadorImagenes();
     }
+}
+
+function handleImagenesAdicionalesVariacion(event, valorKey) {
+    const input = event.target;
+    const container = document.getElementById(`container_adicionales_${valorKey}`);
+    const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
+    
+    if (!container || !countSpan) return;
+    
+    const files = Array.from(input.files);
+    const maxFiles = 7;
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    
+    // IMPORTANTE: Si el usuario canceló la selección, NO hacer nada
+    if (files.length === 0) {
+        console.log('Usuario canceló selección de imágenes adicionales de variación');
+        input.value = '';
+        return; // NO eliminar las imágenes existentes
+    }
+    
+    if (!imagenesVariacion[valorKey]) {
+        imagenesVariacion[valorKey] = {
+            imagenes: []
+        };
+    }
+    
+    if (imagenesVariacion[valorKey].imagenes.length + files.length > maxFiles) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de imágenes',
+            text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales para esta variación.`
+        });
+        input.value = '';
+        return;
+    }
+    
+    const tamanioActual = calcularTamañoTotal();
+    let nuevoTamanio = tamanioActual;
+    files.forEach(file => nuevoTamanio += file.size);
+    
+    if (nuevoTamanio > maxTotalSize) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de tamaño excedido',
+            text: 'Si agregas estas imágenes, excederás el límite de 50MB.'
+        });
+        input.value = '';
+        return;
+    }
+    
+    files.forEach(file => {
+        if (!validTypes.includes(file.type)) return;
+        if (file.size > 5 * 1024 * 1024) return;
+        
+        const yaExiste = imagenesVariacion[valorKey].imagenes.some(img => 
+            img.file.name === file.name && img.file.size === file.size
+        );
+        if (yaExiste) return;
+        
+        const imageId = 'var_img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const preview = URL.createObjectURL(file);
+        
+        imagenesVariacion[valorKey].imagenes.push({
+            id: imageId,
+            file: file,
+            preview: preview,
+            name: file.name,
+            size: file.size
+        });
+    });
+    
+    renderImagenesAdicionalesVariacion(valorKey);
+    countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+    input.value = '';
+}
+
+// Función auxiliar
+function obtenerValorKeyDesdePreviewId(previewId) {
+    const parts = previewId.split('_');
+    if (parts.length >= 3) {
+        return parts.slice(2).join('_');
+    }
+    return null;
+}
+
+function previewGifVariacion(input, previewId) {
+    const previewContainer = document.getElementById(previewId);
+    
+    // IMPORTANTE: Si no hay archivos seleccionados, NO hacer nada (mantener GIF actual)
+    if (!input.files || input.files.length === 0) {
+        console.log('No se seleccionó archivo para GIF de variación, manteniendo GIF actual');
+        return; // NO hacer nada - el GIF actual permanece
+    }
+    
+    const file = input.files[0];
+    
+    if (file.type !== 'image/gif') {
+        Swal.fire({
+            icon: 'error',
+            title: 'Formato no válido',
+            text: 'Solo se permiten archivos GIF'
+        });
+        input.value = '';
+        return;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Archivo demasiado grande',
+            text: 'El GIF no puede exceder los 10MB'
+        });
+        input.value = '';
+        return;
+    }
+    
+    // Actualizar el GIF en el objeto global
+    const valorKey = obtenerValorKeyDesdePreviewId(previewId);
+    if (valorKey) {
+        if (!imagenesVariacion[valorKey]) {
+            imagenesVariacion[valorKey] = { imagenes: [] };
+        }
+        imagenesVariacion[valorKey].gif = file;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (previewContainer) {
+                const img = previewContainer.querySelector('img');
+                if (img) {
+                    img.src = e.target.result;
+                    previewContainer.style.display = 'block';
+                }
+            }
+            actualizarBarraProgresoTamaño();
+            actualizarContadorImagenes();
+        }
+        reader.readAsDataURL(file);
+    }
+}
+
+function handleImagenesAdicionalesVariacion(event, valorKey) {
+    const input = event.target;
+    const container = document.getElementById(`container_adicionales_${valorKey}`);
+    const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
+    
+    if (!container || !countSpan) return;
+    
+    const files = Array.from(input.files);
+    const maxFiles = 7;
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    
+    // IMPORTANTE: Si no hay archivos seleccionados, NO hacer nada (mantener imágenes actuales)
+    if (files.length === 0) {
+        console.log('No se seleccionaron archivos para variación, manteniendo imágenes actuales');
+        input.value = '';
+        return; // NO hacer nada - las imágenes actuales permanecen
+    }
+    
+    if (!imagenesVariacion[valorKey]) {
+        imagenesVariacion[valorKey] = {
+            imagenes: []
+        };
+    }
+    
+    if (imagenesVariacion[valorKey].imagenes.length + files.length > maxFiles) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de imágenes',
+            text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales para esta variación.`
+        });
+        input.value = '';
+        return;
+    }
+    
+    const tamanioActual = calcularTamañoTotal();
+    let nuevoTamanio = tamanioActual;
+    files.forEach(file => nuevoTamanio += file.size);
+    
+    if (nuevoTamanio > maxTotalSize) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de tamaño excedido',
+            text: 'Si agregas estas imágenes, excederás el límite de 50MB.'
+        });
+        input.value = '';
+        return;
+    }
+    
+    files.forEach(file => {
+        if (!validTypes.includes(file.type)) return;
+        if (file.size > 5 * 1024 * 1024) return;
+        
+        // Verificar duplicados
+        const yaExiste = imagenesVariacion[valorKey].imagenes.some(img => 
+            img.file.name === file.name && img.file.size === file.size
+        );
+        if (yaExiste) return;
+        
+        const imageId = 'var_img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const preview = URL.createObjectURL(file);
+        
+        imagenesVariacion[valorKey].imagenes.push({
+            id: imageId,
+            file: file,
+            preview: preview,
+            name: file.name,
+            size: file.size
+        });
+    });
+    
+    renderImagenesAdicionalesVariacion(valorKey);
+    countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+    input.value = '';
+}
+
+// Función auxiliar para obtener valorKey desde previewId
+function obtenerValorKeyDesdePreviewId(previewId) {
+    // Ejemplo: preview_principal_123_456
+    const parts = previewId.split('_');
+    if (parts.length >= 3) {
+        return parts.slice(2).join('_');
+    }
+    return null;
 }
 
 function previewGifVariacion(input, previewId) {
@@ -3966,39 +4752,39 @@ function renderImagenesAdicionalesVariacion(valorKey) {
     
     imagenesVariacion[valorKey].imagenes.forEach((img, index) => {
         const col = document.createElement('div');
-        col.className = 'col-4 col-md-3 mb-2';
-        
-        const card = document.createElement('div');
-        card.className = 'border rounded p-1 text-center bg-light position-relative';
+        col.className = 'col-4 col-md-3 mb-2 position-relative';
         
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1';
-        btn.style.cssText = 'width: 20px; height: 20px; padding: 0; border-radius: 50%; font-size: 10px;';
-        btn.onclick = function(e) {
-            e.preventDefault();
-            eliminarImagenAdicionalVariacion(valorKey, img.id);
-        };
-        
-        const btnIcon = document.createElement('i');
-        btnIcon.className = 'fas fa-times';
-        btn.appendChild(btnIcon);
+        btn.style.cssText = 'width: 22px; height: 22px; padding: 0; border-radius: 50%; font-size: 10px; z-index: 10;';
+        btn.onclick = () => eliminarImagenAdicionalVariacion(valorKey, img.id);
+        btn.innerHTML = '<i class="fas fa-times"></i>';
         
         const imgElement = document.createElement('img');
         imgElement.src = img.preview;
         imgElement.className = 'img-fluid';
-        imgElement.style.cssText = 'height: 60px; object-fit: contain;';
+        imgElement.style.cssText = 'height: 70px; object-fit: contain; width: 100%;';
         
         const small = document.createElement('small');
-        small.className = 'd-block text-truncate';
-        small.textContent = img.name.length > 10 ? img.name.substring(0, 10) + '...' : img.name;
+        small.className = 'd-block text-truncate mt-1';
+        small.textContent = img.name.length > 12 ? img.name.substring(0, 12) + '...' : img.name;
         
-        card.appendChild(btn);
+        const card = document.createElement('div');
+        card.className = 'border rounded p-1 text-center bg-light';
         card.appendChild(imgElement);
         card.appendChild(small);
+        
+        col.appendChild(btn);
         col.appendChild(card);
         container.appendChild(col);
     });
+}
+
+function obtenerValorKeyDesdePreviewId(previewId) {
+    const parts = previewId.split('_');
+    if (parts.length >= 3) return parts.slice(2).join('_');
+    return null;
 }
 
 function eliminarImagenAdicionalVariacion(valorKey, imageId) {
@@ -5357,31 +6143,33 @@ document.querySelectorAll('.valor-checkbox').forEach(checkbox => {
 document.getElementById('productoForm').addEventListener('submit', function(event) {
     event.preventDefault();
     
-    // Primero validar atributos incompletos
-    if (!validarAtributosAntesDeEnviar()) {
-        return false;
+    // Verificar que la imagen principal NO sea null
+    if (!imagenPrincipalFile) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Imagen principal requerida',
+            text: 'Debes seleccionar una imagen principal para el producto'
+        });
+        return;
     }
     
-    // Luego las demás validaciones
-    if (!validarCamposUnicosAntesDeEnviar()) {
-        return false;
-    }
-    
-    if (!validarTamañoTotalAntesDeEnviar()) {
-        return false;
-    }
-
-    
+    // Resto de validaciones...
     const form = this;
     const formData = new FormData(form);
     
-    // IMPORTANTE: Las imágenes ya están en formData por el input file,
-    // pero si selectedImages tiene imágenes, aseguramos que se agreguen
+    // Agregar imagen principal si existe
+    if (imagenPrincipalFile) {
+        formData.set('imagen_principal', imagenPrincipalFile);
+    }
+    
+    // Agregar GIF si existe
+    if (gifFile) {
+        formData.set('gif_producto', gifFile);
+    }
+    
+    // Agregar imágenes adicionales
     if (selectedImages.length > 0) {
-        // Eliminar las entradas existentes de imagenes[] para evitar duplicados
         formData.delete('imagenes[]');
-        
-        // Agregar cada imagen seleccionada
         selectedImages.forEach((image) => {
             formData.append('imagenes[]', image.file);
         });
@@ -5389,47 +6177,34 @@ document.getElementById('productoForm').addEventListener('submit', function(even
     
     // Agregar imágenes de variaciones
     Object.keys(imagenesVariacion).forEach(valorKey => {
-        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+        if (imagenesVariacion[valorKey].imagenes) {
             imagenesVariacion[valorKey].imagenes.forEach((img, idx) => {
                 formData.append(`variaciones[${valorKey}][imagenes_adicionales][${idx}]`, img.file);
             });
         }
     });
     
-    Swal.fire({
-        title: 'Guardando producto...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
-    
+    // Enviar...
     fetch(form.action, {
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-            'Accept': 'application/json'
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
         }
     })
     .then(response => {
         if (response.redirected) {
             window.location.href = response.url;
-        } else if (response.ok) {
-            return response.json();
         } else {
-            throw new Error('Error al guardar el producto');
+            return response.json();
         }
     })
     .then(data => {
-        Swal.close();
         if (data && data.redirect) {
             window.location.href = data.redirect;
-        } else {
-            window.location.href = '{{ route("productos.index") }}';
         }
     })
     .catch(error => {
-        Swal.close();
         console.error('Error:', error);
         Swal.fire({
             icon: 'error',
