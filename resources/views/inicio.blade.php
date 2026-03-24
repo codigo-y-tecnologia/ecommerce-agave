@@ -1162,8 +1162,10 @@
                             $atributosCompletos = $item->getAtributosCompletosTexto();
                             $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
                             $sku = $item->vSKU;
-                            $precioFinal = $item->precio_final_con_impuesto ?? $precioOriginal;
-                            $precioOriginalConImpuesto = $item->precio_original_con_impuesto ?? $precioOriginal;
+                            
+                            // ✅ CORRECCIÓN: Calcular el precio final directamente
+                            $precioFinal = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                            $precioOriginalConImpuesto = $precioOriginal;
                             $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
                             $envioGratis = $precioFinal >= 150;
                             $costoEnvio = 50;
@@ -1184,8 +1186,10 @@
                             $atributosCompletos = '';
                             $marca = $item->marca->vNombre ?? 'Marca genérica';
                             $sku = $item->vCodigo_barras;
-                            $precioFinal = $item->precio_final_con_impuesto ?? $precioOriginal;
-                            $precioOriginalConImpuesto = $item->precio_original_con_impuesto ?? $precioOriginal;
+                            
+                            // ✅ CORRECCIÓN: Calcular el precio final directamente
+                            $precioFinal = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                            $precioOriginalConImpuesto = $precioOriginal;
                             $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
                             $envioGratis = $precioFinal >= 150;
                             $costoEnvio = 50;
@@ -1314,8 +1318,10 @@
                         $atributosCompletos = $item->getAtributosCompletosTexto();
                         $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vSKU;
-                        $precioFinal = $item->precio_final_con_impuesto ?? $precioOriginal;
-                        $precioOriginalConImpuesto = $item->precio_original_con_impuesto ?? $precioOriginal;
+                        
+                        // ✅ CORRECCIÓN: Calcular el precio final directamente
+                        $precioFinal = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                        $precioOriginalConImpuesto = $precioOriginal;
                         $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
                         $envioGratis = $precioFinal >= 150;
                         $costoEnvio = 50;
@@ -1335,8 +1341,10 @@
                         $atributosCompletos = '';
                         $marca = $item->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vCodigo_barras;
-                        $precioFinal = $item->precio_final_con_impuesto ?? $precioOriginal;
-                        $precioOriginalConImpuesto = $item->precio_original_con_impuesto ?? $precioOriginal;
+                        
+                        // ✅ CORRECCIÓN: Calcular el precio final directamente
+                        $precioFinal = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                        $precioOriginalConImpuesto = $precioOriginal;
                         $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
                         $envioGratis = $precioFinal >= 150;
                         $costoEnvio = 50;
