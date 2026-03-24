@@ -415,6 +415,31 @@
             transform: translateY(0);
         }
 
+        /* Botón comprar ahora */
+.btn-comprar-ahora {
+    width: 100%;
+    padding: 8px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    margin-top: 6px;
+}
+
+.btn-comprar-ahora:hover {
+    background: #5a6fd6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+}
+
+.btn-comprar-ahora:active {
+    transform: translateY(0);
+}
+
         .badge-descuento {
             position: absolute;
             top: 15px;
@@ -1173,12 +1198,17 @@
                             @endif
                         </div>
 
-                        <!-- Agregar al carrito -->
+                        <!-- Botones de carrito -->
                         <div class="agregar-carrito-container" style="margin: 10px 0;">
                             <button type="button" 
                                     class="btn-agregar-carrito" 
                                     onclick="event.stopPropagation(); agregarAlCarrito({{ $productoId }}, {{ $variacionId ?? 'null' }})">
                                 <i class="fas fa-shopping-cart"></i> Agregar al carrito
+                            </button>
+                            <button type="button" 
+                                    class="btn-comprar-ahora" 
+                                    onclick="event.stopPropagation(); comprarAhora({{ $productoId }}, {{ $variacionId ?? 'null' }})">
+                                <i class="fas fa-bolt"></i> Comprar ahora
                             </button>
                         </div>
 
@@ -1350,12 +1380,17 @@
                                 @endif
                             </div>
 
-                            <!-- Agregar al carrito -->
+                            <!-- Botones de carrito -->
                             <div class="agregar-carrito-container" style="margin: 10px 0;">
                                 <button type="button" 
                                         class="btn-agregar-carrito" 
                                         onclick="event.stopPropagation(); agregarAlCarrito({{ $productoId }}, {{ $variacionId ?? 'null' }})">
                                     <i class="fas fa-shopping-cart"></i> Agregar al carrito
+                                </button>
+                                <button type="button" 
+                                        class="btn-comprar-ahora" 
+                                        onclick="event.stopPropagation(); comprarAhora({{ $productoId }}, {{ $variacionId ?? 'null' }})">
+                                    <i class="fas fa-bolt"></i> Comprar ahora
                                 </button>
                             </div>
 
@@ -1510,12 +1545,17 @@
                             @endif
                         </div>
 
-                        <!-- Agregar al carrito -->
+                        <!-- Botones de carrito -->
                         <div class="agregar-carrito-container" style="margin: 10px 0;">
                             <button type="button" 
                                     class="btn-agregar-carrito" 
                                     onclick="event.stopPropagation(); agregarAlCarrito({{ $productoId }}, {{ $variacionId ?? 'null' }})">
                                 <i class="fas fa-shopping-cart"></i> Agregar al carrito
+                            </button>
+                            <button type="button" 
+                                    class="btn-comprar-ahora" 
+                                    onclick="event.stopPropagation(); comprarAhora({{ $productoId }}, {{ $variacionId ?? 'null' }})">
+                                <i class="fas fa-bolt"></i> Comprar ahora
                             </button>
                         </div>
 
@@ -1681,12 +1721,17 @@
                             @endif
                         </div>
 
-                        <!-- Agregar al carrito -->
+                        <!-- Botones de carrito -->
                         <div class="agregar-carrito-container" style="margin: 10px 0;">
                             <button type="button" 
                                     class="btn-agregar-carrito" 
                                     onclick="event.stopPropagation(); agregarAlCarrito({{ $productoId }}, {{ $variacionId ?? 'null' }})">
                                 <i class="fas fa-shopping-cart"></i> Agregar al carrito
+                            </button>
+                            <button type="button" 
+                                    class="btn-comprar-ahora" 
+                                    onclick="event.stopPropagation(); comprarAhora({{ $productoId }}, {{ $variacionId ?? 'null' }})">
+                                <i class="fas fa-bolt"></i> Comprar ahora
                             </button>
                         </div>
 
@@ -1995,6 +2040,35 @@
                     showNotification('❌ Error de conexión', 'error');
                 });
         }
+
+        function comprarAhora(productoId, variacionId = null) {
+    fetch('/carrito/agregar', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': csrfToken,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            producto_id: productoId,
+            variacion_id: variacionId,
+            cantidad: 1
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Producto agregado, redirigir al carrito
+            window.location.href = '{{ route("carrito.index") }}';
+        } else {
+            showNotification('❌ ' + (data.message || 'Error al agregar'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('❌ Error de conexión', 'error');
+    });
+}
 
         document.addEventListener('DOMContentLoaded', function() {
             // Prevenir propagación en botones

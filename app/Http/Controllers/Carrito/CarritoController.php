@@ -22,21 +22,41 @@ class CarritoController extends Controller
         $mensajes = [];
 
         foreach ($carrito->detalles as $detalle) {
+
             $producto = $detalle->producto;
 
-            // Producto eliminado o desactivado
-            if (!$producto || $producto->iStock <= 0) {
-                $mensajes[] = "El producto {$detalle->producto->vNombre} ya no tiene stock y fue eliminado del carrito.";
-                $detalle->delete();
-                continue;
-            }
+            if ($detalle->id_variacion) {
+                // ── VARIACIÓN ──
+                $variacion = $detalle->variacion;
 
-            // Ajustar cantidad si excede stock
-            if ($detalle->iCantidad > $producto->iStock) {
-                $detalle->iCantidad = $producto->iStock;
-                $detalle->save();
+                if (!$variacion || $variacion->iStock <= 0) {
+                    $nombreProducto = $producto->vNombre ?? 'Producto';
+                    $mensajes[] = "El producto {$nombreProducto} ya no tiene stock y fue eliminado del carrito.";
+                    $detalle->delete();
+                    continue;
+                }
 
-                $mensajes[] = "La cantidad de {$producto->vNombre} fue ajustada al stock disponible.";
+                if ($detalle->iCantidad > $variacion->iStock) {
+                    $detalle->iCantidad = $variacion->iStock;
+                    $detalle->save();
+                    $mensajes[] = "La cantidad de {$producto->vNombre} fue ajustada al stock disponible ({$variacion->iStock} unidades).";
+                }
+            } else {
+
+                // Producto eliminado o desactivado
+                if (!$producto || $producto->iStock <= 0) {
+                    $mensajes[] = "El producto {$detalle->producto->vNombre} ya no tiene stock y fue eliminado del carrito.";
+                    $detalle->delete();
+                    continue;
+                }
+
+                // Ajustar cantidad si excede stock
+                if ($detalle->iCantidad > $producto->iStock) {
+                    $detalle->iCantidad = $producto->iStock;
+                    $detalle->save();
+
+                    $mensajes[] = "La cantidad de {$producto->vNombre} fue ajustada al stock disponible.";
+                }
             }
         }
 

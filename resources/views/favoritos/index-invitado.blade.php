@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mis Favoritos (Invitado) - Ecommerce Agave</title>
+    <title>Mis Favoritos (Invitado) - {{ config('tienda.nombre_tienda') }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <style>
         * {
             margin: 0;
@@ -519,7 +520,7 @@
 </head>
 <body>
     <header>
-        <h1>Ecommerce Agave</h1>
+        <h1>{{ config('tienda.nombre_tienda') }}</h1>
         <p>Mis Favoritos (Modo Invitado)</p>
     </header>
 
@@ -539,7 +540,9 @@
             <ul class="nav-links">
                 <li><a href="{{ route('home') }}">Inicio</a></li>
                 <li><a href="{{ route('busqueda.resultados') }}">Todos los Productos</a></li>
+                <li><a href="{{ route('carrito.index') }}">🛒 Mi Carrito</a></li>
                 <li><a href="{{ route('favoritos.invitado.index') }}" class="active" style="color: #dc3545; font-weight: bold;">❤️ Mis Favoritos</a></li>
+                <li><a class="consultar-pedido" href="{{ route('consulta.pedido.form') }}"><i class="bi bi-search"></i>Consultar pedido</a></li>
                 <li><a href="{{ route('login') }}">Ingresar</a></li>
                 <li><a href="{{ route('usuarios.create') }}">Crear Cuenta</a></li>
             </ul>

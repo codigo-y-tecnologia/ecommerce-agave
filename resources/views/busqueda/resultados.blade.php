@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resultados de Búsqueda - Ecommerce Agave</title>
+    <title>Resultados de Búsqueda - {{ config('tienda.nombre_tienda') }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <style>
         * {
             margin: 0;
@@ -91,6 +92,11 @@
 
         nav.navbar ul li a.favorito-link:hover {
             color: #667eea;
+        }
+
+        .mis-pedidos {
+            margin-right: 15px;
+            margin-left: 15px;
         }
 
         nav.navbar ul li button {
@@ -636,6 +642,30 @@
             transform: translateY(0);
         }
 
+        .btn-comprar-ahora {
+            width: 100%;
+            padding: 8px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            margin-top: 6px;
+        }
+
+        .btn-comprar-ahora:hover {
+            background: #5a6fd6;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-comprar-ahora:active {
+            transform: translateY(0);
+        }
+
         /* Corazón de favoritos */
         .corazon-favorito {
             position: absolute;
@@ -771,6 +801,10 @@
             color: white;
         }
 
+        .consultar-pedido {
+                margin-right: 15px;
+            }
+
         /* Responsive */
         @media (max-width: 768px) {
             .busqueda-container {
@@ -876,7 +910,7 @@
 </head>
 <body>
     <header>
-        <h1>Ecommerce Agave</h1>
+        <h1>{{ config('tienda.nombre_tienda') }}</h1>
         <p>Encuentra los mejores productos de agave y mezcal</p>
     </header>
 
@@ -889,18 +923,25 @@
 
     <nav class="navbar">
         <ul>
-            <li><a href="{{ route('inicio.real') }}">Inicio</a></li>
+            <li><a href="{{ route('home') }}">Inicio</a></li>
             <li><a href="{{ route('busqueda.resultados') }}">Todos los Productos</a></li>
             <li><a href="{{ route('busqueda.resultados', ['en_descuento' => '1']) }}" style="color: #dc3545; font-weight: bold;" id="link-descuento">🔥 En Descuento</a></li>
+            <li><a href="{{ route('carrito.index') }}">🛒 Mi Carrito</a></li>
             <li>
                 @auth
                     <a href="{{ route('favoritos.index') }}" class="favorito-link">❤️ Mis Favoritos</a>
+                    <a class="mis-pedidos" href="{{ route('pedidos.index') }}">
+                        📦 Mis Pedidos
+                    </a>
+                    <a class="mi-perfil" href="{{ route('perfil.index') }}">
+                        👤 Perfil
+                    </a>
                 @else
+                <a class="consultar-pedido" href="{{ route('consulta.pedido.form') }}"><i class="bi bi-search"></i>Consultar pedido</a>
                     <a href="{{ route('favoritos.invitado.index') }}" class="favorito-link">❤️ Mis Favoritos</a>
                 @endauth
             </li>
             @auth
-                <li><a href="#">Mi Carrito</a></li>
                 <li>
                     <form method="POST" action="{{ route('logout') }}" style="display:inline;">
                         @csrf
@@ -1243,6 +1284,11 @@
                                             onclick="event.stopPropagation(); agregarAlCarrito({{ $productoId }}, {{ $variacionId ?? 'null' }})">
                                         <i class="fas fa-shopping-cart"></i> Agregar al carrito
                                     </button>
+                                    <button type="button"
+                                            class="btn-comprar-ahora"
+                                            onclick="event.stopPropagation(); comprarAhora({{ $productoId }}, {{ $variacionId ?? 'null' }})">
+                                        <i class="fas fa-bolt"></i> Comprar ahora
+                                    </button>
                                 </div>
                                 
                                 <p style="font-size: 13px; color: #666; margin-bottom: 5px;">
@@ -1562,7 +1608,6 @@
         }
 
         function agregarAlCarrito(productoId, variacionId = null) {
-            @auth
                 fetch('/carrito/agregar', {
                     method: 'POST',
                     headers: {
@@ -1588,14 +1633,35 @@
                     console.error('Error:', error);
                     mostrarToast('error', '❌', 'Error de conexión');
                 });
-            @else
-                // Redirigir a login para invitados
-                const redirectUrl = new URL('{{ route("login") }}');
-                redirectUrl.searchParams.set('from_carrito', 'true');
-                redirectUrl.searchParams.set('redirect', window.location.href);
-                window.location.href = redirectUrl.toString();
-            @endauth
         }
+
+        function comprarAhora(productoId, variacionId = null) {
+        fetch('/carrito/agregar', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                producto_id: productoId,
+                variacion_id: variacionId,
+                cantidad: 1
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = '{{ route("carrito.index") }}';
+            } else {
+                mostrarToast('error', '❌', data.message || 'Error al agregar');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarToast('error', '❌', 'Error de conexión');
+        });
+}
 
         document.addEventListener('DOMContentLoaded', function() {
             const buttons = document.querySelectorAll('.producto-card button, .producto-card a');

@@ -7,6 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <style>
         * {
             margin: 0;
@@ -752,6 +753,28 @@
             transform: translateY(-2px);
         }
 
+        .ml-btn-buy-now {
+            flex: 2;
+            background: #667eea;
+            border: none;
+            color: white;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .ml-btn-buy-now:hover {
+            background: #5a6fd6;
+            transform: translateY(-2px);
+        }
+
         /* Modal */
         .ml-modal .modal-content {
             background: transparent;
@@ -873,9 +896,9 @@
     <!-- Header con colores originales -->
     <header class="ml-header">
         <div class="container">
-            <a href="{{ route('inicio.real') }}" class="ml-logo">
+            <a href="{{ route('home') }}" class="ml-logo">
                 <i class="fas fa-wine-bottle"></i>
-                <span>Ecommerce Agave</span>
+                <span>{{ config('tienda.nombre_tienda') }}</span>
             </a>
             
             <div class="ml-search">
@@ -889,9 +912,17 @@
 
             <div class="ml-nav">
                 <a href="{{ route('busqueda.resultados') }}">Productos</a>
+                <a href="{{ route('carrito.index') }}">🛒 Mi Carrito</a>
                 @auth
+                @role('cliente')
                     <a href="{{ route('favoritos.index') }}" style="color: #dc3545;">
                         <i class="fas fa-heart"></i> Favoritos
+                    </a>
+                    <a class="mis-pedidos" href="{{ route('pedidos.index') }}">
+                        📦 Mis Pedidos
+                    </a>
+                    <a class="mi-perfil" href="{{ route('perfil.index') }}">
+                        👤 Perfil
                     </a>
                     <form method="POST" action="{{ route('logout') }}" style="display: inline;">
                         @csrf
@@ -899,7 +930,9 @@
                             <i class="fas fa-sign-out-alt"></i> Salir
                         </button>
                     </form>
+                @endrole
                 @else
+                    <a class="consultar-pedido" href="{{ route('consulta.pedido.form') }}"><i class="bi bi-search"></i>Consultar pedido</a>
                     <a href="{{ route('favoritos.invitado.index') }}" class="btn-invitado">
                         <i class="fas fa-user"></i> Invitado
                     </a>
@@ -1406,8 +1439,15 @@
                         Agregar al carrito
                     </button>
                 </div>
-            </div>
-        </div>
+
+                {{-- Botón comprar ahora (fila separada) --}}
+                <div style="margin-top: -8px; margin-bottom: 16px;">
+                    <button class="ml-btn-buy-now" style="width: 100%;"
+                            onclick="comprarAhora({{ $producto->id_producto }}, {{ $variacionInicial ? $variacionInicial['id'] : 'null' }})">
+                        <i class="fas fa-bolt"></i>
+                        Comprar ahora
+                    </button>
+                </div>
 
         <!-- Características del producto -->
         @if(count($datosIniciales['caracteristicas']) > 0)
@@ -2075,7 +2115,6 @@
         }
 
         function agregarAlCarrito(productoId, variacionId = null) {
-            @auth
                 fetch('/carrito/agregar', {
                     method: 'POST',
                     headers: {
@@ -2101,13 +2140,37 @@
                     console.error('Error:', error);
                     showNotification('❌ Error de conexión', 'error');
                 });
-            @else
-                // Redirigir a login para invitados
-                const redirectUrl = new URL('{{ route("login") }}');
-                redirectUrl.searchParams.set('from_carrito', 'true');
-                redirectUrl.searchParams.set('redirect', window.location.href);
-                window.location.href = redirectUrl.toString();
-            @endauth
+        }
+
+        function comprarAhora(productoId, variacionId = null) {
+            // Usar la variación actualmente seleccionada si la hay
+            const varId = variacionSeleccionadaId !== undefined ? variacionSeleccionadaId : variacionId;
+
+            fetch('/carrito/agregar', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    producto_id: productoId,
+                    variacion_id: varId,
+                    cantidad: 1
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '{{ route("carrito.index") }}';
+                } else {
+                    showNotification(data.message || 'Error al agregar', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error de conexión', 'error');
+            });
         }
 
         // Inicialización

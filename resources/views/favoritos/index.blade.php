@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Lista de Deseos - Ecommerce Agave</title>
+    <title>Mi Lista de Deseos - {{ config('tienda.nombre_tienda') }}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <style>
         * {
             margin: 0;
@@ -70,6 +71,11 @@
 
         .nav-links li a:hover {
             text-decoration: underline;
+        }
+
+        .mis-pedidos {
+            margin-right: 15px;
+            margin-left: 15px;
         }
 
         /* Barra de búsqueda */
@@ -521,7 +527,7 @@
 <body>
     <!-- Header -->
     <header>
-        <h1>Ecommerce Agave</h1>
+        <h1>{{ config('tienda.nombre_tienda') }}</h1>
         <p>Mi Lista de Deseos</p>
     </header>
 
@@ -536,17 +542,26 @@
     <nav class="navbar">
         <div class="nav-container">
             <ul class="nav-links">
-                <li><a href="{{ route('inicio.real') }}">Inicio</a></li>
+                <li><a href="{{ route('home') }}">Inicio</a></li>
                 <li><a href="{{ route('busqueda.resultados') }}">Todos los Productos</a></li>
+                <li><a href="{{ route('carrito.index') }}">🛒 Mi Carrito</a></li>
                 <li>
                     @auth
+                    @role('cliente')
                         <a href="{{ route('favoritos.index') }}" style="color: #dc3545; font-weight: bold;">❤️ Mis Favoritos</a>
+                        <a class="mis-pedidos" href="{{ route('pedidos.index') }}">
+                        📦 Mis Pedidos
+                    </a>
+                    <a class="mi-perfil" href="{{ route('perfil.index') }}">
+                        👤 Perfil
+                    </a>
+                    @endrole
                     @else
+                    <a class="consultar-pedido" href="{{ route('consulta.pedido.form') }}"><i class="bi bi-search"></i>Consultar pedido</a>
                         <a href="{{ route('login') }}" style="color: #dc3545; font-weight: bold;">❤️ Mis Favoritos</a>
                     @endauth
                 </li>
                 @auth
-                    <li><a href="#">Mi Carrito</a></li>
                     <li>
                         <form method="POST" action="{{ route('logout') }}" style="display:inline;">
                             @csrf

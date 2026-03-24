@@ -26,12 +26,12 @@ class ReservarStockService
                     ->first();
 
                 if (!$variacion) {
-                    throw new StockException('La variación ya no está disponible.');
+                    throw new StockException('El producto ya no está disponible.');
                 }
 
                 if ($variacion->iStock < $detalle->iCantidad) {
                     throw new StockException(
-                        "Stock insuficiente para la variación solicitada."
+                        "Stock insuficiente para el producto solicitado."
                     );
                 }
 
