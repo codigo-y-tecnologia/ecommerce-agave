@@ -5097,207 +5097,146 @@ function cancelarImagenCategoriaModal() {
 }
 
 // ============ CONFIGURAR EVENTOS PARA ACTUALIZACIÓN EN TIEMPO REAL ============
-document.addEventListener('DOMContentLoaded', function() {
-    // ============ INICIALIZAR MODALES ============
-    try {
-        modalCategoria = new bootstrap.Modal(document.getElementById('modalCategoria'));
-        modalMarca = new bootstrap.Modal(document.getElementById('modalMarca'));
-        modalEtiqueta = new bootstrap.Modal(document.getElementById('modalEtiqueta'));
-        modalAtributo = new bootstrap.Modal(document.getElementById('modalAtributo'));
-        modalImpuesto = new bootstrap.Modal(document.getElementById('modalImpuesto'));
-        valorModal = new bootstrap.Modal(document.getElementById('crearValorModal'));
-    } catch(e) { console.error('Error al inicializar modales:', e); }
+function actualizarPrecioFinalVariacion(valorKey) {
+    const precioInput = document.getElementById(`precio-${valorKey}`);
+    const descuentoCheckbox = document.getElementById(`descuento-${valorKey}`);
+    const precioDescuentoInput = document.getElementById(`precio_descuento-${valorKey}`);
+    const fechaInicioInput = document.getElementById(`fecha-inicio-${valorKey}`);
+    const fechaFinInput = document.getElementById(`fecha-fin-${valorKey}`);
+    const impuestoSelect = document.getElementById(`impuesto-${valorKey}`);
+    const precioFinalSpan = document.getElementById(`precio-final-${valorKey}`);
+    const detalleImpuestoSpan = document.getElementById(`detalle-impuesto-${valorKey}`);
     
-    // ============ EVENTOS DEL PRODUCTO PRINCIPAL ============
-    const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
-    const fechaFinInput = document.getElementById('dFecha_fin_descuento');
-    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
-    const tieneDescuentoCheckbox = document.getElementById('bTiene_descuento');
-    const precioVentaInput = document.getElementById('dPrecio_venta');
-    const impuestoSelect = document.getElementById('id_impuesto');
+    if (!precioInput) return;
     
-    if (precioVentaInput) {
-        precioVentaInput.addEventListener('input', actualizarPrecioFinal);
-        precioVentaInput.addEventListener('change', actualizarPrecioFinal);
-    }
+    let precioNormal = parseFloat(precioInput.value) || 0;
+    let precioBase = precioNormal;
+    let tieneDescuento = descuentoCheckbox && descuentoCheckbox.checked;
+    let precioDescuento = 0;
+    let descuentoActivo = false;
+    let mensaje = '';
     
-    if (tieneDescuentoCheckbox) {
-        tieneDescuentoCheckbox.addEventListener('change', function() {
-            toggleDescuentoFields();
-            actualizarPrecioFinal();
-        });
-    }
-    
-    if (precioDescuentoInput) {
-        precioDescuentoInput.addEventListener('input', function() {
-            validarPrecioDescuentoProducto();
-            actualizarPrecioFinal();
-        });
-        precioDescuentoInput.addEventListener('change', function() {
-            validarPrecioDescuentoProducto();
-            actualizarPrecioFinal();
-        });
-    }
-    
-    if (fechaInicioInput) {
-        fechaInicioInput.addEventListener('change', function() {
-            validarFechasDescuento();
-            actualizarPrecioFinal();
-        });
-        fechaInicioInput.addEventListener('blur', actualizarPrecioFinal);
-    }
-    
-    if (fechaFinInput) {
-        fechaFinInput.addEventListener('change', function() {
-            validarFechasDescuento();
-            actualizarPrecioFinal();
-        });
-        fechaFinInput.addEventListener('blur', actualizarPrecioFinal);
-    }
-    
-    if (impuestoSelect) {
-        impuestoSelect.addEventListener('change', actualizarPrecioFinal);
-    }
-    
-    // ============ EVENTOS PARA ATRIBUTOS Y VARIACIONES ============
-    document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const atributoId = this.dataset.atributoId;
-            const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
-            const estadoBadge = document.getElementById(`estado-${atributoId}`);
+    // ========== VERIFICAR SI EL DESCUENTO DEBE APLICAR ==========
+    if (tieneDescuento && precioDescuentoInput && precioDescuentoInput.value) {
+        precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
+        
+        if (precioDescuento > 0 && precioDescuento < precioNormal) {
+            const fechaInicioStr = fechaInicioInput?.value || '';
+            const fechaFinStr = fechaFinInput?.value || '';
             
-            if (this.checked) {
-                if (valoresContainer) valoresContainer.style.display = 'block';
-                if (estadoBadge) estadoBadge.style.display = 'inline-block';
-                if (!atributosActivos[atributoId]) {
-                    atributosActivos[atributoId] = {
-                        id: atributoId,
-                        nombre: this.dataset.atributoNombre,
-                        valores: {}
-                    };
-                }
-            } else {
-                if (valoresContainer) valoresContainer.style.display = 'none';
-                if (estadoBadge) estadoBadge.style.display = 'none';
-                delete atributosActivos[atributoId];
+            // Obtener fecha actual (solo fecha, sin hora)
+            const hoy = new Date();
+            const fechaHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+            
+            let fechaInicio = null;
+            let fechaFin = null;
+            
+            if (fechaInicioStr) {
+                const [year, month, day] = fechaInicioStr.split('-').map(Number);
+                fechaInicio = new Date(year, month - 1, day);
             }
-            actualizarPestanasValores();
-            actualizarResumenAtributos();
-        });
-    });
-    
-    document.querySelectorAll('.seleccionar-todos-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const atributoId = this.dataset.atributoId;
-            const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
-            if (!valoresContainer) return;
             
-            const valorCheckboxes = valoresContainer.querySelectorAll('.valor-checkbox');
+            if (fechaFinStr) {
+                const [year, month, day] = fechaFinStr.split('-').map(Number);
+                fechaFin = new Date(year, month - 1, day);
+                fechaFin.setHours(23, 59, 59, 999);
+            }
             
-            valorCheckboxes.forEach(cb => {
-                cb.checked = this.checked;
-                const atributoNombre = cb.dataset.atributoNombre;
-                const valorId = cb.value;
-                const valorNombre = cb.dataset.valorNombre;
-                
-                if (this.checked) {
-                    if (!atributosActivos[atributoId]) {
-                        atributosActivos[atributoId] = {
-                            id: atributoId,
-                            nombre: atributoNombre,
-                            valores: {}
-                        };
-                    }
-                    atributosActivos[atributoId].valores[valorId] = {
-                        id: valorId,
-                        nombre: valorNombre,
-                        atributoId: atributoId,
-                        atributoNombre: atributoNombre
-                    };
+            // ========== LÓGICA CORRECTA ==========
+            if (fechaInicio && fechaFin) {
+                // Caso 1: Tiene ambas fechas
+                if (fechaHoy >= fechaInicio && fechaHoy <= fechaFin) {
+                    descuentoActivo = true;
+                    mensaje = '✓ Descuento activo HOY';
                 } else {
-                    if (atributosActivos[atributoId] && atributosActivos[atributoId].valores[valorId]) {
-                        delete atributosActivos[atributoId].valores[valorId];
-                        if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
-                            delete atributosActivos[atributoId];
-                        }
-                    }
+                    descuentoActivo = false;
+                    mensaje = `⏱️ Descuento programado (${fechaInicioStr} al ${fechaFinStr})`;
                 }
-            });
-            
-            actualizarPestanasValores();
-            actualizarResumenAtributos();
-        });
-    });
-    
-    document.querySelectorAll('.valor-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const atributoId = this.dataset.atributoId;
-            const atributoNombre = this.dataset.atributoNombre;
-            const valorId = this.value;
-            const valorNombre = this.dataset.valorNombre;
-            
-            const atributoActivo = document.getElementById(`atributo-activo-${atributoId}`);
-            if (!atributoActivo.checked) {
-                atributoActivo.checked = true;
-                atributoActivo.dispatchEvent(new Event('change'));
-            }
-            
-            if (!atributosActivos[atributoId]) {
-                atributosActivos[atributoId] = {
-                    id: atributoId,
-                    nombre: atributoNombre,
-                    valores: {}
-                };
-            }
-            
-            if (this.checked) {
-                atributosActivos[atributoId].valores[valorId] = {
-                    id: valorId,
-                    nombre: valorNombre,
-                    atributoId: atributoId,
-                    atributoNombre: atributoNombre
-                };
-            } else {
-                if (atributosActivos[atributoId] && atributosActivos[atributoId].valores[valorId]) {
-                    delete atributosActivos[atributoId].valores[valorId];
-                    if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
-                        delete atributosActivos[atributoId];
-                    }
+            } 
+            else if (fechaInicio && !fechaFin) {
+                // Caso 2: Solo fecha de inicio
+                if (fechaHoy >= fechaInicio) {
+                    descuentoActivo = true;
+                    mensaje = '✓ Descuento activo HOY';
+                } else {
+                    descuentoActivo = false;
+                    mensaje = `⏱️ Descuento programado desde ${fechaInicioStr}`;
                 }
+            } 
+            else if (!fechaInicio && fechaFin) {
+                // Caso 3: Solo fecha de fin
+                if (fechaHoy <= fechaFin) {
+                    descuentoActivo = true;
+                    mensaje = '✓ Descuento activo HOY';
+                } else {
+                    descuentoActivo = false;
+                    mensaje = `⏱️ Descuento programado hasta ${fechaFinStr}`;
+                }
+            } 
+            else {
+                // Caso 4: Sin fechas
+                descuentoActivo = true;
+                mensaje = '✓ Descuento activo';
             }
             
-            actualizarPestanasValores();
-            actualizarResumenAtributos();
-        });
-    });
+            // SOLO si el descuento está activo, usamos el precio con descuento
+            if (descuentoActivo) {
+                precioBase = precioDescuento;
+            }
+        }
+    }
     
-    // ============ EVENT LISTENERS PARA FECHAS Y DESCUENTOS DE VARIACIONES ============
-    document.addEventListener('change', function(e) {
-        // Cuando cambia la fecha de inicio de una variación
-        if (e.target.id && e.target.id.startsWith('fecha-inicio-')) {
-            const valorKey = e.target.id.replace('fecha-inicio-', '');
-            validarFechasDescuentoVariacion(e.target.id, `fecha-fin-${valorKey}`, valorKey);
-            actualizarPrecioFinalVariacion(valorKey);
-        }
-        // Cuando cambia la fecha de fin de una variación
-        if (e.target.id && e.target.id.startsWith('fecha-fin-')) {
-            const valorKey = e.target.id.replace('fecha-fin-', '');
-            validarFechasDescuentoVariacion(`fecha-inicio-${valorKey}`, e.target.id, valorKey);
-            actualizarPrecioFinalVariacion(valorKey);
-        }
-        // Cuando se activa/desactiva el checkbox de descuento de una variación
-        if (e.target.id && e.target.id.startsWith('descuento-')) {
-            const valorKey = e.target.id.replace('descuento-', '');
-            toggleDescuentoVariacion(e.target, valorKey);
-            actualizarPrecioFinalVariacion(valorKey);
-        }
-    });
+    // ========== CALCULAR IMPUESTOS ==========
+    let totalImpuesto = 0;
+    let porcentajeImpuesto = 0;
+    let nombreImpuesto = '';
+    let precioFinal = precioBase;
     
-    // ============ INICIALIZAR RESÚMENES ============
-    actualizarResumenAtributos();
-    actualizarPestanasValores();
-    setTimeout(actualizarPrecioFinal, 100);
-});
+    if (impuestoSelect && impuestoSelect.value) {
+        const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
+        porcentajeImpuesto = parseFloat(selectedOption.dataset.porcentaje) || 0;
+        nombreImpuesto = selectedOption.dataset.nombre || selectedOption.text.split('(')[0].trim();
+        totalImpuesto = precioBase * (porcentajeImpuesto / 100);
+        precioFinal = precioBase + totalImpuesto;
+    }
+    
+    // ========== ACTUALIZAR DISPLAY ==========
+    if (precioFinalSpan) {
+        precioFinalSpan.textContent = '$' + precioFinal.toFixed(2);
+    }
+    
+    if (detalleImpuestoSpan) {
+        let html = '';
+        if (mensaje) {
+            const colorClass = descuentoActivo ? 'text-success' : 'text-warning';
+            html += `<span class="${colorClass}">${mensaje}</span><br>`;
+        }
+        if (porcentajeImpuesto > 0) {
+            html += `${nombreImpuesto}: +${porcentajeImpuesto.toFixed(2)}% ($${totalImpuesto.toFixed(2)})`;
+        } else {
+            html += 'Sin impuesto';
+        }
+        detalleImpuestoSpan.innerHTML = html;
+    }
+    
+    // Actualizar resumen de precios
+    const precioBaseDisplay = document.getElementById(`precio-base-display-${valorKey}`);
+    const totalImpuestosDisplay = document.getElementById(`total-impuestos-display-${valorKey}`);
+    const precioFinalTotalDisplay = document.getElementById(`precio-final-total-display-${valorKey}`);
+    
+    if (precioBaseDisplay) precioBaseDisplay.textContent = '$' + precioBase.toFixed(2);
+    if (totalImpuestosDisplay) totalImpuestosDisplay.textContent = '+$' + totalImpuesto.toFixed(2);
+    if (precioFinalTotalDisplay) precioFinalTotalDisplay.textContent = '$' + precioFinal.toFixed(2);
+    
+    // LOG PARA DEPURACIÓN
+    console.log('=== VARIACIÓN ' + valorKey + ' ===');
+    console.log('Precio normal:', precioNormal);
+    console.log('Precio descuento:', precioDescuento);
+    console.log('Descuento marcado:', tieneDescuento);
+    console.log('Descuento activo HOY?', descuentoActivo);
+    console.log('Precio BASE usado:', precioBase);
+    console.log('Precio FINAL:', precioFinal);
+}
 
 // ============ EVENT LISTENERS ADICIONALES PARA ATRIBUTOS ============
 document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
@@ -5502,23 +5441,205 @@ document.getElementById('productoForm').addEventListener('submit', function(even
 
 // Inicializar modales
 document.addEventListener('DOMContentLoaded', function() {
+    // ============ INICIALIZAR MODALES ============
     try {
-        const modalCategoriaEl = document.getElementById('modalCategoria');
-        const modalMarcaEl = document.getElementById('modalMarca');
-        const modalEtiquetaEl = document.getElementById('modalEtiqueta');
-        const modalAtributoEl = document.getElementById('modalAtributo');
-        const modalImpuestoEl = document.getElementById('modalImpuesto');
-        const crearValorModalEl = document.getElementById('crearValorModal');
-        
-        if (modalCategoriaEl) modalCategoria = new bootstrap.Modal(modalCategoriaEl);
-        if (modalMarcaEl) modalMarca = new bootstrap.Modal(modalMarcaEl);
-        if (modalEtiquetaEl) modalEtiqueta = new bootstrap.Modal(modalEtiquetaEl);
-        if (modalAtributoEl) modalAtributo = new bootstrap.Modal(modalAtributoEl);
-        if (modalImpuestoEl) modalImpuesto = new bootstrap.Modal(modalImpuestoEl);
-        if (crearValorModalEl) valorModal = new bootstrap.Modal(crearValorModalEl);
-    } catch (e) {
-        console.error('Error al inicializar modales:', e);
+        modalCategoria = new bootstrap.Modal(document.getElementById('modalCategoria'));
+        modalMarca = new bootstrap.Modal(document.getElementById('modalMarca'));
+        modalEtiqueta = new bootstrap.Modal(document.getElementById('modalEtiqueta'));
+        modalAtributo = new bootstrap.Modal(document.getElementById('modalAtributo'));
+        modalImpuesto = new bootstrap.Modal(document.getElementById('modalImpuesto'));
+        valorModal = new bootstrap.Modal(document.getElementById('crearValorModal'));
+    } catch(e) { console.error('Error al inicializar modales:', e); }
+    
+    // ============ EVENTOS DEL PRODUCTO PRINCIPAL ============
+    const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
+    const fechaFinInput = document.getElementById('dFecha_fin_descuento');
+    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
+    const tieneDescuentoCheckbox = document.getElementById('bTiene_descuento');
+    const precioVentaInput = document.getElementById('dPrecio_venta');
+    const impuestoSelect = document.getElementById('id_impuesto');
+    
+    if (precioVentaInput) {
+        precioVentaInput.addEventListener('input', actualizarPrecioFinal);
+        precioVentaInput.addEventListener('change', actualizarPrecioFinal);
     }
+    
+    if (tieneDescuentoCheckbox) {
+        tieneDescuentoCheckbox.addEventListener('change', function() {
+            toggleDescuentoFields();
+            actualizarPrecioFinal();
+        });
+    }
+    
+    if (precioDescuentoInput) {
+        precioDescuentoInput.addEventListener('input', function() {
+            validarPrecioDescuentoProducto();
+            actualizarPrecioFinal();
+        });
+        precioDescuentoInput.addEventListener('change', function() {
+            validarPrecioDescuentoProducto();
+            actualizarPrecioFinal();
+        });
+    }
+    
+    if (fechaInicioInput) {
+        fechaInicioInput.addEventListener('change', function() {
+            validarFechasDescuento();
+            actualizarPrecioFinal();
+        });
+        fechaInicioInput.addEventListener('blur', actualizarPrecioFinal);
+    }
+    
+    if (fechaFinInput) {
+        fechaFinInput.addEventListener('change', function() {
+            validarFechasDescuento();
+            actualizarPrecioFinal();
+        });
+        fechaFinInput.addEventListener('blur', actualizarPrecioFinal);
+    }
+    
+    if (impuestoSelect) {
+        impuestoSelect.addEventListener('change', actualizarPrecioFinal);
+    }
+    
+    // ============ EVENTOS PARA ATRIBUTOS Y VARIACIONES ============
+    document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const atributoId = this.dataset.atributoId;
+            const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+            const estadoBadge = document.getElementById(`estado-${atributoId}`);
+            
+            if (this.checked) {
+                if (valoresContainer) valoresContainer.style.display = 'block';
+                if (estadoBadge) estadoBadge.style.display = 'inline-block';
+                if (!atributosActivos[atributoId]) {
+                    atributosActivos[atributoId] = {
+                        id: atributoId,
+                        nombre: this.dataset.atributoNombre,
+                        valores: {}
+                    };
+                }
+            } else {
+                if (valoresContainer) valoresContainer.style.display = 'none';
+                if (estadoBadge) estadoBadge.style.display = 'none';
+                delete atributosActivos[atributoId];
+            }
+            actualizarPestanasValores();
+            actualizarResumenAtributos();
+        });
+    });
+    
+    document.querySelectorAll('.seleccionar-todos-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const atributoId = this.dataset.atributoId;
+            const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+            if (!valoresContainer) return;
+            
+            const valorCheckboxes = valoresContainer.querySelectorAll('.valor-checkbox');
+            
+            valorCheckboxes.forEach(cb => {
+                cb.checked = this.checked;
+                const atributoNombre = cb.dataset.atributoNombre;
+                const valorId = cb.value;
+                const valorNombre = cb.dataset.valorNombre;
+                
+                if (this.checked) {
+                    if (!atributosActivos[atributoId]) {
+                        atributosActivos[atributoId] = {
+                            id: atributoId,
+                            nombre: atributoNombre,
+                            valores: {}
+                        };
+                    }
+                    atributosActivos[atributoId].valores[valorId] = {
+                        id: valorId,
+                        nombre: valorNombre,
+                        atributoId: atributoId,
+                        atributoNombre: atributoNombre
+                    };
+                } else {
+                    if (atributosActivos[atributoId] && atributosActivos[atributoId].valores[valorId]) {
+                        delete atributosActivos[atributoId].valores[valorId];
+                        if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
+                            delete atributosActivos[atributoId];
+                        }
+                    }
+                }
+            });
+            
+            actualizarPestanasValores();
+            actualizarResumenAtributos();
+        });
+    });
+    
+    document.querySelectorAll('.valor-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const atributoId = this.dataset.atributoId;
+            const atributoNombre = this.dataset.atributoNombre;
+            const valorId = this.value;
+            const valorNombre = this.dataset.valorNombre;
+            
+            const atributoActivo = document.getElementById(`atributo-activo-${atributoId}`);
+            if (!atributoActivo.checked) {
+                atributoActivo.checked = true;
+                atributoActivo.dispatchEvent(new Event('change'));
+            }
+            
+            if (!atributosActivos[atributoId]) {
+                atributosActivos[atributoId] = {
+                    id: atributoId,
+                    nombre: atributoNombre,
+                    valores: {}
+                };
+            }
+            
+            if (this.checked) {
+                atributosActivos[atributoId].valores[valorId] = {
+                    id: valorId,
+                    nombre: valorNombre,
+                    atributoId: atributoId,
+                    atributoNombre: atributoNombre
+                };
+            } else {
+                if (atributosActivos[atributoId] && atributosActivos[atributoId].valores[valorId]) {
+                    delete atributosActivos[atributoId].valores[valorId];
+                    if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
+                        delete atributosActivos[atributoId];
+                    }
+                }
+            }
+            
+            actualizarPestanasValores();
+            actualizarResumenAtributos();
+        });
+    });
+    
+    // ============ EVENT LISTENERS PARA FECHAS Y DESCUENTOS DE VARIACIONES ============
+    document.addEventListener('change', function(e) {
+        // Cuando cambia la fecha de inicio de una variación
+        if (e.target.id && e.target.id.startsWith('fecha-inicio-')) {
+            const valorKey = e.target.id.replace('fecha-inicio-', '');
+            validarFechasDescuentoVariacion(e.target.id, `fecha-fin-${valorKey}`, valorKey);
+            actualizarPrecioFinalVariacion(valorKey);
+        }
+        // Cuando cambia la fecha de fin de una variación
+        if (e.target.id && e.target.id.startsWith('fecha-fin-')) {
+            const valorKey = e.target.id.replace('fecha-fin-', '');
+            validarFechasDescuentoVariacion(`fecha-inicio-${valorKey}`, e.target.id, valorKey);
+            actualizarPrecioFinalVariacion(valorKey);
+        }
+        // Cuando se activa/desactiva el checkbox de descuento de una variación
+        if (e.target.id && e.target.id.startsWith('descuento-')) {
+            const valorKey = e.target.id.replace('descuento-', '');
+            toggleDescuentoVariacion(e.target, valorKey);
+            actualizarPrecioFinalVariacion(valorKey);
+        }
+    });
+    
+    // ============ INICIALIZAR RESÚMENES ============
+    actualizarResumenAtributos();
+    actualizarPestanasValores();
+    setTimeout(actualizarPrecioFinal, 100);
 });
 </script>
 @endpush
