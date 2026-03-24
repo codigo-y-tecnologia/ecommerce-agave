@@ -154,7 +154,7 @@
                             </div>
                         </div>
 
-                        <!-- CAMPOS DE Descuento -->
+                        <!-- CAMPOS DE Descuento (COMPLETOS COMO EN PRODUCTO) -->
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group mb-3">
@@ -472,7 +472,7 @@
                     </div>
                 </div>
 
-                <!-- SECCIÓN DE PRECIO FINAL CON IMPUESTO -->
+                <!-- SECCIÓN DE PRECIO FINAL CON IMPUESTO (MEJORADA) -->
                 <div class="card mb-4 bg-info text-white">
                     <div class="card-header bg-dark text-white">
                         <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Precio Final con Impuesto</h5>
@@ -576,7 +576,7 @@
                     </div>
                 </div>
 
-                <!-- MULTIMEDIA DE LA VARIACIÓN -->
+                <!-- MULTIMEDIA DE LA VARIACIÓN (MEJORADA) -->
                 <div class="card mb-4">
                     <div class="card-header bg-secondary text-white">
                         <h5 class="mb-0"><i class="fas fa-images me-2"></i>Multimedia de la Variación</h5>
@@ -601,7 +601,7 @@
                             
                             <!-- Preview de imagen principal -->
                             <div id="preview_principal_container" class="mt-2" style="display: none;">
-                                <div class="border rounded p-2 text-center bg-light">
+                                <div class="border rounded p-2 text-center bg-light position-relative">
                                     <img id="preview_principal_img" src="#" 
                                          class="img-thumbnail" 
                                          style="max-width: 150px; max-height: 150px; object-fit: contain;"
@@ -1401,9 +1401,9 @@ function toggleDescuentoFields() {
     
     if (tieneDescuento) {
         descuentoFields.style.display = 'block';
-        precioDescuento.required = true;
-        fechaInicio.required = true;
-        fechaFin.required = true;
+        if (precioDescuento) precioDescuento.required = true;
+        if (fechaInicio) fechaInicio.required = true;
+        if (fechaFin) fechaFin.required = true;
         
         setTimeout(() => {
             validarPrecioDescuento();
@@ -1411,14 +1411,14 @@ function toggleDescuentoFields() {
         }, 100);
     } else {
         descuentoFields.style.display = 'none';
-        precioDescuento.required = false;
-        fechaInicio.required = false;
-        fechaFin.required = false;
+        if (precioDescuento) precioDescuento.required = false;
+        if (fechaInicio) fechaInicio.required = false;
+        if (fechaFin) fechaFin.required = false;
         
-        precioDescuento.classList.remove('is-invalid');
+        if (precioDescuento) precioDescuento.classList.remove('is-invalid');
         const errorDiv = document.getElementById('error-precio-descuento');
         if (errorDiv) errorDiv.style.display = 'none';
-        fechaFin.classList.remove('is-invalid');
+        if (fechaFin) fechaFin.classList.remove('is-invalid');
         const errorFechas = document.getElementById('error-fechas-descuento');
         if (errorFechas) errorFechas.style.display = 'none';
         
@@ -1432,6 +1432,8 @@ function actualizarPrecioFinal() {
     const precioInput = document.getElementById('dPrecio');
     const tieneDescuento = document.getElementById('bTiene_descuento')?.checked;
     const precioDescuentoInput = document.getElementById('dPrecio_descuento');
+    const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
+    const fechaFinInput = document.getElementById('dFecha_fin_descuento');
     const impuestoSelect = document.getElementById('id_impuesto');
     
     if (!precioInput) return;
@@ -1439,24 +1441,25 @@ function actualizarPrecioFinal() {
     // Determinar qué precio usar (original o con descuento)
     let precioBase = parseFloat(precioInput.value) || 0;
     let precioOriginal = precioBase;
+    let descuentoActivo = false;
+    let mensajeDescuento = '';
     
     // Verificar si el descuento está activo HOY
-    let descuentoActivo = false;
     if (tieneDescuento && precioDescuentoInput && precioDescuentoInput.value) {
         const fechaHoy = new Date();
         fechaHoy.setHours(0, 0, 0, 0);
-        
-        const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
-        const fechaFinInput = document.getElementById('dFecha_fin_descuento');
         
         let fechaInicio = null;
         let fechaFin = null;
         
         if (fechaInicioInput && fechaInicioInput.value) {
-            fechaInicio = new Date(fechaInicioInput.value + 'T00:00:00');
+            const [year, month, day] = fechaInicioInput.value.split('-').map(Number);
+            fechaInicio = new Date(year, month - 1, day);
         }
         if (fechaFinInput && fechaFinInput.value) {
-            fechaFin = new Date(fechaFinInput.value + 'T23:59:59');
+            const [year, month, day] = fechaFinInput.value.split('-').map(Number);
+            fechaFin = new Date(year, month - 1, day);
+            fechaFin.setHours(23, 59, 59, 999);
         }
         
         const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
@@ -1475,6 +1478,14 @@ function actualizarPrecioFinal() {
         if (aplicarDescuento && precioDescuento > 0 && precioDescuento < precioBase) {
             precioBase = precioDescuento;
             descuentoActivo = true;
+            
+            if (fechaInicio && fechaFin) {
+                mensajeDescuento = `Válido del ${fechaInicioInput.value} al ${fechaFinInput.value}`;
+            } else if (fechaInicio) {
+                mensajeDescuento = `Válido desde ${fechaInicioInput.value}`;
+            } else if (fechaFin) {
+                mensajeDescuento = `Válido hasta ${fechaFinInput.value}`;
+            }
         }
     }
     
@@ -1485,11 +1496,39 @@ function actualizarPrecioFinal() {
     const precioOriginalDisplay = document.getElementById('precio-original-display');
     if (precioOriginalDisplay) {
         if (tieneDescuento && precioDescuentoInput?.value && descuentoActivo) {
+            const porcentajeDesc = Math.round(((precioOriginal - precioBase) / precioOriginal) * 100);
             precioOriginalDisplay.style.display = 'block';
             precioOriginalDisplay.innerHTML = `
-                <span class="text-decoration-line-through">$${precioOriginal.toFixed(2)}</span>
-                <span class="badge bg-danger ms-2">¡DESCUENTO!</span>
+                <div class="alert alert-success p-2 mb-2">
+                    <strong>✓ ¡DESCUENTO ACTIVO HOY!</strong><br>
+                    <span class="text-decoration-line-through">$${precioOriginal.toFixed(2)}</span> → 
+                    <strong class="text-danger">$${precioBase.toFixed(2)}</strong>
+                    <span class="badge bg-danger ms-2">-${porcentajeDesc}%</span>
+                    ${mensajeDescuento ? `<br><small>${mensajeDescuento}</small>` : ''}
+                </div>
             `;
+        } else if (tieneDescuento && precioDescuentoInput?.value) {
+            const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
+            if (precioDescuento > 0 && precioDescuento < precioOriginal) {
+                precioOriginalDisplay.style.display = 'block';
+                let fechaTexto = '';
+                if (fechaInicioInput?.value && fechaFinInput?.value) {
+                    fechaTexto = ` (${fechaInicioInput.value} al ${fechaFinInput.value})`;
+                } else if (fechaInicioInput?.value) {
+                    fechaTexto = ` desde ${fechaInicioInput.value}`;
+                } else if (fechaFinInput?.value) {
+                    fechaTexto = ` hasta ${fechaFinInput.value}`;
+                }
+                precioOriginalDisplay.innerHTML = `
+                    <div class="alert alert-warning p-2 mb-2">
+                        <strong>⏱️ Descuento programado${fechaTexto}</strong><br>
+                        Precio normal: <strong>$${precioOriginal.toFixed(2)}</strong><br>
+                        Precio con descuento: $${precioDescuento.toFixed(2)}
+                    </div>
+                `;
+            } else {
+                precioOriginalDisplay.style.display = 'none';
+            }
         } else {
             precioOriginalDisplay.style.display = 'none';
         }
@@ -2073,6 +2112,7 @@ function prepararFormularioParaEnvio(event) {
         }
     }
     
+    // Crear FormData y enviar
     const form = document.getElementById('variacionForm');
     const formData = new FormData(form);
     
@@ -2154,8 +2194,19 @@ document.addEventListener('DOMContentLoaded', function() {
     actualizarPrecioFinal();
     
     // Event listeners para calcular precio final
-    document.getElementById('dPrecio').addEventListener('input', actualizarPrecioFinal);
-    document.getElementById('id_impuesto').addEventListener('change', actualizarPrecioFinal);
+    const precioInput = document.getElementById('dPrecio');
+    const impuestoSelect = document.getElementById('id_impuesto');
+    const descuentoCheckbox = document.getElementById('bTiene_descuento');
+    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
+    const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
+    const fechaFinInput = document.getElementById('dFecha_fin_descuento');
+    
+    if (precioInput) precioInput.addEventListener('input', actualizarPrecioFinal);
+    if (impuestoSelect) impuestoSelect.addEventListener('change', actualizarPrecioFinal);
+    if (descuentoCheckbox) descuentoCheckbox.addEventListener('change', actualizarPrecioFinal);
+    if (precioDescuentoInput) precioDescuentoInput.addEventListener('input', actualizarPrecioFinal);
+    if (fechaInicioInput) fechaInicioInput.addEventListener('change', actualizarPrecioFinal);
+    if (fechaFinInput) fechaFinInput.addEventListener('change', actualizarPrecioFinal);
     
     // Validación en tiempo real de atributos
     document.querySelectorAll('.atributo-radio').forEach(radio => {

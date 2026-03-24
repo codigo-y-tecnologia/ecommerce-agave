@@ -382,4 +382,337 @@ class FavoritoInvitadoController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Obtener productos para la página de inicio de invitado (SOLO 3 por sección)
+     * Este método es para la vista de invitado que muestra productos en el inicio
+     */
+    public function inicioInvitado()
+    {
+        try {
+            // Productos en descuento - LIMITADO a 3
+            $productosDescuento = $this->getProductosConDescuentoInvitado(3);
+            
+            // Productos destacados - LIMITADO a 3
+            $productosDestacados = $this->getProductosDestacadosInvitado(3);
+            
+            // Productos recomendados - LIMITADO a 3
+            $productosRecomendados = $this->getProductosRecomendadosInvitado(3);
+            
+            // Todos los productos con paginación - LIMITADO a 3 por página
+            $todosLosItems = $this->getTodosLosProductosInvitado(3);
+            
+            return view('inicio-invitado', compact(
+                'productosDescuento',
+                'productosDestacados',
+                'productosRecomendados',
+                'todosLosItems'
+            ));
+            
+        } catch (\Exception $e) {
+            Log::error('Error en inicioInvitado: ' . $e->getMessage());
+            
+            $productosDescuento = collect([]);
+            $productosDestacados = collect([]);
+            $productosRecomendados = collect([]);
+            $todosLosItems = collect([]);
+            
+            return view('inicio-invitado', compact(
+                'productosDescuento',
+                'productosDestacados',
+                'productosRecomendados',
+                'todosLosItems'
+            ))->with('error', 'Error al cargar los productos');
+        }
+    }
+
+    /**
+     * Obtener productos con descuento para invitado (productos + variaciones) - LIMITADO
+     */
+    private function getProductosConDescuentoInvitado($limit = 3)
+    {
+        $items = collect();
+        
+        // Productos con descuento
+        $productos = Producto::where('bActivo', true)
+            ->whereDoesntHave('variaciones', function ($query) {
+                $query->where('bActivo', true);
+            })
+            ->where('bTiene_descuento', true)
+            ->where(function($query) {
+                $query->whereNull('dFecha_fin_descuento')
+                    ->orWhere('dFecha_fin_descuento', '>=', now()->toDateString());
+            })
+            ->where(function($query) {
+                $query->whereNull('dFecha_inicio_descuento')
+                    ->orWhere('dFecha_inicio_descuento', '<=', now()->toDateString());
+            })
+            ->where('dPrecio_descuento', '>', 0)
+            ->where('dPrecio_descuento', '<', DB::raw('dPrecio_venta'))
+            ->with(['categoria', 'marca', 'etiquetas', 'impuestos'])
+            ->get();
+            
+        foreach ($productos as $producto) {
+            if ($producto->tieneDescuentoActivo()) {
+                $producto->tipo_item = 'producto';
+                $producto->item_id = $producto->id_producto;
+                
+                // Calcular precio final con impuestos
+                $precioBase = $producto->tieneDescuentoActivo() ? $producto->dPrecio_descuento : $producto->dPrecio_venta;
+                $totalImpuestos = 0;
+                foreach ($producto->impuestos as $impuesto) {
+                    if ($impuesto->bActivo) {
+                        $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                    }
+                }
+                $producto->precio_final_con_impuesto = $precioBase + $totalImpuestos;
+                $producto->precio_original_con_impuesto = $producto->dPrecio_venta;
+                foreach ($producto->impuestos as $impuesto) {
+                    if ($impuesto->bActivo) {
+                        $producto->precio_original_con_impuesto += $producto->dPrecio_venta * ($impuesto->dPorcentaje / 100);
+                    }
+                }
+                
+                $items->push($producto);
+            }
+        }
+        
+        // Variaciones con descuento
+        $variaciones = ProductoVariacion::whereHas('producto', function($query) {
+                $query->where('bActivo', true);
+            })
+            ->where('bActivo', true)
+            ->where('bTiene_descuento', true)
+            ->where(function($query) {
+                $query->whereNull('dFecha_fin_descuento')
+                    ->orWhere('dFecha_fin_descuento', '>=', now()->toDateString());
+            })
+            ->where(function($query) {
+                $query->whereNull('dFecha_inicio_descuento')
+                    ->orWhere('dFecha_inicio_descuento', '<=', now()->toDateString());
+            })
+            ->where('dPrecio_descuento', '>', 0)
+            ->where('dPrecio_descuento', '<', DB::raw('dPrecio'))
+            ->with(['producto.categoria', 'producto.marca', 'producto.etiquetas', 'impuesto', 'atributos.valor'])
+            ->get();
+            
+        foreach ($variaciones as $variacion) {
+            if ($variacion->tieneDescuentoActivo()) {
+                $variacion->tipo_item = 'variacion';
+                $variacion->item_id = $variacion->id_variacion;
+                
+                // Calcular precio final con impuestos
+                $precioBase = $variacion->tieneDescuentoActivo() ? $variacion->dPrecio_descuento : $variacion->dPrecio;
+                $totalImpuestos = 0;
+                
+                if ($variacion->impuesto && $variacion->impuesto->bActivo) {
+                    $totalImpuestos = $precioBase * ($variacion->impuesto->dPorcentaje / 100);
+                } elseif ($variacion->producto && $variacion->producto->impuestos->count() > 0) {
+                    foreach ($variacion->producto->impuestos as $impuesto) {
+                        if ($impuesto->bActivo) {
+                            $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                        }
+                    }
+                }
+                
+                $variacion->precio_final_con_impuesto = $precioBase + $totalImpuestos;
+                $variacion->precio_original_con_impuesto = $variacion->dPrecio;
+                
+                if ($variacion->impuesto && $variacion->impuesto->bActivo) {
+                    $variacion->precio_original_con_impuesto += $variacion->dPrecio * ($variacion->impuesto->dPorcentaje / 100);
+                } elseif ($variacion->producto && $variacion->producto->impuestos->count() > 0) {
+                    foreach ($variacion->producto->impuestos as $impuesto) {
+                        if ($impuesto->bActivo) {
+                            $variacion->precio_original_con_impuesto += $variacion->dPrecio * ($impuesto->dPorcentaje / 100);
+                        }
+                    }
+                }
+                
+                $items->push($variacion);
+            }
+        }
+        
+        // Ordenar por mayor porcentaje de descuento y limitar
+        $items = $items->sortByDesc(function($item) {
+            return $item->porcentaje_descuento;
+        });
+        
+        return $items->take($limit);
+    }
+
+    /**
+     * Obtener productos destacados para invitado - LIMITADO
+     */
+    private function getProductosDestacadosInvitado($limit = 3)
+    {
+        $productos = Producto::where('bActivo', true)
+            ->whereDoesntHave('variaciones', function ($query) {
+                $query->where('bActivo', true);
+            })
+            ->with(['categoria', 'marca', 'etiquetas', 'impuestos'])
+            ->orderBy('tFecha_registro', 'desc')
+            ->limit($limit)
+            ->get()
+            ->map(function($producto) {
+                $producto->tipo_item = 'producto';
+                
+                // Calcular precio final con impuestos
+                $precioBase = $producto->tieneDescuentoActivo() ? $producto->dPrecio_descuento : $producto->dPrecio_venta;
+                $totalImpuestos = 0;
+                foreach ($producto->impuestos as $impuesto) {
+                    if ($impuesto->bActivo) {
+                        $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                    }
+                }
+                $producto->precio_final_con_impuesto = $precioBase + $totalImpuestos;
+                $producto->precio_original_con_impuesto = $producto->dPrecio_venta;
+                foreach ($producto->impuestos as $impuesto) {
+                    if ($impuesto->bActivo) {
+                        $producto->precio_original_con_impuesto += $producto->dPrecio_venta * ($impuesto->dPorcentaje / 100);
+                    }
+                }
+                
+                return $producto;
+            });
+            
+        return $productos;
+    }
+
+    /**
+     * Obtener productos recomendados para invitado - LIMITADO
+     */
+    private function getProductosRecomendadosInvitado($limit = 3)
+    {
+        $productos = Producto::where('bActivo', true)
+            ->whereDoesntHave('variaciones', function ($query) {
+                $query->where('bActivo', true);
+            })
+            ->with(['categoria', 'marca', 'etiquetas', 'impuestos'])
+            ->inRandomOrder()
+            ->limit($limit)
+            ->get()
+            ->map(function($producto) {
+                $producto->tipo_item = 'producto';
+                
+                // Calcular precio final con impuestos
+                $precioBase = $producto->tieneDescuentoActivo() ? $producto->dPrecio_descuento : $producto->dPrecio_venta;
+                $totalImpuestos = 0;
+                foreach ($producto->impuestos as $impuesto) {
+                    if ($impuesto->bActivo) {
+                        $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                    }
+                }
+                $producto->precio_final_con_impuesto = $precioBase + $totalImpuestos;
+                $producto->precio_original_con_impuesto = $producto->dPrecio_venta;
+                foreach ($producto->impuestos as $impuesto) {
+                    if ($impuesto->bActivo) {
+                        $producto->precio_original_con_impuesto += $producto->dPrecio_venta * ($impuesto->dPorcentaje / 100);
+                    }
+                }
+                
+                return $producto;
+            });
+            
+        return $productos;
+    }
+
+    /**
+     * Obtener todos los productos para invitado con paginación
+     */
+    private function getTodosLosProductosInvitado($perPage = 3)
+    {
+        $items = collect();
+        
+        // Productos que NO tienen variaciones activas
+        $productosSinVariaciones = Producto::where('bActivo', true)
+            ->whereDoesntHave('variaciones', function ($query) {
+                $query->where('bActivo', true);
+            })
+            ->with(['categoria', 'marca', 'etiquetas', 'impuestos'])
+            ->orderBy('id_producto', 'desc')
+            ->get();
+            
+        foreach ($productosSinVariaciones as $producto) {
+            $producto->tipo_item = 'producto';
+            $producto->item_id = $producto->id_producto;
+            
+            // Calcular precio final con impuestos
+            $precioBase = $producto->tieneDescuentoActivo() ? $producto->dPrecio_descuento : $producto->dPrecio_venta;
+            $totalImpuestos = 0;
+            foreach ($producto->impuestos as $impuesto) {
+                if ($impuesto->bActivo) {
+                    $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                }
+            }
+            $producto->precio_final_con_impuesto = $precioBase + $totalImpuestos;
+            $producto->precio_original_con_impuesto = $producto->dPrecio_venta;
+            foreach ($producto->impuestos as $impuesto) {
+                if ($impuesto->bActivo) {
+                    $producto->precio_original_con_impuesto += $producto->dPrecio_venta * ($impuesto->dPorcentaje / 100);
+                }
+            }
+            
+            $items->push($producto);
+        }
+        
+        // Todas las variaciones activas
+        $variaciones = ProductoVariacion::whereHas('producto', function($query) {
+                $query->where('bActivo', true);
+            })
+            ->where('bActivo', true)
+            ->with(['producto.categoria', 'producto.marca', 'producto.etiquetas', 'impuesto', 'atributos.valor'])
+            ->orderBy('id_variacion', 'desc')
+            ->get();
+            
+        foreach ($variaciones as $variacion) {
+            $variacion->tipo_item = 'variacion';
+            $variacion->item_id = $variacion->id_variacion;
+            
+            // Calcular precio final con impuestos
+            $precioBase = $variacion->tieneDescuentoActivo() ? $variacion->dPrecio_descuento : $variacion->dPrecio;
+            $totalImpuestos = 0;
+            
+            if ($variacion->impuesto && $variacion->impuesto->bActivo) {
+                $totalImpuestos = $precioBase * ($variacion->impuesto->dPorcentaje / 100);
+            } elseif ($variacion->producto && $variacion->producto->impuestos->count() > 0) {
+                foreach ($variacion->producto->impuestos as $impuesto) {
+                    if ($impuesto->bActivo) {
+                        $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                    }
+                }
+            }
+            
+            $variacion->precio_final_con_impuesto = $precioBase + $totalImpuestos;
+            $variacion->precio_original_con_impuesto = $variacion->dPrecio;
+            
+            if ($variacion->impuesto && $variacion->impuesto->bActivo) {
+                $variacion->precio_original_con_impuesto += $variacion->dPrecio * ($variacion->impuesto->dPorcentaje / 100);
+            } elseif ($variacion->producto && $variacion->producto->impuestos->count() > 0) {
+                foreach ($variacion->producto->impuestos as $impuesto) {
+                    if ($impuesto->bActivo) {
+                        $variacion->precio_original_con_impuesto += $variacion->dPrecio * ($impuesto->dPorcentaje / 100);
+                    }
+                }
+            }
+            
+            $items->push($variacion);
+        }
+        
+        // Mezclar (aleatorio)
+        $items = $items->shuffle();
+        
+        // Paginación manual
+        $page = request()->get('page', 1);
+        $offset = ($page - 1) * $perPage;
+        
+        $paginated = new \Illuminate\Pagination\LengthAwarePaginator(
+            $items->slice($offset, $perPage)->values(),
+            $items->count(),
+            $perPage,
+            $page,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
+        
+        return $paginated;
+    }
 }

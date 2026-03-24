@@ -54,7 +54,8 @@ class BusquedaController extends Controller
         $productos = Producto::with([
                 'categoria', 
                 'marca', 
-                'etiquetas'
+                'etiquetas',
+                'impuestos'
             ])
             ->where('bActivo', true)
             ->orderBy('id_producto', 'desc')
@@ -64,6 +65,23 @@ class BusquedaController extends Controller
             $productoClone = clone $producto;
             $productoClone->tipo_item = 'producto';
             $productoClone->item_id = $producto->id_producto;
+            
+            // Calcular precio final con impuestos para producto
+            $precioBase = $productoClone->tieneDescuentoActivo() ? $productoClone->dPrecio_descuento : $productoClone->dPrecio_venta;
+            $totalImpuestos = 0;
+            foreach ($productoClone->impuestos as $impuesto) {
+                if ($impuesto->bActivo) {
+                    $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                }
+            }
+            $productoClone->precio_final_con_impuesto = $precioBase + $totalImpuestos;
+            $productoClone->precio_original_con_impuesto = $productoClone->dPrecio_venta;
+            foreach ($productoClone->impuestos as $impuesto) {
+                if ($impuesto->bActivo) {
+                    $productoClone->precio_original_con_impuesto += $productoClone->dPrecio_venta * ($impuesto->dPorcentaje / 100);
+                }
+            }
+            
             $items->push($productoClone);
             
             $variaciones = ProductoVariacion::with([
@@ -73,7 +91,8 @@ class BusquedaController extends Controller
                     'productoPadre.etiquetas',
                     'atributos.atributo',
                     'atributos.valor',
-                    'imagenesRegistradas'
+                    'imagenesRegistradas',
+                    'impuesto'
                 ])
                 ->where('id_producto', $producto->id_producto)
                 ->where('bActivo', true)
@@ -82,6 +101,34 @@ class BusquedaController extends Controller
             foreach ($variaciones as $variacion) {
                 $variacion->tipo_item = 'variacion';
                 $variacion->item_id = $variacion->id_variacion;
+                
+                // Calcular precio final con impuestos para variación
+                $precioBase = $variacion->tieneDescuentoActivo() ? $variacion->dPrecio_descuento : $variacion->dPrecio;
+                $totalImpuestos = 0;
+                
+                if ($variacion->impuesto && $variacion->impuesto->bActivo) {
+                    $totalImpuestos = $precioBase * ($variacion->impuesto->dPorcentaje / 100);
+                } elseif ($producto->impuestos->count() > 0) {
+                    foreach ($producto->impuestos as $impuesto) {
+                        if ($impuesto->bActivo) {
+                            $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                        }
+                    }
+                }
+                
+                $variacion->precio_final_con_impuesto = $precioBase + $totalImpuestos;
+                $variacion->precio_original_con_impuesto = $variacion->dPrecio;
+                
+                if ($variacion->impuesto && $variacion->impuesto->bActivo) {
+                    $variacion->precio_original_con_impuesto += $variacion->dPrecio * ($variacion->impuesto->dPorcentaje / 100);
+                } elseif ($producto->impuestos->count() > 0) {
+                    foreach ($producto->impuestos as $impuesto) {
+                        if ($impuesto->bActivo) {
+                            $variacion->precio_original_con_impuesto += $variacion->dPrecio * ($impuesto->dPorcentaje / 100);
+                        }
+                    }
+                }
+                
                 $items->push($variacion);
             }
         }
@@ -108,29 +155,18 @@ class BusquedaController extends Controller
 
     private function obtenerItemsConDescuento($limite = null)
     {
-        $fechaActual = now()->toDateString();
         $itemsConDescuento = collect();
         
+        // Productos con descuento
         $productosConDescuento = Producto::with([
                 'categoria', 
                 'marca', 
-                'etiquetas'
+                'etiquetas',
+                'impuestos'
             ])
             ->where('bActivo', true)
             ->where('bTiene_descuento', 1)
             ->where('dPrecio_descuento', '>', 0)
-            ->where(function($query) use ($fechaActual) {
-                $query->where(function($q) use ($fechaActual) {
-                    $q->whereNull('dFecha_fin_descuento')
-                      ->orWhere('dFecha_fin_descuento', '>=', $fechaActual);
-                });
-            })
-            ->where(function($query) use ($fechaActual) {
-                $query->where(function($q) use ($fechaActual) {
-                    $q->whereNull('dFecha_inicio_descuento')
-                      ->orWhere('dFecha_inicio_descuento', '<=', $fechaActual);
-                });
-            })
             ->get();
         
         foreach ($productosConDescuento as $producto) {
@@ -139,10 +175,28 @@ class BusquedaController extends Controller
                 $productoClone->tipo_item = 'producto';
                 $productoClone->item_id = $producto->id_producto;
                 $productoClone->porcentaje_descuento_calculado = $this->calcularPorcentajeDescuentoProducto($producto);
+                
+                // Calcular precio final con impuestos
+                $precioBase = $productoClone->tieneDescuentoActivo() ? $productoClone->dPrecio_descuento : $productoClone->dPrecio_venta;
+                $totalImpuestos = 0;
+                foreach ($productoClone->impuestos as $impuesto) {
+                    if ($impuesto->bActivo) {
+                        $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                    }
+                }
+                $productoClone->precio_final_con_impuesto = $precioBase + $totalImpuestos;
+                $productoClone->precio_original_con_impuesto = $productoClone->dPrecio_venta;
+                foreach ($productoClone->impuestos as $impuesto) {
+                    if ($impuesto->bActivo) {
+                        $productoClone->precio_original_con_impuesto += $productoClone->dPrecio_venta * ($impuesto->dPorcentaje / 100);
+                    }
+                }
+                
                 $itemsConDescuento->push($productoClone);
             }
         }
         
+        // Variaciones con descuento
         $variacionesConDescuento = ProductoVariacion::with([
                 'productoPadre',
                 'productoPadre.categoria',
@@ -150,7 +204,8 @@ class BusquedaController extends Controller
                 'productoPadre.etiquetas',
                 'atributos.atributo',
                 'atributos.valor',
-                'imagenesRegistradas'
+                'imagenesRegistradas',
+                'impuesto'
             ])
             ->whereHas('productoPadre', function($q) {
                 $q->where('bActivo', true);
@@ -158,18 +213,6 @@ class BusquedaController extends Controller
             ->where('bActivo', true)
             ->where('bTiene_descuento', 1)
             ->where('dPrecio_descuento', '>', 0)
-            ->where(function($query) use ($fechaActual) {
-                $query->where(function($q) use ($fechaActual) {
-                    $q->whereNull('dFecha_fin_descuento')
-                      ->orWhere('dFecha_fin_descuento', '>=', $fechaActual);
-                });
-            })
-            ->where(function($query) use ($fechaActual) {
-                $query->where(function($q) use ($fechaActual) {
-                    $q->whereNull('dFecha_inicio_descuento')
-                      ->orWhere('dFecha_inicio_descuento', '<=', $fechaActual);
-                });
-            })
             ->get();
         
         foreach ($variacionesConDescuento as $variacion) {
@@ -177,6 +220,34 @@ class BusquedaController extends Controller
                 $variacion->tipo_item = 'variacion';
                 $variacion->item_id = $variacion->id_variacion;
                 $variacion->porcentaje_descuento_calculado = $this->calcularPorcentajeDescuentoVariacion($variacion);
+                
+                // Calcular precio final con impuestos
+                $precioBase = $variacion->tieneDescuentoActivo() ? $variacion->dPrecio_descuento : $variacion->dPrecio;
+                $totalImpuestos = 0;
+                
+                if ($variacion->impuesto && $variacion->impuesto->bActivo) {
+                    $totalImpuestos = $precioBase * ($variacion->impuesto->dPorcentaje / 100);
+                } elseif ($variacion->productoPadre && $variacion->productoPadre->impuestos->count() > 0) {
+                    foreach ($variacion->productoPadre->impuestos as $impuesto) {
+                        if ($impuesto->bActivo) {
+                            $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                        }
+                    }
+                }
+                
+                $variacion->precio_final_con_impuesto = $precioBase + $totalImpuestos;
+                $variacion->precio_original_con_impuesto = $variacion->dPrecio;
+                
+                if ($variacion->impuesto && $variacion->impuesto->bActivo) {
+                    $variacion->precio_original_con_impuesto += $variacion->dPrecio * ($variacion->impuesto->dPorcentaje / 100);
+                } elseif ($variacion->productoPadre && $variacion->productoPadre->impuestos->count() > 0) {
+                    foreach ($variacion->productoPadre->impuestos as $impuesto) {
+                        if ($impuesto->bActivo) {
+                            $variacion->precio_original_con_impuesto += $variacion->dPrecio * ($impuesto->dPorcentaje / 100);
+                        }
+                    }
+                }
+                
                 $itemsConDescuento->push($variacion);
             }
         }
@@ -201,16 +272,19 @@ class BusquedaController extends Controller
         $fechaActual = now()->toDateString();
 
         if ($producto->dFecha_inicio_descuento && $producto->dFecha_fin_descuento) {
-            return $fechaActual >= $producto->dFecha_inicio_descuento && 
-                   $fechaActual <= $producto->dFecha_fin_descuento;
+            $inicio = date('Y-m-d', strtotime($producto->dFecha_inicio_descuento));
+            $fin = date('Y-m-d', strtotime($producto->dFecha_fin_descuento));
+            return $fechaActual >= $inicio && $fechaActual <= $fin;
         }
 
         if ($producto->dFecha_inicio_descuento && !$producto->dFecha_fin_descuento) {
-            return $fechaActual >= $producto->dFecha_inicio_descuento;
+            $inicio = date('Y-m-d', strtotime($producto->dFecha_inicio_descuento));
+            return $fechaActual >= $inicio;
         }
 
         if (!$producto->dFecha_inicio_descuento && $producto->dFecha_fin_descuento) {
-            return $fechaActual <= $producto->dFecha_fin_descuento;
+            $fin = date('Y-m-d', strtotime($producto->dFecha_fin_descuento));
+            return $fechaActual <= $fin;
         }
 
         return true;
@@ -225,16 +299,19 @@ class BusquedaController extends Controller
         $fechaActual = now()->toDateString();
 
         if ($variacion->dFecha_inicio_descuento && $variacion->dFecha_fin_descuento) {
-            return $fechaActual >= $variacion->dFecha_inicio_descuento && 
-                   $fechaActual <= $variacion->dFecha_fin_descuento;
+            $inicio = date('Y-m-d', strtotime($variacion->dFecha_inicio_descuento));
+            $fin = date('Y-m-d', strtotime($variacion->dFecha_fin_descuento));
+            return $fechaActual >= $inicio && $fechaActual <= $fin;
         }
 
         if ($variacion->dFecha_inicio_descuento && !$variacion->dFecha_fin_descuento) {
-            return $fechaActual >= $variacion->dFecha_inicio_descuento;
+            $inicio = date('Y-m-d', strtotime($variacion->dFecha_inicio_descuento));
+            return $fechaActual >= $inicio;
         }
 
         if (!$variacion->dFecha_inicio_descuento && $variacion->dFecha_fin_descuento) {
-            return $fechaActual <= $variacion->dFecha_fin_descuento;
+            $fin = date('Y-m-d', strtotime($variacion->dFecha_fin_descuento));
+            return $fechaActual <= $fin;
         }
 
         return true;
@@ -267,10 +344,12 @@ class BusquedaController extends Controller
         $resultados = collect();
         
         if ($filtroDescuento) {
+            // Productos con descuento
             $productosConDescuento = Producto::with([
                     'categoria', 
                     'marca', 
-                    'etiquetas'
+                    'etiquetas',
+                    'impuestos'
                 ])
                 ->where('bActivo', true)
                 ->where('bTiene_descuento', 1)
@@ -285,12 +364,30 @@ class BusquedaController extends Controller
                             $productoClone->tipo_item = 'producto';
                             $productoClone->item_id = $producto->id_producto;
                             $productoClone->porcentaje_descuento_calculado = $this->calcularPorcentajeDescuentoProducto($producto);
+                            
+                            // Calcular precio final con impuestos
+                            $precioBase = $productoClone->tieneDescuentoActivo() ? $productoClone->dPrecio_descuento : $productoClone->dPrecio_venta;
+                            $totalImpuestos = 0;
+                            foreach ($productoClone->impuestos as $impuesto) {
+                                if ($impuesto->bActivo) {
+                                    $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                                }
+                            }
+                            $productoClone->precio_final_con_impuesto = $precioBase + $totalImpuestos;
+                            $productoClone->precio_original_con_impuesto = $productoClone->dPrecio_venta;
+                            foreach ($productoClone->impuestos as $impuesto) {
+                                if ($impuesto->bActivo) {
+                                    $productoClone->precio_original_con_impuesto += $productoClone->dPrecio_venta * ($impuesto->dPorcentaje / 100);
+                                }
+                            }
+                            
                             $resultados->push($productoClone);
                         }
                     }
                 }
             }
             
+            // Variaciones con descuento
             $variacionesConDescuento = ProductoVariacion::with([
                     'productoPadre',
                     'productoPadre.categoria',
@@ -298,7 +395,8 @@ class BusquedaController extends Controller
                     'productoPadre.etiquetas',
                     'atributos.atributo',
                     'atributos.valor',
-                    'imagenesRegistradas'
+                    'imagenesRegistradas',
+                    'impuesto'
                 ])
                 ->whereHas('productoPadre', function($q) use ($request) {
                     $q->where('bActivo', true);
@@ -316,6 +414,34 @@ class BusquedaController extends Controller
                             $variacion->tipo_item = 'variacion';
                             $variacion->item_id = $variacion->id_variacion;
                             $variacion->porcentaje_descuento_calculado = $this->calcularPorcentajeDescuentoVariacion($variacion);
+                            
+                            // Calcular precio final con impuestos
+                            $precioBase = $variacion->tieneDescuentoActivo() ? $variacion->dPrecio_descuento : $variacion->dPrecio;
+                            $totalImpuestos = 0;
+                            
+                            if ($variacion->impuesto && $variacion->impuesto->bActivo) {
+                                $totalImpuestos = $precioBase * ($variacion->impuesto->dPorcentaje / 100);
+                            } elseif ($variacion->productoPadre && $variacion->productoPadre->impuestos->count() > 0) {
+                                foreach ($variacion->productoPadre->impuestos as $impuesto) {
+                                    if ($impuesto->bActivo) {
+                                        $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                                    }
+                                }
+                            }
+                            
+                            $variacion->precio_final_con_impuesto = $precioBase + $totalImpuestos;
+                            $variacion->precio_original_con_impuesto = $variacion->dPrecio;
+                            
+                            if ($variacion->impuesto && $variacion->impuesto->bActivo) {
+                                $variacion->precio_original_con_impuesto += $variacion->dPrecio * ($variacion->impuesto->dPorcentaje / 100);
+                            } elseif ($variacion->productoPadre && $variacion->productoPadre->impuestos->count() > 0) {
+                                foreach ($variacion->productoPadre->impuestos as $impuesto) {
+                                    if ($impuesto->bActivo) {
+                                        $variacion->precio_original_con_impuesto += $variacion->dPrecio * ($impuesto->dPorcentaje / 100);
+                                    }
+                                }
+                            }
+                            
                             $resultados->push($variacion);
                         }
                     }
@@ -323,7 +449,8 @@ class BusquedaController extends Controller
             }
             
         } else {
-            $productosQuery = Producto::with(['categoria', 'marca', 'etiquetas'])
+            // Búsqueda normal (sin filtro de descuento)
+            $productosQuery = Producto::with(['categoria', 'marca', 'etiquetas', 'impuestos'])
                 ->where('bActivo', true);
 
             $this->aplicarFiltros($productosQuery, $request);
@@ -332,7 +459,8 @@ class BusquedaController extends Controller
             $productosPadre = Producto::with([
                     'categoria', 
                     'marca', 
-                    'etiquetas'
+                    'etiquetas',
+                    'impuestos'
                 ])
                 ->whereIn('id_producto', $productosIds)
                 ->get();
@@ -343,6 +471,23 @@ class BusquedaController extends Controller
                         $productoClone = clone $producto;
                         $productoClone->tipo_item = 'producto';
                         $productoClone->item_id = $producto->id_producto;
+                        
+                        // Calcular precio final con impuestos
+                        $precioBase = $productoClone->tieneDescuentoActivo() ? $productoClone->dPrecio_descuento : $productoClone->dPrecio_venta;
+                        $totalImpuestos = 0;
+                        foreach ($productoClone->impuestos as $impuesto) {
+                            if ($impuesto->bActivo) {
+                                $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                            }
+                        }
+                        $productoClone->precio_final_con_impuesto = $precioBase + $totalImpuestos;
+                        $productoClone->precio_original_con_impuesto = $productoClone->dPrecio_venta;
+                        foreach ($productoClone->impuestos as $impuesto) {
+                            if ($impuesto->bActivo) {
+                                $productoClone->precio_original_con_impuesto += $productoClone->dPrecio_venta * ($impuesto->dPorcentaje / 100);
+                            }
+                        }
+                        
                         $resultados->push($productoClone);
                     }
                 }
@@ -351,7 +496,8 @@ class BusquedaController extends Controller
                         'productoPadre',
                         'atributos.atributo',
                         'atributos.valor',
-                        'imagenesRegistradas'
+                        'imagenesRegistradas',
+                        'impuesto'
                     ])
                     ->where('id_producto', $producto->id_producto)
                     ->where('bActivo', true)
@@ -362,6 +508,34 @@ class BusquedaController extends Controller
                         if ($request->con_stock != '1' || $variacion->iStock > 0) {
                             $variacion->tipo_item = 'variacion';
                             $variacion->item_id = $variacion->id_variacion;
+                            
+                            // Calcular precio final con impuestos
+                            $precioBase = $variacion->tieneDescuentoActivo() ? $variacion->dPrecio_descuento : $variacion->dPrecio;
+                            $totalImpuestos = 0;
+                            
+                            if ($variacion->impuesto && $variacion->impuesto->bActivo) {
+                                $totalImpuestos = $precioBase * ($variacion->impuesto->dPorcentaje / 100);
+                            } elseif ($producto->impuestos->count() > 0) {
+                                foreach ($producto->impuestos as $impuesto) {
+                                    if ($impuesto->bActivo) {
+                                        $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                                    }
+                                }
+                            }
+                            
+                            $variacion->precio_final_con_impuesto = $precioBase + $totalImpuestos;
+                            $variacion->precio_original_con_impuesto = $variacion->dPrecio;
+                            
+                            if ($variacion->impuesto && $variacion->impuesto->bActivo) {
+                                $variacion->precio_original_con_impuesto += $variacion->dPrecio * ($variacion->impuesto->dPorcentaje / 100);
+                            } elseif ($producto->impuestos->count() > 0) {
+                                foreach ($producto->impuestos as $impuesto) {
+                                    if ($impuesto->bActivo) {
+                                        $variacion->precio_original_con_impuesto += $variacion->dPrecio * ($impuesto->dPorcentaje / 100);
+                                    }
+                                }
+                            }
+                            
                             $resultados->push($variacion);
                         }
                     }
@@ -481,7 +655,17 @@ class BusquedaController extends Controller
         if ($request->has('precio_min') && !empty($request->precio_min)) {
             $precioMin = floatval($request->precio_min);
             $precioActual = $this->tieneDescuentoActivoProducto($producto) ? $producto->dPrecio_descuento : $producto->dPrecio_venta;
-            if ($precioActual < $precioMin) {
+            
+            // Agregar impuestos al precio actual para comparar con el filtro
+            $totalImpuestos = 0;
+            foreach ($producto->impuestos as $impuesto) {
+                if ($impuesto->bActivo) {
+                    $totalImpuestos += $precioActual * ($impuesto->dPorcentaje / 100);
+                }
+            }
+            $precioFinal = $precioActual + $totalImpuestos;
+            
+            if ($precioFinal < $precioMin) {
                 return false;
             }
         }
@@ -489,7 +673,16 @@ class BusquedaController extends Controller
         if ($request->has('precio_max') && !empty($request->precio_max)) {
             $precioMax = floatval($request->precio_max);
             $precioActual = $this->tieneDescuentoActivoProducto($producto) ? $producto->dPrecio_descuento : $producto->dPrecio_venta;
-            if ($precioActual > $precioMax) {
+            
+            $totalImpuestos = 0;
+            foreach ($producto->impuestos as $impuesto) {
+                if ($impuesto->bActivo) {
+                    $totalImpuestos += $precioActual * ($impuesto->dPorcentaje / 100);
+                }
+            }
+            $precioFinal = $precioActual + $totalImpuestos;
+            
+            if ($precioFinal > $precioMax) {
                 return false;
             }
         }
@@ -516,14 +709,27 @@ class BusquedaController extends Controller
         
         $precioActual = $this->tieneDescuentoActivoVariacion($variacion) ? $variacion->dPrecio_descuento : $variacion->dPrecio;
         
+        // Calcular precio final con impuestos
+        $totalImpuestos = 0;
+        if ($variacion->impuesto && $variacion->impuesto->bActivo) {
+            $totalImpuestos = $precioActual * ($variacion->impuesto->dPorcentaje / 100);
+        } elseif ($variacion->productoPadre && $variacion->productoPadre->impuestos->count() > 0) {
+            foreach ($variacion->productoPadre->impuestos as $impuesto) {
+                if ($impuesto->bActivo) {
+                    $totalImpuestos += $precioActual * ($impuesto->dPorcentaje / 100);
+                }
+            }
+        }
+        $precioFinal = $precioActual + $totalImpuestos;
+        
         if ($request->has('precio_min') && !empty($request->precio_min)) {
-            if ($precioActual < floatval($request->precio_min)) {
+            if ($precioFinal < floatval($request->precio_min)) {
                 return false;
             }
         }
         
         if ($request->has('precio_max') && !empty($request->precio_max)) {
-            if ($precioActual > floatval($request->precio_max)) {
+            if ($precioFinal > floatval($request->precio_max)) {
                 return false;
             }
         }
@@ -537,18 +743,18 @@ class BusquedaController extends Controller
             case 'precio_asc':
                 return $coleccion->sortBy(function($item) {
                     if ($item->tipo_item === 'variacion') {
-                        return $this->tieneDescuentoActivoVariacion($item) ? $item->dPrecio_descuento : $item->dPrecio;
+                        return $item->precio_final_con_impuesto ?? ($this->tieneDescuentoActivoVariacion($item) ? $item->dPrecio_descuento : $item->dPrecio);
                     } else {
-                        return $this->tieneDescuentoActivoProducto($item) ? $item->dPrecio_descuento : $item->dPrecio_venta;
+                        return $item->precio_final_con_impuesto ?? ($this->tieneDescuentoActivoProducto($item) ? $item->dPrecio_descuento : $item->dPrecio_venta);
                     }
                 })->values();
                 
             case 'precio_desc':
                 return $coleccion->sortByDesc(function($item) {
                     if ($item->tipo_item === 'variacion') {
-                        return $this->tieneDescuentoActivoVariacion($item) ? $item->dPrecio_descuento : $item->dPrecio;
+                        return $item->precio_final_con_impuesto ?? ($this->tieneDescuentoActivoVariacion($item) ? $item->dPrecio_descuento : $item->dPrecio);
                     } else {
-                        return $this->tieneDescuentoActivoProducto($item) ? $item->dPrecio_descuento : $item->dPrecio_venta;
+                        return $item->precio_final_con_impuesto ?? ($this->tieneDescuentoActivoProducto($item) ? $item->dPrecio_descuento : $item->dPrecio_venta);
                     }
                 })->values();
                 
@@ -592,7 +798,7 @@ class BusquedaController extends Controller
 
         $sugerencias = [];
 
-        $productos = Producto::with(['categoria', 'marca'])
+        $productos = Producto::with(['categoria', 'marca', 'impuestos'])
             ->where('bActivo', true)
             ->where(function($q) use ($term) {
                 $q->where('vNombre', 'LIKE', "%{$term}%")
@@ -609,7 +815,17 @@ class BusquedaController extends Controller
             
         foreach ($productos as $producto) {
             $tieneDescuento = $this->tieneDescuentoActivoProducto($producto);
-            $precioMostrar = $tieneDescuento ? $producto->dPrecio_descuento : $producto->dPrecio_venta;
+            $precioBase = $tieneDescuento ? $producto->dPrecio_descuento : $producto->dPrecio_venta;
+            
+            // Calcular precio final con impuestos
+            $totalImpuestos = 0;
+            foreach ($producto->impuestos as $impuesto) {
+                if ($impuesto->bActivo) {
+                    $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                }
+            }
+            $precioMostrar = $precioBase + $totalImpuestos;
+            
             $texto = $producto->vNombre . ' - $' . number_format($precioMostrar, 2);
             
             if ($tieneDescuento) {
@@ -630,7 +846,8 @@ class BusquedaController extends Controller
         $variaciones = ProductoVariacion::with([
                 'productoPadre', 
                 'atributos.atributo', 
-                'atributos.valor'
+                'atributos.valor',
+                'impuesto'
             ])
             ->whereHas('productoPadre', function($q) use ($term) {
                 $q->where('bActivo', true);
@@ -651,7 +868,21 @@ class BusquedaController extends Controller
             }
             
             $tieneDescuento = $this->tieneDescuentoActivoVariacion($variacion);
-            $precioMostrar = $tieneDescuento ? $variacion->dPrecio_descuento : $variacion->dPrecio;
+            $precioBase = $tieneDescuento ? $variacion->dPrecio_descuento : $variacion->dPrecio;
+            
+            // Calcular precio final con impuestos
+            $totalImpuestos = 0;
+            if ($variacion->impuesto && $variacion->impuesto->bActivo) {
+                $totalImpuestos = $precioBase * ($variacion->impuesto->dPorcentaje / 100);
+            } elseif ($variacion->productoPadre && $variacion->productoPadre->impuestos->count() > 0) {
+                foreach ($variacion->productoPadre->impuestos as $impuesto) {
+                    if ($impuesto->bActivo) {
+                        $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                    }
+                }
+            }
+            $precioMostrar = $precioBase + $totalImpuestos;
+            
             $texto = $variacion->productoPadre->vNombre . ' - ' . $variacion->getAtributosTexto() . ' - $' . number_format($precioMostrar, 2);
             
             if ($tieneDescuento) {

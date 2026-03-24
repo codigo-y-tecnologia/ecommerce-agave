@@ -107,49 +107,61 @@ class ProductoVariacion extends Model
         });
     }
 
-    // ============ MÉTODOS DE DESCUENTO ============
+    // ============ MÉTODOS DE DESCUENTO CORREGIDOS ============
 
     /**
      * Verifica si el descuento está activo en la fecha actual
-     * Considera que el descuento está activo TODO el día de la fecha de fin
+     * Usa DateTime nativo de PHP sin Carbon
      */
-   public function tieneDescuentoActivo(): bool
-{
-    if (!$this->bTiene_descuento || $this->dPrecio_descuento === null || $this->dPrecio_descuento <= 0) {
-        return false;
-    }
+    public function tieneDescuentoActivo(): bool
+    {
+        if (!$this->bTiene_descuento || $this->dPrecio_descuento === null || $this->dPrecio_descuento <= 0) {
+            return false;
+        }
 
-    $fechaActual = new \DateTime();
-    $fechaActual->setTime(0, 0, 0);
-
-    // Caso 1: Tiene ambas fechas
-    if ($this->dFecha_inicio_descuento && $this->dFecha_fin_descuento) {
-        $fechaInicio = new \DateTime($this->dFecha_inicio_descuento);
-        $fechaInicio->setTime(0, 0, 0);
+        $fechaActual = new \DateTime();
+        $fechaActual->setTime(0, 0, 0);
         
-        $fechaFin = new \DateTime($this->dFecha_fin_descuento);
-        $fechaFin->setTime(23, 59, 59);
+        // Procesar fecha de inicio
+        $fechaInicio = null;
+        if ($this->dFecha_inicio_descuento) {
+            if ($this->dFecha_inicio_descuento instanceof \DateTime) {
+                $fechaInicio = clone $this->dFecha_inicio_descuento;
+            } else {
+                $fechaInicio = new \DateTime($this->dFecha_inicio_descuento);
+            }
+            $fechaInicio->setTime(0, 0, 0);
+        }
         
-        return $fechaActual >= $fechaInicio && $fechaActual <= $fechaFin;
-    }
+        // Procesar fecha de fin
+        $fechaFin = null;
+        if ($this->dFecha_fin_descuento) {
+            if ($this->dFecha_fin_descuento instanceof \DateTime) {
+                $fechaFin = clone $this->dFecha_fin_descuento;
+            } else {
+                $fechaFin = new \DateTime($this->dFecha_fin_descuento);
+            }
+            $fechaFin->setTime(23, 59, 59);
+        }
 
-    // Caso 2: Solo tiene fecha de inicio
-    if ($this->dFecha_inicio_descuento && !$this->dFecha_fin_descuento) {
-        $fechaInicio = new \DateTime($this->dFecha_inicio_descuento);
-        $fechaInicio->setTime(0, 0, 0);
-        return $fechaActual >= $fechaInicio;
-    }
+        // Caso 1: Tiene ambas fechas
+        if ($fechaInicio && $fechaFin) {
+            return $fechaActual >= $fechaInicio && $fechaActual <= $fechaFin;
+        }
 
-    // Caso 3: Solo tiene fecha de fin
-    if (!$this->dFecha_inicio_descuento && $this->dFecha_fin_descuento) {
-        $fechaFin = new \DateTime($this->dFecha_fin_descuento);
-        $fechaFin->setTime(23, 59, 59);
-        return $fechaActual <= $fechaFin;
-    }
+        // Caso 2: Solo tiene fecha de inicio
+        if ($fechaInicio && !$fechaFin) {
+            return $fechaActual >= $fechaInicio;
+        }
 
-    // Caso 4: No tiene fechas, el descuento está siempre activo
-    return true;
-}
+        // Caso 3: Solo tiene fecha de fin
+        if (!$fechaInicio && $fechaFin) {
+            return $fechaActual <= $fechaFin;
+        }
+
+        // Caso 4: No tiene fechas, el descuento está siempre activo
+        return true;
+    }
 
     /**
      * Alias para tieneDescuentoActivo
@@ -305,6 +317,7 @@ class ProductoVariacion extends Model
         }
         return 0;
     }
+    
     public function recalcularPrecioFinal()
     {
         $precioBase = $this->getPrecioBaseAttribute();

@@ -74,8 +74,8 @@
 
 @push('scripts')
 <script>
-    // Verificar si venimos de una redirección por favoritos
     document.addEventListener('DOMContentLoaded', function() {
+        // Verificar si venimos de una redirección por favoritos
         const urlParams = new URLSearchParams(window.location.search);
         const fromFavoritos = urlParams.get('from_favoritos');
         const producto = urlParams.get('producto');
@@ -83,7 +83,7 @@
         const tipo = urlParams.get('tipo');
         
         if (fromFavoritos === 'true' && producto) {
-            // Mostrar mensaje
+            // Mostrar mensaje informativo
             const alertDiv = document.createElement('div');
             alertDiv.className = 'alert alert-info alert-dismissible fade show mt-3';
             alertDiv.setAttribute('role', 'alert');
@@ -98,7 +98,7 @@
                 cardBody.insertBefore(alertDiv, cardBody.firstChild);
             }
             
-            // Eliminar parámetros de la URL
+            // Limpiar parámetros de la URL
             const url = new URL(window.location);
             url.searchParams.delete('from_favoritos');
             url.searchParams.delete('producto');

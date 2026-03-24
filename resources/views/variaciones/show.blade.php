@@ -9,7 +9,6 @@
         <div class="col-12">
             <div class="card border-0 bg-transparent">
                 <div class="card-body p-0">
-                    <!-- Breadcrumb -->
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb mb-2">
                             <li class="breadcrumb-item">
@@ -56,9 +55,14 @@
         // Calcular stock total
         $stockTotal = $producto->variaciones->sum('iStock');
         
-        // Contar variaciones con descuento
-        $variacionesConDescuento = $producto->variaciones->filter(function($v) {
+        // Contar variaciones con descuento activo (basado en fecha actual)
+        $variacionesConDescuentoActivo = $producto->variaciones->filter(function($v) {
             return $v->tieneDescuentoActivo() && $v->dPrecio_descuento < $v->dPrecio;
+        })->count();
+        
+        // Contar variaciones con descuento programado (tienen descuento pero no activo hoy)
+        $variacionesConDescuentoProgramado = $producto->variaciones->filter(function($v) {
+            return $v->bTiene_descuento && $v->dPrecio_descuento && $v->dPrecio_descuento < $v->dPrecio && !$v->tieneDescuentoActivo();
         })->count();
     @endphp
 
@@ -71,14 +75,19 @@
                         <i class="fas fa-cubes me-2 text-primary"></i>
                         Listado de Variaciones
                     </h5>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 flex-wrap">
                         <span class="badge bg-primary p-2">{{ $producto->variaciones->count() }} variaciones</span>
-                        @if($variacionesConDescuento > 0)
+                        @if($variacionesConDescuentoActivo > 0)
                             <span class="badge bg-danger p-2">
-                                <i class="fas fa-tag me-1"></i>{{ $variacionesConDescuento }} con descuento
+                                <i class="fas fa-tag me-1"></i>{{ $variacionesConDescuentoActivo }} con descuento activo
                             </span>
                         @endif
-                        <span class="badge bg-success p-2">Stock: {{ number_format($stockTotal) }}</span>
+                        @if($variacionesConDescuentoProgramado > 0)
+                            <span class="badge bg-warning text-dark p-2">
+                                <i class="fas fa-clock me-1"></i>{{ $variacionesConDescuentoProgramado }} con descuento programado
+                            </span>
+                        @endif
+                        <span class="badge bg-success p-2">Stock total: {{ number_format($stockTotal) }}</span>
                     </div>
                 </div>
                 <div class="card-body p-0">
@@ -101,10 +110,22 @@
                             <tbody>
                                 @forelse($producto->variaciones as $variacion)
                                     @php
-                                        // Verificar si tiene descuento activo
-                                        $tieneDescuento = $variacion->tieneDescuentoActivo();
-                                        $precioBase = $tieneDescuento ? $variacion->dPrecio_descuento : $variacion->dPrecio;
+                                        // Verificar si tiene descuento activo HOY
+                                        $tieneDescuentoActivo = $variacion->tieneDescuentoActivo();
+                                        $tieneDescuentoProgramado = $variacion->bTiene_descuento && $variacion->dPrecio_descuento && $variacion->dPrecio_descuento < $variacion->dPrecio && !$tieneDescuentoActivo;
+                                        
+                                        $precioBase = $tieneDescuentoActivo ? $variacion->dPrecio_descuento : $variacion->dPrecio;
                                         $porcentajeDescuento = $variacion->porcentaje_descuento;
+                                        
+                                        // Calcular impuestos
+                                        $impuestoVariacion = $variacion->impuesto ?? $producto->impuestos->first();
+                                        $totalImpuestos = 0;
+                                        $porcentajeImpuesto = 0;
+                                        if ($impuestoVariacion && $impuestoVariacion->bActivo) {
+                                            $porcentajeImpuesto = $impuestoVariacion->dPorcentaje;
+                                            $totalImpuestos = $precioBase * ($porcentajeImpuesto / 100);
+                                        }
+                                        $precioFinal = $precioBase + $totalImpuestos;
                                         
                                         // Obtener imágenes
                                         $imagenes = $variacion->imagenes ?? [];
@@ -120,16 +141,6 @@
                                                 }
                                             }
                                         }
-                                        
-                                        // Calcular impuestos
-                                        $impuestoVariacion = $variacion->impuesto ?? $producto->impuestos->first();
-                                        $totalImpuestos = 0;
-                                        $porcentajeImpuesto = 0;
-                                        if ($impuestoVariacion) {
-                                            $porcentajeImpuesto = $impuestoVariacion->dPorcentaje;
-                                            $totalImpuestos = $precioBase * ($porcentajeImpuesto / 100);
-                                        }
-                                        $precioFinal = $precioBase + $totalImpuestos;
                                         
                                         // Dimensiones
                                         $largo = $variacion->dLargo_cm ? floatval($variacion->dLargo_cm) : null;
@@ -167,9 +178,13 @@
                                         $stockClass = $stockValue > 50 ? 'success' : ($stockValue > 10 ? 'warning' : 'danger');
                                         
                                         // Calcular ahorro para mostrar tooltip
-                                        $ahorro = $tieneDescuento ? ($variacion->dPrecio - $variacion->dPrecio_descuento) : 0;
+                                        $ahorro = $tieneDescuentoActivo ? ($variacion->dPrecio - $variacion->dPrecio_descuento) : 0;
+                                        
+                                        // Formatear fechas de descuento
+                                        $fechaInicioFormateada = $variacion->dFecha_inicio_descuento ? \Carbon\Carbon::parse($variacion->dFecha_inicio_descuento)->format('d/m/Y') : null;
+                                        $fechaFinFormateada = $variacion->dFecha_fin_descuento ? \Carbon\Carbon::parse($variacion->dFecha_fin_descuento)->format('d/m/Y') : null;
                                     @endphp
-                                    <tr>
+                                    <tr class="{{ $tieneDescuentoActivo ? 'table-danger' : ($tieneDescuentoProgramado ? 'table-warning' : '') }}">
                                         <td class="px-4">
                                             @if(!empty($imagenes) && count($imagenes) > 0)
                                                 <div class="position-relative d-inline-block">
@@ -185,9 +200,13 @@
                                                         </span>
                                                     @endif
                                                     
-                                                    @if($tieneDescuento && $variacion->dPrecio_descuento < $variacion->dPrecio)
+                                                    @if($tieneDescuentoActivo)
                                                         <span class="position-absolute top-0 start-0 badge bg-danger" style="z-index: 10; font-size: 10px;">
-                                                            -{{ $porcentajeDescuento }}%
+                                                            <i class="fas fa-tag me-1"></i>-{{ $porcentajeDescuento }}%
+                                                        </span>
+                                                    @elseif($tieneDescuentoProgramado)
+                                                        <span class="position-absolute top-0 start-0 badge bg-warning text-dark" style="z-index: 10; font-size: 10px;">
+                                                            <i class="fas fa-clock me-1"></i>Próximo
                                                         </span>
                                                     @endif
                                                 </div>
@@ -196,9 +215,13 @@
                                                      style="width: 60px; height: 60px; cursor: pointer;"
                                                      onclick="verImagenesVariacion({{ $variacion->id_variacion }}, '{{ $variacion->vSKU }}', [])">
                                                     <i class="fas fa-image text-muted fa-2x"></i>
-                                                    @if($tieneDescuento && $variacion->dPrecio_descuento < $variacion->dPrecio)
+                                                    @if($tieneDescuentoActivo)
                                                         <span class="position-absolute top-0 start-0 badge bg-danger" style="z-index: 10; font-size: 10px;">
-                                                            -{{ $porcentajeDescuento }}%
+                                                            <i class="fas fa-tag me-1"></i>-{{ $porcentajeDescuento }}%
+                                                        </span>
+                                                    @elseif($tieneDescuentoProgramado)
+                                                        <span class="position-absolute top-0 start-0 badge bg-warning text-dark" style="z-index: 10; font-size: 10px;">
+                                                            <i class="fas fa-clock me-1"></i>Próximo
                                                         </span>
                                                     @endif
                                                 </div>
@@ -223,46 +246,55 @@
                                         </td>
                                         <td>
                                             <div class="vstack gap-1">
+                                                <!-- Precio normal y descuento -->
                                                 <div class="d-flex align-items-center flex-wrap gap-1">
-                                                    <span class="fw-bold">${{ number_format($variacion->dPrecio, 2) }}</span>
-                                                    @if($tieneDescuento && $variacion->dPrecio_descuento < $variacion->dPrecio)
-                                                        <span class="badge bg-danger">
-                                                            -{{ $porcentajeDescuento }}%
+                                                    @if($tieneDescuentoActivo)
+                                                        <span class="text-decoration-line-through text-muted">${{ number_format($variacion->dPrecio, 2) }}</span>
+                                                        <span class="fw-bold text-danger">${{ number_format($variacion->dPrecio_descuento, 2) }}</span>
+                                                        <span class="badge bg-danger">-{{ $porcentajeDescuento }}%</span>
+                                                    @elseif($tieneDescuentoProgramado)
+                                                        <span class="fw-bold">${{ number_format($variacion->dPrecio, 2) }}</span>
+                                                        <span class="badge bg-warning text-dark">
+                                                            <i class="fas fa-clock me-1"></i>Próximo: ${{ number_format($variacion->dPrecio_descuento, 2) }}
                                                         </span>
+                                                    @else
+                                                        <span class="fw-bold">${{ number_format($variacion->dPrecio, 2) }}</span>
                                                     @endif
                                                 </div>
                                                 
-                                                @if($tieneDescuento && $variacion->dPrecio_descuento < $variacion->dPrecio)
-                                                    <div class="text-success small">
-                                                        <i class="fas fa-tag me-1"></i>
-                                                        <span class="fw-bold">Con descuento:</span> 
-                                                        <span class="text-danger">${{ number_format($variacion->dPrecio_descuento, 2) }}</span>
-                                                    </div>
-                                                    
-                                                    @if($variacion->vMotivo_descuento)
-                                                        <small class="text-muted" title="{{ $variacion->vMotivo_descuento }}">
-                                                            <i class="fas fa-comment me-1"></i>{{ Str::limit($variacion->vMotivo_descuento, 15) }}
-                                                        </small>
-                                                    @endif
-                                                    
-                                                    @if($variacion->dFecha_inicio_descuento && $variacion->dFecha_fin_descuento)
-                                                        <small class="text-muted">
-                                                            <i class="fas fa-calendar-alt me-1"></i>
-                                                            {{ \Carbon\Carbon::parse($variacion->dFecha_inicio_descuento)->format('d/m') }} - 
-                                                            {{ \Carbon\Carbon::parse($variacion->dFecha_fin_descuento)->format('d/m') }}
-                                                        </small>
-                                                    @endif
+                                                <!-- Información de descuento activo -->
+                                                @if($tieneDescuentoActivo && $variacion->vMotivo_descuento)
+                                                    <small class="text-muted" title="{{ $variacion->vMotivo_descuento }}">
+                                                        <i class="fas fa-comment me-1"></i>{{ Str::limit($variacion->vMotivo_descuento, 30) }}
+                                                    </small>
                                                 @endif
                                                 
-                                                @if($impuestoVariacion)
+                                                @if($tieneDescuentoActivo && $fechaInicioFormateada && $fechaFinFormateada)
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-calendar-alt me-1"></i>
+                                                        {{ $fechaInicioFormateada }} - {{ $fechaFinFormateada }}
+                                                    </small>
+                                                @elseif($tieneDescuentoProgramado && $fechaInicioFormateada)
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-calendar-alt me-1"></i>
+                                                        Inicia: {{ $fechaInicioFormateada }}
+                                                        @if($fechaFinFormateada)
+                                                            (hasta {{ $fechaFinFormateada }})
+                                                        @endif
+                                                    </small>
+                                                @endif
+                                                
+                                                <!-- Impuestos -->
+                                                @if($impuestoVariacion && $impuestoVariacion->bActivo)
                                                     <small class="text-muted">
                                                         <i class="fas fa-file-invoice-dollar me-1"></i>
                                                         {{ $impuestoVariacion->vNombre }} ({{ $impuestoVariacion->dPorcentaje }}%)
                                                     </small>
                                                 @endif
                                                 
+                                                <!-- Precio final con impuestos -->
                                                 <small class="text-primary fw-bold">
-                                                    Total: ${{ number_format($precioFinal, 2) }}
+                                                    <i class="fas fa-calculator me-1"></i>Total: ${{ number_format($precioFinal, 2) }}
                                                 </small>
                                             </div>
                                         </td>
@@ -308,7 +340,7 @@
                                         </td>
                                         <td class="text-end pe-4">
                                             <div class="btn-group" role="group">
-                                                <!-- BOTÓN VER - REDIRIGE A LA NUEVA VISTA DE DETALLE -->
+                                                <!-- Botón Ver detalles -->
                                                 <a href="{{ route('variaciones.show.variacion', ['producto_id' => $producto->id_producto, 'variacion_id' => $variacion->id_variacion]) }}" 
                                                    class="btn btn-sm btn-outline-primary" title="Ver detalles">
                                                     <i class="fas fa-eye"></i>
@@ -355,7 +387,6 @@
 <script>
 // Función para ver imágenes de variación
 function verImagenesVariacion(id, sku, imagenes) {
-    // Crear modal dinámico para mostrar imágenes
     let imagenesHtml = '';
     
     if (imagenes && imagenes.length > 0) {
@@ -425,42 +456,15 @@ function confirmDelete(id, sku) {
 
 // Mostrar mensaje SweetAlert2 después de operaciones exitosas
 @if(session('success'))
-    @if(str_contains(session('success'), 'eliminada'))
-        Swal.fire({
-            title: '¡Eliminada!',
-            text: "{{ session('success') }}",
-            icon: 'success',
-            timer: 3000,
-            showConfirmButton: false
-        });
-    @elseif(str_contains(session('success'), 'creada'))
-        Swal.fire({
-            title: '¡Creada!',
-            text: "{{ session('success') }}",
-            icon: 'success',
-            timer: 3000,
-            showConfirmButton: false
-        });
-    @elseif(str_contains(session('success'), 'actualizada'))
-        Swal.fire({
-            title: '¡Actualizada!',
-            text: "{{ session('success') }}",
-            icon: 'success',
-            timer: 3000,
-            showConfirmButton: false
-        });
-    @else
-        Swal.fire({
-            title: '¡Éxito!',
-            text: "{{ session('success') }}",
-            icon: 'success',
-            timer: 3000,
-            showConfirmButton: false
-        });
-    @endif
+    Swal.fire({
+        title: '¡Éxito!',
+        text: "{{ session('success') }}",
+        icon: 'success',
+        timer: 3000,
+        showConfirmButton: false
+    });
 @endif
 
-// Mostrar mensaje SweetAlert2 si hay error
 @if(session('error'))
     Swal.fire({
         icon: 'error',
@@ -487,6 +491,14 @@ function confirmDelete(id, sku) {
     background-color: rgba(0,123,255,0.05);
 }
 
+.table-danger {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+}
+
+.table-warning {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+}
+
 .btn-group .btn {
     padding: 0.25rem 0.5rem;
     transition: all 0.2s ease;
@@ -501,35 +513,22 @@ function confirmDelete(id, sku) {
     font-weight: 500;
 }
 
-.modal-header.bg-primary {
-    background: linear-gradient(135deg, #007bff, #0056b3) !important;
-}
-
-.modal-content {
-    border: none;
-    border-radius: 12px;
-}
-
-.modal-header {
-    border-radius: 12px 12px 0 0;
-}
-
 .carousel-control-prev,
 .carousel-control-next {
     background-color: rgba(0,0,0,0.5);
-    width: 50px;
-    height: 50px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     top: 50%;
     transform: translateY(-50%);
 }
 
 .carousel-control-prev {
-    left: 20px;
+    left: 10px;
 }
 
 .carousel-control-next {
-    right: 20px;
+    right: 10px;
 }
 
 @media (max-width: 768px) {
