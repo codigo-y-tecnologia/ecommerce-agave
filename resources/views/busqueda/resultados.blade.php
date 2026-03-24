@@ -351,7 +351,6 @@
             color: #333;
         }
 
-        /* Estilos de tarjetas de producto */
         .producto-card {
             background: #fff;
             border-radius: 12px;
@@ -431,46 +430,56 @@
             word-break: break-word;
         }
 
-        /* PRECIOS */
-        .producto-precio {
-            margin-bottom: 5px;
+        .precio-container {
+            margin-bottom: 8px;
         }
 
         .precio-original {
             text-decoration: line-through;
-            color: #6c757d;
-            font-size: 14px;
-            font-weight: normal;
-            margin-right: 8px;
+            color: #999;
+            font-size: 12px;
+            display: block;
         }
 
         .precio-actual {
-            font-weight: bold;
-            color: #28a745;
-            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            font-size: 24px;
+            line-height: 1.2;
         }
 
-        .badge-descuento {
-            display: inline-block;
-            padding: 4px 8px;
-            font-size: 11px;
-            background-color: #dc3545;
+        .precio-actual small {
+            font-size: 12px;
+            font-weight: 400;
+            color: #666;
+        }
+
+        .descuento-badge {
+            background: #00a650;
             color: white;
+            padding: 2px 6px;
             border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
             margin-left: 8px;
-            font-weight: bold;
+            display: inline-block;
+        }
+
+        .ahorro-info {
+            background-color: #e8f5e9;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 11px;
+            color: #2e7d32;
+            display: inline-block;
+            margin-top: 4px;
         }
 
         .motivo-descuento {
             font-size: 10px;
             color: #666;
             margin-top: 2px;
-            margin-bottom: 5px;
-        }
-
-        .motivo-descuento i {
-            margin-right: 3px;
-            color: #dc3545;
+            margin-bottom: 2px;
         }
 
         .periodo-descuento {
@@ -479,30 +488,30 @@
             margin-bottom: 5px;
         }
 
-        .periodo-descuento i {
-            margin-right: 3px;
-            color: #007bff;
-        }
-
         .envio-info {
-            font-size: 13px;
-            margin-bottom: 8px;
+            font-size: 14px;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .envio-gratis {
             color: #00a650;
+            font-weight: 600;
         }
 
         .envio-pago {
             color: #ff6b00;
+            font-weight: 600;
         }
 
         .stock-info {
+            font-size: 13px;
             margin-bottom: 5px;
-            font-size: 14px;
         }
 
-        .badge {
+        .badge-descuento {
             display: inline-block;
             padding: 4px 8px;
             font-size: 11px;
@@ -560,7 +569,7 @@
         .badge-descuento-rojo {
             position: absolute;
             top: 15px;
-            right: 15px;
+            right: 60px;
             background: #dc3545;
             color: white;
             padding: 5px 10px;
@@ -618,7 +627,6 @@
             background: #5a6268;
         }
 
-        /* Botón agregar al carrito */
         .btn-agregar-carrito {
             width: 100%;
             padding: 8px;
@@ -666,7 +674,6 @@
             transform: translateY(0);
         }
 
-        /* Corazón de favoritos */
         .corazon-favorito {
             position: absolute;
             top: 15px;
@@ -734,7 +741,6 @@
             50% { transform: scale(0.95); }
         }
 
-        /* Toast notifications */
         .toast {
             position: fixed;
             top: 30px;
@@ -802,10 +808,9 @@
         }
 
         .consultar-pedido {
-                margin-right: 15px;
-            }
+            margin-right: 15px;
+        }
 
-        /* Responsive */
         @media (max-width: 768px) {
             .busqueda-container {
                 flex-direction: column;
@@ -914,7 +919,6 @@
         <p>Encuentra los mejores productos de agave y mezcal</p>
     </header>
 
-    <!-- Mostrar bienvenida al usuario si está autenticado -->
     @auth
     <div class="user-welcome">
         <p>¡Hola {{ Auth::user()->vNombre }}! 👋 Resultados de búsqueda</p>
@@ -954,7 +958,6 @@
             @endauth
         </ul>
 
-        <!-- Barra de búsqueda -->
         <div class="barra-busqueda-principal">
             <form action="{{ route('busqueda.resultados') }}" method="GET" id="form-busqueda">
                 <input type="text" name="q" placeholder="Buscar productos (agave, mezcal, espadín...)" 
@@ -965,13 +968,11 @@
     </nav>
 
     <div class="busqueda-container">
-        <!-- Sidebar de Filtros -->
         <aside class="filtros-sidebar">
             <h3 style="margin-bottom: 15px; color: #333;">Filtros de Búsqueda</h3>
             <form id="filtrosForm" method="GET" action="{{ route('busqueda.resultados') }}">
                 <input type="hidden" name="q" value="{{ request('q') }}">
                 
-                <!-- Filtro de Descuentos -->
                 <div class="filtro-grupo">
                     <div class="filtro-titulo">Descuentos</div>
                     <div class="filtro-opcion">
@@ -983,7 +984,6 @@
                     </div>
                 </div>
                 
-                <!-- Filtro de Categorías -->
                 <div class="filtro-grupo">
                     <div class="filtro-titulo">Categorías</div>
                     @foreach($categorias as $categoria)
@@ -997,7 +997,6 @@
                     @endforeach
                 </div>
 
-                <!-- Filtro de Marcas -->
                 <div class="filtro-grupo">
                     <div class="filtro-titulo">Marcas</div>
                     @foreach($marcas as $marca)
@@ -1011,7 +1010,6 @@
                     @endforeach
                 </div>
 
-                <!-- Filtro de Etiquetas -->
                 <div class="filtro-grupo">
                     <div class="filtro-titulo">Etiquetas</div>
                     @foreach($etiquetas as $etiqueta)
@@ -1025,7 +1023,6 @@
                     @endforeach
                 </div>
 
-                <!-- Filtro de Precio -->
                 <div class="filtro-grupo">
                     <div class="filtro-titulo">Rango de Precio</div>
                     <div class="precio-inputs">
@@ -1041,7 +1038,6 @@
                     </button>
                 </div>
 
-                <!-- Filtro de Stock -->
                 <div class="filtro-grupo">
                     <div class="filtro-opcion">
                         <input type="checkbox" name="con_stock" value="1" id="con_stock"
@@ -1057,9 +1053,7 @@
             </form>
         </aside>
 
-        <!-- Área Principal de Resultados -->
         <main class="resultados-main">
-            <!-- Información y ordenamiento -->
             <div class="busqueda-superior">
                 <div class="resultados-info">
                     <strong>{{ $productos->total() }}</strong> resultado(s) encontrado(s)
@@ -1108,15 +1102,12 @@
                 </div>
             </div>
 
-            <!-- Resultados -->
             @if($productos->count() > 0)
                 <div class="productos-grid">
                     @foreach($productos as $producto)
                         @php
-                            // Verificar si es un producto padre o una variación
                             $esVariacion = isset($producto->id_variacion);
                             
-                            // Determinar si tiene descuento activo
                             if ($esVariacion) {
                                 $tieneDescuento = $producto->tieneDescuentoActivo();
                                 $precioOriginal = $producto->dPrecio;
@@ -1136,9 +1127,40 @@
                                 $atributosTexto = $producto->getAtributosCompletosTexto();
                                 $atributosCorto = $producto->getAtributosTexto();
                                 $motivoDescuento = $producto->vMotivo_descuento ?? '';
-                                $fechaInicio = $producto->dFecha_inicio_descuento ? \Carbon\Carbon::parse($producto->dFecha_inicio_descuento)->format('d/m') : '';
-                                $fechaFin = $producto->dFecha_fin_descuento ? \Carbon\Carbon::parse($producto->dFecha_fin_descuento)->format('d/m') : '';
-                                $porcentajeImpuesto = $producto->porcentaje_impuesto ?? 0;
+                                
+                                $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                                
+                                $porcentajeImpuesto = 0;
+                                if ($producto->impuesto && $producto->impuesto->bActivo) {
+                                    $porcentajeImpuesto = $producto->impuesto->dPorcentaje;
+                                } elseif ($producto->productoPadre && $producto->productoPadre->impuestos->count() > 0) {
+                                    foreach ($producto->productoPadre->impuestos as $imp) {
+                                        if ($imp->bActivo) {
+                                            $porcentajeImpuesto += $imp->dPorcentaje;
+                                        }
+                                    }
+                                }
+                                
+                                $totalImpuestos = $precioBase * ($porcentajeImpuesto / 100);
+                                $precioFinal = $precioBase + $totalImpuestos;
+                                
+                                $precioOriginalConImpuesto = $precioOriginal + ($precioOriginal * ($porcentajeImpuesto / 100));
+                                $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
+                                
+                                $fechaInicioFormateada = '';
+                                $fechaFinFormateada = '';
+                                if ($producto->dFecha_inicio_descuento) {
+                                    $fechaInicio = new \DateTime($producto->dFecha_inicio_descuento);
+                                    $fechaInicioFormateada = $fechaInicio->format('d/m');
+                                }
+                                if ($producto->dFecha_fin_descuento) {
+                                    $fechaFin = new \DateTime($producto->dFecha_fin_descuento);
+                                    $fechaFinFormateada = $fechaFin->format('d/m');
+                                }
+                                
+                                $envioGratis = $precioFinal >= config('tienda.envio_gratis_desde');
+                                $costoEnvio = config('tienda.costo_de_envio');
+                                
                             } else {
                                 $tieneDescuento = $producto->tieneDescuentoActivo();
                                 $precioOriginal = $producto->dPrecio_venta;
@@ -1158,25 +1180,44 @@
                                 $atributosTexto = '';
                                 $atributosCorto = '';
                                 $motivoDescuento = $producto->vMotivo_descuento ?? '';
-                                $fechaInicio = $producto->dFecha_inicio_descuento ? \Carbon\Carbon::parse($producto->dFecha_inicio_descuento)->format('d/m') : '';
-                                $fechaFin = $producto->dFecha_fin_descuento ? \Carbon\Carbon::parse($producto->dFecha_fin_descuento)->format('d/m') : '';
-                                $porcentajeImpuesto = $producto->porcentaje_impuestos ?? 0;
+                                
+                                $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
+                                
+                                $porcentajeImpuesto = 0;
+                                if ($producto->impuestos && $producto->impuestos->count() > 0) {
+                                    foreach ($producto->impuestos as $imp) {
+                                        if ($imp->bActivo) {
+                                            $porcentajeImpuesto += $imp->dPorcentaje;
+                                        }
+                                    }
+                                }
+                                
+                                $totalImpuestos = $precioBase * ($porcentajeImpuesto / 100);
+                                $precioFinal = $precioBase + $totalImpuestos;
+                                
+                                $precioOriginalConImpuesto = $precioOriginal + ($precioOriginal * ($porcentajeImpuesto / 100));
+                                $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
+                                
+                                $fechaInicioFormateada = '';
+                                $fechaFinFormateada = '';
+                                if ($producto->dFecha_inicio_descuento) {
+                                    $fechaInicio = new \DateTime($producto->dFecha_inicio_descuento);
+                                    $fechaInicioFormateada = $fechaInicio->format('d/m');
+                                }
+                                if ($producto->dFecha_fin_descuento) {
+                                    $fechaFin = new \DateTime($producto->dFecha_fin_descuento);
+                                    $fechaFinFormateada = $fechaFin->format('d/m');
+                                }
+                                
+                                $envioGratis = $precioFinal >= config('tienda.envio_gratis_desde');
+                                $costoEnvio = config('tienda.costo_de_envio');
                             }
                             
-                            $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
-                            $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
-                            $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
-                            
                             $estaBajoStock = $stock > 0 && $stock <= 10;
-                            
-                            // Lógica de envío
-                            $envioGratis = $precioFinal >= config('tienda.envio_gratis_desde');
-                            $costoEnvio = config('tienda.costo_de_envio');
                         @endphp
                         
                         <div class="producto-card" onclick="window.location.href='{{ $url }}'">
                             <div class="producto-imagen-container">
-                                <!-- BOTÓN DEL CORAZÓN -->
                                 <button class="corazon-favorito {{ $esFavorito ? 'activo' : 'inactivo' }}" 
                                         data-producto="{{ $productoId }}"
                                         data-variacion="{{ $variacionId ?? '' }}"
@@ -1188,7 +1229,10 @@
 
                                 @if($tieneDescuento && $porcentajeDescuento > 0)
                                     <div class="badge-descuento-rojo" title="{{ $motivoDescuento ?: 'Descuento especial' }}">
-                                        -{{ $porcentajeDescuento }}%
+                                        -{{ $porcentajeDescuento }}% OFF
+                                        @if($motivoDescuento)
+                                            <br><small style="font-size: 8px;">{{ Str::limit($motivoDescuento, 15) }}</small>
+                                        @endif
                                     </div>
                                 @elseif($estaBajoStock && !$tieneDescuento)
                                     <div class="badge-stock-bajo">
@@ -1196,7 +1240,6 @@
                                     </div>
                                 @endif
 
-                                <!-- Badge de variación (solo si es variación) -->
                                 @if($esVariacion && !empty($atributosCorto))
                                     <div class="badge-variacion" title="{{ $atributosTexto }}">
                                         {{ $atributosCorto }}
@@ -1215,40 +1258,28 @@
                             <div class="producto-info">
                                 <h3 title="{{ $nombreCompleto }}">{{ Str::limit($nombreCompleto, 50) }}</h3>
                                 
-                                <!-- Precio con descuento -->
-                                <div class="producto-precio">
+                                <div class="precio-container">
                                     @if($tieneDescuento && $porcentajeDescuento > 0)
-                                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap;">
-                                            <span class="precio-original">
-                                                ${{ number_format($precioOriginal, 2) }}
-                                            </span>
-                                            <span class="precio-actual">
-                                                ${{ number_format($precioFinal, 2) }}
-                                            </span>
-                                            <span class="badge-descuento">
-                                                -{{ $porcentajeDescuento }}%
-                                            </span>
+                                        <span class="precio-original">${{ number_format($precioOriginalConImpuesto, 2) }}</span>
+                                        <div style="display: flex; align-items: center; flex-wrap: wrap;">
+                                            <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
+                                            <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                         </div>
-                                        
                                         @if($motivoDescuento)
                                             <div class="motivo-descuento" title="{{ $motivoDescuento }}">
                                                 <i class="fas fa-comment"></i> {{ Str::limit($motivoDescuento, 30) }}
                                             </div>
                                         @endif
-                                        
-                                        @if($fechaInicio && $fechaFin)
+                                        @if($fechaInicioFormateada && $fechaFinFormateada && !$esVariacion)
                                             <div class="periodo-descuento">
-                                                <i class="fas fa-calendar-alt"></i> {{ $fechaInicio }} - {{ $fechaFin }}
+                                                <i class="fas fa-calendar-alt"></i> {{ $fechaInicioFormateada }} - {{ $fechaFinFormateada }}
                                             </div>
                                         @endif
                                     @else
-                                        <span class="precio-actual">
-                                            ${{ number_format($precioFinal, 2) }}
-                                        </span>
+                                        <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                     @endif
                                 </div>
 
-                                <!-- ENVÍO -->
                                 <div class="envio-info">
                                     @if($envioGratis)
                                         <span class="envio-gratis">
@@ -1261,12 +1292,10 @@
                                     @endif
                                 </div>
                                 
-                                <!-- SKU -->
                                 <div style="font-size: 11px; color: #999; margin-bottom: 5px;">
                                     SKU: {{ $sku }}
                                 </div>
                                 
-                                <!-- Stock -->
                                 <div class="stock-info" style="color: {{ $stock > 10 ? '#00a650' : ($stock > 0 ? '#ff6b00' : '#dc3545') }};">
                                     @if($stock > 10)
                                         ✅ En stock ({{ $stock }} disponibles)
@@ -1314,11 +1343,9 @@
                     @endforeach
                 </div>
 
-                <!-- PAGINACIÓN -->
                 <div class="paginacion">
                     @if ($productos->hasPages())
                         <ul class="pagination">
-                            {{-- Flecha Anterior --}}
                             @if ($productos->onFirstPage())
                                 <li class="disabled" aria-disabled="true">
                                     <span></span>
@@ -1329,7 +1356,6 @@
                                 </li>
                             @endif
 
-                            {{-- Números de página --}}
                             @foreach ($productos->getUrlRange(max(1, $productos->currentPage() - 2), min($productos->lastPage(), $productos->currentPage() + 2)) as $page => $url)
                                 @if ($page == $productos->currentPage())
                                     <li class="active" aria-current="page"><span>{{ $page }}</span></li>
@@ -1338,7 +1364,6 @@
                                 @endif
                             @endforeach
 
-                            {{-- Flecha Siguiente --}}
                             @if ($productos->hasMorePages())
                                 <li>
                                     <a href="{{ $productos->nextPageUrl() }}" rel="next" aria-label="Siguiente"></a>
@@ -1406,7 +1431,6 @@
             button.innerHTML = '⏳';
             
             @auth
-                // Usuario autenticado - ruta directa
                 const url = variacionId 
                     ? `/favoritos/toggle-variacion/${variacionId}`
                     : `/favoritos/toggle-producto/${productoId}`;
@@ -1447,7 +1471,6 @@
                             button.setAttribute('title', 'Quitar de favoritos');
                             
                             let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
-                            
                             mostrarToast('success', '✅', `${tipoTexto} agregado a favoritos`);
                             
                             localStorage.setItem('last_favorito_action', 'added');
@@ -1461,7 +1484,6 @@
                             button.setAttribute('title', 'Agregar a favoritos');
                             
                             let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
-                            
                             mostrarToast('error', '❌', `${tipoTexto} eliminado de favoritos`);
                             
                             localStorage.setItem('last_favorito_action', 'removed');
@@ -1470,7 +1492,6 @@
                             localStorage.setItem('last_favorito_time', Date.now());
                         }
                     } else {
-                        // Revertir cambios si hubo error
                         revertirEstadoFavorito(button, estabaActivo);
                         mostrarToast('error', '❌', data.message || 'Error al gestionar favoritos');
                     }
@@ -1487,12 +1508,10 @@
                     }, 500);
                 });
             @else
-                // Invitado - verificar estado actual primero
                 const checkUrl = variacionId 
                     ? `/favoritos-invitado/check/${productoId}/${variacionId}`
                     : `/favoritos-invitado/check/${productoId}`;
                 
-                // Verificar estado actual
                 fetch(checkUrl, {
                     method: 'GET',
                     headers: {
@@ -1508,7 +1527,6 @@
                 })
                 .then(checkData => {
                     if (checkData.success) {
-                        // Proceder con el toggle
                         const toggleUrl = variacionId 
                             ? `/favoritos-invitado/toggle-variacion/${variacionId}`
                             : `/favoritos-invitado/toggle-producto/${productoId}`;
@@ -1527,7 +1545,7 @@
                 })
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}`);
+                        return response.json().then(err => { throw new Error(err.message || `HTTP ${response.status}`); });
                     }
                     return response.json();
                 })
@@ -1540,7 +1558,6 @@
                             button.setAttribute('title', 'Quitar de favoritos');
                             
                             let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
-                            
                             mostrarToast('success', '✅', `${tipoTexto} agregado a favoritos`);
                             
                             localStorage.setItem('last_favorito_action', 'added');
@@ -1554,7 +1571,6 @@
                             button.setAttribute('title', 'Agregar a favoritos');
                             
                             let tipoTexto = data.tipo === 'variacion' ? 'Variación' : 'Producto';
-                            
                             mostrarToast('error', '❌', `${tipoTexto} eliminado de favoritos`);
                             
                             localStorage.setItem('last_favorito_action', 'removed');
@@ -1570,7 +1586,7 @@
                 .catch(error => {
                     console.error('Error:', error);
                     revertirEstadoFavorito(button, estabaActivo);
-                    mostrarToast('error', '❌', 'Error de conexión');
+                    mostrarToast('error', '❌', error.message);
                 })
                 .finally(() => {
                     setTimeout(() => {
@@ -1684,14 +1700,12 @@
                 if (searchInput) searchInput.focus();
             }
 
-            // Verificar acciones recientes de localStorage
             const lastAction = localStorage.getItem('last_favorito_action');
             const lastId = localStorage.getItem('last_favorito_id');
             const lastTipo = localStorage.getItem('last_favorito_tipo');
             const lastTime = localStorage.getItem('last_favorito_time');
             
             if (lastAction && lastId && lastTime && (Date.now() - lastTime) < 5000) {
-                // Buscar el botón correspondiente
                 let selector;
                 if (lastTipo === 'variacion') {
                     selector = `[data-variacion="${lastId}"]`;
@@ -1715,7 +1729,6 @@
                 }
             }
             
-            // Limpiar localStorage después de 5 segundos
             setTimeout(() => {
                 localStorage.removeItem('last_favorito_action');
                 localStorage.removeItem('last_favorito_id');
@@ -1723,7 +1736,6 @@
                 localStorage.removeItem('last_favorito_time');
             }, 5000);
 
-            // Debounce para cambios en checkboxes
             let timeoutId;
             document.querySelectorAll('#filtrosForm input[type="checkbox"]').forEach(input => {
                 input.addEventListener('change', function() {

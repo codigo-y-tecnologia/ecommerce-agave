@@ -244,7 +244,7 @@
                                        id="dFecha_inicio_descuento" 
                                        class="form-control @error('dFecha_inicio_descuento') is-invalid @enderror"
                                        value="{{ old('dFecha_inicio_descuento', $producto->dFecha_inicio_descuento ? \Carbon\Carbon::parse($producto->dFecha_inicio_descuento)->format('Y-m-d') : '') }}"
-                                       onchange="validarFechasDescuento()"
+                                       onchange="validarFechasDescuento(); actualizarPrecioFinal();"
                                        autocomplete="off">
                                 @error('dFecha_inicio_descuento')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -262,7 +262,7 @@
                                        id="dFecha_fin_descuento" 
                                        class="form-control @error('dFecha_fin_descuento') is-invalid @enderror"
                                        value="{{ old('dFecha_fin_descuento', $producto->dFecha_fin_descuento ? \Carbon\Carbon::parse($producto->dFecha_fin_descuento)->format('Y-m-d') : '') }}"
-                                       onchange="validarFechasDescuento()"
+                                       onchange="validarFechasDescuento(); actualizarPrecioFinal();"
                                        autocomplete="off">
                                 <div id="error-fechas-descuento" class="invalid-feedback" style="display: none;"></div>
                                 @error('dFecha_fin_descuento')
@@ -560,7 +560,7 @@
                         <div class="col-md-6">
                             <i class="fas fa-camera me-1"></i>
                             <strong>Total de archivos multimedia:</strong> 
-                            <span id="total-imagenes">0</span> archivos
+                            <span id="total-imagenes">{{ $producto->getNumeroImagenes() }}</span> archivos
                         </div>
                         <div class="col-md-6">
                             <strong>Tamaño total:</strong>
@@ -604,6 +604,7 @@
                                 JPG, JPEG, PNG. Máx: 5MB
                             </small>
                             
+                            <!-- Preview para nueva imagen -->
                             <div id="preview_principal_container" class="mt-2" style="display: none;">
                                 <div class="border rounded p-2 text-center bg-light">
                                     <img id="preview_principal_img" src="#" 
@@ -611,13 +612,14 @@
                                          style="max-width: 150px; max-height: 150px; object-fit: contain;"
                                          alt="Preview imagen principal">
                                     <div class="mt-2">
-                                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarImagenPrincipal()">
-                                            <i class="fas fa-times me-1"></i>Cancelar
+                                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarNuevaImagenPrincipal()">
+                                            <i class="fas fa-times me-1"></i>Cancelar nueva imagen
                                         </button>
                                     </div>
                                 </div>
                             </div>
                             
+                            <!-- Imagen actual -->
                             @if($imagenPrincipalActual)
                             <div class="mt-2" id="current_principal_container">
                                 <div class="border rounded p-2 text-center bg-light position-relative">
@@ -649,6 +651,7 @@
                                 GIF. Máx: 10MB
                             </small>
                             
+                            <!-- Preview para nuevo GIF -->
                             <div id="preview_gif_container" class="mt-2" style="display: none;">
                                 <div class="border rounded p-2 text-center bg-light">
                                     <img id="preview_gif" src="#" 
@@ -656,13 +659,14 @@
                                          style="max-width: 150px; max-height: 150px; object-fit: contain;"
                                          alt="Preview GIF">
                                     <div class="mt-2">
-                                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarGif()">
-                                            <i class="fas fa-times me-1"></i>Cancelar
+                                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarNuevoGif()">
+                                            <i class="fas fa-times me-1"></i>Cancelar nuevo GIF
                                         </button>
                                     </div>
                                 </div>
                             </div>
                             
+                            <!-- GIF actual -->
                             @if($gifActual)
                             <div class="mt-2" id="current_gif_container">
                                 <div class="border rounded p-2 text-center bg-light position-relative">
@@ -700,12 +704,13 @@
                     </div>
                 </div>
                 
+                <!-- Imágenes adicionales actuales -->
                 @if(count($imagenesAdicionalesActuales) > 0)
                 <div class="mt-3">
                     <label class="small fw-bold">Imágenes adicionales actuales:</label>
                     <div id="existing-images-container" class="row g-2 mt-1">
                         @foreach($imagenesAdicionalesActuales as $index => $img)
-                            <div class="col-auto existing-image-item" data-imagen-index="{{ $index }}">
+                            <div class="col-auto existing-image-item" data-imagen-index="{{ $index }}" data-imagen-filename="{{ basename($img) }}">
                                 <div class="border rounded p-1 text-center bg-light position-relative">
                                     <img src="{{ $img }}" class="img-thumbnail" style="width: 80px; height: 80px; object-fit: contain;">
                                     <div class="mt-1">
@@ -720,6 +725,7 @@
                 </div>
                 @endif
                 
+                <!-- Nuevas imágenes a agregar -->
                 <div class="mt-3">
                     <h6 class="fw-bold mb-2"><i class="fas fa-images me-2"></i>Nuevas imágenes a agregar:</h6>
                     <div id="selected-images-container" class="row g-2"></div>
@@ -1076,43 +1082,28 @@
         </div>
     </form>
 
-    <!-- MODAL PARA CREAR CATEGORÍA (CON IMAGEN) -->
+    <!-- MODALES PARA CREACIÓN RÁPIDA (los mismos que en create.blade) -->
+    <!-- MODAL PARA CREAR CATEGORÍA -->
     <div class="modal fade" id="modalCategoria" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">
-                        <i class="fas fa-tags me-2"></i>Crear Nueva Categoría
-                    </h5>
+                    <h5 class="modal-title"><i class="fas fa-tags me-2"></i>Crear Nueva Categoría</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="categoriaModalForm" enctype="multipart/form-data">
                         @csrf
-                        
                         <div class="mb-3">
-                            <label for="vNombre_categoria_modal" class="form-label fw-bold">Nombre de la Categoría *</label>
-                            <input type="text" class="form-control" 
-                                   id="vNombre_categoria_modal" name="vNombre" 
-                                   required
-                                   placeholder="Ej: Tequila, Mezcal, Añejos..."
-                                   oninput="generarSlugCategoria(this.value)">
-                            <small class="form-text text-muted">Nombre descriptivo para la categoría</small>
+                            <label class="form-label fw-bold">Nombre de la Categoría *</label>
+                            <input type="text" class="form-control" id="vNombre_categoria_modal" name="vNombre" required oninput="generarSlugCategoria(this.value)">
                         </div>
-
                         <div class="mb-3">
-                            <label for="vSlug_categoria_modal" class="form-label fw-bold">Slug (URL amigable) *</label>
-                            <input type="text" class="form-control" 
-                                   id="vSlug_categoria_modal" name="vSlug" 
-                                   required
-                                   placeholder="tequila-reposado">
-                            <small class="form-text text-muted">
-                                URL para la categoría. Se genera automáticamente.
-                            </small>
+                            <label class="form-label fw-bold">Slug (URL amigable) *</label>
+                            <input type="text" class="form-control" id="vSlug_categoria_modal" name="vSlug" required>
                         </div>
-
                         <div class="mb-3">
-                            <label for="id_categoria_padre_modal" class="form-label fw-bold">Categoría Padre</label>
+                            <label class="form-label fw-bold">Categoría Padre</label>
                             <select class="form-control" id="id_categoria_padre_modal" name="id_categoria_padre">
                                 <option value="">-- Seleccionar Categoría Padre (Opcional) --</option>
                                 @php
@@ -1120,77 +1111,42 @@
                                         foreach($categorias as $categoria) {
                                             $prefijo = str_repeat('&nbsp;&nbsp;&nbsp;', $nivel);
                                             $icono = $nivel == 0 ? '🏠 ' : '↳ ';
-                                            echo '<option value="' . $categoria->id_categoria . '">' .
-                                                 $prefijo . $icono . htmlspecialchars($categoria->vNombre) . 
-                                                 '</option>';
-                                            
+                                            echo '<option value="' . $categoria->id_categoria . '">' . $prefijo . $icono . htmlspecialchars($categoria->vNombre) . '</option>';
                                             if ($categoria->hijos && $categoria->hijos->count() > 0) {
                                                 mostrarCategoriasModal($categoria->hijos, $nivel + 1);
                                             }
                                         }
                                     }
-                                    
                                     $categoriasRaiz = $categorias->where('id_categoria_padre', null)->where('bActivo', true);
                                 @endphp
-                                
                                 @php mostrarCategoriasModal($categoriasRaiz, 0); @endphp
                             </select>
-                            <small class="form-text text-muted">Selecciona si esta categoría pertenece a otra</small>
                         </div>
-
                         <div class="mb-3">
-                            <label for="tDescripcion_categoria_modal" class="form-label fw-bold">Descripción</label>
-                            <textarea class="form-control" 
-                                      id="tDescripcion_categoria_modal" name="tDescripcion" rows="3"
-                                      placeholder="Describe la categoría..."></textarea>
+                            <label class="form-label fw-bold">Descripción</label>
+                            <textarea class="form-control" id="tDescripcion_categoria_modal" name="tDescripcion" rows="3"></textarea>
                         </div>
-
                         <div class="mb-3">
                             <label class="form-label fw-bold">Imagen de la Categoría</label>
-                            
-                            <!-- Preview de imagen -->
-                            <div class="mb-3" id="categoriaModalImagePreview" style="display: none;">
+                            <div id="categoriaModalImagePreview" class="mb-3" style="display: none;">
                                 <div class="border rounded p-3 text-center">
-                                    <img id="categoriaModalPreviewImg" src="#" 
-                                         class="img-thumbnail" 
-                                         style="max-width: 150px; max-height: 150px; object-fit: cover;"
-                                         alt="Preview">
-                                    <div class="mt-2">
-                                        <small class="text-muted d-block">Vista previa</small>
-                                        <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarImagenCategoriaModal()">
-                                            <i class="fas fa-times me-1"></i>Cancelar imagen
-                                        </button>
-                                    </div>
+                                    <img id="categoriaModalPreviewImg" src="#" class="img-thumbnail" style="max-width: 150px; max-height: 150px;">
+                                    <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarImagenCategoriaModal()">Cancelar imagen</button>
                                 </div>
                             </div>
-                            
-                            <input type="file" class="form-control" 
-                                   id="vImagen_categoria_modal" name="vImagen"
-                                   accept="image/jpeg,image/jpg,image/png,image/webp"
-                                   onchange="previewImagenCategoriaModal(this)">
-                            <small class="form-text text-muted">
-                                Formatos: JPG, JPEG, PNG, WebP. Tamaño máximo: 2MB. La imagen es opcional.
-                            </small>
+                            <input type="file" class="form-control" id="vImagen_categoria_modal" name="vImagen" accept="image/jpeg,image/jpg,image/png,image/webp" onchange="previewImagenCategoriaModal(this)">
                         </div>
-
                         <div class="mb-3">
                             <div class="form-check">
-                                <input type="checkbox" class="form-check-input" 
-                                       id="bActivo_categoria_modal" name="bActivo" value="1" checked>
-                                <label class="form-check-label" for="bActivo_categoria_modal">
-                                    Categoría activa
-                                </label>
+                                <input type="checkbox" class="form-check-input" id="bActivo_categoria_modal" name="bActivo" value="1" checked>
+                                <label class="form-check-label">Categoría activa</label>
                             </div>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i> Cancelar
-                    </button>
-                    <button type="button" class="btn btn-primary" onclick="guardarCategoria()">
-                        <i class="fas fa-save me-1"></i> Crear Categoría
-                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarCategoria()">Crear Categoría</button>
                 </div>
             </div>
         </div>
@@ -1201,74 +1157,54 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">
-                        <i class="fas fa-industry me-2"></i>Crear Nueva Marca
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title"><i class="fas fa-industry me-2"></i>Crear Nueva Marca</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form id="marcaModalForm">
                         @csrf
-                        
                         <div class="mb-3">
-                            <label for="vNombre_marca_modal" class="form-label fw-bold">Nombre de la Marca *</label>
-                            <input type="text" class="form-control" id="vNombre_marca_modal" name="vNombre" 
-                                   placeholder="Ej: José Cuervo, Patrón, Don Julio" required>
+                            <label class="form-label fw-bold">Nombre de la Marca *</label>
+                            <input type="text" class="form-control" id="vNombre_marca_modal" name="vNombre" required>
                         </div>
-                        
                         <div class="mb-3">
-                            <label for="tDescripcion_marca_modal" class="form-label fw-bold">Descripción (Opcional)</label>
-                            <textarea class="form-control" id="tDescripcion_marca_modal" name="tDescripcion" rows="3" 
-                                      placeholder="Describe la marca..."></textarea>
+                            <label class="form-label fw-bold">Descripción (Opcional)</label>
+                            <textarea class="form-control" id="tDescripcion_marca_modal" name="tDescripcion" rows="3"></textarea>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i> Cancelar
-                    </button>
-                    <button type="button" class="btn btn-primary" onclick="guardarMarca()">
-                        <i class="fas fa-save me-1"></i> Crear Marca
-                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarMarca()">Crear Marca</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL PARA CREAR ETIQUETA (SIN COLOR) -->
+    <!-- MODAL PARA CREAR ETIQUETA -->
     <div class="modal fade" id="modalEtiqueta" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">
-                        <i class="fas fa-tag me-2"></i>Crear Nueva Etiqueta
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title"><i class="fas fa-tag me-2"></i>Crear Nueva Etiqueta</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form id="etiquetaModalForm">
                         @csrf
-                        
                         <div class="mb-3">
-                            <label for="vNombre_eti_modal" class="form-label fw-bold">Nombre de la Etiqueta *</label>
-                            <input type="text" class="form-control" id="vNombre_eti_modal" name="vNombre" 
-                                   placeholder="Ej: Artesanal, Orgánico, Premium" required>
+                            <label class="form-label fw-bold">Nombre de la Etiqueta *</label>
+                            <input type="text" class="form-control" id="vNombre_eti_modal" name="vNombre" required>
                         </div>
-                        
                         <div class="mb-3">
-                            <label for="tDescripcion_eti_modal" class="form-label fw-bold">Descripción (Opcional)</label>
-                            <textarea class="form-control" id="tDescripcion_eti_modal" name="tDescripcion" rows="2" 
-                                      placeholder="Descripción de la etiqueta..."></textarea>
+                            <label class="form-label fw-bold">Descripción (Opcional)</label>
+                            <textarea class="form-control" id="tDescripcion_eti_modal" name="tDescripcion" rows="2"></textarea>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i> Cancelar
-                    </button>
-                    <button type="button" class="btn btn-primary" onclick="guardarEtiqueta()">
-                        <i class="fas fa-save me-1"></i> Crear Etiqueta
-                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarEtiqueta()">Crear Etiqueta</button>
                 </div>
             </div>
         </div>
@@ -1279,155 +1215,107 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">
-                        <i class="fas fa-list-alt me-2"></i>Crear Nuevo Atributo
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title"><i class="fas fa-list-alt me-2"></i>Crear Nuevo Atributo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form id="atributoModalForm">
                         @csrf
-                        
                         <div class="mb-3">
-                            <label for="vNombre_attr_modal" class="form-label fw-bold">Nombre del Atributo *</label>
-                            <input type="text" class="form-control" id="vNombre_attr_modal" name="vNombre" 
-                                   placeholder="Ej: Tamaño, Color, Sabor, Edad"
-                                   oninput="generarSlugAtributo(this.value)" required>
+                            <label class="form-label fw-bold">Nombre del Atributo *</label>
+                            <input type="text" class="form-control" id="vNombre_attr_modal" name="vNombre" required oninput="generarSlugAtributo(this.value)">
                         </div>
-                        
                         <div class="mb-3">
-                            <label for="vSlug_attr_modal" class="form-label fw-bold">Slug (URL amigable)</label>
-                            <input type="text" class="form-control" id="vSlug_attr_modal" name="vSlug" 
-                                   placeholder="tamano, color, material">
-                            <small class="form-text text-muted">Se genera automáticamente desde el nombre</small>
+                            <label class="form-label fw-bold">Slug (URL amigable)</label>
+                            <input type="text" class="form-control" id="vSlug_attr_modal" name="vSlug">
                         </div>
-                        
                         <div class="mb-3">
-                            <label for="tDescripcion_attr_modal" class="form-label fw-bold">Descripción (Opcional)</label>
-                            <textarea class="form-control" id="tDescripcion_attr_modal" name="tDescripcion" rows="2" 
-                                      placeholder="Describe el atributo..."></textarea>
+                            <label class="form-label fw-bold">Descripción (Opcional)</label>
+                            <textarea class="form-control" id="tDescripcion_attr_modal" name="tDescripcion" rows="2"></textarea>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i> Cancelar
-                    </button>
-                    <button type="button" class="btn btn-primary" onclick="guardarAtributo()">
-                        <i class="fas fa-save me-1"></i> Crear Atributo
-                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarAtributo()">Crear Atributo</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL PARA CREAR IMPUESTO (IVA e IEPS) -->
+    <!-- MODAL PARA CREAR IMPUESTO -->
     <div class="modal fade" id="modalImpuesto" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">
-                        <i class="fas fa-file-invoice-dollar me-2"></i>Crear Nuevo Impuesto
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title"><i class="fas fa-file-invoice-dollar me-2"></i>Crear Nuevo Impuesto</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form id="impuestoModalForm">
                         @csrf
-                        
                         <div class="mb-3">
-                            <label for="vNombre_impuesto_modal" class="form-label fw-bold">Nombre del Impuesto *</label>
-                            <input type="text" class="form-control" id="vNombre_impuesto_modal" name="vNombre" 
-                                   placeholder="Ej: IVA, IEPS" value="" required>
-                            <small class="text-muted">Ejemplos: IVA, IEPS</small>
+                            <label class="form-label fw-bold">Nombre del Impuesto *</label>
+                            <input type="text" class="form-control" id="vNombre_impuesto_modal" name="vNombre" required>
                         </div>
-                        
                         <div class="mb-3">
-                            <label for="eTipo_impuesto_modal" class="form-label fw-bold">Tipo de Impuesto *</label>
+                            <label class="form-label fw-bold">Tipo de Impuesto *</label>
                             <select class="form-control" id="eTipo_impuesto_modal" name="eTipo" required>
-                                <option value="">Seleccionar tipo</option>
                                 <option value="IVA">IVA</option>
                                 <option value="IEPS">IEPS</option>
                             </select>
                         </div>
-                        
                         <div class="mb-3">
-                            <label for="dPorcentaje_impuesto_modal" class="form-label fw-bold">Porcentaje *</label>
-                            <div class="input-group">
-                                <input type="number" step="0.01" min="0" max="100" class="form-control" 
-                                       id="dPorcentaje_impuesto_modal" name="dPorcentaje" 
-                                       placeholder="16.00" value="" required>
-                                <span class="input-group-text">%</span>
-                            </div>
-                            <small class="text-muted">IVA 16%, IEPS 8% (ejemplo)</small>
+                            <label class="form-label fw-bold">Porcentaje *</label>
+                            <input type="number" step="0.01" class="form-control" id="dPorcentaje_impuesto_modal" name="dPorcentaje" required>
                         </div>
-                        
                         <div class="mb-3">
                             <div class="form-check">
-                                <input type="checkbox" class="form-check-input" 
-                                       id="bActivo_impuesto_modal" name="bActivo" value="1" checked>
-                                <label class="form-check-label" for="bActivo_impuesto_modal">Activo</label>
+                                <input type="checkbox" class="form-check-input" id="bActivo_impuesto_modal" name="bActivo" value="1" checked>
+                                <label class="form-check-label">Activo</label>
                             </div>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i> Cancelar
-                    </button>
-                    <button type="button" class="btn btn-primary" onclick="guardarImpuesto()">
-                        <i class="fas fa-save me-1"></i> Crear Impuesto
-                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarImpuesto()">Crear Impuesto</button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- MODAL PARA CREAR VALOR DE ATRIBUTO -->
-    <div class="modal fade" id="crearValorModal" tabindex="-1" aria-labelledby="crearValorModalLabel" aria-hidden="true">
+    <div class="modal fade" id="crearValorModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="crearValorModalLabel">
-                        <i class="fas fa-plus-circle me-2"></i>Crear Nuevo Valor para <span id="atributoNombreModal"></span>
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title">Crear Nuevo Valor para <span id="atributoNombreModal"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form id="valorQuickForm">
                         @csrf
                         <input type="hidden" id="valor_atributo_id" name="atributo_id">
-                        
                         <div class="mb-3">
-                            <label for="vValor_modal" class="form-label fw-bold">Valor <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="vValor_modal" name="vValor" required
-                                   placeholder="Ej: 750ml, Rojo, Joven, 6 meses"
-                                   oninput="generarSlugValor(this.value)">
-                            <small class="form-text text-muted">El valor que aparecerá en las opciones del producto</small>
+                            <label class="form-label fw-bold">Valor *</label>
+                            <input type="text" class="form-control" id="vValor_modal" name="vValor" required oninput="generarSlugValor(this.value)">
                         </div>
-                        
                         <div class="mb-3">
-                            <label for="vSlug_valor_modal" class="form-label fw-bold">Slug (URL amigable)</label>
-                            <input type="text" class="form-control" id="vSlug_valor_modal" name="vSlug"
-                                   placeholder="Se genera automáticamente">
-                            <small class="form-text text-muted">Versión para URL del valor</small>
+                            <label class="form-label fw-bold">Slug (URL amigable)</label>
+                            <input type="text" class="form-control" id="vSlug_valor_modal" name="vSlug">
                         </div>
-                        
                         <div class="mb-3">
                             <div class="form-check">
                                 <input type="checkbox" class="form-check-input" id="bActivo_valor_modal" name="bActivo" value="1" checked>
-                                <label class="form-check-label" for="bActivo_valor_modal">Activo</label>
+                                <label class="form-check-label">Activo</label>
                             </div>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i>Cancelar
-                    </button>
-                    <button type="button" class="btn btn-primary" onclick="guardarValorAtributo()">
-                        <i class="fas fa-save me-1"></i>Guardar Valor
-                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="guardarValorAtributo()">Guardar Valor</button>
                 </div>
             </div>
         </div>
@@ -1436,76 +1324,20 @@
 
 @push('styles')
 <style>
-.valores-nav {
-    border-bottom: 2px solid #dee2e6;
-    padding-left: 10px;
-    background: white;
-    flex-wrap: wrap;
-}
-.valores-nav .nav-item {
-    margin-right: 2px;
-    margin-bottom: 5px;
-}
-.valores-nav .nav-link {
-    color: #495057;
-    border: none;
-    border-bottom: 3px solid transparent;
-    margin-bottom: -2px;
-    padding: 10px 15px;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    background: transparent;
-}
-.valores-nav .nav-link:hover {
-    color: #007bff;
-    border-bottom-color: #adb5bd;
-    background: rgba(0,123,255,0.05);
-}
-.valores-nav .nav-link.active {
-    color: #007bff;
-    background: white;
-    border-bottom: 3px solid #007bff;
-    font-weight: 600;
-}
-.valores-nav .nav-link .badge {
-    margin-left: 8px;
-    background-color: #6c757d;
-    color: white;
-}
-.valores-nav .nav-link.active .badge {
-    background-color: #007bff !important;
-    color: white;
-}
-.variacion-form-container {
-    padding: 20px;
-    background: white;
-}
-.variacion-header-info {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-}
-.atributo-valores-container {
-    transition: all 0.3s ease;
-}
-.image-preview-card {
-    transition: transform 0.2s;
-    border: 2px solid transparent;
-}
-.image-preview-card:hover {
-    transform: scale(1.02);
-    border-color: #007bff;
-}
-.duplicate-error {
-    display: none;
-    width: 100%;
-    margin-top: 0.25rem;
-    font-size: 0.875em;
-    color: #dc3545;
-}
-.existing-image-item.eliminada {
-    display: none;
-}
+.valores-nav { border-bottom: 2px solid #dee2e6; padding-left: 10px; background: white; flex-wrap: wrap; }
+.valores-nav .nav-item { margin-right: 2px; margin-bottom: 5px; }
+.valores-nav .nav-link { color: #495057; border: none; border-bottom: 3px solid transparent; margin-bottom: -2px; padding: 10px 15px; font-weight: 500; transition: all 0.3s ease; background: transparent; }
+.valores-nav .nav-link:hover { color: #007bff; border-bottom-color: #adb5bd; background: rgba(0,123,255,0.05); }
+.valores-nav .nav-link.active { color: #007bff; background: white; border-bottom: 3px solid #007bff; font-weight: 600; }
+.valores-nav .nav-link .badge { margin-left: 8px; background-color: #6c757d; color: white; }
+.valores-nav .nav-link.active .badge { background-color: #007bff !important; color: white; }
+.variacion-form-container { padding: 20px; background: white; }
+.variacion-header-info { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; }
+.atributo-valores-container { transition: all 0.3s ease; }
+.image-preview-card { transition: transform 0.2s; border: 2px solid transparent; }
+.image-preview-card:hover { transform: scale(1.02); border-color: #007bff; }
+.duplicate-error { display: none; width: 100%; margin-top: 0.25rem; font-size: 0.875em; color: #dc3545; }
+.existing-image-item.eliminada { display: none; }
 </style>
 @endpush
 
@@ -1514,7 +1346,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    
 // ============ PASAR DATOS DE LA BASE DE DATOS A JAVASCRIPT ============
 const productosExistentes = @json($productosExistentes ?? []);
 const variacionesExistentes = @json($variacionesExistentes ?? []);
@@ -1522,7 +1353,6 @@ const variacionesExistentesData = @json($variacionesExistentesData ?? []);
 const valoresSeleccionadosAttr = @json($valoresSeleccionadosAttr ?? []);
 const imagenesActualesProducto = @json($imagenesActuales ?? []);
 
-// Crear sets para búsqueda rápida
 const skusExistentes = new Set(productosExistentes.map(p => p.sku));
 const nombresExistentes = new Set(productosExistentes.map(p => p.nombre));
 const skusVariacionExistentes = new Set(variacionesExistentes.map(v => v.sku));
@@ -1538,8 +1368,6 @@ let maxTotalSize = 50 * 1024 * 1024;
 let limiteExcedido = false;
 let imagenesAdicionalesAEliminar = [];
 
-
-// Variables para modales
 let modalCategoria = null;
 let modalMarca = null;
 let modalEtiqueta = null;
@@ -1556,7 +1384,6 @@ Object.keys(valoresSeleccionadosAttr).forEach(atributoId => {
         nombre: atributo.nombre,
         valores: {}
     };
-    
     Object.keys(atributo.valores).forEach(valorId => {
         atributosActivos[atributoId].valores[valorId] = {
             id: parseInt(valorId),
@@ -1567,8 +1394,7 @@ Object.keys(valoresSeleccionadosAttr).forEach(atributoId => {
     });
 });
 
-// ============ FUNCIONES DE ELIMINACIÓN DEL PRODUCTO PRINCIPAL ============
-
+// ============ FUNCIONES DE ELIMINACIÓN ============
 function eliminarImagenPrincipalProducto() {
     Swal.fire({
         title: '¿Eliminar imagen principal?',
@@ -1582,15 +1408,9 @@ function eliminarImagenPrincipalProducto() {
     }).then((result) => {
         if (result.isConfirmed) {
             document.getElementById('eliminar_imagen_principal_producto').value = '1';
-            document.getElementById('current_principal_container').style.display = 'none';
-            
-            Swal.fire({
-                title: '¡Imagen marcada para eliminar!',
-                text: 'La imagen será eliminada al guardar los cambios.',
-                icon: 'success',
-                timer: 2000,
-                showConfirmButton: false
-            });
+            const container = document.getElementById('current_principal_container');
+            if (container) container.style.display = 'none';
+            Swal.fire({ title: '¡Imagen marcada para eliminar!', text: 'Será eliminada al guardar.', icon: 'success', timer: 2000, showConfirmButton: false });
             actualizarContadorImagenes();
         }
     });
@@ -1609,15 +1429,9 @@ function eliminarGifProducto() {
     }).then((result) => {
         if (result.isConfirmed) {
             document.getElementById('eliminar_gif_producto').value = '1';
-            document.getElementById('current_gif_container').style.display = 'none';
-            
-            Swal.fire({
-                title: '¡GIF marcado para eliminar!',
-                text: 'El GIF será eliminado al guardar los cambios.',
-                icon: 'success',
-                timer: 2000,
-                showConfirmButton: false
-            });
+            const container = document.getElementById('current_gif_container');
+            if (container) container.style.display = 'none';
+            Swal.fire({ title: '¡GIF marcado para eliminar!', text: 'Será eliminado al guardar.', icon: 'success', timer: 2000, showConfirmButton: false });
             actualizarContadorImagenes();
         }
     });
@@ -1626,7 +1440,7 @@ function eliminarGifProducto() {
 function eliminarImagenAdicional(btn, identificadorIndex, identificadorFilename) {
     Swal.fire({
         title: '¿Eliminar imagen?',
-        text: 'Esta acción eliminará esta imagen adicional del producto.',
+        text: 'Esta acción eliminará esta imagen adicional.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
@@ -1637,160 +1451,43 @@ function eliminarImagenAdicional(btn, identificadorIndex, identificadorFilename)
         if (result.isConfirmed) {
             const container = btn.closest('.existing-image-item');
             const imagenesAEliminarInput = document.getElementById('imagenes_adicionales_a_eliminar');
-            
-            if (!imagenesAEliminarInput) {
-                console.error('Input NO encontrado');
-                return;
-            }
-            
             let imagenesAEliminar = [];
             if (imagenesAEliminarInput.value && imagenesAEliminarInput.value !== '[]') {
-                try {
-                    imagenesAEliminar = JSON.parse(imagenesAEliminarInput.value);
-                } catch(e) {
-                    imagenesAEliminar = [];
-                }
+                try { imagenesAEliminar = JSON.parse(imagenesAEliminarInput.value); } catch(e) { imagenesAEliminar = []; }
             }
-            
             const identificador = identificadorFilename || identificadorIndex;
             if (!imagenesAEliminar.includes(identificador) && !imagenesAEliminar.includes(parseInt(identificadorIndex))) {
                 imagenesAEliminar.push(identificador);
                 imagenesAEliminarInput.value = JSON.stringify(imagenesAEliminar);
-                console.log('Imágenes a eliminar:', imagenesAEliminar);
             }
-            
-            if (container) {
-                container.style.display = 'none';
-                container.classList.add('eliminada');
-            }
-            
-            Swal.fire({
-                title: '¡Imagen marcada para eliminar!',
-                text: 'La imagen será eliminada al guardar los cambios.',
-                icon: 'success',
-                timer: 2000,
-                showConfirmButton: false
-            });
-            
-            actualizarContadorImagenes();
-        }
-    });
-}
-
-// ============ FUNCIONES DE ELIMINACIÓN PARA VARIACIONES ============
-
-function eliminarImagenPrincipalVariacion(valorKey) {
-    Swal.fire({
-        title: '¿Eliminar imagen principal de la variación?',
-        text: 'Esta acción eliminará la imagen principal de esta variación.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const input = document.getElementById(`eliminar_imagen_principal_${valorKey}`);
-            if (input) input.value = '1';
-            
-            const container = document.getElementById(`current_principal_container_${valorKey}`);
             if (container) container.style.display = 'none';
-            
-            Swal.fire({
-                title: '¡Imagen marcada para eliminar!',
-                text: 'La imagen será eliminada al guardar los cambios.',
-                icon: 'success',
-                timer: 2000,
-                showConfirmButton: false
-            });
+            Swal.fire({ title: '¡Imagen marcada para eliminar!', text: 'Será eliminada al guardar.', icon: 'success', timer: 2000, showConfirmButton: false });
             actualizarContadorImagenes();
         }
     });
 }
 
-function eliminarGifVariacion(valorKey) {
-    Swal.fire({
-        title: '¿Eliminar GIF de la variación?',
-        text: 'Esta acción eliminará el GIF animado de esta variación.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const input = document.getElementById(`eliminar_gif_${valorKey}`);
-            if (input) input.value = '1';
-            
-            const container = document.getElementById(`current_gif_container_${valorKey}`);
-            if (container) container.style.display = 'none';
-            
-            Swal.fire({
-                title: '¡GIF marcado para eliminar!',
-                text: 'El GIF será eliminado al guardar los cambios.',
-                icon: 'success',
-                timer: 2000,
-                showConfirmButton: false
-            });
-            actualizarContadorImagenes();
-        }
-    });
+function cancelarNuevaImagenPrincipal() {
+    const input = document.getElementById('imagen_principal');
+    const previewContainer = document.getElementById('preview_principal_container');
+    if (input) input.value = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+    imagenPrincipalFile = null;
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
 }
 
-function eliminarImagenAdicionalVariacion(btn, valorKey, imagenIndex) {
-    Swal.fire({
-        title: '¿Eliminar imagen?',
-        text: 'Esta acción eliminará esta imagen adicional de la variación.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const container = btn.closest('.existing-image-item');
-            const imagenesAEliminarInput = document.getElementById(`imagenes_a_eliminar_${valorKey}`);
-            
-            if (!imagenesAEliminarInput) return;
-            
-            let imagenesAEliminar = [];
-            if (imagenesAEliminarInput.value && imagenesAEliminarInput.value !== '[]') {
-                try {
-                    imagenesAEliminar = JSON.parse(imagenesAEliminarInput.value);
-                } catch(e) {
-                    imagenesAEliminar = [];
-                }
-            }
-            
-            const indexToRemove = parseInt(imagenIndex);
-            if (!imagenesAEliminar.includes(indexToRemove)) {
-                imagenesAEliminar.push(indexToRemove);
-                imagenesAEliminar.sort((a, b) => a - b);
-                imagenesAEliminarInput.value = JSON.stringify(imagenesAEliminar);
-            }
-            
-            if (container) {
-                container.style.display = 'none';
-                container.classList.add('eliminada');
-            }
-            
-            Swal.fire({
-                title: '¡Imagen marcada para eliminar!',
-                text: 'La imagen será eliminada al guardar los cambios.',
-                icon: 'success',
-                timer: 2000,
-                showConfirmButton: false
-            });
-            actualizarContadorImagenes();
-        }
-    });
+function cancelarNuevoGif() {
+    const input = document.getElementById('gif_producto');
+    const previewContainer = document.getElementById('preview_gif_container');
+    if (input) input.value = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+    gifFile = null;
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
 }
 
 // ============ FUNCIONES DE VALIDACIÓN ============
-
 function validarSKU(input) {
     input.value = input.value.replace(/[^A-Za-z0-9-]/g, '');
     if (input.value.length > 50) input.value = input.value.substring(0, 50);
@@ -1802,22 +1499,15 @@ function validarPrecio(input) {
     if (value === '') return;
     value = value.replace(/[^0-9.]/g, '');
     const puntos = value.split('.').length - 1;
-    if (puntos > 1) {
-        const partes = value.split('.');
-        value = partes[0] + '.' + partes.slice(1).join('');
-    }
+    if (puntos > 1) value = value.split('.')[0] + '.' + value.split('.').slice(1).join('');
     value = value.replace(/\.{2,}/g, '.');
     if (value.startsWith('.')) value = '0' + value;
     const parteEntera = value.split('.')[0];
-    if (parteEntera.length > 7) {
-        value = parteEntera.substring(0, 7) + (value.includes('.') ? '.' + value.split('.')[1] : '');
-    }
+    if (parteEntera.length > 7) value = parteEntera.substring(0, 7) + (value.includes('.') ? '.' + value.split('.')[1] : '');
     if (value.includes('.')) {
         const partes = value.split('.');
-        if (partes[1].length > 2) {
-            partes[1] = partes[1].substring(0, 2);
-            value = partes[0] + '.' + partes[1];
-        }
+        if (partes[1].length > 2) partes[1] = partes[1].substring(0, 2);
+        value = partes[0] + '.' + partes[1];
     }
     input.value = value;
 }
@@ -1872,10 +1562,7 @@ function permitirBorrado(e) {
     if (teclasPermitidas.includes(e.key)) return true;
     if (e.key >= '0' && e.key <= '9') return true;
     if (e.key === '.') {
-        if (e.target.value.includes('.')) {
-            e.preventDefault();
-            return false;
-        }
+        if (e.target.value.includes('.')) { e.preventDefault(); return false; }
         return true;
     }
     e.preventDefault();
@@ -1893,10 +1580,7 @@ function verificarSKUProductoLocal(input) {
     }
     if (skusExistentes.has(sku)) {
         input.classList.add('is-invalid');
-        if (errorDiv) {
-            errorDiv.textContent = `⚠️ Ya existe un producto con el SKU "${sku}".`;
-            errorDiv.style.display = 'block';
-        }
+        if (errorDiv) { errorDiv.textContent = `⚠️ Ya existe un producto con el SKU "${sku}".`; errorDiv.style.display = 'block'; }
         return false;
     }
     input.classList.remove('is-invalid');
@@ -1915,10 +1599,7 @@ function verificarNombreProductoLocal(input) {
     }
     if (nombresExistentes.has(nombre)) {
         input.classList.add('is-invalid');
-        if (errorDiv) {
-            errorDiv.textContent = `⚠️ Ya existe un producto con el nombre "${nombre}".`;
-            errorDiv.style.display = 'block';
-        }
+        if (errorDiv) { errorDiv.textContent = `⚠️ Ya existe un producto con el nombre "${nombre}".`; errorDiv.style.display = 'block'; }
         return false;
     }
     input.classList.remove('is-invalid');
@@ -1956,7 +1637,6 @@ function verificarSKUVariacionLocal(input, valorKey) {
 }
 
 // ============ FUNCIONES DE DESCUENTO ============
-
 function toggleDescuentoFields() {
     const descuentoFields = document.getElementById('descuentoFields');
     const tieneDescuento = document.getElementById('bTiene_descuento').checked;
@@ -1968,16 +1648,16 @@ function toggleDescuentoFields() {
         if (precioDescuento) precioDescuento.required = true;
         if (fechaInicio) fechaInicio.required = true;
         if (fechaFin) fechaFin.required = true;
-        setTimeout(() => {
-            validarPrecioDescuentoProducto();
-            validarFechasDescuento();
-            actualizarPrecioFinal();
-        }, 100);
+        setTimeout(() => { validarPrecioDescuentoProducto(); validarFechasDescuento(); actualizarPrecioFinal(); }, 100);
     } else {
         descuentoFields.style.display = 'none';
-        if (precioDescuento) precioDescuento.required = false;
+        if (precioDescuento) { precioDescuento.required = false; precioDescuento.classList.remove('is-invalid'); }
         if (fechaInicio) fechaInicio.required = false;
-        if (fechaFin) fechaFin.required = false;
+        if (fechaFin) { fechaFin.required = false; fechaFin.classList.remove('is-invalid'); }
+        const errorDiv = document.getElementById('error-precio-descuento');
+        if (errorDiv) errorDiv.style.display = 'none';
+        const errorFechas = document.getElementById('error-fechas-descuento');
+        if (errorFechas) errorFechas.style.display = 'none';
         actualizarPrecioFinal();
     }
 }
@@ -1994,17 +1674,23 @@ function validarPrecioDescuentoProducto() {
     }
     const precioVenta = parseFloat(precioVentaInput?.value) || 0;
     const precioDescuento = parseFloat(precioDescuentoInput?.value) || 0;
-    if (precioDescuento >= precioVenta || !precioDescuentoInput?.value) {
+    const inputValue = precioDescuentoInput?.value;
+    let esValido = true;
+    if (inputValue && inputValue !== '') {
+        if (precioDescuento >= precioVenta || precioDescuento === 0) esValido = false;
+    } else { esValido = false; }
+    if (!esValido) {
         precioDescuentoInput.classList.add('is-invalid');
         if (errorDiv) {
             errorDiv.style.display = 'block';
-            errorDiv.textContent = precioDescuento >= precioVenta ? 'El precio de descuento debe ser menor que el precio de venta.' : 'Este campo es obligatorio cuando el descuento está activo.';
+            if (precioDescuento >= precioVenta && inputValue) errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta.';
+            else errorDiv.textContent = 'Este campo es obligatorio cuando el descuento está activo.';
         }
-        return false;
+    } else {
+        precioDescuentoInput.classList.remove('is-invalid');
+        if (errorDiv) { errorDiv.style.display = 'none'; errorDiv.textContent = ''; }
     }
-    precioDescuentoInput.classList.remove('is-invalid');
-    if (errorDiv) errorDiv.style.display = 'none';
-    return true;
+    return esValido;
 }
 
 function validarFechasDescuento() {
@@ -2015,78 +1701,448 @@ function validarFechasDescuento() {
     if (fechaInicio.value && fechaFin.value) {
         const inicio = new Date(fechaInicio.value);
         const fin = new Date(fechaFin.value);
+        inicio.setHours(0, 0, 0, 0);
+        fin.setHours(0, 0, 0, 0);
         if (fin < inicio) {
             fechaFin.classList.add('is-invalid');
-            if (errorDiv) {
-                errorDiv.style.display = 'block';
-                errorDiv.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio';
-            }
+            if (errorDiv) { errorDiv.style.display = 'block'; errorDiv.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio'; }
             return false;
+        } else {
+            fechaFin.classList.remove('is-invalid');
+            if (errorDiv) { errorDiv.style.display = 'none'; errorDiv.textContent = ''; }
+            return true;
         }
-        fechaFin.classList.remove('is-invalid');
-        if (errorDiv) errorDiv.style.display = 'none';
     }
     return true;
 }
 
 // ============ FUNCIÓN DE CÁLCULO DE PRECIO FINAL ============
-
 function actualizarPrecioFinal() {
     const precioVentaInput = document.getElementById('dPrecio_venta');
     const tieneDescuentoCheckbox = document.getElementById('bTiene_descuento');
     const precioDescuentoInput = document.getElementById('dPrecio_descuento');
+    const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
+    const fechaFinInput = document.getElementById('dFecha_fin_descuento');
     const impuestoSelect = document.getElementById('id_impuesto');
     if (!precioVentaInput) return;
-    let precioBase = parseFloat(precioVentaInput.value) || 0;
-    if (tieneDescuentoCheckbox && tieneDescuentoCheckbox.checked && precioDescuentoInput?.value) {
-        const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
-        if (precioDescuento > 0 && precioDescuento < precioBase) precioBase = precioDescuento;
+    let precioVenta = parseFloat(precioVentaInput.value) || 0;
+    let precioBase = precioVenta;
+    let descuentoActivoHoy = false;
+    let precioDescuento = 0;
+    if (tieneDescuentoCheckbox && tieneDescuentoCheckbox.checked && precioDescuentoInput) {
+        precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
+        const fechaInicioStr = fechaInicioInput?.value || '';
+        const fechaFinStr = fechaFinInput?.value || '';
+        if (precioDescuento > 0 && precioDescuento < precioVenta) {
+            const hoy = new Date();
+            const fechaHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+            let fechaInicio = null, fechaFin = null;
+            if (fechaInicioStr) { const [year, month, day] = fechaInicioStr.split('-').map(Number); fechaInicio = new Date(year, month - 1, day); }
+            if (fechaFinStr) { const [year, month, day] = fechaFinStr.split('-').map(Number); fechaFin = new Date(year, month - 1, day); fechaFin.setHours(23, 59, 59, 999); }
+            if (fechaInicio && fechaFin) descuentoActivoHoy = fechaHoy >= fechaInicio && fechaHoy <= fechaFin;
+            else if (fechaInicio && !fechaFin) descuentoActivoHoy = fechaHoy >= fechaInicio;
+            else if (!fechaInicio && fechaFin) descuentoActivoHoy = fechaHoy <= fechaFin;
+            else descuentoActivoHoy = true;
+            if (descuentoActivoHoy) precioBase = precioDescuento;
+        }
     }
-    document.getElementById('precio-base-display').textContent = '$' + precioBase.toFixed(2);
-    let totalImpuesto = 0, porcentaje = 0, nombreImpuesto = '';
+    const precioBaseDisplay = document.getElementById('precio-base-display');
+    if (precioBaseDisplay) precioBaseDisplay.textContent = '$' + precioBase.toFixed(2);
+    const precioOriginalDisplay = document.getElementById('precio-original-display');
+    if (precioOriginalDisplay) {
+        if (tieneDescuentoCheckbox && tieneDescuentoCheckbox.checked && precioDescuentoInput?.value && precioDescuento > 0 && precioDescuento < precioVenta) {
+            precioOriginalDisplay.style.display = 'block';
+            if (descuentoActivoHoy) {
+                const porcentajeDesc = Math.round(((precioVenta - precioDescuento) / precioVenta) * 100);
+                precioOriginalDisplay.innerHTML = `<div class="alert alert-success p-2 mb-2"><strong>✓ ¡DESCUENTO ACTIVO HOY!</strong><br><span class="text-decoration-line-through">$${precioVenta.toFixed(2)}</span> → <strong class="text-danger">$${precioBase.toFixed(2)}</strong><span class="badge bg-danger ms-2">-${porcentajeDesc}%</span></div>`;
+            } else {
+                let mensaje = '⏱️ Descuento programado', fechaTexto = '';
+                if (fechaInicioInput?.value && fechaFinInput?.value) fechaTexto = ` (${fechaInicioInput.value} al ${fechaFinInput.value})`;
+                else if (fechaInicioInput?.value) fechaTexto = ` desde ${fechaInicioInput.value}`;
+                else if (fechaFinInput?.value) fechaTexto = ` hasta ${fechaFinInput.value}`;
+                mensaje += fechaTexto;
+                precioOriginalDisplay.innerHTML = `<div class="alert alert-warning p-2 mb-2"><strong>${mensaje}</strong><br>Precio actual: <strong>$${precioVenta.toFixed(2)}</strong><br>Precio con descuento: $${precioDescuento.toFixed(2)}</div>`;
+            }
+        } else { precioOriginalDisplay.style.display = 'none'; }
+    }
+    let totalImpuesto = 0, porcentaje = 0, nombreImpuesto = '', precioFinal = precioBase;
     if (impuestoSelect && impuestoSelect.value) {
         const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
         porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
-        nombreImpuesto = selectedOption.dataset.nombre || '';
+        nombreImpuesto = selectedOption.dataset.nombre || selectedOption.text.split('(')[0].trim();
         totalImpuesto = precioBase * (porcentaje / 100);
+        precioFinal = precioBase + totalImpuesto;
     }
-    const precioFinal = precioBase + totalImpuesto;
-    document.getElementById('total-impuestos-display').textContent = '+$' + totalImpuesto.toFixed(2);
-    document.getElementById('precio-final-display').textContent = '$' + precioFinal.toFixed(2);
-    document.getElementById('porcentaje-impuestos-display').textContent = porcentaje > 0 ? `${porcentaje.toFixed(2)}% (${nombreImpuesto})` : '0%';
+    const totalImpuestosDisplay = document.getElementById('total-impuestos-display');
+    if (totalImpuestosDisplay) totalImpuestosDisplay.textContent = '+$' + totalImpuesto.toFixed(2);
+    const precioFinalDisplay = document.getElementById('precio-final-display');
+    if (precioFinalDisplay) precioFinalDisplay.textContent = '$' + precioFinal.toFixed(2);
+    const porcentajeImpuestosDisplay = document.getElementById('porcentaje-impuestos-display');
+    if (porcentajeImpuestosDisplay) porcentajeImpuestosDisplay.textContent = porcentaje > 0 ? `+${porcentaje.toFixed(2)}% (${nombreImpuesto})` : '0%';
     const detalleInfo = document.getElementById('isr-info');
     if (detalleInfo) {
-        if (nombreImpuesto) {
-            detalleInfo.innerHTML = `<strong>Cálculo de ${nombreImpuesto}:</strong><br>Precio base: $${precioBase.toFixed(2)}<br>${nombreImpuesto} (${porcentaje}%): +$${totalImpuesto.toFixed(2)}<br><strong>Total: $${precioFinal.toFixed(2)}</strong>`;
-        } else {
-            detalleInfo.innerHTML = `Precio final: $${precioBase.toFixed(2)} (Sin impuestos)`;
-        }
+        if (porcentaje > 0) detalleInfo.innerHTML = `<strong>Cálculo de ${nombreImpuesto}:</strong><br>Precio base: $${precioBase.toFixed(2)}<br>${nombreImpuesto} (${porcentaje}%): +$${totalImpuesto.toFixed(2)}<br><strong>Total: $${precioFinal.toFixed(2)}</strong>`;
+        else detalleInfo.innerHTML = `Precio final: $${precioBase.toFixed(2)} (Sin impuestos)`;
     }
+}
+
+// ============ FUNCIONES DE IMÁGENES ============
+function calcularTamañoTotal() {
+    let total = 0;
+    if (imagenPrincipalFile) total += imagenPrincipalFile.size;
+    if (gifFile) total += gifFile.size;
+    if (selectedImagesProducto) selectedImagesProducto.forEach(img => total += img.file.size);
+    Object.keys(imagenesVariacion).forEach(valorKey => {
+        if (imagenesVariacion[valorKey]?.imagenes) imagenesVariacion[valorKey].imagenes.forEach(img => total += img.file.size);
+    });
+    return total;
+}
+
+function actualizarBarraProgresoTamaño() {
+    const totalSize = calcularTamañoTotal();
+    const porcentaje = (totalSize / maxTotalSize) * 100;
+    const progressBar = document.getElementById('size-progress-bar');
+    const totalSizeSpan = document.getElementById('total-size');
+    const limiteMsg = document.getElementById('limiteArchivosMsg');
+    if (totalSizeSpan) {
+        if (totalSize < 1024) totalSizeSpan.textContent = totalSize + ' B';
+        else if (totalSize < 1024 * 1024) totalSizeSpan.textContent = (totalSize / 1024).toFixed(2) + ' KB';
+        else totalSizeSpan.textContent = (totalSize / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+    if (progressBar) progressBar.style.width = Math.min(porcentaje, 100) + '%';
+    if (totalSize > maxTotalSize) {
+        limiteExcedido = true;
+        if (limiteMsg) limiteMsg.style.display = 'block';
+        document.getElementById('btnSubmit').disabled = true;
+    } else {
+        limiteExcedido = false;
+        if (limiteMsg) limiteMsg.style.display = 'none';
+        document.getElementById('btnSubmit').disabled = false;
+    }
+}
+
+function actualizarContadorImagenes() {
+    const totalImagenesSpan = document.getElementById('total-imagenes');
+    if (!totalImagenesSpan) return;
+    let total = 0;
+    if (document.getElementById('eliminar_imagen_principal_producto')?.value !== '1') {
+        if (imagenPrincipalFile || document.getElementById('current_principal_container')?.style.display !== 'none') total++;
+    }
+    if (document.getElementById('eliminar_gif_producto')?.value !== '1') {
+        if (gifFile || document.getElementById('current_gif_container')?.style.display !== 'none') total++;
+    }
+    const imagenesActualesNoEliminadas = document.querySelectorAll('#existing-images-container .existing-image-item:not(.eliminada)').length;
+    total += imagenesActualesNoEliminadas;
+    if (selectedImagesProducto) total += selectedImagesProducto.length;
+    Object.keys(imagenesVariacion).forEach(valorKey => {
+        const eliminarPrincipal = document.getElementById(`eliminar_imagen_principal_${valorKey}`);
+        if (eliminarPrincipal?.value !== '1') {
+            const principalContainer = document.getElementById(`current_principal_container_${valorKey}`);
+            if (principalContainer?.style.display !== 'none' || document.getElementById(`img_principal_${valorKey}`)?.files?.[0]) total++;
+        }
+        const eliminarGif = document.getElementById(`eliminar_gif_${valorKey}`);
+        if (eliminarGif?.value !== '1') {
+            const gifContainer = document.getElementById(`current_gif_container_${valorKey}`);
+            if (gifContainer?.style.display !== 'none' || document.getElementById(`gif_${valorKey}`)?.files?.[0]) total++;
+        }
+        const imagenesVariacionActualesNoEliminadas = document.querySelectorAll(`#existing_imagenes_container_${valorKey} .existing-image-item:not(.eliminada)`).length;
+        total += imagenesVariacionActualesNoEliminadas;
+        if (imagenesVariacion[valorKey]?.imagenes) total += imagenesVariacion[valorKey].imagenes.length;
+    });
+    totalImagenesSpan.textContent = total;
+}
+
+// ============ FUNCIONES DE IMÁGENES DEL PRODUCTO PRINCIPAL ============
+function previewImagenPrincipal(input) {
+    const previewContainer = document.getElementById('preview_principal_container');
+    const previewImg = document.getElementById('preview_principal_img');
+    if (!input.files || input.files.length === 0) {
+        input.value = '';
+        return;
+    }
+    const file = input.files[0];
+    if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
+        Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'La imagen principal solo acepta formatos JPG, JPEG y PNG' });
+        input.value = ''; return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+        Swal.fire({ icon: 'error', title: 'Archivo demasiado grande', text: 'La imagen principal no puede exceder los 5MB' });
+        input.value = ''; return;
+    }
+    imagenPrincipalFile = file;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        if (previewImg) previewImg.src = e.target.result;
+        if (previewContainer) previewContainer.style.display = 'block';
+        actualizarBarraProgresoTamaño();
+        actualizarContadorImagenes();
+    };
+    reader.readAsDataURL(file);
+}
+
+function previewGif(input) {
+    const previewContainer = document.getElementById('preview_gif_container');
+    const previewImg = document.getElementById('preview_gif');
+    if (!input.files || input.files.length === 0) {
+        input.value = '';
+        return;
+    }
+    const file = input.files[0];
+    if (file.type !== 'image/gif') {
+        Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'Solo se permiten archivos GIF' });
+        input.value = ''; return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+        Swal.fire({ icon: 'error', title: 'Archivo demasiado grande', text: 'El GIF no puede exceder los 10MB' });
+        input.value = ''; return;
+    }
+    gifFile = file;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        if (previewImg) previewImg.src = e.target.result;
+        if (previewContainer) previewContainer.style.display = 'block';
+        actualizarBarraProgresoTamaño();
+        actualizarContadorImagenes();
+    };
+    reader.readAsDataURL(file);
+}
+
+function handleImageSelection(event) {
+    const input = event.target;
+    const files = input.files;
+    const maxFiles = 7;
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!files || files.length === 0) {
+        input.value = '';
+        return;
+    }
+    const imagenesExistentesNoEliminadas = document.querySelectorAll('#existing-images-container .existing-image-item:not(.eliminada)').length;
+    const totalActual = imagenesExistentesNoEliminadas + (selectedImagesProducto ? selectedImagesProducto.length : 0);
+    if (totalActual + files.length > 7) {
+        Swal.fire({ icon: 'warning', title: 'Límite de imágenes', text: `El producto puede tener máximo 7 imágenes adicionales.` });
+        input.value = ''; return;
+    }
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (!validTypes.includes(file.type)) continue;
+        if (file.size > 5 * 1024 * 1024) continue;
+        const imageId = 'img_prod_' + Date.now() + '_' + imageCounter++;
+        const preview = URL.createObjectURL(file);
+        if (!selectedImagesProducto) selectedImagesProducto = [];
+        selectedImagesProducto.push({ id: imageId, file: file, preview: preview, name: file.name, size: file.size });
+    }
+    const countSpan = document.getElementById('count_adicionales_producto');
+    if (countSpan) countSpan.textContent = (selectedImagesProducto ? selectedImagesProducto.length : 0) + ' seleccionadas';
+    renderSelectedImages();
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+    input.value = '';
+}
+
+function renderSelectedImages() {
+    const container = document.getElementById('selected-images-container');
+    const noMsg = document.getElementById('no-imagenes-msg');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!selectedImagesProducto || selectedImagesProducto.length === 0) {
+        if (noMsg) noMsg.style.display = 'block';
+        return;
+    }
+    if (noMsg) noMsg.style.display = 'none';
+    selectedImagesProducto.forEach((image, index) => {
+        const col = document.createElement('div');
+        col.className = 'col-4 col-md-3 mb-2';
+        const card = document.createElement('div');
+        card.className = 'border rounded p-1 text-center bg-light position-relative';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1';
+        btn.style.cssText = 'width: 20px; height: 20px; padding: 0; border-radius: 50%; font-size: 10px;';
+        btn.onclick = function(e) { e.preventDefault(); removeSelectedImage(image.id); };
+        btn.innerHTML = '<i class="fas fa-times"></i>';
+        const img = document.createElement('img');
+        img.src = image.preview;
+        img.className = 'img-fluid';
+        img.style.cssText = 'height: 60px; object-fit: contain;';
+        const small = document.createElement('small');
+        small.className = 'd-block text-truncate';
+        small.textContent = image.name.length > 10 ? image.name.substring(0, 10) + '...' : image.name;
+        card.appendChild(btn);
+        card.appendChild(img);
+        card.appendChild(small);
+        col.appendChild(card);
+        container.appendChild(col);
+    });
+}
+
+function removeSelectedImage(imageId) {
+    const image = selectedImagesProducto.find(img => img.id === imageId);
+    if (image && image.preview) URL.revokeObjectURL(image.preview);
+    selectedImagesProducto = selectedImagesProducto.filter(img => img.id !== imageId);
+    const countSpan = document.getElementById('count_adicionales_producto');
+    if (countSpan) countSpan.textContent = selectedImagesProducto.length + ' seleccionadas';
+    renderSelectedImages();
+    actualizarContadorImagenes();
+    actualizarBarraProgresoTamaño();
+}
+
+// ============ FUNCIONES DE ATRIBUTOS Y VARIACIONES ============
+function actualizarPestanasValores() {
+    const tabsContainer = document.getElementById('valores-activos-tabs-container');
+    const noAtributosMsg = document.getElementById('no-atributos-activos-message');
+    const navTabs = document.querySelector('#valoresTab');
+    const tabContent = document.querySelector('#valoresTabContent');
+    const totalValoresBadge = document.getElementById('total-valores-badge');
+    if (!tabsContainer || !navTabs || !tabContent) return;
+    let todosLosValores = [];
+    Object.values(atributosActivos).forEach(atributo => {
+        Object.values(atributo.valores).forEach(valor => {
+            todosLosValores.push({ ...valor, atributoId: atributo.id, atributoNombre: atributo.nombre });
+        });
+    });
+    if (todosLosValores.length === 0) {
+        tabsContainer.style.display = 'none';
+        if (noAtributosMsg) noAtributosMsg.style.display = 'block';
+        if (totalValoresBadge) totalValoresBadge.textContent = '0 valores';
+        return;
+    }
+    tabsContainer.style.display = 'block';
+    if (noAtributosMsg) noAtributosMsg.style.display = 'none';
+    if (totalValoresBadge) totalValoresBadge.textContent = todosLosValores.length + ' ' + (todosLosValores.length === 1 ? 'valor' : 'valores');
+    navTabs.innerHTML = '';
+    tabContent.innerHTML = '';
+    const productoSku = document.getElementById('vCodigo_barras')?.value || 'PROD';
+    todosLosValores.forEach((valor, index) => {
+        const valorKey = `${valor.atributoId}_${valor.id}`;
+        const variacionExistente = variacionesExistentesData[valorKey] || null;
+        const tabItem = document.createElement('li');
+        tabItem.className = 'nav-item';
+        tabItem.role = 'presentation';
+        const tabButton = document.createElement('button');
+        tabButton.className = 'nav-link' + (index === 0 ? ' active' : '');
+        tabButton.id = 'valor-tab-' + valorKey;
+        tabButton.setAttribute('data-bs-toggle', 'tab');
+        tabButton.setAttribute('data-bs-target', '#valor-content-' + valorKey);
+        tabButton.type = 'button';
+        tabButton.role = 'tab';
+        tabButton.setAttribute('data-valor-id', valor.id);
+        tabButton.setAttribute('data-atributo-id', valor.atributoId);
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-cube me-1';
+        tabButton.appendChild(icon);
+        tabButton.appendChild(document.createTextNode(' ' + valor.nombre));
+        if (variacionExistente) {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-success ms-2';
+            badge.textContent = '✓';
+            tabButton.appendChild(badge);
+        }
+        tabItem.appendChild(tabButton);
+        navTabs.appendChild(tabItem);
+        const contentPane = document.createElement('div');
+        contentPane.className = 'tab-pane fade' + (index === 0 ? ' show active' : '');
+        contentPane.id = 'valor-content-' + valorKey;
+        contentPane.role = 'tabpanel';
+        const skuSugerido = variacionExistente ? variacionExistente.vSKU : productoSku + '-' + valor.atributoNombre.substring(0, 3).toUpperCase() + valor.nombre.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase();
+        const formHtml = `
+            <div class="variacion-form-container">
+                <div class="variacion-header-info mb-4 p-3 bg-light rounded">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h6 class="fw-bold mb-2"><i class="fas fa-cube me-2"></i>Variación: <span class="text-primary">${valor.nombre}</span><small class="d-block text-muted mt-1">Atributo: ${valor.atributoNombre}</small></h6>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <span class="badge bg-secondary p-2"><i class="fas fa-barcode me-1"></i>SKU Sugerido: ${skuSugerido}</span>
+                        </div>
+                    </div>
+                </div>
+                ${variacionExistente ? `<input type="hidden" name="variaciones[${valorKey}][id_variacion]" value="${variacionExistente.id_variacion}">` : ''}
+                <input type="hidden" name="variaciones[${valorKey}][id_atributo]" value="${valor.atributoId}">
+                <input type="hidden" name="variaciones[${valorKey}][id_atributo_valor]" value="${valor.id}">
+                <input type="hidden" name="variaciones[${valorKey}][eliminar_imagen_principal]" id="eliminar_imagen_principal_${valorKey}" value="0">
+                <input type="hidden" name="variaciones[${valorKey}][eliminar_gif]" id="eliminar_gif_${valorKey}" value="0">
+                <input type="hidden" name="variaciones[${valorKey}][imagenes_a_eliminar]" id="imagenes_a_eliminar_${valorKey}" value="[]">
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <div class="form-group"><label class="form-label fw-bold">SKU de la variación <span class="text-danger">*</span></label><input type="text" name="variaciones[${valorKey}][vSKU]" id="sku-${valorKey}" class="form-control" value="${variacionExistente ? variacionExistente.vSKU : skuSugerido}" maxlength="50" required oninput="validarSKU(this); verificarSKUVariacionLocal(this, '${valorKey}')" autocomplete="off"></div>
+                    </div>
+                    <div class="col-md-4"><div class="form-check form-switch mt-4"><input type="checkbox" name="variaciones[${valorKey}][bActivo]" id="activo-${valorKey}" class="form-check-input" value="1" ${variacionExistente ? (variacionExistente.bActivo ? 'checked' : '') : 'checked'}><label class="form-check-label" for="activo-${valorKey}">Variación activa</label></div></div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4"><div class="form-group"><label class="form-label fw-bold">Precio de venta <span class="text-danger">*</span></label><div class="input-group"><span class="input-group-text">$</span><input type="text" name="variaciones[${valorKey}][dPrecio]" id="precio-${valorKey}" class="form-control" value="${variacionExistente ? variacionExistente.dPrecio : ''}" required oninput="validarPrecio(this); actualizarPrecioFinalVariacion('${valorKey}')" placeholder="0.00" autocomplete="off"></div></div></div>
+                    <div class="col-md-4"><div class="form-group"><label class="form-label fw-bold">Stock disponible <span class="text-danger">*</span></label><input type="text" name="variaciones[${valorKey}][iStock]" id="stock-${valorKey}" class="form-control" value="${variacionExistente ? variacionExistente.iStock : '0'}" required oninput="validarStock(this)" autocomplete="off"></div></div>
+                    <div class="col-md-4"><div class="form-group"><label class="form-label fw-bold">Clase de envío</label><select name="variaciones[${valorKey}][vClase_envio]" id="clase-envio-${valorKey}" class="form-select"><option value="">-- Por defecto --</option><option value="estandar" ${variacionExistente && variacionExistente.vClase_envio == 'estandar' ? 'selected' : ''}>Estándar</option><option value="express" ${variacionExistente && variacionExistente.vClase_envio == 'express' ? 'selected' : ''}>Express</option><option value="fragil" ${variacionExistente && variacionExistente.vClase_envio == 'fragil' ? 'selected' : ''}>Frágil</option><option value="grandes_dimensiones" ${variacionExistente && variacionExistente.vClase_envio == 'grandes_dimensiones' ? 'selected' : ''}>Grandes dimensiones</option></select></div></div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-12"><div class="card border"><div class="card-header bg-light py-2"><h6 class="mb-0"><i class="fas fa-file-invoice-dollar me-2"></i>Impuesto para la Variación</h6></div><div class="card-body"><div class="row"><div class="col-md-8"><div class="form-group mb-3"><label class="form-label fw-bold">Impuesto Aplicable</label><select name="variaciones[${valorKey}][id_impuesto]" id="impuesto-${valorKey}" class="form-select" onchange="actualizarPrecioFinalVariacion('${valorKey}')"><option value="">-- Sin impuesto --</option>@foreach($impuestos as $impuesto)<option value="{{ $impuesto->id_impuesto }}" data-porcentaje="{{ $impuesto->dPorcentaje }}" ${variacionExistente && variacionExistente.id_impuesto == {{ $impuesto->id_impuesto }} ? 'selected' : ''}>{{ $impuesto->vNombre }} ({{ $impuesto->dPorcentaje }}%)</option>@endforeach</select></div></div><div class="col-md-4"><div class="bg-light p-3 rounded text-center"><small class="text-muted d-block">Precio con impuesto</small><h5 class="fw-bold mb-0" id="precio-final-${valorKey}">$0.00</h5><small class="text-muted" id="detalle-impuesto-${valorKey}"></small></div></div></div></div></div></div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-3"><div class="form-group"><label class="form-label fw-bold">Peso (kg)</label><input type="text" name="variaciones[${valorKey}][dPeso]" id="peso-${valorKey}" class="form-control" value="${variacionExistente && variacionExistente.dPeso ? variacionExistente.dPeso : ''}" oninput="validarPeso(this)" placeholder="0.000"></div></div>
+                    <div class="col-md-3"><div class="form-group"><label class="form-label fw-bold">Largo (cm)</label><input type="text" name="variaciones[${valorKey}][dLargo_cm]" id="largo-${valorKey}" class="form-control" value="${variacionExistente && variacionExistente.dLargo_cm ? variacionExistente.dLargo_cm : ''}" oninput="validarDimensionCm(this)" placeholder="0.00"></div></div>
+                    <div class="col-md-3"><div class="form-group"><label class="form-label fw-bold">Ancho (cm)</label><input type="text" name="variaciones[${valorKey}][dAncho_cm]" id="ancho-${valorKey}" class="form-control" value="${variacionExistente && variacionExistente.dAncho_cm ? variacionExistente.dAncho_cm : ''}" oninput="validarDimensionCm(this)" placeholder="0.00"></div></div>
+                    <div class="col-md-3"><div class="form-group"><label class="form-label fw-bold">Alto (cm)</label><input type="text" name="variaciones[${valorKey}][dAlto_cm]" id="alto-${valorKey}" class="form-control" value="${variacionExistente && variacionExistente.dAlto_cm ? variacionExistente.dAlto_cm : ''}" oninput="validarDimensionCm(this)" placeholder="0.00"></div></div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-12"><div class="card border"><div class="card-header bg-light py-2"><h6 class="mb-0"><i class="fas fa-percentage me-2"></i>Descuento Especial</h6></div><div class="card-body"><div class="row"><div class="col-md-6"><div class="form-group mb-3"><div class="form-check form-switch"><input type="checkbox" name="variaciones[${valorKey}][bTiene_descuento]" id="descuento-${valorKey}" class="form-check-input" value="1" ${variacionExistente && variacionExistente.bTiene_descuento ? 'checked' : ''} onchange="toggleDescuentoVariacion(this, '${valorKey}')"><label class="form-check-label" for="descuento-${valorKey}">Activar Descuento</label></div></div></div></div><div class="descuento-fields-${valorKey}" style="display: ${variacionExistente && variacionExistente.bTiene_descuento ? 'block' : 'none'};"><div class="row"><div class="col-md-4"><div class="form-group mb-3"><label class="form-label fw-bold">Precio de Descuento <span class="text-danger">*</span></label><div class="input-group"><span class="input-group-text">$</span><input type="text" name="variaciones[${valorKey}][dPrecio_descuento]" id="precio_descuento-${valorKey}" class="form-control variacion-precio-descuento" data-precio-normal-id="precio-${valorKey}" data-valor-key="${valorKey}" value="${variacionExistente && variacionExistente.dPrecio_descuento ? variacionExistente.dPrecio_descuento : ''}" oninput="validarPrecio(this); validarPrecioDescuentoVariacionInstantaneo(this); actualizarPrecioFinalVariacion('${valorKey}')" onblur="validarPrecioDescuentoVariacion(this)" placeholder="0.00"></div><div id="error-precio-descuento-${valorKey}" class="invalid-feedback" style="display: none;"></div></div></div><div class="col-md-4"><div class="form-group mb-3"><label class="form-label fw-bold">Fecha inicio <span class="text-danger">*</span></label><input type="date" name="variaciones[${valorKey}][dFecha_inicio_descuento]" class="form-control fecha-inicio-${valorKey}" id="fecha-inicio-${valorKey}" value="${variacionExistente && variacionExistente.dFecha_inicio_descuento ? variacionExistente.dFecha_inicio_descuento : ''}" onchange="validarFechasDescuentoVariacion('fecha-inicio-${valorKey}', 'fecha-fin-${valorKey}', '${valorKey}')"></div></div><div class="col-md-4"><div class="form-group mb-3"><label class="form-label fw-bold">Fecha fin <span class="text-danger">*</span></label><input type="date" name="variaciones[${valorKey}][dFecha_fin_descuento]" class="form-control fecha-fin-${valorKey}" id="fecha-fin-${valorKey}" value="${variacionExistente && variacionExistente.dFecha_fin_descuento ? variacionExistente.dFecha_fin_descuento : ''}" onchange="validarFechasDescuentoVariacion('fecha-inicio-${valorKey}', 'fecha-fin-${valorKey}', '${valorKey}')"><div id="error-fechas-descuento-${valorKey}" class="invalid-feedback" style="display: none;"></div></div></div></div><div class="row"><div class="col-md-12"><div class="form-group mb-3"><label class="form-label fw-bold">Motivo del descuento</label><input type="text" name="variaciones[${valorKey}][vMotivo_descuento]" id="motivo-${valorKey}" class="form-control" value="${variacionExistente && variacionExistente.vMotivo_descuento ? variacionExistente.vMotivo_descuento : ''}" maxlength="255" placeholder="Ej: Liquidación de temporada, Black Friday, etc."></div></div></div></div></div></div></div>
+                </div>
+                <div class="row mb-3"><div class="col-md-12"><div class="form-group"><label class="form-label fw-bold">Descripción de la variación</label><textarea name="variaciones[${valorKey}][tDescripcion]" id="descripcion-${valorKey}" class="form-control" rows="2" placeholder="Descripción específica para esta variación (opcional)">${variacionExistente && variacionExistente.tDescripcion ? variacionExistente.tDescripcion : ''}</textarea></div></div></div>
+                <div class="card mb-4 border-primary"><div class="card-header bg-primary text-white py-2"><h6 class="mb-0"><i class="fas fa-images me-2"></i>Imágenes de la Variación</h6></div><div class="card-body"><div class="row"><div class="col-md-4"><div class="form-group mb-3"><label class="form-label fw-bold"><i class="fas fa-star text-warning me-1"></i>Imagen Principal</label><input type="file" name="variaciones[${valorKey}][imagen_principal]" id="img_principal_${valorKey}" class="form-control" accept="image/jpeg,image/jpg,image/png" onchange="previewImagenPrincipalVariacion(this, 'preview_principal_${valorKey}')"><small class="form-text text-muted">JPG, JPEG, PNG. Máx: 5MB</small><div id="preview_principal_${valorKey}" class="mt-2" style="display: none;"><div class="border rounded p-2 text-center bg-light"><img src="#" class="img-thumbnail" style="max-width: 150px; max-height: 150px; object-fit: contain;"></div></div>${variacionExistente && variacionExistente.imagen_principal_url ? `<div class="mt-2" id="current_principal_container_${valorKey}"><div class="border rounded p-2 text-center bg-light position-relative"><img src="${variacionExistente.imagen_principal_url}" class="img-thumbnail" style="max-width: 100px; max-height: 100px; object-fit: contain;"><div class="mt-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarImagenPrincipalVariacion('${valorKey}')"><i class="fas fa-trash me-1"></i>Eliminar imagen actual</button></div></div></div>` : ''}</div></div><div class="col-md-4"><div class="form-group mb-3"><label class="form-label fw-bold"><i class="fas fa-file-image text-success me-1"></i>GIF Animado</label><input type="file" name="variaciones[${valorKey}][gif]" id="gif_${valorKey}" class="form-control" accept="image/gif" onchange="previewGifVariacion(this, 'preview_gif_${valorKey}')"><small class="form-text text-muted">GIF. Máx: 10MB</small><div id="preview_gif_${valorKey}" class="mt-2" style="display: none;"><div class="border rounded p-2 text-center bg-light"><img src="#" class="img-thumbnail" style="max-width: 150px; max-height: 150px; object-fit: contain;"></div></div>${variacionExistente && variacionExistente.gif_url ? `<div class="mt-2" id="current_gif_container_${valorKey}"><div class="border rounded p-2 text-center bg-light position-relative"><img src="${variacionExistente.gif_url}" class="img-thumbnail" style="max-width: 100px; max-height: 100px; object-fit: contain;"><div class="mt-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarGifVariacion('${valorKey}')"><i class="fas fa-trash me-1"></i>Eliminar GIF actual</button></div></div></div>` : ''}</div></div><div class="col-md-4"><div class="form-group mb-3"><label class="form-label fw-bold"><i class="fas fa-images me-1"></i>Imágenes Adicionales (Máx 7)</label><input type="file" name="variaciones[${valorKey}][imagenes_adicionales][]" id="imagenes_adicionales_${valorKey}" class="form-control" multiple accept="image/jpeg,image/jpg,image/png,image/webp" onchange="handleImagenesAdicionalesVariacion(event, '${valorKey}')"><small class="form-text text-muted">JPG, JPEG, PNG, WEBP. Máx: 5MB c/u</small><div id="container_adicionales_${valorKey}" class="row mt-2"></div><div class="mt-2"><span class="badge bg-info" id="count_adicionales_${valorKey}">0 seleccionadas</span></div>${variacionExistente && variacionExistente.imagenes_adicionales_urls && variacionExistente.imagenes_adicionales_urls.length > 0 ? `<div class="mt-3"><label class="small fw-bold">Imágenes adicionales actuales:</label><div id="existing_imagenes_container_${valorKey}" class="row g-2 mt-1">${variacionExistente.imagenes_adicionales_urls.map((img, idx) => `<div class="col-auto existing-image-item" data-imagen-index="${idx}"><div class="border rounded p-1 text-center bg-light position-relative"><img src="${img}" class="img-thumbnail" style="width: 80px; height: 80px; object-fit: contain;"><div class="mt-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarImagenAdicionalVariacion(this, '${valorKey}', ${idx})"><i class="fas fa-trash me-1"></i>Eliminar</button></div></div></div>`).join('')}</div></div>` : ''}</div></div></div></div></div>
+            </div>
+        `;
+        contentPane.innerHTML = formHtml;
+        tabContent.appendChild(contentPane);
+        setTimeout(() => { if (variacionExistente) actualizarPrecioFinalVariacion(valorKey); }, 100);
+    });
 }
 
 function actualizarPrecioFinalVariacion(valorKey) {
     const precioInput = document.getElementById(`precio-${valorKey}`);
     const descuentoCheckbox = document.getElementById(`descuento-${valorKey}`);
     const precioDescuentoInput = document.getElementById(`precio_descuento-${valorKey}`);
+    const fechaInicioInput = document.getElementById(`fecha-inicio-${valorKey}`);
+    const fechaFinInput = document.getElementById(`fecha-fin-${valorKey}`);
     const impuestoSelect = document.getElementById(`impuesto-${valorKey}`);
     const precioFinalSpan = document.getElementById(`precio-final-${valorKey}`);
+    const detalleImpuestoSpan = document.getElementById(`detalle-impuesto-${valorKey}`);
     if (!precioInput || !precioFinalSpan) return;
     let precioBase = parseFloat(precioInput.value) || 0;
+    let descuentoActivo = false;
+    let mensajeDescuento = '';
+    let precioDescuento = 0;
     if (descuentoCheckbox && descuentoCheckbox.checked && precioDescuentoInput?.value) {
-        const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
-        if (precioDescuento > 0 && precioDescuento < precioBase) precioBase = precioDescuento;
+        precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
+        const fechaInicioStr = fechaInicioInput?.value || '';
+        const fechaFinStr = fechaFinInput?.value || '';
+        if (precioDescuento > 0 && precioDescuento < precioBase) {
+            const hoy = new Date();
+            const fechaHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+            let fechaInicio = null, fechaFin = null;
+            if (fechaInicioStr) { const [year, month, day] = fechaInicioStr.split('-').map(Number); fechaInicio = new Date(year, month - 1, day); }
+            if (fechaFinStr) { const [year, month, day] = fechaFinStr.split('-').map(Number); fechaFin = new Date(year, month - 1, day); fechaFin.setHours(23, 59, 59, 999); }
+            let aplicar = false;
+            if (fechaInicio && fechaFin) aplicar = fechaHoy >= fechaInicio && fechaHoy <= fechaFin;
+            else if (fechaInicio && !fechaFin) aplicar = fechaHoy >= fechaInicio;
+            else if (!fechaInicio && fechaFin) aplicar = fechaHoy <= fechaFin;
+            else aplicar = true;
+            if (aplicar) { precioBase = precioDescuento; descuentoActivo = true; }
+        }
     }
-    let totalImpuesto = 0, porcentaje = 0, nombreImpuesto = '';
+    let totalImpuesto = 0, porcentaje = 0, nombreImpuesto = '', precioFinal = precioBase;
     if (impuestoSelect && impuestoSelect.value) {
         const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
         porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
         nombreImpuesto = selectedOption.dataset.nombre || selectedOption.text.split('(')[0].trim();
         totalImpuesto = precioBase * (porcentaje / 100);
+        precioFinal = precioBase + totalImpuesto;
     }
-    const precioFinal = precioBase + totalImpuesto;
-    precioFinalSpan.textContent = '$' + precioFinal.toFixed(2);
-    const detalleImpuestoSpan = document.getElementById(`detalle-impuesto-${valorKey}`);
-    if (detalleImpuestoSpan) detalleImpuestoSpan.innerHTML = porcentaje > 0 ? `${nombreImpuesto}: +${porcentaje.toFixed(2)}% ($${totalImpuesto.toFixed(2)})` : 'Sin impuesto';
+    if (precioFinalSpan) precioFinalSpan.textContent = '$' + precioFinal.toFixed(2);
+    if (detalleImpuestoSpan) {
+        let html = '';
+        if (descuentoActivo) html += `<span class="text-success">✓ Descuento activo HOY</span><br>`;
+        if (porcentaje > 0) html += `${nombreImpuesto}: +${porcentaje.toFixed(2)}% ($${totalImpuesto.toFixed(2)})`;
+        else html += 'Sin impuesto';
+        detalleImpuestoSpan.innerHTML = html;
+    }
 }
 
 function validarPrecioDescuentoVariacionInstantaneo(input) {
@@ -2176,197 +2232,186 @@ function toggleDescuentoVariacion(checkbox, valorKey) {
     }
 }
 
-// ============ FUNCIONES DE IMÁGENES ============
-
-function calcularTamañoTotal() {
-    let total = 0;
-    if (imagenPrincipalFile) total += imagenPrincipalFile.size;
-    if (gifFile) total += gifFile.size;
-    if (selectedImagesProducto) selectedImagesProducto.forEach(img => total += img.file.size);
-    Object.keys(imagenesVariacion).forEach(valorKey => {
-        if (imagenesVariacion[valorKey]?.imagenes) {
-            imagenesVariacion[valorKey].imagenes.forEach(img => total += img.file.size);
+function eliminarImagenPrincipalVariacion(valorKey) {
+    Swal.fire({
+        title: '¿Eliminar imagen principal de la variación?',
+        text: 'Esta acción eliminará la imagen principal de esta variación.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const input = document.getElementById(`eliminar_imagen_principal_${valorKey}`);
+            if (input) input.value = '1';
+            const container = document.getElementById(`current_principal_container_${valorKey}`);
+            if (container) container.style.display = 'none';
+            Swal.fire({ title: '¡Imagen marcada para eliminar!', text: 'Será eliminada al guardar.', icon: 'success', timer: 2000, showConfirmButton: false });
+            actualizarContadorImagenes();
         }
     });
-    return total;
 }
 
-function actualizarBarraProgresoTamaño() {
-    const totalSize = calcularTamañoTotal();
-    const porcentaje = (totalSize / maxTotalSize) * 100;
-    const progressBar = document.getElementById('size-progress-bar');
-    const totalSizeSpan = document.getElementById('total-size');
-    const limiteMsg = document.getElementById('limiteArchivosMsg');
-    if (totalSizeSpan) {
-        if (totalSize < 1024) totalSizeSpan.textContent = totalSize + ' B';
-        else if (totalSize < 1024 * 1024) totalSizeSpan.textContent = (totalSize / 1024).toFixed(2) + ' KB';
-        else totalSizeSpan.textContent = (totalSize / (1024 * 1024)).toFixed(2) + ' MB';
-    }
-    if (progressBar) progressBar.style.width = Math.min(porcentaje, 100) + '%';
-    if (totalSize > maxTotalSize) {
-        limiteExcedido = true;
-        if (limiteMsg) limiteMsg.style.display = 'block';
-        document.getElementById('btnSubmit').disabled = true;
-    } else {
-        limiteExcedido = false;
-        if (limiteMsg) limiteMsg.style.display = 'none';
-        document.getElementById('btnSubmit').disabled = false;
-    }
-}
-
-function actualizarContadorImagenes() {
-    const totalImagenesSpan = document.getElementById('total-imagenes');
-    if (!totalImagenesSpan) return;
-    let total = 0;
-    
-    if (document.getElementById('eliminar_imagen_principal_producto')?.value !== '1') {
-        if (imagenPrincipalFile || document.getElementById('current_principal_container')?.style.display !== 'none') total++;
-    }
-    if (document.getElementById('eliminar_gif_producto')?.value !== '1') {
-        if (gifFile || document.getElementById('current_gif_container')?.style.display !== 'none') total++;
-    }
-    const imagenesActualesNoEliminadas = document.querySelectorAll('#existing-images-container .existing-image-item:not(.eliminada)').length;
-    total += imagenesActualesNoEliminadas;
-    if (selectedImagesProducto) total += selectedImagesProducto.length;
-    
-    Object.keys(imagenesVariacion).forEach(valorKey => {
-        const eliminarPrincipal = document.getElementById(`eliminar_imagen_principal_${valorKey}`);
-        if (eliminarPrincipal?.value !== '1') {
-            const principalContainer = document.getElementById(`current_principal_container_${valorKey}`);
-            if (principalContainer?.style.display !== 'none' || document.getElementById(`img_principal_${valorKey}`)?.files?.[0]) total++;
+function eliminarGifVariacion(valorKey) {
+    Swal.fire({
+        title: '¿Eliminar GIF de la variación?',
+        text: 'Esta acción eliminará el GIF animado de esta variación.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const input = document.getElementById(`eliminar_gif_${valorKey}`);
+            if (input) input.value = '1';
+            const container = document.getElementById(`current_gif_container_${valorKey}`);
+            if (container) container.style.display = 'none';
+            Swal.fire({ title: '¡GIF marcado para eliminar!', text: 'Será eliminado al guardar.', icon: 'success', timer: 2000, showConfirmButton: false });
+            actualizarContadorImagenes();
         }
-        const eliminarGif = document.getElementById(`eliminar_gif_${valorKey}`);
-        if (eliminarGif?.value !== '1') {
-            const gifContainer = document.getElementById(`current_gif_container_${valorKey}`);
-            if (gifContainer?.style.display !== 'none' || document.getElementById(`gif_${valorKey}`)?.files?.[0]) total++;
-        }
-        const imagenesVariacionActualesNoEliminadas = document.querySelectorAll(`#existing_imagenes_container_${valorKey} .existing-image-item:not(.eliminada)`).length;
-        total += imagenesVariacionActualesNoEliminadas;
-        if (imagenesVariacion[valorKey]?.imagenes) total += imagenesVariacion[valorKey].imagenes.length;
     });
-    
-    totalImagenesSpan.textContent = total;
 }
 
-function previewImagenPrincipal(input) {
-    const previewContainer = document.getElementById('preview_principal_container');
-    const previewImg = document.getElementById('preview_principal_img');
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
-            Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'La imagen principal solo acepta formatos JPG, JPEG y PNG' });
-            input.value = ''; return;
+function eliminarImagenAdicionalVariacion(btn, valorKey, imagenIndex) {
+    Swal.fire({
+        title: '¿Eliminar imagen?',
+        text: 'Esta acción eliminará esta imagen adicional de la variación.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const container = btn.closest('.existing-image-item');
+            const imagenesAEliminarInput = document.getElementById(`imagenes_a_eliminar_${valorKey}`);
+            let imagenesAEliminar = [];
+            if (imagenesAEliminarInput.value && imagenesAEliminarInput.value !== '[]') {
+                try { imagenesAEliminar = JSON.parse(imagenesAEliminarInput.value); } catch(e) { imagenesAEliminar = []; }
+            }
+            if (!imagenesAEliminar.includes(parseInt(imagenIndex))) {
+                imagenesAEliminar.push(parseInt(imagenIndex));
+                imagenesAEliminar.sort((a, b) => a - b);
+                imagenesAEliminarInput.value = JSON.stringify(imagenesAEliminar);
+            }
+            if (container) container.style.display = 'none';
+            Swal.fire({ title: '¡Imagen marcada para eliminar!', text: 'Será eliminada al guardar.', icon: 'success', timer: 2000, showConfirmButton: false });
+            actualizarContadorImagenes();
         }
-        if (file.size > 5 * 1024 * 1024) {
-            Swal.fire({ icon: 'error', title: 'Archivo demasiado grande', text: 'La imagen principal no puede exceder los 5MB' });
-            input.value = ''; return;
-        }
-        imagenPrincipalFile = file;
+    });
+}
+
+function previewImagenPrincipalVariacion(input, previewId) {
+    const previewContainer = document.getElementById(previewId);
+    const valorKey = obtenerValorKeyDesdePreviewId(previewId);
+    if (!input.files || input.files.length === 0) {
+        input.value = '';
+        return;
+    }
+    const file = input.files[0];
+    if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
+        Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'Solo JPG, JPEG, PNG' });
+        input.value = ''; return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+        Swal.fire({ icon: 'error', title: 'Archivo demasiado grande', text: 'Máximo 5MB' });
+        input.value = ''; return;
+    }
+    if (valorKey) {
+        if (!imagenesVariacion[valorKey]) imagenesVariacion[valorKey] = { imagenes: [] };
+        imagenesVariacion[valorKey].imagenPrincipal = file;
         const reader = new FileReader();
         reader.onload = function(e) {
-            if (previewImg) previewImg.src = e.target.result;
-            if (previewContainer) previewContainer.style.display = 'block';
+            if (previewContainer) {
+                const img = previewContainer.querySelector('img');
+                if (img) img.src = e.target.result;
+                previewContainer.style.display = 'block';
+            }
             actualizarBarraProgresoTamaño();
             actualizarContadorImagenes();
         };
         reader.readAsDataURL(file);
-    } else {
-        if (previewContainer) previewContainer.style.display = 'none';
-        imagenPrincipalFile = null;
-        actualizarBarraProgresoTamaño();
-        actualizarContadorImagenes();
     }
 }
 
-function cancelarImagenPrincipal() {
-    document.getElementById('imagen_principal').value = '';
-    document.getElementById('preview_principal_container').style.display = 'none';
-    imagenPrincipalFile = null;
-    actualizarBarraProgresoTamaño();
-    actualizarContadorImagenes();
-}
-
-function previewGif(input) {
-    const previewContainer = document.getElementById('preview_gif_container');
-    const previewImg = document.getElementById('preview_gif');
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        if (file.type !== 'image/gif') {
-            Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'El campo GIF solo acepta archivos con formato GIF' });
-            input.value = ''; return;
-        }
-        if (file.size > 10 * 1024 * 1024) {
-            Swal.fire({ icon: 'error', title: 'Archivo demasiado grande', text: 'El GIF no puede exceder los 10MB' });
-            input.value = ''; return;
-        }
-        gifFile = file;
+function previewGifVariacion(input, previewId) {
+    const previewContainer = document.getElementById(previewId);
+    const valorKey = obtenerValorKeyDesdePreviewId(previewId);
+    if (!input.files || input.files.length === 0) {
+        input.value = '';
+        return;
+    }
+    const file = input.files[0];
+    if (file.type !== 'image/gif') {
+        Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'Solo archivos GIF' });
+        input.value = ''; return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+        Swal.fire({ icon: 'error', title: 'Archivo demasiado grande', text: 'Máximo 10MB' });
+        input.value = ''; return;
+    }
+    if (valorKey) {
+        if (!imagenesVariacion[valorKey]) imagenesVariacion[valorKey] = { imagenes: [] };
+        imagenesVariacion[valorKey].gif = file;
         const reader = new FileReader();
         reader.onload = function(e) {
-            if (previewImg) previewImg.src = e.target.result;
-            if (previewContainer) previewContainer.style.display = 'block';
+            if (previewContainer) {
+                const img = previewContainer.querySelector('img');
+                if (img) img.src = e.target.result;
+                previewContainer.style.display = 'block';
+            }
             actualizarBarraProgresoTamaño();
             actualizarContadorImagenes();
         };
         reader.readAsDataURL(file);
-    } else {
-        if (previewContainer) previewContainer.style.display = 'none';
-        gifFile = null;
-        actualizarBarraProgresoTamaño();
-        actualizarContadorImagenes();
     }
 }
 
-function cancelarGif() {
-    document.getElementById('gif_producto').value = '';
-    document.getElementById('preview_gif_container').style.display = 'none';
-    gifFile = null;
-    actualizarBarraProgresoTamaño();
-    actualizarContadorImagenes();
-}
-
-function handleImageSelection(event) {
-    const files = event.target.files;
+function handleImagenesAdicionalesVariacion(event, valorKey) {
+    const input = event.target;
+    const files = Array.from(input.files);
     const maxFiles = 7;
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!files || files.length === 0) {
-        event.target.value = '';
+    if (files.length === 0) {
+        input.value = '';
         return;
     }
-    const imagenesExistentesNoEliminadas = document.querySelectorAll('#existing-images-container .existing-image-item:not(.eliminada)').length;
-    const totalActual = imagenesExistentesNoEliminadas + (selectedImagesProducto ? selectedImagesProducto.length : 0);
-    if (totalActual + files.length > 7) {
-        Swal.fire({ icon: 'warning', title: 'Límite de imágenes', text: `El producto puede tener máximo 7 imágenes adicionales.` });
-        event.target.value = '';
-        return;
+    if (!imagenesVariacion[valorKey]) imagenesVariacion[valorKey] = { imagenes: [] };
+    const imagenesExistentesNoEliminadas = document.querySelectorAll(`#existing_imagenes_container_${valorKey} .existing-image-item:not(.eliminada)`).length;
+    const totalActual = imagenesExistentesNoEliminadas + imagenesVariacion[valorKey].imagenes.length;
+    if (totalActual + files.length > maxFiles) {
+        Swal.fire({ icon: 'warning', title: 'Límite de imágenes', text: `Esta variación puede tener máximo ${maxFiles} imágenes adicionales.` });
+        input.value = ''; return;
     }
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (!validTypes.includes(file.type)) continue;
-        if (file.size > 5 * 1024 * 1024) continue;
-        const imageId = 'img_prod_' + Date.now() + '_' + imageCounter++;
+    files.forEach(file => {
+        if (!validTypes.includes(file.type)) return;
+        if (file.size > 5 * 1024 * 1024) return;
+        const imageId = 'var_img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         const preview = URL.createObjectURL(file);
-        if (!selectedImagesProducto) selectedImagesProducto = [];
-        selectedImagesProducto.push({ id: imageId, file: file, preview: preview, name: file.name, size: file.size });
-    }
-    const countSpan = document.getElementById('count_adicionales_producto');
-    if (countSpan) countSpan.textContent = (selectedImagesProducto ? selectedImagesProducto.length : 0) + ' seleccionadas';
-    renderSelectedImages();
+        imagenesVariacion[valorKey].imagenes.push({ id: imageId, file: file, preview: preview, name: file.name, size: file.size });
+    });
+    renderImagenesAdicionalesVariacion(valorKey);
+    const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
+    if (countSpan) countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
     actualizarBarraProgresoTamaño();
     actualizarContadorImagenes();
-    event.target.value = '';
+    input.value = '';
 }
 
-function renderSelectedImages() {
-    const container = document.getElementById('selected-images-container');
-    const noMsg = document.getElementById('no-imagenes-msg');
+function renderImagenesAdicionalesVariacion(valorKey) {
+    const container = document.getElementById(`container_adicionales_${valorKey}`);
     if (!container) return;
     container.innerHTML = '';
-    if (!selectedImagesProducto || selectedImagesProducto.length === 0) {
-        if (noMsg) noMsg.style.display = 'block';
+    if (!imagenesVariacion[valorKey] || imagenesVariacion[valorKey].imagenes.length === 0) {
+        container.innerHTML = '<div class="col-12 text-muted small">No hay nuevas imágenes seleccionadas</div>';
         return;
     }
-    if (noMsg) noMsg.style.display = 'none';
-    selectedImagesProducto.forEach((image, index) => {
+    imagenesVariacion[valorKey].imagenes.forEach((img, index) => {
         const col = document.createElement('div');
         col.className = 'col-4 col-md-3 mb-2';
         const card = document.createElement('div');
@@ -2375,431 +2420,40 @@ function renderSelectedImages() {
         btn.type = 'button';
         btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1';
         btn.style.cssText = 'width: 20px; height: 20px; padding: 0; border-radius: 50%; font-size: 10px;';
-        btn.onclick = function(e) { e.preventDefault(); removeSelectedImage(image.id); };
-        const btnIcon = document.createElement('i'); btnIcon.className = 'fas fa-times'; btn.appendChild(btnIcon);
-        const img = document.createElement('img');
-        img.src = image.preview;
-        img.className = 'img-fluid';
-        img.style.cssText = 'height: 60px; object-fit: contain;';
+        btn.onclick = function(e) { e.preventDefault(); eliminarNuevaImagenAdicionalVariacion(valorKey, img.id); };
+        btn.innerHTML = '<i class="fas fa-times"></i>';
+        const imgElement = document.createElement('img');
+        imgElement.src = img.preview;
+        imgElement.className = 'img-fluid';
+        imgElement.style.cssText = 'height: 60px; object-fit: contain;';
         const small = document.createElement('small');
         small.className = 'd-block text-truncate';
-        small.textContent = image.name.length > 10 ? image.name.substring(0, 10) + '...' : image.name;
+        small.textContent = img.name.length > 15 ? img.name.substring(0, 15) + '...' : img.name;
         card.appendChild(btn);
-        card.appendChild(img);
+        card.appendChild(imgElement);
         card.appendChild(small);
         col.appendChild(card);
         container.appendChild(col);
     });
 }
 
-function removeSelectedImage(imageId) {
-    const image = selectedImagesProducto.find(img => img.id === imageId);
-    if (image && image.preview) URL.revokeObjectURL(image.preview);
-    selectedImagesProducto = selectedImagesProducto.filter(img => img.id !== imageId);
-    const countSpan = document.getElementById('count_adicionales_producto');
-    if (countSpan) countSpan.textContent = selectedImagesProducto.length + ' seleccionadas';
-    renderSelectedImages();
-    actualizarContadorImagenes();
-    actualizarBarraProgresoTamaño();
+function eliminarNuevaImagenAdicionalVariacion(valorKey, imageId) {
+    if (imagenesVariacion[valorKey]) {
+        const image = imagenesVariacion[valorKey].imagenes.find(img => img.id === imageId);
+        if (image && image.preview) URL.revokeObjectURL(image.preview);
+        imagenesVariacion[valorKey].imagenes = imagenesVariacion[valorKey].imagenes.filter(img => img.id !== imageId);
+        renderImagenesAdicionalesVariacion(valorKey);
+        const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
+        if (countSpan) countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
+        actualizarBarraProgresoTamaño();
+        actualizarContadorImagenes();
+    }
 }
 
-// ============ FUNCIONES DE ATRIBUTOS Y VARIACIONES ============
-
-function actualizarPestanasValores() {
-    const tabsContainer = document.getElementById('valores-activos-tabs-container');
-    const noAtributosMsg = document.getElementById('no-atributos-activos-message');
-    const navTabs = document.querySelector('#valoresTab');
-    const tabContent = document.querySelector('#valoresTabContent');
-    const totalValoresBadge = document.getElementById('total-valores-badge');
-    
-    if (!tabsContainer || !navTabs || !tabContent) return;
-    
-    let todosLosValores = [];
-    
-    Object.values(atributosActivos).forEach(atributo => {
-        Object.values(atributo.valores).forEach(valor => {
-            todosLosValores.push({
-                ...valor,
-                atributoId: atributo.id,
-                atributoNombre: atributo.nombre
-            });
-        });
-    });
-    
-    if (todosLosValores.length === 0) {
-        tabsContainer.style.display = 'none';
-        if (noAtributosMsg) noAtributosMsg.style.display = 'block';
-        if (totalValoresBadge) totalValoresBadge.textContent = '0 valores';
-        return;
-    }
-    
-    tabsContainer.style.display = 'block';
-    if (noAtributosMsg) noAtributosMsg.style.display = 'none';
-    if (totalValoresBadge) {
-        totalValoresBadge.textContent = todosLosValores.length + ' ' + (todosLosValores.length === 1 ? 'valor' : 'valores');
-    }
-    
-    navTabs.innerHTML = '';
-    tabContent.innerHTML = '';
-    
-    const productoSku = document.getElementById('vCodigo_barras')?.value || 'PROD';
-    
-    todosLosValores.forEach((valor, index) => {
-        const valorKey = `${valor.atributoId}_${valor.id}`;
-        const variacionExistente = variacionesExistentesData[valorKey] || null;
-        
-        const tabItem = document.createElement('li');
-        tabItem.className = 'nav-item';
-        tabItem.role = 'presentation';
-        
-        const tabButton = document.createElement('button');
-        tabButton.className = 'nav-link' + (index === 0 ? ' active' : '');
-        tabButton.id = 'valor-tab-' + valorKey;
-        tabButton.setAttribute('data-bs-toggle', 'tab');
-        tabButton.setAttribute('data-bs-target', '#valor-content-' + valorKey);
-        tabButton.type = 'button';
-        tabButton.role = 'tab';
-        tabButton.setAttribute('data-valor-id', valor.id);
-        tabButton.setAttribute('data-atributo-id', valor.atributoId);
-        
-        const icon = document.createElement('i');
-        icon.className = 'fas fa-cube me-1';
-        tabButton.appendChild(icon);
-        tabButton.appendChild(document.createTextNode(' ' + valor.nombre));
-        
-        if (variacionExistente) {
-            const badge = document.createElement('span');
-            badge.className = 'badge bg-success ms-2';
-            badge.textContent = '✓';
-            tabButton.appendChild(badge);
-        }
-        
-        tabItem.appendChild(tabButton);
-        navTabs.appendChild(tabItem);
-        
-        const contentPane = document.createElement('div');
-        contentPane.className = 'tab-pane fade' + (index === 0 ? ' show active' : '');
-        contentPane.id = 'valor-content-' + valorKey;
-        contentPane.role = 'tabpanel';
-        
-        const combinacion = [{
-            atributoId: valor.atributoId,
-            atributoNombre: valor.atributoNombre,
-            valorId: valor.id,
-            valorNombre: valor.nombre
-        }];
-        const skuSugerido = generarSkuSugerido(productoSku, combinacion);
-        
-        const formHtml = `
-            <div class="variacion-form-container">
-                <div class="variacion-header-info mb-4 p-3 bg-light rounded">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <h6 class="fw-bold mb-2">
-                                <i class="fas fa-cube me-2"></i>
-                                Variación: <span class="text-primary">${valor.nombre}</span>
-                                <small class="d-block text-muted mt-1">Atributo: ${valor.atributoNombre}</small>
-                            </h6>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <span class="badge bg-secondary p-2">
-                                <i class="fas fa-barcode me-1"></i>
-                                SKU Sugerido: ${skuSugerido}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                ${variacionExistente ? `<input type="hidden" name="variaciones[${valorKey}][id_variacion]" value="${variacionExistente.id_variacion}">` : ''}
-                <input type="hidden" name="variaciones[${valorKey}][id_atributo]" value="${valor.atributoId}">
-                <input type="hidden" name="variaciones[${valorKey}][id_atributo_valor]" value="${valor.id}">
-                
-                <input type="hidden" name="variaciones[${valorKey}][eliminar_imagen_principal]" id="eliminar_imagen_principal_${valorKey}" value="0">
-                <input type="hidden" name="variaciones[${valorKey}][eliminar_gif]" id="eliminar_gif_${valorKey}" value="0">
-                <input type="hidden" name="variaciones[${valorKey}][imagenes_a_eliminar]" id="imagenes_a_eliminar_${valorKey}" value="[]">
-                
-                <div class="row mb-3">
-                    <div class="col-md-8">
-                        <div class="form-group">
-                            <label class="form-label fw-bold">SKU de la variación <span class="text-danger">*</span></label>
-                            <input type="text" name="variaciones[${valorKey}][vSKU]" id="sku-${valorKey}" class="form-control" value="${variacionExistente ? variacionExistente.vSKU : skuSugerido}" maxlength="50" required oninput="validarSKU(this); verificarSKUVariacionLocal(this, '${valorKey}')" autocomplete="off">
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-check form-switch mt-4">
-                            <input type="checkbox" name="variaciones[${valorKey}][bActivo]" id="activo-${valorKey}" class="form-check-input" value="1" ${variacionExistente ? (variacionExistente.bActivo ? 'checked' : '') : 'checked'}>
-                            <label class="form-check-label" for="activo-${valorKey}">Variación activa</label>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="form-label fw-bold">Precio de venta <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="text" name="variaciones[${valorKey}][dPrecio]" id="precio-${valorKey}" class="form-control" value="${variacionExistente ? variacionExistente.dPrecio : ''}" required oninput="validarPrecio(this); actualizarPrecioFinalVariacion('${valorKey}')" placeholder="0.00" autocomplete="off">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="form-label fw-bold">Stock disponible <span class="text-danger">*</span></label>
-                            <input type="text" name="variaciones[${valorKey}][iStock]" id="stock-${valorKey}" class="form-control" value="${variacionExistente ? variacionExistente.iStock : '0'}" required oninput="validarStock(this)" autocomplete="off">
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="form-label fw-bold">Clase de envío</label>
-                            <select name="variaciones[${valorKey}][vClase_envio]" id="clase-envio-${valorKey}" class="form-select">
-                                <option value="">-- Por defecto --</option>
-                                <option value="estandar" ${variacionExistente && variacionExistente.vClase_envio == 'estandar' ? 'selected' : ''}>Estándar</option>
-                                <option value="express" ${variacionExistente && variacionExistente.vClase_envio == 'express' ? 'selected' : ''}>Express</option>
-                                <option value="fragil" ${variacionExistente && variacionExistente.vClase_envio == 'fragil' ? 'selected' : ''}>Frágil</option>
-                                <option value="grandes_dimensiones" ${variacionExistente && variacionExistente.vClase_envio == 'grandes_dimensiones' ? 'selected' : ''}>Grandes dimensiones</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row mb-3">
-                    <div class="col-md-12">
-                        <div class="card border">
-                            <div class="card-header bg-light py-2">
-                                <h6 class="mb-0"><i class="fas fa-file-invoice-dollar me-2"></i>Impuesto para la Variación</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <div class="form-group mb-3">
-                                            <label class="form-label fw-bold">Impuesto Aplicable</label>
-                                            <select name="variaciones[${valorKey}][id_impuesto]" id="impuesto-${valorKey}" class="form-select" onchange="actualizarPrecioFinalVariacion('${valorKey}')">
-                                                <option value="">-- Sin impuesto --</option>
-                                                @foreach($impuestos as $impuesto)
-                                                    <option value="{{ $impuesto->id_impuesto }}" data-porcentaje="{{ $impuesto->dPorcentaje }}" ${variacionExistente && variacionExistente.id_impuesto == {{ $impuesto->id_impuesto }} ? 'selected' : ''}>{{ $impuesto->vNombre }} ({{ $impuesto->dPorcentaje }}%)</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="bg-light p-3 rounded text-center">
-                                            <small class="text-muted d-block">Precio con impuesto</small>
-                                            <h5 class="fw-bold mb-0" id="precio-final-${valorKey}">$0.00</h5>
-                                            <small class="text-muted" id="detalle-impuesto-${valorKey}"></small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row mb-3">
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label class="form-label fw-bold">Peso (kg)</label>
-                            <input type="text" name="variaciones[${valorKey}][dPeso]" id="peso-${valorKey}" class="form-control" value="${variacionExistente && variacionExistente.dPeso ? variacionExistente.dPeso : ''}" oninput="validarPeso(this)" placeholder="0.000">
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label class="form-label fw-bold">Largo (cm)</label>
-                            <input type="text" name="variaciones[${valorKey}][dLargo_cm]" id="largo-${valorKey}" class="form-control" value="${variacionExistente && variacionExistente.dLargo_cm ? variacionExistente.dLargo_cm : ''}" oninput="validarDimensionCm(this)" placeholder="0.00">
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label class="form-label fw-bold">Ancho (cm)</label>
-                            <input type="text" name="variaciones[${valorKey}][dAncho_cm]" id="ancho-${valorKey}" class="form-control" value="${variacionExistente && variacionExistente.dAncho_cm ? variacionExistente.dAncho_cm : ''}" oninput="validarDimensionCm(this)" placeholder="0.00">
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label class="form-label fw-bold">Alto (cm)</label>
-                            <input type="text" name="variaciones[${valorKey}][dAlto_cm]" id="alto-${valorKey}" class="form-control" value="${variacionExistente && variacionExistente.dAlto_cm ? variacionExistente.dAlto_cm : ''}" oninput="validarDimensionCm(this)" placeholder="0.00">
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row mb-3">
-                    <div class="col-md-12">
-                        <div class="card border">
-                            <div class="card-header bg-light py-2">
-                                <h6 class="mb-0"><i class="fas fa-percentage me-2"></i>Descuento Especial</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group mb-3">
-                                            <div class="form-check form-switch">
-                                                <input type="checkbox" name="variaciones[${valorKey}][bTiene_descuento]" id="descuento-${valorKey}" class="form-check-input" value="1" ${variacionExistente && variacionExistente.bTiene_descuento ? 'checked' : ''} onchange="toggleDescuentoVariacion(this, '${valorKey}')">
-                                                <label class="form-check-label" for="descuento-${valorKey}">Activar Descuento</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="descuento-fields-${valorKey}" style="display: ${variacionExistente && variacionExistente.bTiene_descuento ? 'block' : 'none'};">
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <div class="form-group mb-3">
-                                                <label class="form-label fw-bold">Precio de Descuento <span class="text-danger">*</span></label>
-                                                <div class="input-group">
-                                                    <span class="input-group-text">$</span>
-                                                    <input type="text" name="variaciones[${valorKey}][dPrecio_descuento]" id="precio_descuento-${valorKey}" class="form-control variacion-precio-descuento" data-precio-normal-id="precio-${valorKey}" data-valor-key="${valorKey}" value="${variacionExistente && variacionExistente.dPrecio_descuento ? variacionExistente.dPrecio_descuento : ''}" oninput="validarPrecio(this); validarPrecioDescuentoVariacionInstantaneo(this); actualizarPrecioFinalVariacion('${valorKey}')" onblur="validarPrecioDescuentoVariacion(this)" placeholder="0.00">
-                                                </div>
-                                                <div id="error-precio-descuento-${valorKey}" class="invalid-feedback" style="display: none;"></div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="form-group mb-3">
-                                                <label class="form-label fw-bold">Fecha inicio <span class="text-danger">*</span></label>
-                                                <input type="date" name="variaciones[${valorKey}][dFecha_inicio_descuento]" class="form-control fecha-inicio-${valorKey}" id="fecha-inicio-${valorKey}" value="${variacionExistente && variacionExistente.dFecha_inicio_descuento ? variacionExistente.dFecha_inicio_descuento : ''}" onchange="validarFechasDescuentoVariacion('fecha-inicio-${valorKey}', 'fecha-fin-${valorKey}', '${valorKey}')">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="form-group mb-3">
-                                                <label class="form-label fw-bold">Fecha fin <span class="text-danger">*</span></label>
-                                                <input type="date" name="variaciones[${valorKey}][dFecha_fin_descuento]" class="form-control fecha-fin-${valorKey}" id="fecha-fin-${valorKey}" value="${variacionExistente && variacionExistente.dFecha_fin_descuento ? variacionExistente.dFecha_fin_descuento : ''}" onchange="validarFechasDescuentoVariacion('fecha-inicio-${valorKey}', 'fecha-fin-${valorKey}', '${valorKey}')">
-                                                <div id="error-fechas-descuento-${valorKey}" class="invalid-feedback" style="display: none;"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-12">
-                                            <div class="form-group mb-3">
-                                                <label class="form-label fw-bold">Motivo del descuento</label>
-                                                <input type="text" name="variaciones[${valorKey}][vMotivo_descuento]" id="motivo-${valorKey}" class="form-control" value="${variacionExistente && variacionExistente.vMotivo_descuento ? variacionExistente.vMotivo_descuento : ''}" maxlength="255" placeholder="Ej: Liquidación de temporada, Black Friday, etc.">
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row mb-3">
-                    <div class="col-md-12">
-                        <div class="form-group">
-                            <label class="form-label fw-bold">Descripción de la variación</label>
-                            <textarea name="variaciones[${valorKey}][tDescripcion]" id="descripcion-${valorKey}" class="form-control" rows="2" placeholder="Descripción específica para esta variación (opcional)">${variacionExistente && variacionExistente.tDescripcion ? variacionExistente.tDescripcion : ''}</textarea>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="card mb-4 border-primary">
-                    <div class="card-header bg-primary text-white py-2">
-                        <h6 class="mb-0"><i class="fas fa-images me-2"></i>Imágenes de la Variación</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-group mb-3">
-                                    <label class="form-label fw-bold"><i class="fas fa-star text-warning me-1"></i>Imagen Principal</label>
-                                    <input type="file" name="variaciones[${valorKey}][imagen_principal]" id="img_principal_${valorKey}" class="form-control" accept="image/jpeg,image/jpg,image/png" onchange="previewImagenPrincipalVariacion(this, 'preview_principal_${valorKey}')">
-                                    <small class="form-text text-muted">JPG, JPEG, PNG. Máx: 5MB</small>
-                                    <div id="preview_principal_${valorKey}" class="mt-2" style="display: none;">
-                                        <div class="border rounded p-2 text-center bg-light">
-                                            <img src="#" class="img-thumbnail" style="max-width: 150px; max-height: 150px; object-fit: contain;">
-                                        </div>
-                                    </div>
-                                    ${variacionExistente && variacionExistente.imagen_principal_url ? `
-                                    <div class="mt-2" id="current_principal_container_${valorKey}">
-                                        <div class="border rounded p-2 text-center bg-light position-relative">
-                                            <img src="${variacionExistente.imagen_principal_url}" class="img-thumbnail" style="max-width: 100px; max-height: 100px; object-fit: contain;">
-                                            <div class="mt-1">
-                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarImagenPrincipalVariacion('${valorKey}')">
-                                                    <i class="fas fa-trash me-1"></i>Eliminar imagen actual
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    ` : ''}
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-4">
-                                <div class="form-group mb-3">
-                                    <label class="form-label fw-bold"><i class="fas fa-file-image text-success me-1"></i>GIF Animado</label>
-                                    <input type="file" name="variaciones[${valorKey}][gif]" id="gif_${valorKey}" class="form-control" accept="image/gif" onchange="previewGifVariacion(this, 'preview_gif_${valorKey}')">
-                                    <small class="form-text text-muted">GIF. Máx: 10MB</small>
-                                    <div id="preview_gif_${valorKey}" class="mt-2" style="display: none;">
-                                        <div class="border rounded p-2 text-center bg-light">
-                                            <img src="#" class="img-thumbnail" style="max-width: 150px; max-height: 150px; object-fit: contain;">
-                                        </div>
-                                    </div>
-                                    ${variacionExistente && variacionExistente.gif_url ? `
-                                    <div class="mt-2" id="current_gif_container_${valorKey}">
-                                        <div class="border rounded p-2 text-center bg-light position-relative">
-                                            <img src="${variacionExistente.gif_url}" class="img-thumbnail" style="max-width: 100px; max-height: 100px; object-fit: contain;">
-                                            <div class="mt-1">
-                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarGifVariacion('${valorKey}')">
-                                                    <i class="fas fa-trash me-1"></i>Eliminar GIF actual
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    ` : ''}
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-4">
-                                <div class="form-group mb-3">
-                                    <label class="form-label fw-bold"><i class="fas fa-images me-1"></i>Imágenes Adicionales (Máx 7)</label>
-                                    <input type="file" name="variaciones[${valorKey}][imagenes_adicionales][]" id="imagenes_adicionales_${valorKey}" class="form-control" multiple accept="image/jpeg,image/jpg,image/png,image/webp" onchange="handleImagenesAdicionalesVariacion(event, '${valorKey}')">
-                                    <small class="form-text text-muted">JPG, JPEG, PNG, WEBP. Máx: 5MB c/u</small>
-                                    <div id="container_adicionales_${valorKey}" class="row mt-2"></div>
-                                    <div class="mt-2">
-                                        <span class="badge bg-info" id="count_adicionales_${valorKey}">0 seleccionadas</span>
-                                    </div>
-                                    
-                                   ${variacionExistente && variacionExistente.imagenes_adicionales_urls && variacionExistente.imagenes_adicionales_urls.length > 0 ? `
-                                    <div class="mt-3">
-                                        <label class="small fw-bold">Imágenes adicionales actuales:</label>
-                                        <div id="existing_imagenes_container_${valorKey}" class="row g-2 mt-1">
-                                            ${variacionExistente.imagenes_adicionales_urls.map((img, idx) => `
-                                                <div class="col-auto existing-image-item" data-imagen-index="${idx}" data-valor-key="${valorKey}">
-                                                    <div class="border rounded p-1 text-center bg-light position-relative">
-                                                        <img src="${img}" class="img-thumbnail" style="width: 80px; height: 80px; object-fit: contain;" onerror="this.src='https://via.placeholder.com/80x80?text=Error'">
-                                                        <div class="mt-1">
-                                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarImagenAdicionalVariacion(this, '${valorKey}', ${idx})">
-                                                                <i class="fas fa-trash me-1"></i>Eliminar
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            `).join('')}
-                                        </div>
-                                    </div>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        contentPane.innerHTML = formHtml;
-        tabContent.appendChild(contentPane);
-        
-        setTimeout(() => { 
-            if (variacionExistente) { 
-                const precioInput = document.getElementById(`precio-${valorKey}`); 
-                if (precioInput) actualizarPrecioFinalVariacion(valorKey); 
-            } 
-        }, 100);
-    });
-}
-
-function generarSkuSugerido(productoSku, combinacion) {
-    let sku = productoSku || 'PROD';
-    combinacion.forEach(item => {
-        const attrCode = item.atributoNombre.substring(0, 3).toUpperCase();
-        const valCode = item.valorNombre.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase();
-        sku += `-${attrCode}${valCode}`;
-    });
-    return sku;
+function obtenerValorKeyDesdePreviewId(previewId) {
+    const parts = previewId.split('_');
+    if (parts.length >= 3) return parts.slice(2).join('_');
+    return null;
 }
 
 function actualizarResumenAtributos() {
@@ -2819,7 +2473,8 @@ function actualizarResumenAtributos() {
             lista.appendChild(item);
         }
     });
-    document.getElementById('resumen-atributos').style.display = atributosCount > 0 ? 'block' : 'none';
+    const resumenDiv = document.getElementById('resumen-atributos');
+    if (resumenDiv) resumenDiv.style.display = atributosCount > 0 ? 'block' : 'none';
     totalAtributosBadge.textContent = atributosCount > 0 ? `${atributosCount} atributos activos (${totalValores} valores)` : '0 atributos activos';
 }
 
@@ -2869,175 +2524,8 @@ function validarCamposUnicosAntesDeEnviar() {
     return true;
 }
 
-// ============ FUNCIONES DE VARIACIONES ============
-
-function previewImagenPrincipalVariacion(input, previewId) {
-    const previewContainer = document.getElementById(previewId);
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
-            Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'La imagen principal solo acepta formatos JPG, JPEG y PNG' });
-            input.value = ''; return;
-        }
-        if (file.size > 5 * 1024 * 1024) {
-            Swal.fire({ icon: 'error', title: 'Archivo demasiado grande', text: 'La imagen principal no puede exceder los 5MB' });
-            input.value = ''; return;
-        }
-        const reader = new FileReader();
-        reader.onload = function(e) { if (previewContainer) { const img = previewContainer.querySelector('img'); if (img) { img.src = e.target.result; previewContainer.style.display = 'block'; } } actualizarBarraProgresoTamaño(); actualizarContadorImagenes(); };
-        reader.readAsDataURL(file);
-    } else { if (previewContainer) previewContainer.style.display = 'none'; actualizarBarraProgresoTamaño(); actualizarContadorImagenes(); }
-}
-
-function previewGifVariacion(input, previewId) {
-    const previewContainer = document.getElementById(previewId);
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        if (file.type !== 'image/gif') {
-            Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'Solo se permiten archivos GIF' });
-            input.value = ''; return;
-        }
-        if (file.size > 10 * 1024 * 1024) {
-            Swal.fire({ icon: 'error', title: 'Archivo demasiado grande', text: 'El GIF no puede exceder los 10MB' });
-            input.value = ''; return;
-        }
-        const reader = new FileReader();
-        reader.onload = function(e) { if (previewContainer) { const img = previewContainer.querySelector('img'); if (img) { img.src = e.target.result; previewContainer.style.display = 'block'; } } actualizarBarraProgresoTamaño(); actualizarContadorImagenes(); };
-        reader.readAsDataURL(file);
-    } else { if (previewContainer) previewContainer.style.display = 'none'; actualizarBarraProgresoTamaño(); actualizarContadorImagenes(); }
-}
-
-function handleImagenesAdicionalesVariacion(event, valorKey) {
-    const input = event.target;
-    const container = document.getElementById(`container_adicionales_${valorKey}`);
-    const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
-    
-    if (!container || !countSpan) return;
-    
-    const files = Array.from(input.files);
-    const maxFiles = 7;
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    
-    if (!imagenesVariacion[valorKey]) {
-        imagenesVariacion[valorKey] = { imagenes: [] };
-    }
-    
-    const imagenesExistentesNoEliminadas = document.querySelectorAll(`#existing_imagenes_container_${valorKey} .existing-image-item:not(.eliminada)`).length;
-    const totalActual = imagenesExistentesNoEliminadas + imagenesVariacion[valorKey].imagenes.length;
-    
-    if (totalActual + files.length > maxFiles) {
-        Swal.fire({ icon: 'warning', title: 'Límite de imágenes', text: `Esta variación puede tener máximo ${maxFiles} imágenes adicionales.` });
-        input.value = '';
-        return;
-    }
-    
-    const tamanioActual = calcularTamañoTotal();
-    let nuevoTamanio = tamanioActual;
-    files.forEach(file => nuevoTamanio += file.size);
-    
-    if (nuevoTamanio > maxTotalSize) {
-        Swal.fire({ icon: 'warning', title: 'Límite de tamaño excedido', text: 'Si agregas estas imágenes, excederás el límite de 50MB.' });
-        input.value = '';
-        return;
-    }
-    
-    let archivosAgregados = 0;
-    files.forEach(file => {
-        if (!validTypes.includes(file.type)) return;
-        if (file.size > 5 * 1024 * 1024) return;
-        
-        const imageId = 'var_img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        const preview = URL.createObjectURL(file);
-        
-        imagenesVariacion[valorKey].imagenes.push({
-            id: imageId,
-            file: file,
-            preview: preview,
-            name: file.name,
-            size: file.size
-        });
-        archivosAgregados++;
-    });
-    
-    if (archivosAgregados > 0) {
-        renderImagenesAdicionalesVariacion(valorKey);
-        countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
-        actualizarBarraProgresoTamaño();
-        actualizarContadorImagenes();
-    }
-    
-    input.value = '';
-}
-
-function renderImagenesAdicionalesVariacion(valorKey) {
-    const container = document.getElementById(`container_adicionales_${valorKey}`);
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    if (!imagenesVariacion[valorKey] || imagenesVariacion[valorKey].imagenes.length === 0) {
-        container.innerHTML = '<div class="col-12 text-muted small">No hay nuevas imágenes seleccionadas</div>';
-        return;
-    }
-    
-    imagenesVariacion[valorKey].imagenes.forEach((img, index) => {
-        const col = document.createElement('div');
-        col.className = 'col-4 col-md-3 mb-2';
-        col.setAttribute('data-image-id', img.id);
-        
-        const card = document.createElement('div');
-        card.className = 'border rounded p-1 text-center bg-light position-relative';
-        
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1';
-        btn.style.cssText = 'width: 20px; height: 20px; padding: 0; border-radius: 50%; font-size: 10px;';
-        btn.onclick = function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            eliminarNuevaImagenAdicionalVariacion(valorKey, img.id);
-        };
-        
-        const btnIcon = document.createElement('i');
-        btnIcon.className = 'fas fa-times';
-        btn.appendChild(btnIcon);
-        
-        const imgElement = document.createElement('img');
-        imgElement.src = img.preview;
-        imgElement.className = 'img-fluid';
-        imgElement.style.cssText = 'height: 60px; object-fit: contain;';
-        
-        const small = document.createElement('small');
-        small.className = 'd-block text-truncate';
-        small.textContent = img.name.length > 15 ? img.name.substring(0, 15) + '...' : img.name;
-        
-        card.appendChild(btn);
-        card.appendChild(imgElement);
-        card.appendChild(small);
-        col.appendChild(card);
-        container.appendChild(col);
-    });
-}
-
-function eliminarNuevaImagenAdicionalVariacion(valorKey, imageId) {
-    if (imagenesVariacion[valorKey]) {
-        const image = imagenesVariacion[valorKey].imagenes.find(img => img.id === imageId);
-        if (image && image.preview) URL.revokeObjectURL(image.preview);
-        
-        imagenesVariacion[valorKey].imagenes = imagenesVariacion[valorKey].imagenes.filter(img => img.id !== imageId);
-        renderImagenesAdicionalesVariacion(valorKey);
-        
-        const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
-        if (countSpan) countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
-        actualizarBarraProgresoTamaño();
-        actualizarContadorImagenes();
-    }
-}
-
 // ============ FUNCIONES DE MODALES ============
-
 function abrirModalCategoria() {
-    // Limpiar campos del modal de categoría
     const nombreInput = document.getElementById('vNombre_categoria_modal');
     const slugInput = document.getElementById('vSlug_categoria_modal');
     const padreSelect = document.getElementById('id_categoria_padre_modal');
@@ -3046,7 +2534,6 @@ function abrirModalCategoria() {
     const previewDiv = document.getElementById('categoriaModalImagePreview');
     const activoCheckbox = document.getElementById('bActivo_categoria_modal');
     
-    // Verificar que los elementos existan antes de asignar valores
     if (nombreInput) nombreInput.value = '';
     if (slugInput) slugInput.value = '';
     if (padreSelect) padreSelect.value = '';
@@ -3055,23 +2542,7 @@ function abrirModalCategoria() {
     if (previewDiv) previewDiv.style.display = 'none';
     if (activoCheckbox) activoCheckbox.checked = true;
     
-    // Resetear variable de imagen
-    if (typeof categoriaModalImagenFile !== 'undefined') {
-        categoriaModalImagenFile = null;
-    }
-    
-    // Mostrar el modal si existe
-    if (modalCategoria) {
-        modalCategoria.show();
-    } else {
-        console.error('Modal de categoría no inicializado');
-        // Intentar obtener el modal de nuevo
-        const modalElement = document.getElementById('modalCategoria');
-        if (modalElement) {
-            modalCategoria = new bootstrap.Modal(modalElement);
-            modalCategoria.show();
-        }
-    }
+    if (modalCategoria) modalCategoria.show();
 }
 
 function abrirModalMarca() {
@@ -3110,7 +2581,21 @@ function mostrarFormularioValor(atributoId, atributoNombre) {
     if (valorModal) valorModal.show();
 }
 
-function generarSlugValor(valor) { if (!valor) { document.getElementById('vSlug_valor_modal').value = ''; return; } let slug = valor.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-+/, '').replace(/-+$/, ''); document.getElementById('vSlug_valor_modal').value = slug; }
+function generarSlugValor(valor) {
+    if (!valor) {
+        document.getElementById('vSlug_valor_modal').value = '';
+        return;
+    }
+    let slug = valor.toLowerCase()
+        .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i').replace(/ó/g, 'o').replace(/ú/g, 'u')
+        .replace(/ñ/g, 'n')
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+/, '').replace(/-+$/, '');
+    document.getElementById('vSlug_valor_modal').value = slug;
+}
+
 function generarSlugCategoria(nombre) {
     if (!nombre) {
         const inputSlug = document.getElementById('vSlug_categoria_modal');
@@ -3124,46 +2609,45 @@ function generarSlugCategoria(nombre) {
         .replace(/\s+/g, '-')
         .replace(/-+/g, '-')
         .replace(/^-+/, '').replace(/-+$/, '');
-    
     const inputSlug = document.getElementById('vSlug_categoria_modal');
     if (inputSlug) inputSlug.value = slug;
+}
+
+function generarSlugAtributo(nombre) {
+    if (!nombre) {
+        document.getElementById('vSlug_attr_modal').value = '';
+        return;
+    }
+    let slug = nombre.toLowerCase()
+        .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i').replace(/ó/g, 'o').replace(/ú/g, 'u')
+        .replace(/ñ/g, 'n')
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+/, '').replace(/-+$/, '');
+    document.getElementById('vSlug_attr_modal').value = slug;
 }
 
 function previewImagenCategoriaModal(input) {
     const preview = document.getElementById('categoriaModalImagePreview');
     const previewImg = document.getElementById('categoriaModalPreviewImg');
-    
     if (input.files && input.files.length > 0) {
         const file = input.files[0];
         const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-        
         if (!validTypes.includes(file.type)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Formato no válido',
-                text: 'Solo se permiten imágenes JPG, JPEG, PNG o WebP'
-            });
-            input.value = '';
-            return;
+            Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'Solo se permiten imágenes JPG, JPEG, PNG o WebP' });
+            input.value = ''; return;
         }
-        
         if (file.size > 2 * 1024 * 1024) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Archivo demasiado grande',
-                text: 'La imagen no puede exceder los 2MB'
-            });
-            input.value = '';
-            return;
+            Swal.fire({ icon: 'error', title: 'Archivo demasiado grande', text: 'La imagen no puede exceder los 2MB' });
+            input.value = ''; return;
         }
-        
         categoriaModalImagenFile = file;
-        
         const reader = new FileReader();
         reader.onload = function(e) {
             if (previewImg) previewImg.src = e.target.result;
             if (preview) preview.style.display = 'block';
-        }
+        };
         reader.readAsDataURL(file);
     }
 }
@@ -3171,14 +2655,11 @@ function previewImagenCategoriaModal(input) {
 function cancelarImagenCategoriaModal() {
     const preview = document.getElementById('categoriaModalImagePreview');
     const input = document.getElementById('vImagen_categoria_modal');
-    
     if (preview) preview.style.display = 'none';
     if (input) input.value = '';
     categoriaModalImagenFile = null;
 }
-function generarSlugAtributo(nombre) { if (!nombre) { document.getElementById('vSlug_attr_modal').value = ''; return; } let slug = nombre.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-+/, '').replace(/-+$/, ''); document.getElementById('vSlug_attr_modal').value = slug; }
 
-// ============ FUNCIÓN CORREGIDA PARA GUARDAR CATEGORÍA ============
 function guardarCategoria() {
     const vNombre = document.getElementById('vNombre_categoria_modal')?.value.trim();
     const vSlug = document.getElementById('vSlug_categoria_modal')?.value.trim();
@@ -3203,161 +2684,61 @@ function guardarCategoria() {
     formData.append('vSlug', vSlug);
     formData.append('tDescripcion', tDescripcion || '');
     formData.append('bActivo', bActivo);
-    if (idCategoriaPadre) {
-        formData.append('id_categoria_padre', idCategoriaPadre);
-    }
+    if (idCategoriaPadre) formData.append('id_categoria_padre', idCategoriaPadre);
     
-    // Agregar imagen si existe
     const imagenInput = document.getElementById('vImagen_categoria_modal');
     if (imagenInput && imagenInput.files && imagenInput.files[0]) {
         formData.append('vImagen', imagenInput.files[0]);
     }
     
-    // ==== OBTENER EL TOKEN CSRF DE MÚLTIPLES FORMAS ====
-    let csrfToken = null;
-    
-    // Método 1: Desde meta tag
-    const metaToken = document.querySelector('meta[name="csrf-token"]');
-    if (metaToken) {
-        csrfToken = metaToken.getAttribute('content');
-    }
-    
-    // Método 2: Desde el formulario (si existe un input con nombre _token)
-    if (!csrfToken) {
-        const tokenInput = document.querySelector('input[name="_token"]');
-        if (tokenInput) {
-            csrfToken = tokenInput.value;
-        }
-    }
-    
-    // Método 3: Desde la cookie Laravel
-    if (!csrfToken) {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.startsWith('XSRF-TOKEN=')) {
-                csrfToken = decodeURIComponent(cookie.substring('XSRF-TOKEN='.length));
-                break;
-            }
-        }
-    }
-    
-    console.log('Token CSRF obtenido:', csrfToken ? 'Sí' : 'No');
-    
+    const csrfToken = document.querySelector('#productoForm input[name="_token"]')?.value || document.querySelector('meta[name="csrf-token"]')?.content;
     if (!csrfToken) {
         Swal.close();
-        Swal.fire({
-            icon: 'error',
-            title: 'Error de seguridad',
-            text: 'No se pudo obtener el token de seguridad. Por favor, recarga la página.'
-        });
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo obtener el token de seguridad. Recarga la página.' });
         return;
     }
-    
-    // Agregar el token al FormData
     formData.append('_token', csrfToken);
     
     fetch('{{ route("categorias.quick-create") }}', {
         method: 'POST',
-        headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            // No incluir el token en el header, solo en el body
-        },
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: formData
     })
     .then(async response => {
-        console.log('Respuesta status:', response.status);
-        
-        if (response.status === 419) {
-            // Intentar obtener más información del error
-            const errorText = await response.text();
-            console.error('Error 419 - Respuesta:', errorText);
-            throw new Error('El token de seguridad ha expirado. Por favor, recarga la página y vuelve a intentarlo.');
-        }
-        
-        if (response.status === 422) {
-            const errorData = await response.json();
-            throw errorData;
-        }
-        
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw errorData;
-        }
-        
-        return response.json();
+        if (response.status === 419) throw new Error('El token de seguridad ha expirado. Recarga la página.');
+        const data = await response.json();
+        if (!response.ok) throw data;
+        return data;
     })
     .then(data => {
         Swal.close();
-        
         if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: data.message || 'Categoría creada exitosamente',
-                timer: 2000,
-                showConfirmButton: false
-            });
-            
+            Swal.fire({ icon: 'success', title: '¡Éxito!', text: data.message, timer: 2000, showConfirmButton: false });
             const select = document.getElementById('id_categoria');
             if (select) {
                 const option = document.createElement('option');
                 option.value = data.categoria.id_categoria;
-                const prefijo = data.categoria.id_categoria_padre ? '↳ ' : '🏠 ';
-                option.innerHTML = prefijo + data.categoria.vNombre;
+                option.innerHTML = (data.categoria.id_categoria_padre ? '↳ ' : '🏠 ') + data.categoria.vNombre;
                 select.appendChild(option);
                 select.value = data.categoria.id_categoria;
             }
-            
-            // Limpiar el modal
             if (modalCategoria) modalCategoria.hide();
-            
-            // Limpiar campos
-            const nombreInput = document.getElementById('vNombre_categoria_modal');
-            const slugInput = document.getElementById('vSlug_categoria_modal');
-            const padreSelect = document.getElementById('id_categoria_padre_modal');
-            const descTextarea = document.getElementById('tDescripcion_categoria_modal');
-            const imagenFile = document.getElementById('vImagen_categoria_modal');
-            const previewDiv = document.getElementById('categoriaModalImagePreview');
-            const activoCheckbox = document.getElementById('bActivo_categoria_modal');
-            
-            if (nombreInput) nombreInput.value = '';
-            if (slugInput) slugInput.value = '';
-            if (padreSelect) padreSelect.value = '';
-            if (descTextarea) descTextarea.value = '';
-            if (imagenFile) imagenFile.value = '';
-            if (previewDiv) previewDiv.style.display = 'none';
-            if (activoCheckbox) activoCheckbox.checked = true;
-            
+            document.getElementById('vNombre_categoria_modal').value = '';
+            document.getElementById('vSlug_categoria_modal').value = '';
+            document.getElementById('id_categoria_padre_modal').value = '';
+            document.getElementById('tDescripcion_categoria_modal').value = '';
+            document.getElementById('vImagen_categoria_modal').value = '';
+            document.getElementById('categoriaModalImagePreview').style.display = 'none';
+            document.getElementById('bActivo_categoria_modal').checked = true;
             categoriaModalImagenFile = null;
         } else {
-            let errorMessage = data.message || 'Error al crear la categoría';
-            if (data.errors) {
-                errorMessage = Object.values(data.errors).flat().join('<br>');
-            }
-            Swal.fire({ icon: 'error', title: 'Error', html: errorMessage });
+            Swal.fire({ icon: 'error', title: 'Error', html: data.message || 'Error al crear la categoría' });
         }
     })
     .catch(error => {
         Swal.close();
-        console.error('Error completo:', error);
-        
-        let errorMessage = 'Error de conexión al servidor';
-        if (typeof error === 'string') {
-            errorMessage = error;
-        } else if (error.message) {
-            errorMessage = error.message;
-        } else if (error.errors) {
-            errorMessage = Object.values(error.errors).flat().join('<br>');
-        }
-        
-        Swal.fire({ 
-            icon: 'error', 
-            title: 'Error', 
-            html: errorMessage,
-            confirmButtonText: 'Entendido'
-        });
+        console.error('Error:', error);
+        Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'Error de conexión' });
     });
 }
 
@@ -3381,83 +2762,29 @@ function guardarMarca() {
     formData.append('vNombre', vNombre);
     formData.append('tDescripcion', tDescripcion || '');
     
-    // ==== OBTENER EL TOKEN DEL FORMULARIO PRINCIPAL ====
-    let csrfToken = null;
-    
-    // Método 1: Buscar input _token dentro del formulario principal
-    const formToken = document.querySelector('#productoForm input[name="_token"]');
-    if (formToken) {
-        csrfToken = formToken.value;
-        console.log('Token obtenido del formulario:', csrfToken ? 'Sí' : 'No');
-    }
-    
-    // Método 2: Si no está en el formulario, buscar el meta tag
-    if (!csrfToken) {
-        const metaToken = document.querySelector('meta[name="csrf-token"]');
-        if (metaToken) {
-            csrfToken = metaToken.getAttribute('content');
-            console.log('Token obtenido del meta tag:', csrfToken ? 'Sí' : 'No');
-        }
-    }
-    
-    // Método 3: Buscar cualquier input con name="_token"
-    if (!csrfToken) {
-        const anyToken = document.querySelector('input[name="_token"]');
-        if (anyToken) {
-            csrfToken = anyToken.value;
-            console.log('Token obtenido de input genérico:', csrfToken ? 'Sí' : 'No');
-        }
-    }
-    
+    const csrfToken = document.querySelector('#productoForm input[name="_token"]')?.value || document.querySelector('meta[name="csrf-token"]')?.content;
     if (!csrfToken) {
         Swal.close();
-        Swal.fire({
-            icon: 'error',
-            title: 'Error de seguridad',
-            text: 'No se pudo obtener el token de seguridad. Por favor, recarga la página.'
-        });
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo obtener el token de seguridad. Recarga la página.' });
         return;
     }
-    
-    // Agregar el token al FormData
     formData.append('_token', csrfToken);
     
     fetch('{{ route("marcas.quick-create") }}', {
         method: 'POST',
-        headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-        },
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: formData
     })
     .then(async response => {
-        console.log('Respuesta status:', response.status);
-        
-        // Si es 419, intentar obtener más información
-        if (response.status === 419) {
-            const text = await response.text();
-            console.error('Error 419 - Respuesta:', text);
-            throw new Error('El token de seguridad no es válido. Por favor, recarga la página (F5) y vuelve a intentarlo.');
-        }
-        
+        if (response.status === 419) throw new Error('El token ha expirado. Recarga la página.');
         const data = await response.json();
-        if (!response.ok) {
-            throw data;
-        }
+        if (!response.ok) throw data;
         return data;
     })
     .then(data => {
         Swal.close();
-        
         if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: data.message,
-                timer: 2000,
-                showConfirmButton: false
-            });
-            
+            Swal.fire({ icon: 'success', title: '¡Éxito!', text: data.message, timer: 2000, showConfirmButton: false });
             const select = document.getElementById('id_marca');
             if (select) {
                 const option = document.createElement('option');
@@ -3466,43 +2793,20 @@ function guardarMarca() {
                 select.appendChild(option);
                 select.value = data.marca.id_marca;
             }
-            
             if (modalMarca) modalMarca.hide();
-            
-            // Limpiar campos
             document.getElementById('vNombre_marca_modal').value = '';
             document.getElementById('tDescripcion_marca_modal').value = '';
         } else {
-            let errorMessage = data.message || 'Error al crear la marca';
-            if (data.errors) {
-                errorMessage = Object.values(data.errors).flat().join('<br>');
-            }
-            Swal.fire({ icon: 'error', title: 'Error', html: errorMessage });
+            Swal.fire({ icon: 'error', title: 'Error', html: data.message || 'Error al crear la marca' });
         }
     })
     .catch(error => {
         Swal.close();
-        console.error('Error completo:', error);
-        
-        let errorMessage = 'Error de conexión al servidor';
-        if (typeof error === 'string') {
-            errorMessage = error;
-        } else if (error.message) {
-            errorMessage = error.message;
-        } else if (error.errors) {
-            errorMessage = Object.values(error.errors).flat().join('<br>');
-        }
-        
-        Swal.fire({ 
-            icon: 'error', 
-            title: 'Error', 
-            html: errorMessage,
-            confirmButtonText: 'Entendido'
-        });
+        Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'Error de conexión' });
     });
 }
 
-async function guardarEtiqueta() {
+function guardarEtiqueta() {
     const vNombre = document.getElementById('vNombre_eti_modal')?.value.trim();
     const tDescripcion = document.getElementById('tDescripcion_eti_modal')?.value;
     
@@ -3518,50 +2822,33 @@ async function guardarEtiqueta() {
         didOpen: () => { Swal.showLoading(); }
     });
     
-    // Crear FormData
     const formData = new FormData();
     formData.append('vNombre', vNombre);
     formData.append('tDescripcion', tDescripcion || '');
     
-    // Obtener token del formulario principal
-    const csrfToken = document.querySelector('#productoForm input[name="_token"]')?.value;
-    
+    const csrfToken = document.querySelector('#productoForm input[name="_token"]')?.value || document.querySelector('meta[name="csrf-token"]')?.content;
     if (!csrfToken) {
         Swal.close();
         Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo obtener el token de seguridad. Recarga la página.' });
         return;
     }
-    
     formData.append('_token', csrfToken);
     
-    try {
-        const response = await fetch('{{ route("etiquetas.quick-create") }}', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: formData
-        });
-        
-        if (response.status === 419) {
-            throw new Error('Token CSRF inválido. Recarga la página (F5).');
-        }
-        
+    fetch('{{ route("etiquetas.quick-create") }}', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(async response => {
+        if (response.status === 419) throw new Error('El token ha expirado. Recarga la página.');
         const data = await response.json();
         if (!response.ok) throw data;
-        
+        return data;
+    })
+    .then(data => {
         Swal.close();
-        
         if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: data.message,
-                timer: 2000,
-                showConfirmButton: false
-            });
-            
+            Swal.fire({ icon: 'success', title: '¡Éxito!', text: data.message, timer: 2000, showConfirmButton: false });
             const container = document.getElementById('etiquetas-container');
             if (container) {
                 const row = container.querySelector('.row');
@@ -3590,23 +2877,17 @@ async function guardarEtiqueta() {
                     row.appendChild(col);
                 }
             }
-            
             if (modalEtiqueta) modalEtiqueta.hide();
-            
             document.getElementById('vNombre_eti_modal').value = '';
             document.getElementById('tDescripcion_eti_modal').value = '';
         } else {
-            let errorMessage = data.message || 'Error al crear la etiqueta';
-            if (data.errors) {
-                errorMessage = Object.values(data.errors).flat().join('<br>');
-            }
-            Swal.fire({ icon: 'error', title: 'Error', html: errorMessage });
+            Swal.fire({ icon: 'error', title: 'Error', html: data.message || 'Error al crear la etiqueta' });
         }
-    } catch (error) {
+    })
+    .catch(error => {
         Swal.close();
-        console.error('Error:', error);
         Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'Error de conexión' });
-    }
+    });
 }
 
 function guardarAtributo() {
@@ -3628,24 +2909,24 @@ function guardarAtributo() {
     
     const formData = new FormData();
     formData.append('vNombre', vNombre);
-    formData.append('vSlug', vSlug || '');
-    formData.append('tDescripcion', tDescripcion || '');
+    if (vSlug) formData.append('vSlug', vSlug);
+    if (tDescripcion) formData.append('tDescripcion', tDescripcion);
     
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const csrfToken = document.querySelector('#productoForm input[name="_token"]')?.value || document.querySelector('meta[name="csrf-token"]')?.content;
+    if (!csrfToken) {
+        Swal.close();
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo obtener el token de seguridad. Recarga la página.' });
+        return;
+    }
     formData.append('_token', csrfToken);
     
     fetch('{{ route("atributos.quick-create") }}', {
         method: 'POST',
-        headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-        },
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: formData
     })
     .then(async response => {
-        if (response.status === 419) {
-            throw new Error('El token de seguridad ha expirado. Por favor, recarga la página.');
-        }
+        if (response.status === 419) throw new Error('El token ha expirado. Recarga la página.');
         const data = await response.json();
         if (!response.ok) throw data;
         return data;
@@ -3662,7 +2943,6 @@ function guardarAtributo() {
     })
     .catch(error => {
         Swal.close();
-        console.error('Error:', error);
         Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'Error de conexión' });
     });
 }
@@ -3691,7 +2971,7 @@ function guardarImpuesto() {
     formData.append('dPorcentaje', dPorcentaje);
     formData.append('bActivo', bActivo);
     
-    const csrfToken = getCsrfToken();
+    const csrfToken = document.querySelector('#productoForm input[name="_token"]')?.value || document.querySelector('meta[name="csrf-token"]')?.content;
     if (!csrfToken) {
         Swal.close();
         Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo obtener el token de seguridad. Recarga la página.' });
@@ -3705,9 +2985,7 @@ function guardarImpuesto() {
         body: formData
     })
     .then(async response => {
-        if (response.status === 419) {
-            throw new Error('Token CSRF inválido. Recarga la página (F5) y vuelve a intentarlo.');
-        }
+        if (response.status === 419) throw new Error('El token ha expirado. Recarga la página.');
         const data = await response.json();
         if (!response.ok) throw data;
         return data;
@@ -3716,15 +2994,11 @@ function guardarImpuesto() {
         Swal.close();
         if (data.success) {
             Swal.fire({ icon: 'success', title: '¡Éxito!', text: data.message, timer: 2000, showConfirmButton: false });
-            
             const select = document.getElementById('id_impuesto');
             if (select) {
                 let existe = false;
                 for (let i = 0; i < select.options.length; i++) {
-                    if (select.options[i].value == data.impuesto.id_impuesto) {
-                        existe = true;
-                        break;
-                    }
+                    if (select.options[i].value == data.impuesto.id_impuesto) { existe = true; break; }
                 }
                 if (!existe) {
                     const option = document.createElement('option');
@@ -3737,25 +3011,17 @@ function guardarImpuesto() {
                 select.value = data.impuesto.id_impuesto;
                 if (typeof actualizarPrecioFinal === 'function') actualizarPrecioFinal();
             }
-            
             if (modalImpuesto) modalImpuesto.hide();
-            
-            // Limpiar campos
             document.getElementById('vNombre_impuesto_modal').value = '';
             document.getElementById('eTipo_impuesto_modal').value = 'IVA';
             document.getElementById('dPorcentaje_impuesto_modal').value = '';
             document.getElementById('bActivo_impuesto_modal').checked = true;
         } else {
-            let errorMessage = data.message || 'Error al crear el impuesto';
-            if (data.errors) {
-                errorMessage = Object.values(data.errors).flat().join('<br>');
-            }
-            Swal.fire({ icon: 'error', title: 'Error', html: errorMessage });
+            Swal.fire({ icon: 'error', title: 'Error', html: data.message || 'Error al crear el impuesto' });
         }
     })
     .catch(error => {
         Swal.close();
-        console.error('Error:', error);
         Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'Error de conexión' });
     });
 }
@@ -3765,49 +3031,159 @@ function guardarValorAtributo() {
     const vValor = document.getElementById('vValor_modal')?.value.trim();
     const vSlug = document.getElementById('vSlug_valor_modal')?.value.trim();
     const bActivo = document.getElementById('bActivo_valor_modal')?.checked ? 1 : 0;
-    if (!atributoId || !vValor) { Swal.fire({ icon: 'error', title: 'Error', text: 'El valor es obligatorio' }); return; }
-    Swal.fire({ title: 'Creando valor...', text: 'Por favor espera', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+    
+    if (!atributoId || !vValor) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'El valor es obligatorio' });
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Creando valor...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+    
+    const csrfToken = document.querySelector('#productoForm input[name="_token"]')?.value || document.querySelector('meta[name="csrf-token"]')?.content;
+    if (!csrfToken) {
+        Swal.close();
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo obtener el token de seguridad. Recarga la página.' });
+        return;
+    }
+    
     fetch(`/atributos/${atributoId}/valores-quick`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken,
+            'Accept': 'application/json'
+        },
         body: JSON.stringify({ vValor: vValor, vSlug: vSlug, bActivo: bActivo })
     })
-    .then(response => { if (!response.ok) return response.json().then(err => { throw err; }); return response.json(); })
+    .then(async response => {
+        if (response.status === 419) throw new Error('El token ha expirado. Recarga la página.');
+        const data = await response.json();
+        if (!response.ok) throw data;
+        return data;
+    })
     .then(data => {
         Swal.close();
         if (data.success) {
-            Swal.fire({ icon: 'success', title: '¡Éxito!', text: data.message || 'Valor creado exitosamente', timer: 2000, showConfirmButton: false });
+            Swal.fire({ icon: 'success', title: '¡Éxito!', text: data.message, timer: 2000, showConfirmButton: false });
             location.reload();
             if (valorModal) valorModal.hide();
         } else {
             Swal.fire({ icon: 'error', title: 'Error', text: data.message || 'Error al crear el valor' });
         }
     })
-    .catch(error => { Swal.close(); Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'Error en la solicitud' }); });
+    .catch(error => {
+        Swal.close();
+        Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'Error de conexión' });
+    });
 }
 
-function actualizarSelectsImpuestosVariaciones(impuesto) {
-    const selectsVariacion = document.querySelectorAll('select[id^="impuesto-"]');
-    if (selectsVariacion.length === 0) return;
-    const impuestoId = impuesto.id_impuesto, porcentaje = impuesto.dPorcentaje, tipo = impuesto.eTipo, texto = impuesto.vNombre + ' (' + tipo + ' - ' + parseFloat(porcentaje).toFixed(2) + '%)';
-    selectsVariacion.forEach(select => { let existe = false; for (let i = 0; i < select.options.length; i++) { if (select.options[i].value == impuestoId) { existe = true; break; } } if (!existe) { const option = document.createElement('option'); option.value = impuestoId; option.setAttribute('data-porcentaje', porcentaje); option.setAttribute('data-tipo', tipo); option.textContent = texto; select.appendChild(option); } });
-}
-
-function previewImagenCategoriaModal(input) {
-    const preview = document.getElementById('categoriaModalImagePreview');
-    const previewImg = document.getElementById('categoriaModalPreviewImg');
-    if (input.files && input.files.length > 0) {
-        const file = input.files[0];
-        if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) { Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'Solo se permiten imágenes JPG, JPEG, PNG o WebP' }); input.value = ''; return; }
-        if (file.size > 2 * 1024 * 1024) { Swal.fire({ icon: 'error', title: 'Archivo demasiado grande', text: 'La imagen no puede exceder los 2MB' }); input.value = ''; return; }
-        categoriaModalImagenFile = file;
-        const reader = new FileReader(); reader.onload = function(e) { if (previewImg) previewImg.src = e.target.result; if (preview) preview.style.display = 'block'; }; reader.readAsDataURL(file);
+// ============ ENVÍO DEL FORMULARIO ============
+document.getElementById('productoForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    if (!validarAtributosAntesDeEnviar()) return false;
+    if (!validarCamposUnicosAntesDeEnviar()) return false;
+    if (limiteExcedido) { Swal.fire({ icon: 'error', title: 'Límite excedido', text: 'El tamaño total de los archivos excede el límite de 50MB.' }); return false; }
+    
+    const form = this;
+    const formData = new FormData(form);
+    formData.append('_method', 'PUT');
+    formData.delete('imagenes[]');
+    formData.delete('imagen_principal');
+    formData.delete('gif_producto');
+    
+    if (imagenPrincipalFile) formData.append('imagen_principal', imagenPrincipalFile);
+    if (gifFile) formData.append('gif_producto', gifFile);
+    if (selectedImagesProducto && selectedImagesProducto.length > 0) {
+        selectedImagesProducto.forEach((image) => formData.append('imagenes[]', image.file));
     }
-}
+    if (document.getElementById('eliminar_imagen_principal_producto')?.value === '1') formData.append('eliminar_imagen_principal_producto', '1');
+    if (document.getElementById('eliminar_gif_producto')?.value === '1') formData.append('eliminar_gif_producto', '1');
+    const imagenesAEliminarInput = document.getElementById('imagenes_adicionales_a_eliminar');
+    if (imagenesAEliminarInput && imagenesAEliminarInput.value && imagenesAEliminarInput.value !== '[]') {
+        formData.append('imagenes_adicionales_a_eliminar', imagenesAEliminarInput.value);
+    }
+    
+    Object.keys(imagenesVariacion).forEach(valorKey => {
+        if (imagenesVariacion[valorKey]?.imagenes) {
+            imagenesVariacion[valorKey].imagenes.forEach((img, idx) => {
+                formData.append(`variaciones[${valorKey}][imagenes_adicionales][${idx}]`, img.file);
+            });
+        }
+        const imagenesAEliminarVarInput = document.getElementById(`imagenes_a_eliminar_${valorKey}`);
+        if (imagenesAEliminarVarInput && imagenesAEliminarVarInput.value && imagenesAEliminarVarInput.value !== '[]') {
+            formData.append(`variaciones[${valorKey}][imagenes_a_eliminar]`, imagenesAEliminarVarInput.value);
+        }
+        const eliminarPrincipalInput = document.getElementById(`eliminar_imagen_principal_${valorKey}`);
+        if (eliminarPrincipalInput && eliminarPrincipalInput.value === '1') {
+            formData.append(`variaciones[${valorKey}][eliminar_imagen_principal]`, '1');
+        }
+        const eliminarGifInput = document.getElementById(`eliminar_gif_${valorKey}`);
+        if (eliminarGifInput && eliminarGifInput.value === '1') {
+            formData.append(`variaciones[${valorKey}][eliminar_gif]`, '1');
+        }
+        const imgPrincipalInput = document.getElementById(`img_principal_${valorKey}`);
+        if (imgPrincipalInput?.files?.[0]) {
+            formData.append(`variaciones[${valorKey}][imagen_principal]`, imgPrincipalInput.files[0]);
+        }
+        const gifInput = document.getElementById(`gif_${valorKey}`);
+        if (gifInput?.files?.[0]) {
+            formData.append(`variaciones[${valorKey}][gif]`, gifInput.files[0]);
+        }
+    });
+    
+    Swal.fire({
+        title: 'Actualizando producto...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(async response => {
+        if (response.redirected) {
+            window.location.href = response.url;
+            return;
+        }
+        if (!response.ok) throw new Error(`Error ${response.status}`);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) return response.json();
+        const text = await response.text();
+        if (text.includes('redirect') || text.includes('productos')) {
+            window.location.href = '{{ route("productos.index") }}';
+            return;
+        }
+        return { success: true };
+    })
+    .then(data => {
+        Swal.close();
+        if (data?.redirect) window.location.href = data.redirect;
+        else if (data?.success === false) {
+            Swal.fire({ icon: 'error', title: 'Error', text: data.message || 'Error al actualizar el producto' });
+        } else {
+            window.location.href = '{{ route("productos.index") }}';
+        }
+    })
+    .catch(error => {
+        Swal.close();
+        console.error('Error:', error);
+        Swal.fire({ icon: 'error', title: 'Error', text: 'Hubo un problema al actualizar el producto. Por favor intenta de nuevo.' });
+    });
+});
 
-function cancelarImagenCategoriaModal() { document.getElementById('categoriaModalImagePreview').style.display = 'none'; document.getElementById('vImagen_categoria_modal').value = ''; categoriaModalImagenFile = null; }
-
-// ============ EVENTOS DE ATRIBUTOS ============
+// Inicializar modales y eventos
 document.addEventListener('DOMContentLoaded', function() {
     try {
         modalCategoria = new bootstrap.Modal(document.getElementById('modalCategoria'));
@@ -3817,17 +3193,38 @@ document.addEventListener('DOMContentLoaded', function() {
         modalImpuesto = new bootstrap.Modal(document.getElementById('modalImpuesto'));
         valorModal = new bootstrap.Modal(document.getElementById('crearValorModal'));
     } catch(e) { console.error('Error al inicializar modales:', e); }
-    document.getElementById('dPrecio_venta')?.addEventListener('input', actualizarPrecioFinal);
-    document.getElementById('bTiene_descuento')?.addEventListener('change', function() { toggleDescuentoFields(); actualizarPrecioFinal(); });
-    document.getElementById('dPrecio_descuento')?.addEventListener('input', actualizarPrecioFinal);
-    document.getElementById('dFecha_inicio_descuento')?.addEventListener('change', function() { validarFechasDescuento(); actualizarPrecioFinal(); });
-    document.getElementById('dFecha_fin_descuento')?.addEventListener('change', function() { validarFechasDescuento(); actualizarPrecioFinal(); });
-    document.getElementById('id_impuesto')?.addEventListener('change', actualizarPrecioFinal);
+    
+    const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
+    const fechaFinInput = document.getElementById('dFecha_fin_descuento');
+    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
+    const tieneDescuentoCheckbox = document.getElementById('bTiene_descuento');
+    const precioVentaInput = document.getElementById('dPrecio_venta');
+    const impuestoSelect = document.getElementById('id_impuesto');
+    
+    if (precioVentaInput) { precioVentaInput.addEventListener('input', actualizarPrecioFinal); precioVentaInput.addEventListener('change', actualizarPrecioFinal); }
+    if (tieneDescuentoCheckbox) tieneDescuentoCheckbox.addEventListener('change', function() { toggleDescuentoFields(); actualizarPrecioFinal(); });
+    if (precioDescuentoInput) { precioDescuentoInput.addEventListener('input', function() { validarPrecioDescuentoProducto(); actualizarPrecioFinal(); }); precioDescuentoInput.addEventListener('change', function() { validarPrecioDescuentoProducto(); actualizarPrecioFinal(); }); }
+    if (fechaInicioInput) { fechaInicioInput.addEventListener('change', function() { validarFechasDescuento(); actualizarPrecioFinal(); }); fechaInicioInput.addEventListener('blur', actualizarPrecioFinal); }
+    if (fechaFinInput) { fechaFinInput.addEventListener('change', function() { validarFechasDescuento(); actualizarPrecioFinal(); }); fechaFinInput.addEventListener('blur', actualizarPrecioFinal); }
+    if (impuestoSelect) impuestoSelect.addEventListener('change', actualizarPrecioFinal);
+    
     document.addEventListener('change', function(e) {
-        if (e.target.id && e.target.id.startsWith('fecha-inicio-')) { const valorKey = e.target.id.replace('fecha-inicio-', ''); validarFechasDescuentoVariacion(e.target.id, `fecha-fin-${valorKey}`, valorKey); actualizarPrecioFinalVariacion(valorKey); }
-        if (e.target.id && e.target.id.startsWith('fecha-fin-')) { const valorKey = e.target.id.replace('fecha-fin-', ''); validarFechasDescuentoVariacion(`fecha-inicio-${valorKey}`, e.target.id, valorKey); actualizarPrecioFinalVariacion(valorKey); }
-        if (e.target.id && e.target.id.startsWith('descuento-')) { const valorKey = e.target.id.replace('descuento-', ''); toggleDescuentoVariacion(e.target, valorKey); }
+        if (e.target.id && e.target.id.startsWith('fecha-inicio-')) {
+            const valorKey = e.target.id.replace('fecha-inicio-', '');
+            validarFechasDescuentoVariacion(e.target.id, `fecha-fin-${valorKey}`, valorKey);
+            actualizarPrecioFinalVariacion(valorKey);
+        }
+        if (e.target.id && e.target.id.startsWith('fecha-fin-')) {
+            const valorKey = e.target.id.replace('fecha-fin-', '');
+            validarFechasDescuentoVariacion(`fecha-inicio-${valorKey}`, e.target.id, valorKey);
+            actualizarPrecioFinalVariacion(valorKey);
+        }
+        if (e.target.id && e.target.id.startsWith('descuento-')) {
+            const valorKey = e.target.id.replace('descuento-', '');
+            toggleDescuentoVariacion(e.target, valorKey);
+        }
     });
+    
     actualizarResumenAtributos();
     actualizarPestanasValores();
     setTimeout(actualizarPrecioFinal, 100);
@@ -3885,129 +3282,6 @@ document.addEventListener('DOMContentLoaded', function() {
             actualizarPestanasValores();
             actualizarResumenAtributos();
         });
-    });
-});
-
-// ============ ENVÍO DEL FORMULARIO COMPLETO ============
-document.getElementById('productoForm').addEventListener('submit', function(event) {
-    event.preventDefault();
-    
-    if (!validarAtributosAntesDeEnviar()) return false;
-    if (!validarCamposUnicosAntesDeEnviar()) return false;
-    if (limiteExcedido) { 
-        Swal.fire({ icon: 'error', title: 'Límite excedido', text: 'El tamaño total de los archivos excede el límite de 50MB.' }); 
-        return false; 
-    }
-    
-    const form = this;
-    const formData = new FormData(form);
-    formData.append('_method', 'PUT');
-    
-    formData.delete('imagenes[]');
-    formData.delete('imagen_principal');
-    formData.delete('gif_producto');
-    
-    if (imagenPrincipalFile) formData.append('imagen_principal', imagenPrincipalFile);
-    if (gifFile) formData.append('gif_producto', gifFile);
-    if (selectedImagesProducto && selectedImagesProducto.length > 0) {
-        selectedImagesProducto.forEach((image) => formData.append('imagenes[]', image.file));
-    }
-    
-    if (document.getElementById('eliminar_imagen_principal_producto')?.value === '1') {
-        formData.append('eliminar_imagen_principal_producto', '1');
-    }
-    if (document.getElementById('eliminar_gif_producto')?.value === '1') {
-        formData.append('eliminar_gif_producto', '1');
-    }
-    const imagenesAEliminarInput = document.getElementById('imagenes_adicionales_a_eliminar');
-    if (imagenesAEliminarInput && imagenesAEliminarInput.value && imagenesAEliminarInput.value !== '[]') {
-        formData.append('imagenes_adicionales_a_eliminar', imagenesAEliminarInput.value);
-    }
-    
-    Object.keys(imagenesVariacion).forEach(valorKey => {
-        const regex = new RegExp(`variaciones\\[${valorKey}\\]\\[imagenes_adicionales\\]\\[\\d+\\]`);
-        const keysToDelete = [];
-        for (let key of formData.keys()) {
-            if (regex.test(key)) keysToDelete.push(key);
-        }
-        keysToDelete.forEach(key => formData.delete(key));
-        
-        if (imagenesVariacion[valorKey]?.imagenes) {
-            imagenesVariacion[valorKey].imagenes.forEach((img, idx) => {
-                formData.append(`variaciones[${valorKey}][imagenes_adicionales][${idx}]`, img.file);
-            });
-        }
-        
-        const imagenesAEliminarVarInput = document.getElementById(`imagenes_a_eliminar_${valorKey}`);
-        if (imagenesAEliminarVarInput && imagenesAEliminarVarInput.value && imagenesAEliminarVarInput.value !== '[]') {
-            formData.append(`variaciones[${valorKey}][imagenes_a_eliminar]`, imagenesAEliminarVarInput.value);
-        }
-        
-        const eliminarPrincipalInput = document.getElementById(`eliminar_imagen_principal_${valorKey}`);
-        if (eliminarPrincipalInput && eliminarPrincipalInput.value === '1') {
-            formData.append(`variaciones[${valorKey}][eliminar_imagen_principal]`, '1');
-        }
-        
-        const eliminarGifInput = document.getElementById(`eliminar_gif_${valorKey}`);
-        if (eliminarGifInput && eliminarGifInput.value === '1') {
-            formData.append(`variaciones[${valorKey}][eliminar_gif]`, '1');
-        }
-        
-        const imgPrincipalInput = document.getElementById(`img_principal_${valorKey}`);
-        if (imgPrincipalInput?.files?.[0]) {
-            formData.append(`variaciones[${valorKey}][imagen_principal]`, imgPrincipalInput.files[0]);
-        }
-        
-        const gifInput = document.getElementById(`gif_${valorKey}`);
-        if (gifInput?.files?.[0]) {
-            formData.append(`variaciones[${valorKey}][gif]`, gifInput.files[0]);
-        }
-    });
-    
-    Swal.fire({
-        title: 'Actualizando producto...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
-    
-    fetch(form.action, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(async response => {
-        if (response.redirected) {
-            window.location.href = response.url;
-            return;
-        }
-        if (!response.ok) throw new Error(`Error ${response.status}`);
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) return response.json();
-        const text = await response.text();
-        if (text.includes('redirect') || text.includes('productos')) {
-            window.location.href = '{{ route("productos.index") }}';
-            return;
-        }
-        return { success: true };
-    })
-    .then(data => {
-        Swal.close();
-        if (data?.redirect) window.location.href = data.redirect;
-        else if (data?.success === false) {
-            Swal.fire({ icon: 'error', title: 'Error', text: data.message || 'Error al actualizar el producto' });
-        } else {
-            window.location.href = '{{ route("productos.index") }}';
-        }
-    })
-    .catch(error => {
-        Swal.close();
-        console.error('Error:', error);
-        Swal.fire({ icon: 'error', title: 'Error', text: 'Hubo un problema al actualizar el producto. Por favor intenta de nuevo.' });
     });
 });
 

@@ -232,7 +232,6 @@ class VariacionController extends Controller
             'bActivo' => 'nullable|boolean',
             'id_impuesto' => 'nullable|exists:tbl_impuestos,id_impuesto',
             
-            // CAMPOS DE IMÁGENES MÚLTIPLES
             'imagen_principal' => 'nullable|image|max:5120|mimes:jpeg,jpg,png',
             'gif' => 'nullable|mimes:gif|max:10240',
             'imagenes_adicionales' => 'nullable|array|max:7',
@@ -242,7 +241,6 @@ class VariacionController extends Controller
             'atributos.*' => 'required|exists:tbl_atributo_valores,id_atributo_valor',
         ]);
 
-        // Validación condicional para precio de descuento
         $validator->sometimes('dPrecio_descuento', 'required|lt:dPrecio', function ($input) {
             return $input->bTiene_descuento == 1;
         });
@@ -257,7 +255,6 @@ class VariacionController extends Controller
         try {
             DB::beginTransaction();
 
-            // Determinar clase de envío
             $claseEnvio = $request->vClase_envio;
             if (empty($claseEnvio) && $productoPadre->vClase_envio) {
                 $claseEnvio = $productoPadre->vClase_envio;
@@ -265,16 +262,69 @@ class VariacionController extends Controller
                 $claseEnvio = 'estandar';
             }
 
-            // Crear la variación
+            // ========== CÁLCULO DEL PRECIO FINAL EN TIEMPO REAL ==========
+            $precioBase = floatval($request->dPrecio);
+            $tieneDescuento = $request->has('bTiene_descuento') && $request->bTiene_descuento == '1';
+            $precioDescuento = $tieneDescuento ? floatval($request->dPrecio_descuento) : null;
+
+            $aplicaDescuento = false;
+            if ($tieneDescuento && $precioDescuento !== null && $precioDescuento > 0 && $precioDescuento < $precioBase) {
+                $fechaActual = new \DateTime();
+                $fechaActual->setTime(0, 0, 0);
+                
+                $fechaInicio = null;
+                $fechaFin = null;
+                
+                if (!empty($request->dFecha_inicio_descuento)) {
+                    $fechaInicio = new \DateTime($request->dFecha_inicio_descuento);
+                    $fechaInicio->setTime(0, 0, 0);
+                }
+                
+                if (!empty($request->dFecha_fin_descuento)) {
+                    $fechaFin = new \DateTime($request->dFecha_fin_descuento);
+                    $fechaFin->setTime(23, 59, 59);
+                }
+                
+                if ($fechaInicio && $fechaFin) {
+                    $aplicaDescuento = $fechaActual >= $fechaInicio && $fechaActual <= $fechaFin;
+                } else if ($fechaInicio && !$fechaFin) {
+                    $aplicaDescuento = $fechaActual >= $fechaInicio;
+                } else if (!$fechaInicio && $fechaFin) {
+                    $aplicaDescuento = $fechaActual <= $fechaFin;
+                } else {
+                    $aplicaDescuento = true;
+                }
+            }
+
+            $precioBaseParaImpuestos = $aplicaDescuento ? $precioDescuento : $precioBase;
+
+            $totalImpuestos = 0;
+            $idImpuesto = $request->id_impuesto ?? null;
+
+            if ($idImpuesto) {
+                $impuesto = Impuesto::find($idImpuesto);
+                if ($impuesto && $impuesto->bActivo) {
+                    $totalImpuestos = $precioBaseParaImpuestos * ($impuesto->dPorcentaje / 100);
+                }
+            } elseif ($productoPadre->impuestos->count() > 0) {
+                $impuestoPrincipal = $productoPadre->impuestos->first();
+                if ($impuestoPrincipal && $impuestoPrincipal->bActivo) {
+                    $totalImpuestos = $precioBaseParaImpuestos * ($impuestoPrincipal->dPorcentaje / 100);
+                }
+            }
+
+            $precioFinal = $precioBaseParaImpuestos + $totalImpuestos;
+
             $variacionData = [
                 'id_producto' => $producto_id,
                 'vSKU' => strtoupper($request->vSKU),
                 'dPrecio' => $request->dPrecio,
                 'dPrecio_descuento' => $request->dPrecio_descuento ?? null,
+                'dPrecio_final' => $precioFinal,
                 'dFecha_inicio_descuento' => $request->dFecha_inicio_descuento ?? null,
                 'dFecha_fin_descuento' => $request->dFecha_fin_descuento ?? null,
                 'vMotivo_descuento' => $request->vMotivo_descuento ?? null,
-                'bTiene_descuento' => $request->has('bTiene_descuento') && $request->bTiene_descuento == '1' ? 1 : 0,
+                'bTiene_descuento' => $tieneDescuento ? 1 : 0,
                 'iStock' => $request->iStock,
                 'dPeso' => $request->dPeso ?: null,
                 'dLargo_cm' => $request->dLargo_cm ?: null,
@@ -283,48 +333,37 @@ class VariacionController extends Controller
                 'vClase_envio' => $claseEnvio,
                 'tDescripcion' => $request->tDescripcion,
                 'bActivo' => $request->has('bActivo') ? 1 : 0,
-                'id_impuesto' => $request->id_impuesto ?: null,
+                'id_impuesto' => $idImpuesto,
             ];
 
             $variacion = ProductoVariacion::create($variacionData);
-            Log::info('Variación creada con ID: ' . $variacion->id_variacion);
+            Log::info('Variación creada con ID: ' . $variacion->id_variacion . ', precio_final: ' . $precioFinal);
 
-            // ============ GUARDAR IMÁGENES ============
-
-            // 1. Guardar imagen principal si existe
+            // Guardar imágenes (código existente...)
             if ($request->hasFile('imagen_principal')) {
                 $variacion->guardarImagenPrincipal($request->file('imagen_principal'));
-                Log::info('Imagen principal guardada para variación ID: ' . $variacion->id_variacion);
             }
 
-            // 2. Guardar GIF si existe
             if ($request->hasFile('gif')) {
                 $variacion->guardarGif($request->file('gif'));
-                Log::info('GIF guardado para variación ID: ' . $variacion->id_variacion);
             }
 
-            // 3. Guardar imágenes adicionales si existen
             if ($request->hasFile('imagenes_adicionales')) {
                 $archivos = $request->file('imagenes_adicionales');
-                
                 if (is_array($archivos)) {
                     $archivosValidos = array_filter($archivos, function($file) {
                         return $file && $file->isValid();
                     });
-                    
                     if (!empty($archivosValidos)) {
-                        $resultado = $variacion->guardarImagenesAdicionales($archivosValidos);
-                        Log::info('Imágenes adicionales guardadas para variación ID: ' . $variacion->id_variacion . '. Cantidad: ' . count($resultado));
+                        $variacion->guardarImagenesAdicionales($archivosValidos);
                     }
                 } else {
                     if ($archivos && $archivos->isValid()) {
-                        $resultado = $variacion->guardarImagenesAdicionales([$archivos]);
-                        Log::info('Imagen adicional guardada para variación ID: ' . $variacion->id_variacion);
+                        $variacion->guardarImagenesAdicionales([$archivos]);
                     }
                 }
             }
 
-            // Guardar relaciones con atributos
             foreach ($request->atributos as $atributo_id => $valor_id) {
                 $atributoValor = AtributoValor::where('id_atributo_valor', $valor_id)
                     ->where('id_atributo', $atributo_id)
@@ -431,7 +470,7 @@ class VariacionController extends Controller
     }
 
     /**
-     * Actualizar variación existente - SOLO CORREGIDO PARA ELIMINACIÓN DE IMÁGENES
+     * Actualizar variación existente
      */
     public function update(Request $request, $producto_id, $variacion_id)
     {
@@ -526,7 +565,6 @@ class VariacionController extends Controller
             'bActivo' => 'nullable|boolean',
             'id_impuesto' => 'nullable|exists:tbl_impuestos,id_impuesto',
             
-            // CAMPOS DE IMÁGENES MÚLTIPLES
             'imagen_principal' => 'nullable|image|max:5120|mimes:jpeg,jpg,png',
             'gif' => 'nullable|mimes:gif|max:10240',
             'imagenes_adicionales' => 'nullable|array|max:7',
@@ -537,56 +575,8 @@ class VariacionController extends Controller
             
             'atributos' => 'required|array',
             'atributos.*' => 'required|exists:tbl_atributo_valores,id_atributo_valor',
-        ], [
-            'vSKU.required' => 'El SKU es obligatorio',
-            'vSKU.unique' => 'Este SKU ya está registrado',
-            'vSKU.max' => 'El SKU no puede exceder los 25 caracteres',
-            'dPrecio.required' => 'El precio es obligatorio',
-            'dPrecio.numeric' => 'El precio debe ser un número válido',
-            'dPrecio.min' => 'El precio no puede ser negativo',
-            'dPrecio.max' => 'El precio no puede exceder $9,999,999.99',
-            'dPrecio_descuento.numeric' => 'El precio de descuento debe ser un número válido',
-            'dPrecio_descuento.min' => 'El precio de descuento no puede ser negativo',
-            'dPrecio_descuento.max' => 'El precio de descuento no puede exceder $9,999,999.99',
-            'iStock.required' => 'El stock es obligatorio',
-            'iStock.integer' => 'El stock debe ser un número entero',
-            'iStock.min' => 'El stock no puede ser negativo',
-            'iStock.max' => 'El stock no puede exceder 999,999 unidades',
-            'dFecha_inicio_descuento.required_if' => 'La fecha de inicio es obligatoria cuando el descuento está activo',
-            'dFecha_fin_descuento.required_if' => 'La fecha de fin es obligatoria cuando el descuento está activo',
-            'dFecha_fin_descuento.after_or_equal' => 'La fecha de fin debe ser igual o posterior a la fecha de inicio',
-            'dPeso.numeric' => 'El peso debe ser un número válido',
-            'dPeso.min' => 'El peso no puede ser negativo',
-            'dPeso.max' => 'El peso no puede exceder 999.999 kg',
-            'dLargo_cm.numeric' => 'El largo debe ser un número válido',
-            'dLargo_cm.min' => 'El largo no puede ser negativo',
-            'dLargo_cm.max' => 'El largo no puede exceder 999.99 cm',
-            'dAncho_cm.numeric' => 'El ancho debe ser un número válido',
-            'dAncho_cm.min' => 'El ancho no puede ser negativo',
-            'dAncho_cm.max' => 'El ancho no puede exceder 999.99 cm',
-            'dAlto_cm.numeric' => 'El alto debe ser un número válido',
-            'dAlto_cm.min' => 'El alto no puede ser negativo',
-            'dAlto_cm.max' => 'El alto no puede exceder 999.99 cm',
-            'vClase_envio.in' => 'La clase de envío seleccionada no es válida',
-            'vClase_envio.max' => 'La clase de envío no puede exceder los 50 caracteres',
-            'id_impuesto.exists' => 'El impuesto seleccionado no existe',
-            
-            'imagen_principal.image' => 'El archivo debe ser una imagen válida',
-            'imagen_principal.max' => 'La imagen principal no debe pesar más de 5MB',
-            'imagen_principal.mimes' => 'La imagen principal debe ser JPG, JPEG o PNG',
-            'gif.mimes' => 'El archivo debe ser un GIF',
-            'gif.max' => 'El GIF no debe pesar más de 10MB',
-            'imagenes_adicionales.max' => 'No puedes subir más de 7 imágenes adicionales',
-            'imagenes_adicionales.*.image' => 'Solo se permiten archivos de imagen',
-            'imagenes_adicionales.*.mimes' => 'Formatos permitidos: JPG, JPEG, PNG, WEBP',
-            'imagenes_adicionales.*.max' => 'Cada imagen no debe superar los 5MB',
-            
-            'atributos.required' => 'Debes seleccionar valores para todos los atributos',
-            'atributos.*.required' => 'Debes seleccionar un valor para cada atributo',
-            'atributos.*.exists' => 'El valor seleccionado no es válido',
         ]);
 
-        // Validación condicional para precio de descuento
         $validator->sometimes('dPrecio_descuento', 'required|lt:dPrecio', function ($input) {
             return $input->bTiene_descuento == 1;
         });
@@ -601,7 +591,7 @@ class VariacionController extends Controller
         try {
             DB::beginTransaction();
 
-            // Validar límite de imágenes
+            // Validar límite de imágenes (código existente...)
             $imagenesActuales = $variacion->numero_imagenes;
             $nuevasImagenes = 0;
             
@@ -635,13 +625,10 @@ class VariacionController extends Controller
                     ->with('swal_error', true);
             }
 
-            // ELIMINAR IMÁGENES ADICIONALES SELECCIONADAS
             if (!empty($imagenesAEliminar)) {
                 $variacion->eliminarImagenesAdicionalesEspecificas($imagenesAEliminar);
-                Log::info('Imágenes adicionales eliminadas de variación ID: ' . $variacion->id_variacion);
             }
 
-            // DETERMINAR CLASE DE ENVÍO
             $claseEnvio = $request->vClase_envio;
             if (empty($claseEnvio) && $productoPadre->vClase_envio) {
                 $claseEnvio = $productoPadre->vClase_envio;
@@ -649,30 +636,59 @@ class VariacionController extends Controller
                 $claseEnvio = $variacion->vClase_envio ?: 'estandar';
             }
 
-            // CALCULAR PRECIO FINAL
-            $precioBase = $request->dPrecio;
+            // ========== CÁLCULO DEL PRECIO FINAL EN TIEMPO REAL ==========
+            $precioBase = floatval($request->dPrecio);
             $tieneDescuento = $request->has('bTiene_descuento') && $request->bTiene_descuento == '1';
-            
-            if ($tieneDescuento && isset($request->dPrecio_descuento) && $request->dPrecio_descuento > 0) {
-                $precioBase = $request->dPrecio_descuento;
+            $precioDescuento = $tieneDescuento ? floatval($request->dPrecio_descuento) : null;
+
+            $aplicaDescuento = false;
+            if ($tieneDescuento && $precioDescuento !== null && $precioDescuento > 0 && $precioDescuento < $precioBase) {
+                $fechaActual = new \DateTime();
+                $fechaActual->setTime(0, 0, 0);
+                
+                $fechaInicio = null;
+                $fechaFin = null;
+                
+                if (!empty($request->dFecha_inicio_descuento)) {
+                    $fechaInicio = new \DateTime($request->dFecha_inicio_descuento);
+                    $fechaInicio->setTime(0, 0, 0);
+                }
+                
+                if (!empty($request->dFecha_fin_descuento)) {
+                    $fechaFin = new \DateTime($request->dFecha_fin_descuento);
+                    $fechaFin->setTime(23, 59, 59);
+                }
+                
+                if ($fechaInicio && $fechaFin) {
+                    $aplicaDescuento = $fechaActual >= $fechaInicio && $fechaActual <= $fechaFin;
+                } else if ($fechaInicio && !$fechaFin) {
+                    $aplicaDescuento = $fechaActual >= $fechaInicio;
+                } else if (!$fechaInicio && $fechaFin) {
+                    $aplicaDescuento = $fechaActual <= $fechaFin;
+                } else {
+                    $aplicaDescuento = true;
+                }
             }
-            
+
+            $precioBaseParaImpuestos = $aplicaDescuento ? $precioDescuento : $precioBase;
+
             $totalImpuestos = 0;
             $idImpuesto = $request->id_impuesto ?? null;
-            
+
             if ($idImpuesto) {
                 $impuesto = Impuesto::find($idImpuesto);
-                if ($impuesto) {
-                    $totalImpuestos = $precioBase * ($impuesto->dPorcentaje / 100);
+                if ($impuesto && $impuesto->bActivo) {
+                    $totalImpuestos = $precioBaseParaImpuestos * ($impuesto->dPorcentaje / 100);
                 }
             } elseif ($productoPadre->impuestos->count() > 0) {
                 $impuestoPrincipal = $productoPadre->impuestos->first();
-                $totalImpuestos = $precioBase * ($impuestoPrincipal->dPorcentaje / 100);
+                if ($impuestoPrincipal && $impuestoPrincipal->bActivo) {
+                    $totalImpuestos = $precioBaseParaImpuestos * ($impuestoPrincipal->dPorcentaje / 100);
+                }
             }
-            
-            $precioFinal = $precioBase + $totalImpuestos;
 
-            // ACTUALIZAR DATOS BÁSICOS
+            $precioFinal = $precioBaseParaImpuestos + $totalImpuestos;
+
             $updateData = [
                 'vSKU' => strtoupper($request->vSKU),
                 'dPrecio' => $request->dPrecio,
@@ -694,34 +710,25 @@ class VariacionController extends Controller
             ];
 
             $variacion->update($updateData);
+            Log::info('Variación actualizada ID: ' . $variacion->id_variacion . ', precio_final: ' . $precioFinal);
 
-            // ============ GESTIONAR IMAGEN PRINCIPAL ============
-            // 1. Eliminar imagen principal si está marcada
+            // Gestión de imágenes (código existente...)
             if ($request->has('eliminar_imagen_principal') && $request->eliminar_imagen_principal == '1') {
                 $variacion->eliminarImagenPrincipal();
-                Log::info('Imagen principal eliminada de variación ID: ' . $variacion->id_variacion);
             }
             
-            // 2. Agregar nueva imagen principal
             if ($request->hasFile('imagen_principal')) {
                 $variacion->guardarImagenPrincipal($request->file('imagen_principal'));
-                Log::info('Nueva imagen principal guardada para variación ID: ' . $variacion->id_variacion);
             }
 
-            // ============ GESTIONAR GIF ============
-            // 1. Eliminar GIF si está marcado
             if ($request->has('eliminar_gif') && $request->eliminar_gif == '1') {
                 $variacion->eliminarGif();
-                Log::info('GIF eliminado de variación ID: ' . $variacion->id_variacion);
             }
             
-            // 2. Agregar nuevo GIF
             if ($request->hasFile('gif')) {
                 $variacion->guardarGif($request->file('gif'));
-                Log::info('Nuevo GIF guardado para variación ID: ' . $variacion->id_variacion);
             }
 
-            // GUARDAR NUEVAS IMÁGENES ADICIONALES
             if ($request->hasFile('imagenes_adicionales')) {
                 $archivos = $request->file('imagenes_adicionales');
                 if (!is_array($archivos)) {
@@ -734,11 +741,9 @@ class VariacionController extends Controller
                 
                 if (!empty($archivosValidos)) {
                     $variacion->guardarImagenesAdicionales($archivosValidos);
-                    Log::info('Nuevas imágenes adicionales guardadas para variación ID: ' . $variacion->id_variacion);
                 }
             }
 
-            // ACTUALIZAR RELACIONES CON ATRIBUTOS
             $variacion->atributos()->delete();
             
             foreach ($request->atributos as $atributo_id => $valor_id) {

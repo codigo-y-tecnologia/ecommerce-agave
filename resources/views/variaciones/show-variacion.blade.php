@@ -4,12 +4,11 @@
 
 @section('content')
 <div class="container-fluid px-4 py-4">
-    <!-- Header con breadcrumbs y acciones -->
+    <!-- Header con breadcrumbs y acciones (sin cambios) -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card border-0 bg-transparent">
                 <div class="card-body p-0">
-                    <!-- Breadcrumb -->
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb mb-2">
                             <li class="breadcrumb-item">
@@ -27,7 +26,6 @@
                     </nav>
 
                     @php
-                        // Obtener el nombre de la variación basado en el primer atributo
                         $nombreVariacion = '';
                         foreach($variacion->atributos as $atributoRel) {
                             if($atributoRel->valor) {
@@ -63,15 +61,12 @@
     </div>
 
     @php
-        // --- DATOS DE LA VARIACIÓN ---
         $imagenesVariacion = $variacion->imagenes ?? [];
         
-        // Calcular si la variación tiene descuento activo
         $variacionTieneDescuento = $variacion->tieneDescuentoActivo();
         $precioBaseVariacion = $variacionTieneDescuento ? $variacion->dPrecio_descuento : $variacion->dPrecio;
         $porcentajeDescuento = $variacion->porcentaje_descuento;
         
-        // Calcular impuestos de la variación
         $impuestoVariacion = $variacion->impuesto ?? $producto->impuestos->first();
         $totalImpuestosVariacion = 0;
         $detalleImpuestosVariacion = [];
@@ -83,15 +78,13 @@
             $detalleImpuestosVariacion[] = $impuestoVariacion->vNombre . ': $' . number_format($montoImpuesto, 2);
         }
 
-        // Calcular ahorro total si hay descuento
         $ahorroTotal = 0;
         if ($variacionTieneDescuento && $variacion->dPrecio_descuento < $variacion->dPrecio) {
             $precioOriginalConImpuestos = $variacion->dPrecio + ($impuestoVariacion ? $variacion->dPrecio * ($impuestoVariacion->dPorcentaje / 100) : 0);
-            $precioActualConImpuestos = $precioBaseVariacion + $totalImpuestosVariacion;
+            $precioActualConImpuestos = $variacion->precio_final;
             $ahorroTotal = $precioOriginalConImpuestos - $precioActualConImpuestos;
         }
 
-        // Atributos de la variación
         $atributosTexto = [];
         foreach($variacion->atributos as $atributoRel) {
             if($atributoRel->atributo && $atributoRel->valor) {
@@ -99,7 +92,6 @@
             }
         }
 
-        // Clase de envío
         $claseEnvio = $variacion->vClase_envio ?: $producto->vClase_envio;
         $claseEnvioText = '';
         $claseEnvioClass = '';
@@ -128,15 +120,11 @@
 
     <!-- PRIMERA FILA: Imagen principal con ZOOM + Información básica + Atributos -->
     <div class="row g-4 mb-4">
-        <!-- Columna de imagen y galería con ZOOM -->
         <div class="col-lg-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body p-3">
-                    <!-- Contenedor de imagen principal con ZOOM -->
                     <div class="position-relative mb-3" style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e0e0e0; overflow: hidden;">
-                        <!-- Contenedor del zoom -->
                         <div id="zoom-container" class="zoom-container" style="position: relative; width: 100%; height: 400px; overflow: hidden; cursor: crosshair;">
-                            <!-- Imagen principal -->
                             <img id="mainImage" 
                                  src="{{ !empty($imagenesVariacion) ? $imagenesVariacion[0] : 'https://via.placeholder.com/400x400?text=Sin+Imagen' }}" 
                                  class="img-fluid zoom-image" 
@@ -145,7 +133,6 @@
                                  onclick="abrirModalImagen()"
                                  onerror="this.onerror=null; this.src='https://via.placeholder.com/400x400?text=Error';">
                             
-                            <!-- Lupa (el área que sigue al mouse) -->
                             <div id="zoom-lens" class="zoom-lens" style="display: none; position: absolute; width: 150px; height: 150px; border: 2px solid #007bff; background-color: rgba(255,255,255,0.3); pointer-events: none; z-index: 10; border-radius: 4px;"></div>
                             
                             @if($variacion->bActivo)
@@ -154,14 +141,12 @@
                                 </span>
                             @endif
 
-                            <!-- Badge de descuento en la imagen -->
                             @if($variacionTieneDescuento && $variacion->dPrecio_descuento < $variacion->dPrecio)
                                 <span class="position-absolute top-0 end-0 badge bg-danger mt-2 me-2 px-3 py-2" style="z-index: 15; font-size: 14px;">
                                     <i class="fas fa-tag me-1"></i>-{{ $porcentajeDescuento }}%
                                 </span>
                             @endif
 
-                            <!-- Controles de navegación -->
                             <div id="imageControls" class="position-absolute w-100 d-flex justify-content-between px-2" style="top: 50%; transform: translateY(-50%); z-index: 15;">
                                 <button type="button" class="btn btn-sm btn-light rounded-circle shadow-sm" onclick="event.stopPropagation(); cambiarImagen(-1)" style="width: 36px; height: 36px; opacity: 0.8; background-color: rgba(255,255,255,0.9);" {{ count($imagenesVariacion) <= 1 ? 'disabled' : '' }}>
                                     <i class="fas fa-chevron-left"></i>
@@ -173,10 +158,8 @@
                         </div>
                     </div>
 
-                    <!-- Miniaturas horizontales con flex-wrap -->
                     <div id="miniaturas-container" class="d-flex flex-wrap justify-content-center gap-2 mt-2" style="padding-bottom: 5px; max-height: 170px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 10px;"></div>
 
-                    <!-- Contador de imágenes -->
                     <div id="imageCounter" class="text-center mt-2" {{ count($imagenesVariacion) <= 0 ? 'style=display:none;' : '' }}>
                         <span class="badge bg-light text-dark" id="contador-imagenes">
                             <span id="imagen-actual">1</span> / <span id="total-imagenes">{{ count($imagenesVariacion) }}</span>
@@ -186,7 +169,6 @@
             </div>
         </div>
 
-        <!-- Columna de información básica y atributos -->
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white border-0 pt-4 px-4">
@@ -235,7 +217,6 @@
                         </div>
                     </div>
 
-                    <!-- Atributos de la variación -->
                     @if(!empty($atributosTexto))
                         <div class="mt-3 pt-3 border-top">
                             <small class="text-muted text-uppercase">Atributos de esta variación</small>
@@ -249,7 +230,6 @@
                         </div>
                     @endif
                     
-                    <!-- Resumen rápido del descuento -->
                     @if($variacionTieneDescuento && $variacion->dPrecio_descuento < $variacion->dPrecio)
                         <div class="mt-3 pt-3 border-top">
                             <div class="alert alert-success mb-0">
@@ -331,7 +311,6 @@
                                     </td>
                                 </tr>
                                 
-                                <!-- Información del descuento -->
                                 @if($variacionTieneDescuento)
                                     @if($variacion->vMotivo_descuento)
                                     <tr>
@@ -364,7 +343,7 @@
                                     </td>
                                     <td class="py-3 px-3">
                                         <span class="fw-bold text-primary fs-4">
-                                            ${{ number_format($precioBaseVariacion + $totalImpuestosVariacion, 2) }}
+                                            ${{ number_format($variacion->precio_final, 2) }}
                                         </span>
                                     </td>
                                     <td class="py-3 px-3 rounded-end"></td>
@@ -393,25 +372,24 @@
                             <span class="badge bg-primary fs-6">{{ $impuestoVariacion->dPorcentaje }}%</span>
                         </div>
                         
-                        <!-- Resumen de ahorro si hay descuento -->
                         @if($variacionTieneDescuento && $variacion->dPrecio_descuento < $variacion->dPrecio && $ahorroTotal > 0)
                             <div class="alert alert-success mt-3 mb-0">
                                 <i class="fas fa-piggy-bank me-2"></i>
                                 <strong>¡Ahorras ${{ number_format($ahorroTotal, 2) }}!</strong>
                                 <small class="d-block mt-2">
                                     Precio original con impuestos: 
-                                    ${{ number_format($variacion->dPrecio + ($impuestoVariacion ? $variacion->dPrecio * ($impuestoVariacion->dPorcentaje/100) : 0), 2) }}
+                                    ${{ number_format($variacion->precio_original_con_impuesto, 2) }}
                                 </small>
                                 <small class="d-block mt-1">
                                     Precio actual con impuestos: 
-                                    ${{ number_format($precioBaseVariacion + $totalImpuestosVariacion, 2) }}
+                                    ${{ number_format($variacion->precio_final, 2) }}
                                 </small>
                             </div>
                         @else
                             <div class="alert alert-info mt-3 mb-0">
                                 <i class="fas fa-info-circle me-2"></i>
                                 <strong>Precio final con impuestos:</strong>
-                                <span class="d-block fs-5 fw-bold mt-1">${{ number_format($precioBaseVariacion + $totalImpuestosVariacion, 2) }}</span>
+                                <span class="d-block fs-5 fw-bold mt-1">${{ number_format($variacion->precio_final, 2) }}</span>
                             </div>
                         @endif
                     @else
@@ -422,6 +400,8 @@
                                 <div class="alert alert-success mt-3 mb-0">
                                     <i class="fas fa-tag me-2"></i>
                                     <strong>¡Ahorras ${{ number_format($variacion->dPrecio - $variacion->dPrecio_descuento, 2) }}!</strong>
+                                    <br>
+                                    <small>Precio final: ${{ number_format($variacion->precio_final, 2) }}</small>
                                 </div>
                             @endif
                         </div>
@@ -431,7 +411,6 @@
         </div>
     </div>
 
-    <!-- DESCRIPCIÓN DE LA VARIACIÓN -->
     @if($variacion->tDescripcion)
     <div class="row g-4 mb-4">
         <div class="col-12">
@@ -516,7 +495,7 @@
         </div>
     </div>
 
-    <!-- Modal para ampliar imágenes (mejorado) -->
+    <!-- Modal para ampliar imágenes -->
     <div class="modal fade" id="imagenModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-xl">
             <div class="modal-content bg-transparent border-0">
@@ -545,7 +524,6 @@
         </div>
     </div>
 
-    <!-- Formulario de eliminación oculto -->
     <form id="deleteForm-{{ $variacion->id_variacion }}" action="{{ route('variaciones.destroy', ['producto_id' => $producto->id_producto, 'variacion_id' => $variacion->id_variacion]) }}" method="POST" style="display: none;">
         @csrf
         @method('DELETE')
@@ -556,11 +534,9 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-// Variables globales
 let currentImageIndex = 0;
 let imagenesActuales = @json($imagenesVariacion);
 
-// ============ FUNCIONES DE ZOOM ============
 let zoomActive = false;
 const zoomContainer = document.getElementById('zoom-container');
 const zoomImage = document.getElementById('mainImage');
@@ -569,10 +545,8 @@ const zoomLens = document.getElementById('zoom-lens');
 function iniciarZoom() {
     if (!zoomContainer || !zoomImage || !zoomLens) return;
     
-    // Calcular la relación de zoom (2.5x más grande)
     const zoomRatio = 2.5;
     
-    // Crear imagen de zoom si no existe
     let zoomResult = document.getElementById('zoom-result');
     if (!zoomResult) {
         zoomResult = document.createElement('div');
@@ -597,7 +571,6 @@ function iniciarZoom() {
         zoomContainer.appendChild(zoomResult);
     }
     
-    // Evento mouseenter
     zoomContainer.addEventListener('mouseenter', function(e) {
         zoomActive = true;
         zoomLens.style.display = 'block';
@@ -606,13 +579,11 @@ function iniciarZoom() {
         actualizarZoom(e);
     });
     
-    // Evento mousemove
     zoomContainer.addEventListener('mousemove', function(e) {
         if (!zoomActive) return;
         actualizarZoom(e);
     });
     
-    // Evento mouseleave
     zoomContainer.addEventListener('mouseleave', function() {
         zoomActive = false;
         zoomLens.style.display = 'none';
@@ -623,46 +594,36 @@ function iniciarZoom() {
     function actualizarZoom(e) {
         const rect = zoomContainer.getBoundingClientRect();
         
-        // Posición del mouse relativa al contenedor (0 a 1)
         let x = (e.clientX - rect.left) / rect.width;
         let y = (e.clientY - rect.top) / rect.height;
         
-        // Limitar entre 0 y 1
         x = Math.max(0, Math.min(1, x));
         y = Math.max(0, Math.min(1, y));
         
-        // Tamaño de la lupa (150x150)
         const lensWidth = 150;
         const lensHeight = 150;
         
-        // Posición de la lupa (centrada en el mouse)
         let lensLeft = (e.clientX - rect.left) - lensWidth / 2;
         let lensTop = (e.clientY - rect.top) - lensHeight / 2;
         
-        // Limitar la lupa dentro del contenedor
         lensLeft = Math.max(0, Math.min(rect.width - lensWidth, lensLeft));
         lensTop = Math.max(0, Math.min(rect.height - lensHeight, lensTop));
         
-        // Posicionar la lupa
         zoomLens.style.left = lensLeft + 'px';
         zoomLens.style.top = lensTop + 'px';
         
-        // Calcular posición del fondo en el zoom result (inverso)
         const bgX = (lensLeft / (rect.width - lensWidth)) * 100;
         const bgY = (lensTop / (rect.height - lensHeight)) * 100;
         
-        // Actualizar el zoom result
         zoomResult.style.backgroundImage = `url('${zoomImage.src}')`;
         zoomResult.style.backgroundPosition = `${bgX}% ${bgY}%`;
         
-        // Actualizar transform de la imagen principal para efecto adicional
         const scale = 1.1 + (0.4 * (1 - Math.abs(x - 0.5) * 2));
         zoomImage.style.transform = `scale(${scale})`;
         zoomImage.style.transformOrigin = `${x * 100}% ${y * 100}%`;
     }
 }
 
-// Función para abrir modal con imagen ampliada
 function abrirModalImagen() {
     if (!imagenesActuales || imagenesActuales.length === 0) return;
     const modalImg = document.getElementById('imagenAmpliada');
@@ -671,14 +632,12 @@ function abrirModalImagen() {
     modal.show();
 }
 
-// Función para seleccionar imagen
 function seleccionarImagen(index) {
     if (!imagenesActuales || imagenesActuales.length === 0) return;
     currentImageIndex = index;
     actualizarImagenPrincipal();
 }
 
-// Función para cambiar imagen con flechas
 function cambiarImagen(direccion) {
     if (imagenesActuales.length <= 1) return;
     currentImageIndex += direccion;
@@ -690,7 +649,6 @@ function cambiarImagen(direccion) {
     actualizarImagenPrincipal();
 }
 
-// Función para actualizar imagen principal, miniaturas y contador
 function actualizarImagenPrincipal() {
     const mainImage = document.getElementById('mainImage');
     const miniaturas = document.querySelectorAll('.miniatura');
@@ -712,7 +670,6 @@ function actualizarImagenPrincipal() {
     if (mainImage && imagenesActuales[currentImageIndex]) {
         mainImage.src = imagenesActuales[currentImageIndex];
         
-        // Reiniciar zoom para la nueva imagen
         const zoomResult = document.getElementById('zoom-result');
         if (zoomResult) {
             zoomResult.style.backgroundImage = `url('${mainImage.src}')`;
@@ -746,7 +703,6 @@ function actualizarImagenPrincipal() {
     }
 }
 
-// Función para actualizar miniaturas
 function actualizarMiniaturas() {
     const miniaturasContainer = document.getElementById('miniaturas-container');
     const imageCounter = document.getElementById('imageCounter');
@@ -785,7 +741,6 @@ function actualizarMiniaturas() {
     }
 }
 
-// Función para eliminar variación
 function confirmDelete(id) {
     Swal.fire({
         title: '¿Eliminar variación?',
@@ -803,14 +758,12 @@ function confirmDelete(id) {
     });
 }
 
-// Inicializar al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
     actualizarMiniaturas();
     
     if (imagenesActuales.length > 0) {
         currentImageIndex = 0;
         actualizarImagenPrincipal();
-        // Iniciar zoom después de que la imagen esté cargada
         setTimeout(iniciarZoom, 500);
     }
 
@@ -819,7 +772,6 @@ document.addEventListener('DOMContentLoaded', function() {
         else if (e.key === 'ArrowRight') cambiarImagen(1);
     });
     
-    // Reiniciar zoom cuando cambia el tamaño de la ventana
     window.addEventListener('resize', function() {
         const zoomResult = document.getElementById('zoom-result');
         if (zoomResult) zoomResult.remove();
@@ -827,7 +779,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Mostrar mensaje SweetAlert2 después de operaciones exitosas
 @if(session('success'))
     Swal.fire({
         title: '¡Éxito!',
@@ -838,7 +789,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 @endif
 
-// Mostrar mensaje SweetAlert2 si hay error
 @if(session('error'))
     Swal.fire({
         icon: 'error',
@@ -849,7 +799,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
-/* Estilos para el zoom */
 .zoom-container {
     position: relative;
     width: 100%;
@@ -893,7 +842,6 @@ document.addEventListener('DOMContentLoaded', function() {
     background-color: white;
 }
 
-/* Responsive: ocultar zoom en pantallas pequeñas */
 @media (max-width: 1200px) {
     .zoom-result {
         width: 300px;
@@ -910,12 +858,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }
 
-/* Animación suave para la imagen al hacer zoom */
 .zoom-image {
     transition: transform 0.2s ease-out !important;
 }
 
-/* Estilo para el modal de imagen ampliada */
 #imagenModal .modal-content {
     background: transparent;
     border: none;
@@ -930,7 +876,6 @@ document.addEventListener('DOMContentLoaded', function() {
     opacity: 1;
 }
 
-/* Efecto hover en miniaturas */
 .miniatura-item {
     transition: transform 0.2s ease;
 }

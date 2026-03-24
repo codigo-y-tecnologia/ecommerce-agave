@@ -30,7 +30,7 @@ class CarritoController extends Controller
                 $variacion = $detalle->variacion;
 
                 if (!$variacion || $variacion->iStock <= 0) {
-                    $nombreProducto = $producto->vNombre ?? 'Producto';
+                    $nombreProducto = $producto->vNombre ?? 'Producto eliminado';
                     $mensajes[] = "El producto {$nombreProducto} ya no tiene stock y fue eliminado del carrito.";
                     $detalle->delete();
                     continue;

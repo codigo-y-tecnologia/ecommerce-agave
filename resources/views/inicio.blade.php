@@ -58,7 +58,6 @@
             word-break: break-word;
         }
 
-        /* Navbar */
         .navbar {
             background-color: #e9ecef;
             padding: 10px 0;
@@ -101,7 +100,6 @@
 
         .nav-links li a.favorito-link {
             color: #495057;
-            margin-right: 15px;
         }
 
         .nav-links li a.favorito-link:hover {
@@ -130,7 +128,6 @@
             margin-right: 15px;
         }
 
-        /* Barra de búsqueda */
         .barra-busqueda-principal {
             text-align: center;
             margin: 15px 0;
@@ -204,7 +201,6 @@
             margin-bottom: 15px;
         }
 
-        /* Estilos de tarjetas de producto */
         .producto-card {
             background: #fff;
             border-radius: 12px;
@@ -285,7 +281,6 @@
             word-break: break-word;
         }
 
-        /* PRECIOS */
         .precio-container {
             margin-bottom: 8px;
         }
@@ -305,21 +300,35 @@
         }
 
         .precio-actual small {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 400;
             color: #666;
-            margin-left: 4px;
         }
 
         .descuento-badge {
             background: #00a650;
             color: white;
-            padding: 3px 6px;
+            padding: 2px 6px;
             border-radius: 4px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             margin-left: 8px;
             display: inline-block;
+        }
+
+        .ahorro-info {
+            background-color: #e8f5e9;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 11px;
+            color: #2e7d32;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        .ahorro-info i {
+            font-size: 10px;
+            margin-right: 2px;
         }
 
         .motivo-descuento {
@@ -345,7 +354,6 @@
             color: #007bff;
         }
 
-        /* ENVÍO */
         .envio-info {
             font-size: 14px;
             margin-top: 5px;
@@ -391,7 +399,6 @@
             font-weight: bold;
         }
 
-        /* Botón agregar al carrito */
         .btn-agregar-carrito {
             width: 100%;
             padding: 8px;
@@ -416,29 +423,29 @@
         }
 
         /* Botón comprar ahora */
-.btn-comprar-ahora {
-    width: 100%;
-    padding: 8px;
-    background: #667eea;
-    color: white;
-    border: none;
-    border-radius: 25px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 14px;
-    margin-top: 6px;
-}
+        .btn-comprar-ahora {
+            width: 100%;
+            padding: 8px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            margin-top: 6px;
+        }
 
-.btn-comprar-ahora:hover {
-    background: #5a6fd6;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
-}
+        .btn-comprar-ahora:hover {
+            background: #5a6fd6;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+        }
 
-.btn-comprar-ahora:active {
-    transform: translateY(0);
-}
+        .btn-comprar-ahora:active {
+            transform: translateY(0);
+        }
 
         .badge-descuento {
             position: absolute;
@@ -563,7 +570,6 @@
             background: #008f45;
         }
 
-        /* Corazón de favoritos */
         .corazon-favorito {
             position: absolute;
             top: 10px;
@@ -631,7 +637,6 @@
             50% { transform: scale(0.95); }
         }
 
-        /* NOTIFICACIÓN ÚNICA */
         .toast-single {
             position: fixed;
             top: 20px;
@@ -682,7 +687,6 @@
             line-height: 1.4;
         }
 
-        /* Banner de bienvenida */
         .banner-inicio {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -737,7 +741,6 @@
             background: #008f45;
         }
 
-        /* Secciones */
         .seccion-destacados {
             max-width: 1200px;
             margin: 0 auto 30px;
@@ -793,63 +796,13 @@
             border: 1px solid #bee5eb;
         }
 
-        /* Paginación */
-        .paginacion {
-            display: flex;
-            justify-content: center;
-            margin: 30px 0 20px;
-            padding: 0 15px;
+       
+        /* Resultados info */
+        .resultados-info {
+            font-size: 14px;
+            color: #666;
         }
 
-        .pagination {
-            display: flex;
-            list-style: none;
-            gap: 5px;
-            padding: 5px;
-            margin: 0;
-            background: white;
-            border-radius: 40px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        .pagination li a,
-        .pagination li span {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 36px;
-            height: 36px;
-            padding: 0 6px;
-            border-radius: 50%;
-            text-decoration: none;
-            color: #495057;
-            font-size: 13px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            background-color: transparent;
-            border: 1px solid transparent;
-        }
-
-        .pagination li a:hover {
-            background-color: #e9ecef;
-            border-color: #dee2e6;
-            color: #667eea;
-        }
-
-        .pagination li.active span {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            font-weight: 600;
-        }
-
-        .pagination li.disabled span {
-            color: #adb5bd;
-            cursor: not-allowed;
-        }
-
-        /* Media Queries */
         @media (max-width: 768px) {
             .productos-grid {
                 grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -881,6 +834,8 @@
                 font-size: 10px;
                 padding: 3px 6px;
             }
+
+          
         }
 
         @media (max-width: 480px) {
@@ -952,12 +907,6 @@
                 margin-left: 0;
             }
 
-            .pagination li a,
-            .pagination li span {
-                min-width: 28px;
-                height: 28px;
-                font-size: 11px;
-            }
         }
     </style>
 </head>
@@ -967,14 +916,12 @@
         <p>Encuentra los mejores productos de agave y mezcal</p>
     </header>
 
-    <!-- Mostrar bienvenida al usuario si está autenticado -->
     @auth
     <div class="user-welcome">
         <p>¡Hola {{ Auth::user()->vNombre }}! 👋 Bienvenido a {{ config('tienda.nombre_tienda') }}</p>
     </div>
     @endauth
 
-    <!-- Navbar -->
     <nav class="navbar">
         <div class="nav-container">
             <ul class="nav-links">
@@ -1012,7 +959,6 @@
             </ul>
         </div>
 
-        <!-- Barra de búsqueda -->
         <div class="barra-busqueda-principal">
             <form action="{{ route('busqueda.resultados') }}" method="GET" id="form-busqueda">
                 <input type="text" name="q" placeholder="Buscar productos (agave, mezcal, espadín...)" 
@@ -1022,7 +968,6 @@
         </div>
     </nav>
 
-    <!-- Mostrar mensajes -->
     @if(session('success'))
         <div class="alert alert-success">
             {{ session('success') }}
@@ -1035,7 +980,6 @@
         </div>
     @endif
 
-    <!-- Banner de bienvenida -->
     <div class="banner-inicio">
         <h2>¡Bienvenido a {{ config('tienda.nombre_tienda') }}!</h2>
         <p>Descubre nuestra exclusiva selección de productos de agave y mezcal</p>
@@ -1074,9 +1018,23 @@
                         $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vSKU;
                         $motivoDescuento = $item->vMotivo_descuento ?? '';
-                        $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
-                        $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
-                        $porcentajeImpuesto = $item->porcentaje_impuesto ?? 0;
+                        $precioFinal = $item->precio_final_con_impuesto ?? $precioOriginal;
+                        $precioOriginalConImpuesto = $item->precio_original_con_impuesto ?? $precioOriginal;
+                        $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
+                        $envioGratis = $precioFinal >= config('tienda.envio_gratis_desde');
+                        $costoEnvio = config('tienda.costo_de_envio');
+                        $estaBajoStock = $stock > 0 && $stock <= 10;
+                        
+                        $fechaInicioFormateada = '';
+                        $fechaFinFormateada = '';
+                        if ($item->dFecha_inicio_descuento) {
+                            $fechaInicio = new \DateTime($item->dFecha_inicio_descuento);
+                            $fechaInicioFormateada = $fechaInicio->format('d/m');
+                        }
+                        if ($item->dFecha_fin_descuento) {
+                            $fechaFin = new \DateTime($item->dFecha_fin_descuento);
+                            $fechaFinFormateada = $fechaFin->format('d/m');
+                        }
                     } else {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio_venta;
@@ -1094,24 +1052,28 @@
                         $marca = $item->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vCodigo_barras;
                         $motivoDescuento = $item->vMotivo_descuento ?? '';
-                        $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
-                        $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
-                        $porcentajeImpuesto = $item->porcentaje_impuestos ?? 0;
+                        $precioFinal = $item->precio_final_con_impuesto ?? $precioOriginal;
+                        $precioOriginalConImpuesto = $item->precio_original_con_impuesto ?? $precioOriginal;
+                        $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
+                        $envioGratis = $precioFinal >= config('tienda.envio_gratis_desde');
+                        $costoEnvio = config('tienda.costo_de_envio');
+                        $estaBajoStock = $stock > 0 && $stock <= 10;
+                        
+                        $fechaInicioFormateada = '';
+                        $fechaFinFormateada = '';
+                        if ($item->dFecha_inicio_descuento) {
+                            $fechaInicio = new \DateTime($item->dFecha_inicio_descuento);
+                            $fechaInicioFormateada = $fechaInicio->format('d/m');
+                        }
+                        if ($item->dFecha_fin_descuento) {
+                            $fechaFin = new \DateTime($item->dFecha_fin_descuento);
+                            $fechaFinFormateada = $fechaFin->format('d/m');
+                        }
                     }
-                    
-                    $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
-                    $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
-                    $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
-                    
-                    $envioGratis = $precioFinal >= config('tienda.envio_gratis_desde');
-                    $costoEnvio = config('tienda.costo_de_envio');
-                    
-                    $estaBajoStock = $stock > 0 && $stock <= 10;
                 @endphp
                 
                 <div class="producto-card" onclick="window.location.href='{{ $url }}'">
                     <div class="producto-imagen-container">
-                        <!-- Botón de corazón para favoritos -->
                         <button class="corazon-favorito {{ $esFavorito ? 'activo' : 'inactivo' }}" 
                                 data-producto="{{ $productoId }}"
                                 data-variacion="{{ $variacionId ?? '' }}"
@@ -1154,21 +1116,19 @@
 
                         <div class="precio-container">
                             @if($tieneDescuento && $porcentajeDescuento > 0)
-                                <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
+                                <span class="precio-original">${{ number_format($precioOriginalConImpuesto, 2) }}</span>
                                 <div style="display: flex; align-items: center; flex-wrap: wrap;">
                                     <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                     <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                 </div>
-                                
-                                @if($motivoDescuento && $esVariacion)
+                                @if($motivoDescuento)
                                     <div class="motivo-descuento" title="{{ $motivoDescuento }}">
-                                        <i class="fas fa-tag"></i> {{ Str::limit($motivoDescuento, 25) }}
+                                        <i class="fas fa-comment"></i> {{ Str::limit($motivoDescuento, 30) }}
                                     </div>
                                 @endif
-                                
-                                @if($fechaInicio && $fechaFin)
+                                @if($fechaInicioFormateada && $fechaFinFormateada && !$esVariacion)
                                     <div class="periodo-descuento">
-                                        <i class="fas fa-calendar-alt"></i> {{ $fechaInicio }} - {{ $fechaFin }}
+                                        <i class="fas fa-calendar-alt"></i> {{ $fechaInicioFormateada }} - {{ $fechaFinFormateada }}
                                     </div>
                                 @endif
                             @else
@@ -1178,13 +1138,9 @@
 
                         <div class="envio-info">
                             @if($envioGratis)
-                                <span class="envio-gratis">
-                                    <span>🚚</span> Envío gratis
-                                </span>
+                                <span class="envio-gratis"><span>🚚</span> Envío gratis</span>
                             @else
-                                <span class="envio-pago">
-                                    <span>📦</span> + ${{ number_format($costoEnvio, 2) }} envío
-                                </span>
+                                <span class="envio-pago"><span>📦</span> + ${{ number_format($costoEnvio, 2) }} envío</span>
                             @endif
                         </div>
 
@@ -1256,10 +1212,12 @@
                             $atributosCompletos = $item->getAtributosCompletosTexto();
                             $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
                             $sku = $item->vSKU;
-                            $motivoDescuento = $item->vMotivo_descuento ?? '';
-                            $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
-                            $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
-                            $porcentajeImpuesto = $item->porcentaje_impuesto ?? 0;
+                            $precioFinal = $item->precio_final_con_impuesto ?? $precioOriginal;
+                            $precioOriginalConImpuesto = $item->precio_original_con_impuesto ?? $precioOriginal;
+                            $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
+                            $envioGratis = $precioFinal >= config('tienda.envio_gratis_desde');
+                            $costoEnvio = config('tienda.costo_de_envio');
+                            $estaBajoStock = $stock > 0 && $stock <= 10;
                         } else {
                             $tieneDescuento = $item->tieneDescuentoActivo();
                             $precioOriginal = $item->dPrecio_venta;
@@ -1276,20 +1234,13 @@
                             $atributosCompletos = '';
                             $marca = $item->marca->vNombre ?? 'Marca genérica';
                             $sku = $item->vCodigo_barras;
-                            $motivoDescuento = $item->vMotivo_descuento ?? '';
-                            $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
-                            $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
-                            $porcentajeImpuesto = $item->porcentaje_impuestos ?? 0;
+                            $precioFinal = $item->precio_final_con_impuesto ?? $precioOriginal;
+                            $precioOriginalConImpuesto = $item->precio_original_con_impuesto ?? $precioOriginal;
+                            $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
+                            $envioGratis = $precioFinal >= config('tienda.envio_gratis_desde');
+                            $costoEnvio = config('tienda.costo_de_envio');
+                            $estaBajoStock = $stock > 0 && $stock <= 10;
                         }
-                        
-                        $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
-                        $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
-                        $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
-                        
-                        $envioGratis = $precioFinal >= config('tienda.envio_gratis_desde');
-                        $costoEnvio = config('tienda.costo_de_envio');
-                        
-                        $estaBajoStock = $stock > 0 && $stock <= 10;
                     @endphp
                     
                     <div class="producto-card" onclick="window.location.href='{{ $url }}'">
@@ -1304,11 +1255,8 @@
                             </button>
 
                             @if($tieneDescuento && $porcentajeDescuento > 0)
-                                <div class="badge-descuento-rojo" title="{{ $motivoDescuento ?: 'Descuento especial' }}">
+                                <div class="badge-descuento-rojo" title="Descuento especial">
                                     -{{ $porcentajeDescuento }}%
-                                    @if($motivoDescuento)
-                                        <br><small style="font-size: 8px;">{{ Str::limit($motivoDescuento, 15) }}</small>
-                                    @endif
                                 </div>
                             @elseif($estaBajoStock)
                                 <div class="badge-stock-bajo">
@@ -1336,23 +1284,11 @@
 
                             <div class="precio-container">
                                 @if($tieneDescuento && $porcentajeDescuento > 0)
-                                    <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
+                                    <span class="precio-original">${{ number_format($precioOriginalConImpuesto, 2) }}</span>
                                     <div style="display: flex; align-items: center; flex-wrap: wrap;">
                                         <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                         <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                     </div>
-                                    
-                                    @if($motivoDescuento && $esVariacion)
-                                        <div class="motivo-descuento" title="{{ $motivoDescuento }}">
-                                            <i class="fas fa-tag"></i> {{ Str::limit($motivoDescuento, 25) }}
-                                        </div>
-                                    @endif
-                                    
-                                    @if($fechaInicio && $fechaFin)
-                                        <div class="periodo-descuento">
-                                            <i class="fas fa-calendar-alt"></i> {{ $fechaInicio }} - {{ $fechaFin }}
-                                        </div>
-                                    @endif
                                 @else
                                     <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                 @endif
@@ -1360,13 +1296,9 @@
 
                             <div class="envio-info">
                                 @if($envioGratis)
-                                    <span class="envio-gratis">
-                                        <span>🚚</span> Envío gratis
-                                    </span>
+                                    <span class="envio-gratis"><span>🚚</span> Envío gratis</span>
                                 @else
-                                    <span class="envio-pago">
-                                        <span>📦</span> + ${{ number_format($costoEnvio, 2) }} envío
-                                    </span>
+                                    <span class="envio-pago"><span>📦</span> + ${{ number_format($costoEnvio, 2) }} envío</span>
                                 @endif
                             </div>
 
@@ -1405,10 +1337,16 @@
                     </div>
                 @endforeach
             </div>
+            
+            <div style="text-align: center; margin-top: 20px; margin-bottom: 30px;">
+                <a href="{{ route('busqueda.resultados') }}" class="btn">Ver Todos los Productos</a>
+            </div>
         @endif
+    </div>
 
-        <!-- SECCIÓN 3: PRODUCTOS RECOMENDADOS -->
-        @if(isset($productosRecomendados) && $productosRecomendados->count() > 0)
+    <!-- SECCIÓN 3: PRODUCTOS RECOMENDADOS -->
+    @if(isset($productosRecomendados) && $productosRecomendados->count() > 0)
+    <div class="seccion-destacados">
         <h2 class="titulo-seccion" style="margin-top: 40px;">✨ Productos Recomendados</h2>
         
         <div class="productos-grid">
@@ -1432,10 +1370,11 @@
                         $atributosCompletos = $item->getAtributosCompletosTexto();
                         $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vSKU;
-                        $motivoDescuento = $item->vMotivo_descuento ?? '';
-                        $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
-                        $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
-                        $porcentajeImpuesto = $item->porcentaje_impuesto ?? 0;
+                        $precioFinal = $item->precio_final_con_impuesto ?? $precioOriginal;
+                        $precioOriginalConImpuesto = $item->precio_original_con_impuesto ?? $precioOriginal;
+                        $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
+                        $envioGratis = $precioFinal >= config('tienda.envio_gratis_desde');
+                        $costoEnvio = config('tienda.costo_de_envio');
                     } else {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio_venta;
@@ -1452,18 +1391,12 @@
                         $atributosCompletos = '';
                         $marca = $item->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vCodigo_barras;
-                        $motivoDescuento = $item->vMotivo_descuento ?? '';
-                        $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
-                        $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
-                        $porcentajeImpuesto = $item->porcentaje_impuestos ?? 0;
+                        $precioFinal = $item->precio_final_con_impuesto ?? $precioOriginal;
+                        $precioOriginalConImpuesto = $item->precio_original_con_impuesto ?? $precioOriginal;
+                        $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
+                        $envioGratis = $precioFinal >= config('tienda.envio_gratis_desde');
+                        $costoEnvio = config('tienda.costo_de_envio');
                     }
-                    
-                    $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
-                    $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
-                    $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
-                    
-                    $envioGratis = $precioFinal >= config('tienda.envio_gratis_desde');
-                    $costoEnvio = config('tienda.costo_de_envio');
                 @endphp
                 
                 <div class="producto-card" onclick="window.location.href='{{ $url }}'">
@@ -1482,7 +1415,7 @@
                         </button>
 
                         @if($tieneDescuento && $porcentajeDescuento > 0)
-                            <div class="badge-descuento-rojo" title="{{ $motivoDescuento ?: 'Descuento especial' }}">
+                            <div class="badge-descuento-rojo">
                                 -{{ $porcentajeDescuento }}%
                             </div>
                         @endif
@@ -1507,23 +1440,11 @@
 
                         <div class="precio-container">
                             @if($tieneDescuento && $porcentajeDescuento > 0)
-                                <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
+                                <span class="precio-original">${{ number_format($precioOriginalConImpuesto, 2) }}</span>
                                 <div style="display: flex; align-items: center; flex-wrap: wrap;">
                                     <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                     <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                 </div>
-                                
-                                @if($motivoDescuento && $esVariacion)
-                                    <div class="motivo-descuento" title="{{ $motivoDescuento }}">
-                                        <i class="fas fa-tag"></i> {{ Str::limit($motivoDescuento, 25) }}
-                                    </div>
-                                @endif
-                                
-                                @if($fechaInicio && $fechaFin)
-                                    <div class="periodo-descuento">
-                                        <i class="fas fa-calendar-alt"></i> {{ $fechaInicio }} - {{ $fechaFin }}
-                                    </div>
-                                @endif
                             @else
                                 <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                             @endif
@@ -1570,10 +1491,16 @@
                 </div>
             @endforeach
         </div>
-        @endif
+        
+        <div style="text-align: center; margin-top: 20px; margin-bottom: 30px;">
+            <a href="{{ route('busqueda.resultados') }}" class="btn">Ver Más Productos</a>
+        </div>
+    </div>
+    @endif
 
-        <!-- SECCIÓN 4: TODOS LOS PRODUCTOS Y VARIACIONES -->
-        @if(isset($todosLosItems) && $todosLosItems->count() > 0)
+    <!-- SECCIÓN 4: TODOS LOS PRODUCTOS Y VARIACIONES (CON PAGINACIÓN) -->
+    @if(isset($todosLosItems) && $todosLosItems->count() > 0)
+    <div class="seccion-destacados">
         <h2 class="titulo-seccion" style="margin-top: 40px;">📦 Todos Nuestros Productos</h2>
         
         <div class="productos-grid">
@@ -1598,9 +1525,23 @@
                         $marca = $item->productoPadre->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vSKU;
                         $motivoDescuento = $item->vMotivo_descuento ?? '';
-                        $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
-                        $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
-                        $porcentajeImpuesto = $item->porcentaje_impuesto ?? 0;
+                        $precioFinal = $item->precio_final_con_impuesto ?? $precioOriginal;
+                        $precioOriginalConImpuesto = $item->precio_original_con_impuesto ?? $precioOriginal;
+                        $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
+                        $envioGratis = $precioFinal >= config('tienda.envio_gratis_desde');
+                        $costoEnvio = config('tienda.costo_de_envio');
+                        $estaBajoStock = $stock > 0 && $stock <= 10;
+                        
+                        $fechaInicioFormateada = '';
+                        $fechaFinFormateada = '';
+                        if ($item->dFecha_inicio_descuento) {
+                            $fechaInicio = new \DateTime($item->dFecha_inicio_descuento);
+                            $fechaInicioFormateada = $fechaInicio->format('d/m');
+                        }
+                        if ($item->dFecha_fin_descuento) {
+                            $fechaFin = new \DateTime($item->dFecha_fin_descuento);
+                            $fechaFinFormateada = $fechaFin->format('d/m');
+                        }
                     } else {
                         $tieneDescuento = $item->tieneDescuentoActivo();
                         $precioOriginal = $item->dPrecio_venta;
@@ -1618,19 +1559,24 @@
                         $marca = $item->marca->vNombre ?? 'Marca genérica';
                         $sku = $item->vCodigo_barras;
                         $motivoDescuento = $item->vMotivo_descuento ?? '';
-                        $fechaInicio = $item->dFecha_inicio_descuento ? \Carbon\Carbon::parse($item->dFecha_inicio_descuento)->format('d/m') : '';
-                        $fechaFin = $item->dFecha_fin_descuento ? \Carbon\Carbon::parse($item->dFecha_fin_descuento)->format('d/m') : '';
-                        $porcentajeImpuesto = $item->porcentaje_impuestos ?? 0;
+                        $precioFinal = $item->precio_final_con_impuesto ?? $precioOriginal;
+                        $precioOriginalConImpuesto = $item->precio_original_con_impuesto ?? $precioOriginal;
+                        $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
+                        $envioGratis = $precioFinal >= config('tienda.envio_gratis_desde');
+                        $costoEnvio = config('tienda.costo_de_envio');
+                        $estaBajoStock = $stock > 0 && $stock <= 10;
+                        
+                        $fechaInicioFormateada = '';
+                        $fechaFinFormateada = '';
+                        if ($item->dFecha_inicio_descuento) {
+                            $fechaInicio = new \DateTime($item->dFecha_inicio_descuento);
+                            $fechaInicioFormateada = $fechaInicio->format('d/m');
+                        }
+                        if ($item->dFecha_fin_descuento) {
+                            $fechaFin = new \DateTime($item->dFecha_fin_descuento);
+                            $fechaFinFormateada = $fechaFin->format('d/m');
+                        }
                     }
-                    
-                    $precioBase = $tieneDescuento ? $precioDescuento : $precioOriginal;
-                    $precioFinal = $precioBase + ($precioBase * $porcentajeImpuesto / 100);
-                    $porcentajeDescuento = $tieneDescuento ? round((($precioOriginal - $precioDescuento) / $precioOriginal) * 100) : 0;
-                    
-                    $envioGratis = $precioFinal >= config('tienda.envio_gratis_desde');
-                    $costoEnvio = config('tienda.costo_de_envio');
-                    
-                    $estaBajoStock = $stock > 0 && $stock <= 10;
                 @endphp
                 
                 <div class="producto-card" onclick="window.location.href='{{ $url }}'">
@@ -1677,21 +1623,19 @@
 
                         <div class="precio-container">
                             @if($tieneDescuento && $porcentajeDescuento > 0)
-                                <span class="precio-original">${{ number_format($precioOriginal, 2) }}</span>
+                                <span class="precio-original">${{ number_format($precioOriginalConImpuesto, 2) }}</span>
                                 <div style="display: flex; align-items: center; flex-wrap: wrap;">
                                     <span class="precio-actual">${{ number_format($precioFinal, 2) }} <small>sin interés</small></span>
                                     <span class="descuento-badge">{{ $porcentajeDescuento }}% OFF</span>
                                 </div>
-                                
-                                @if($motivoDescuento && $esVariacion)
+                                @if($motivoDescuento)
                                     <div class="motivo-descuento" title="{{ $motivoDescuento }}">
-                                        <i class="fas fa-tag"></i> {{ Str::limit($motivoDescuento, 25) }}
+                                        <i class="fas fa-comment"></i> {{ Str::limit($motivoDescuento, 30) }}
                                     </div>
                                 @endif
-                                
-                                @if($fechaInicio && $fechaFin)
+                                @if($fechaInicioFormateada && $fechaFinFormateada && !$esVariacion)
                                     <div class="periodo-descuento">
-                                        <i class="fas fa-calendar-alt"></i> {{ $fechaInicio }} - {{ $fechaFin }}
+                                        <i class="fas fa-calendar-alt"></i> {{ $fechaInicioFormateada }} - {{ $fechaFinFormateada }}
                                     </div>
                                 @endif
                             @else
@@ -1701,13 +1645,9 @@
 
                         <div class="envio-info">
                             @if($envioGratis)
-                                <span class="envio-gratis">
-                                    <span>🚚</span> Envío gratis
-                                </span>
+                                <span class="envio-gratis"><span>🚚</span> Envío gratis</span>
                             @else
-                                <span class="envio-pago">
-                                    <span>📦</span> + ${{ number_format($costoEnvio, 2) }} envío
-                                </span>
+                                <span class="envio-pago"><span>📦</span> + ${{ number_format($costoEnvio, 2) }} envío</span>
                             @endif
                         </div>
 
@@ -1747,19 +1687,14 @@
             @endforeach
         </div>
 
-        <!-- PAGINACIÓN -->
-        <div class="paginacion">
-            {{ $todosLosItems->links() }}
-        </div>
-
+        
         <div style="text-align: center; margin-top: 20px; margin-bottom: 20px;">
             <a href="{{ route('busqueda.resultados') }}" class="btn">Ver Todos los Productos</a>
         </div>
-        @endif
     </div>
+    @endif
 
     <script>
-        // Configurar CSRF token para todas las peticiones fetch
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         
         let currentToast = null;
@@ -1829,7 +1764,6 @@
             button.innerHTML = '⏳';
             
             @auth
-                // Usuario autenticado - ruta directa
                 const url = variacionId 
                     ? `/favoritos/toggle-variacion/${variacionId}`
                     : `/favoritos/toggle-producto/${productoId}`;
@@ -1892,7 +1826,6 @@
                             localStorage.setItem('last_favorito_time', Date.now());
                         }
                     } else {
-                        // Revertir cambios si hubo error
                         revertirEstadoFavorito(button, estabaActivo);
                         showNotification('❌ ' + (data.message || 'Error al gestionar favoritos'), 'error');
                     }
@@ -1909,12 +1842,10 @@
                     }, 500);
                 });
             @else
-                // Invitado - verificar estado actual primero
                 const checkUrl = variacionId 
                     ? `/favoritos-invitado/check/${productoId}/${variacionId}`
                     : `/favoritos-invitado/check/${productoId}`;
                 
-                // Verificar estado actual
                 fetch(checkUrl, {
                     method: 'GET',
                     headers: {
@@ -1930,7 +1861,6 @@
                 })
                 .then(checkData => {
                     if (checkData.success) {
-                        // Proceder con el toggle
                         const toggleUrl = variacionId 
                             ? `/favoritos-invitado/toggle-variacion/${variacionId}`
                             : `/favoritos-invitado/toggle-producto/${productoId}`;
@@ -2042,36 +1972,35 @@
         }
 
         function comprarAhora(productoId, variacionId = null) {
-    fetch('/carrito/agregar', {
-        method: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': csrfToken,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            producto_id: productoId,
-            variacion_id: variacionId,
-            cantidad: 1
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Producto agregado, redirigir al carrito
-            window.location.href = '{{ route("carrito.index") }}';
-        } else {
-            showNotification('❌ ' + (data.message || 'Error al agregar'), 'error');
+            fetch('/carrito/agregar', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    producto_id: productoId,
+                    variacion_id: variacionId,
+                    cantidad: 1
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Producto agregado, redirigir al carrito
+                    window.location.href = '{{ route("carrito.index") }}';
+                } else {
+                    showNotification('❌ ' + (data.message || 'Error al agregar'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('❌ Error de conexión', 'error');
+            });
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('❌ Error de conexión', 'error');
-    });
-}
 
         document.addEventListener('DOMContentLoaded', function() {
-            // Prevenir propagación en botones
             const buttons = document.querySelectorAll('.producto-card button, .producto-card a');
             buttons.forEach(button => {
                 button.addEventListener('click', function(e) {
@@ -2079,7 +2008,6 @@
                 });
             });
 
-            // Links de descuento
             const linkDescuento = document.getElementById('link-descuento');
             if (linkDescuento) {
                 linkDescuento.addEventListener('click', function(e) {
@@ -2096,20 +2024,17 @@
                 });
             }
 
-            // Auto-focus en búsqueda para desktop
             if (window.innerWidth > 768) {
                 const searchInput = document.querySelector('.barra-busqueda-principal input[type="text"]');
                 if (searchInput) searchInput.focus();
             }
 
-            // Verificar acciones recientes de localStorage
             const lastAction = localStorage.getItem('last_favorito_action');
             const lastId = localStorage.getItem('last_favorito_id');
             const lastTipo = localStorage.getItem('last_favorito_tipo');
             const lastTime = localStorage.getItem('last_favorito_time');
             
             if (lastAction && lastId && lastTime && (Date.now() - lastTime) < 5000) {
-                // Buscar el botón correspondiente
                 let selector;
                 if (lastTipo === 'variacion') {
                     selector = `[data-variacion="${lastId}"]`;
@@ -2133,7 +2058,6 @@
                 }
             }
             
-            // Limpiar localStorage después de 5 segundos
             setTimeout(() => {
                 localStorage.removeItem('last_favorito_action');
                 localStorage.removeItem('last_favorito_id');

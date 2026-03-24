@@ -108,7 +108,8 @@ class DashboardController extends Controller
         $productos = Producto::with([
             'categoria',
             'marca',
-            'etiquetas'
+            'etiquetas',
+            'impuestos'
         ])
             ->where('bActivo', true)
             ->orderBy('id_producto', 'desc')
@@ -118,6 +119,23 @@ class DashboardController extends Controller
             $productoClone = clone $producto;
             $productoClone->tipo_item = 'producto';
             $productoClone->item_id = $producto->id_producto;
+
+            // Calcular precio final con impuestos para producto
+            $precioBase = $productoClone->tieneDescuentoActivo() ? $productoClone->dPrecio_descuento : $productoClone->dPrecio_venta;
+            $totalImpuestos = 0;
+            foreach ($productoClone->impuestos as $impuesto) {
+                if ($impuesto->bActivo) {
+                    $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                }
+            }
+            $productoClone->precio_final_con_impuesto = $precioBase + $totalImpuestos;
+            $productoClone->precio_original_con_impuesto = $productoClone->dPrecio_venta;
+            foreach ($productoClone->impuestos as $impuesto) {
+                if ($impuesto->bActivo) {
+                    $productoClone->precio_original_con_impuesto += $productoClone->dPrecio_venta * ($impuesto->dPorcentaje / 100);
+                }
+            }
+
             $items->push($productoClone);
 
             $variaciones = ProductoVariacion::with([
@@ -127,7 +145,8 @@ class DashboardController extends Controller
                 'productoPadre.etiquetas',
                 'atributos.atributo',
                 'atributos.valor',
-                'imagenesRegistradas'
+                'imagenesRegistradas',
+                'impuesto'
             ])
                 ->where('id_producto', $producto->id_producto)
                 ->where('bActivo', true)
@@ -136,6 +155,34 @@ class DashboardController extends Controller
             foreach ($variaciones as $variacion) {
                 $variacion->tipo_item = 'variacion';
                 $variacion->item_id = $variacion->id_variacion;
+
+                // Calcular precio final con impuestos para variación
+                $precioBase = $variacion->tieneDescuentoActivo() ? $variacion->dPrecio_descuento : $variacion->dPrecio;
+                $totalImpuestos = 0;
+
+                if ($variacion->impuesto && $variacion->impuesto->bActivo) {
+                    $totalImpuestos = $precioBase * ($variacion->impuesto->dPorcentaje / 100);
+                } elseif ($producto->impuestos->count() > 0) {
+                    foreach ($producto->impuestos as $impuesto) {
+                        if ($impuesto->bActivo) {
+                            $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                        }
+                    }
+                }
+
+                $variacion->precio_final_con_impuesto = $precioBase + $totalImpuestos;
+                $variacion->precio_original_con_impuesto = $variacion->dPrecio;
+
+                if ($variacion->impuesto && $variacion->impuesto->bActivo) {
+                    $variacion->precio_original_con_impuesto += $variacion->dPrecio * ($variacion->impuesto->dPorcentaje / 100);
+                } elseif ($producto->impuestos->count() > 0) {
+                    foreach ($producto->impuestos as $impuesto) {
+                        if ($impuesto->bActivo) {
+                            $variacion->precio_original_con_impuesto += $variacion->dPrecio * ($impuesto->dPorcentaje / 100);
+                        }
+                    }
+                }
+
                 $items->push($variacion);
             }
         }
@@ -162,29 +209,18 @@ class DashboardController extends Controller
 
     private function obtenerItemsConDescuento($limite = null)
     {
-        $fechaActual = now()->toDateString();
         $itemsConDescuento = collect();
 
+        // Productos con descuento
         $productosConDescuento = Producto::with([
             'categoria',
             'marca',
-            'etiquetas'
+            'etiquetas',
+            'impuestos'
         ])
             ->where('bActivo', true)
             ->where('bTiene_descuento', 1)
             ->where('dPrecio_descuento', '>', 0)
-            ->where(function ($query) use ($fechaActual) {
-                $query->where(function ($q) use ($fechaActual) {
-                    $q->whereNull('dFecha_fin_descuento')
-                        ->orWhere('dFecha_fin_descuento', '>=', $fechaActual);
-                });
-            })
-            ->where(function ($query) use ($fechaActual) {
-                $query->where(function ($q) use ($fechaActual) {
-                    $q->whereNull('dFecha_inicio_descuento')
-                        ->orWhere('dFecha_inicio_descuento', '<=', $fechaActual);
-                });
-            })
             ->get();
 
         foreach ($productosConDescuento as $producto) {
@@ -193,10 +229,28 @@ class DashboardController extends Controller
                 $productoClone->tipo_item = 'producto';
                 $productoClone->item_id = $producto->id_producto;
                 $productoClone->porcentaje_descuento_calculado = $this->calcularPorcentajeDescuentoProducto($producto);
+
+                // Calcular precio final con impuestos
+                $precioBase = $productoClone->tieneDescuentoActivo() ? $productoClone->dPrecio_descuento : $productoClone->dPrecio_venta;
+                $totalImpuestos = 0;
+                foreach ($productoClone->impuestos as $impuesto) {
+                    if ($impuesto->bActivo) {
+                        $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                    }
+                }
+                $productoClone->precio_final_con_impuesto = $precioBase + $totalImpuestos;
+                $productoClone->precio_original_con_impuesto = $productoClone->dPrecio_venta;
+                foreach ($productoClone->impuestos as $impuesto) {
+                    if ($impuesto->bActivo) {
+                        $productoClone->precio_original_con_impuesto += $productoClone->dPrecio_venta * ($impuesto->dPorcentaje / 100);
+                    }
+                }
+
                 $itemsConDescuento->push($productoClone);
             }
         }
 
+        // Variaciones con descuento
         $variacionesConDescuento = ProductoVariacion::with([
             'productoPadre',
             'productoPadre.categoria',
@@ -204,7 +258,8 @@ class DashboardController extends Controller
             'productoPadre.etiquetas',
             'atributos.atributo',
             'atributos.valor',
-            'imagenesRegistradas'
+            'imagenesRegistradas',
+            'impuesto'
         ])
             ->whereHas('productoPadre', function ($q) {
                 $q->where('bActivo', true);
@@ -212,18 +267,6 @@ class DashboardController extends Controller
             ->where('bActivo', true)
             ->where('bTiene_descuento', 1)
             ->where('dPrecio_descuento', '>', 0)
-            ->where(function ($query) use ($fechaActual) {
-                $query->where(function ($q) use ($fechaActual) {
-                    $q->whereNull('dFecha_fin_descuento')
-                        ->orWhere('dFecha_fin_descuento', '>=', $fechaActual);
-                });
-            })
-            ->where(function ($query) use ($fechaActual) {
-                $query->where(function ($q) use ($fechaActual) {
-                    $q->whereNull('dFecha_inicio_descuento')
-                        ->orWhere('dFecha_inicio_descuento', '<=', $fechaActual);
-                });
-            })
             ->get();
 
         foreach ($variacionesConDescuento as $variacion) {
@@ -231,6 +274,34 @@ class DashboardController extends Controller
                 $variacion->tipo_item = 'variacion';
                 $variacion->item_id = $variacion->id_variacion;
                 $variacion->porcentaje_descuento_calculado = $this->calcularPorcentajeDescuentoVariacion($variacion);
+
+                // Calcular precio final con impuestos
+                $precioBase = $variacion->tieneDescuentoActivo() ? $variacion->dPrecio_descuento : $variacion->dPrecio;
+                $totalImpuestos = 0;
+
+                if ($variacion->impuesto && $variacion->impuesto->bActivo) {
+                    $totalImpuestos = $precioBase * ($variacion->impuesto->dPorcentaje / 100);
+                } elseif ($variacion->productoPadre && $variacion->productoPadre->impuestos->count() > 0) {
+                    foreach ($variacion->productoPadre->impuestos as $impuesto) {
+                        if ($impuesto->bActivo) {
+                            $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                        }
+                    }
+                }
+
+                $variacion->precio_final_con_impuesto = $precioBase + $totalImpuestos;
+                $variacion->precio_original_con_impuesto = $variacion->dPrecio;
+
+                if ($variacion->impuesto && $variacion->impuesto->bActivo) {
+                    $variacion->precio_original_con_impuesto += $variacion->dPrecio * ($variacion->impuesto->dPorcentaje / 100);
+                } elseif ($variacion->productoPadre && $variacion->productoPadre->impuestos->count() > 0) {
+                    foreach ($variacion->productoPadre->impuestos as $impuesto) {
+                        if ($impuesto->bActivo) {
+                            $variacion->precio_original_con_impuesto += $variacion->dPrecio * ($impuesto->dPorcentaje / 100);
+                        }
+                    }
+                }
+
                 $itemsConDescuento->push($variacion);
             }
         }
@@ -255,16 +326,19 @@ class DashboardController extends Controller
         $fechaActual = now()->toDateString();
 
         if ($producto->dFecha_inicio_descuento && $producto->dFecha_fin_descuento) {
-            return $fechaActual >= $producto->dFecha_inicio_descuento &&
-                $fechaActual <= $producto->dFecha_fin_descuento;
+            $inicio = date('Y-m-d', strtotime($producto->dFecha_inicio_descuento));
+            $fin = date('Y-m-d', strtotime($producto->dFecha_fin_descuento));
+            return $fechaActual >= $inicio && $fechaActual <= $fin;
         }
 
         if ($producto->dFecha_inicio_descuento && !$producto->dFecha_fin_descuento) {
-            return $fechaActual >= $producto->dFecha_inicio_descuento;
+            $inicio = date('Y-m-d', strtotime($producto->dFecha_inicio_descuento));
+            return $fechaActual >= $inicio;
         }
 
         if (!$producto->dFecha_inicio_descuento && $producto->dFecha_fin_descuento) {
-            return $fechaActual <= $producto->dFecha_fin_descuento;
+            $fin = date('Y-m-d', strtotime($producto->dFecha_fin_descuento));
+            return $fechaActual <= $fin;
         }
 
         return true;
@@ -279,16 +353,19 @@ class DashboardController extends Controller
         $fechaActual = now()->toDateString();
 
         if ($variacion->dFecha_inicio_descuento && $variacion->dFecha_fin_descuento) {
-            return $fechaActual >= $variacion->dFecha_inicio_descuento &&
-                $fechaActual <= $variacion->dFecha_fin_descuento;
+            $inicio = date('Y-m-d', strtotime($variacion->dFecha_inicio_descuento));
+            $fin = date('Y-m-d', strtotime($variacion->dFecha_fin_descuento));
+            return $fechaActual >= $inicio && $fechaActual <= $fin;
         }
 
         if ($variacion->dFecha_inicio_descuento && !$variacion->dFecha_fin_descuento) {
-            return $fechaActual >= $variacion->dFecha_inicio_descuento;
+            $inicio = date('Y-m-d', strtotime($variacion->dFecha_inicio_descuento));
+            return $fechaActual >= $inicio;
         }
 
         if (!$variacion->dFecha_inicio_descuento && $variacion->dFecha_fin_descuento) {
-            return $fechaActual <= $variacion->dFecha_fin_descuento;
+            $fin = date('Y-m-d', strtotime($variacion->dFecha_fin_descuento));
+            return $fechaActual <= $fin;
         }
 
         return true;

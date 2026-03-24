@@ -21,7 +21,19 @@
 
     @php
         $tieneDescuentoActivo = $variacion->tieneDescuentoActivo();
+        $tieneDescuentoProgramado = $variacion->bTiene_descuento && $variacion->dPrecio_descuento && $variacion->dPrecio_descuento < $variacion->dPrecio && !$tieneDescuentoActivo;
         $porcentajeDescuento = $variacion->porcentaje_descuento;
+        
+        $precioBase = $tieneDescuentoActivo ? $variacion->dPrecio_descuento : $variacion->dPrecio;
+        
+        $impuestoVariacion = $variacion->impuesto ?? $producto->impuestos->first();
+        $totalImpuestos = 0;
+        $porcentajeImpuesto = 0;
+        if ($impuestoVariacion && $impuestoVariacion->bActivo) {
+            $porcentajeImpuesto = $impuestoVariacion->dPorcentaje;
+            $totalImpuestos = $precioBase * ($porcentajeImpuesto / 100);
+        }
+        $precioFinal = $precioBase + $totalImpuestos;
         
         $imagenesAdicionales = $variacion->imagenesRegistradas()
             ->where('eTipo', 'adicional')
@@ -29,19 +41,17 @@
             ->get();
         $totalImagenesActuales = $imagenesAdicionales->count();
         
-        $imagenesExistentesData = [];
-        foreach($imagenesAdicionales as $imagen) {
-            $imagenesExistentesData[] = [
-                'id' => $imagen->id_variacion_imagen,
-                'url' => $imagen->url,
-                'filename' => basename($imagen->vRuta),
-                'ruta' => $imagen->vRuta
-            ];
+        $fechaInicioFormateada = $variacion->dFecha_inicio_descuento ? \Carbon\Carbon::parse($variacion->dFecha_inicio_descuento)->format('Y-m-d') : '';
+        $fechaFinFormateada = $variacion->dFecha_fin_descuento ? \Carbon\Carbon::parse($variacion->dFecha_fin_descuento)->format('Y-m-d') : '';
+        
+        $valoresSeleccionados = [];
+        foreach($variacion->atributos as $atributoRel) {
+            $valoresSeleccionados[$atributoRel->id_atributo] = $atributoRel->id_atributo_valor;
         }
     @endphp
 
     <!-- Barra de progreso de tamaño total de archivos -->
-    <div class="alert alert-info py-2 mb-3" id="sizeInfo">
+    <div class="alert alert-info py-2 mb-3" id="sizeInfo" style="display: none;">
         <div class="row align-items-center">
             <div class="col-md-6">
                 <i class="fas fa-camera me-1"></i>
@@ -68,6 +78,59 @@
         <strong>¡Atención!</strong> Has excedido el límite de tamaño total de archivos (50MB).
     </div>
 
+    @if($tieneDescuentoActivo)
+        <div class="alert alert-success mb-3">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <i class="fas fa-tag fa-2x"></i>
+                </div>
+                <div>
+                    <strong class="text-success">¡DESCUENTO ACTIVO HOY!</strong>
+                    <div class="d-flex align-items-center gap-2 mt-1">
+                        <span class="text-decoration-line-through text-muted">${{ number_format($variacion->dPrecio, 2) }}</span>
+                        <span class="fw-bold text-danger fs-5">${{ number_format($variacion->dPrecio_descuento, 2) }}</span>
+                        <span class="badge bg-danger">-{{ $porcentajeDescuento }}%</span>
+                    </div>
+                    @if($variacion->vMotivo_descuento)
+                        <small class="d-block mt-1"><i class="fas fa-comment me-1"></i>{{ $variacion->vMotivo_descuento }}</small>
+                    @endif
+                    @if($fechaInicioFormateada && $fechaFinFormateada)
+                        <small class="d-block mt-1">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            Válido del {{ \Carbon\Carbon::parse($fechaInicioFormateada)->format('d/m/Y') }} 
+                            al {{ \Carbon\Carbon::parse($fechaFinFormateada)->format('d/m/Y') }}
+                        </small>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @elseif($tieneDescuentoProgramado)
+        <div class="alert alert-warning mb-3">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <i class="fas fa-clock fa-2x"></i>
+                </div>
+                <div>
+                    <strong class="text-warning">¡DESCUENTO PROGRAMADO!</strong>
+                    <div class="d-flex align-items-center gap-2 mt-1">
+                        <span class="fw-bold">${{ number_format($variacion->dPrecio, 2) }}</span>
+                        <span class="text-decoration-line-through text-muted">${{ number_format($variacion->dPrecio_descuento, 2) }}</span>
+                        <span class="badge bg-warning text-dark">-{{ $porcentajeDescuento }}%</span>
+                    </div>
+                    @if($fechaInicioFormateada)
+                        <small class="d-block mt-1">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            Inicia: {{ \Carbon\Carbon::parse($fechaInicioFormateada)->format('d/m/Y') }}
+                            @if($fechaFinFormateada)
+                                (hasta {{ \Carbon\Carbon::parse($fechaFinFormateada)->format('d/m/Y') }})
+                            @endif
+                        </small>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @endif
+
     <form action="{{ route('variaciones.update', ['producto_id' => $producto->id_producto, 'variacion_id' => $variacion->id_variacion]) }}" 
           method="POST" enctype="multipart/form-data" id="variacionForm">
         @csrf
@@ -81,19 +144,6 @@
                         <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información Básica de la Variación</h5>
                     </div>
                     <div class="card-body">
-                        @if($tieneDescuentoActivo)
-                            <div class="alert alert-success mb-3">
-                                <i class="fas fa-tag me-2"></i>
-                                <strong>¡Esta variación tiene un descuento activo del {{ $porcentajeDescuento }}%!</strong>
-                                @if($variacion->vMotivo_descuento)
-                                    <br><small>Motivo: {{ $variacion->vMotivo_descuento }}</small>
-                                @endif
-                                @if($variacion->dFecha_inicio_descuento && $variacion->dFecha_fin_descuento)
-                                    <br><small>Período: {{ \Carbon\Carbon::parse($variacion->dFecha_inicio_descuento)->format('d/m/Y') }} - {{ \Carbon\Carbon::parse($variacion->dFecha_fin_descuento)->format('d/m/Y') }}</small>
-                                @endif
-                            </div>
-                        @endif
-
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
@@ -208,7 +258,7 @@
                                                {{ old('bTiene_descuento', $variacion->bTiene_descuento) ? 'checked' : '' }}
                                                onchange="toggleDescuentoFields()">
                                         <label class="form-check-label" for="bTiene_descuento">
-                                            Activar descuento para esta variación
+                                            Activar Descuento para esta variación
                                         </label>
                                     </div>
                                     <small class="form-text text-muted">
@@ -218,13 +268,13 @@
                             </div>
                         </div>
 
-                        <!-- CAMPOS DE DESCUENTO -->
+                        <!-- CAMPOS DE DESCUENTO (OCULTOS INICIALMENTE) -->
                         <div id="descuentoFields" style="display: {{ old('bTiene_descuento', $variacion->bTiene_descuento) ? 'block' : 'none' }};">
                             <div class="row">
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
                                         <label for="dPrecio_descuento" class="form-label fw-bold">
-                                            Precio de descuento <span class="text-danger">*</span>
+                                            Precio de Descuento <span class="text-danger">*</span>
                                         </label>
                                         <div class="input-group">
                                             <span class="input-group-text">$</span>
@@ -255,7 +305,7 @@
                                                name="dFecha_inicio_descuento" 
                                                id="dFecha_inicio_descuento" 
                                                class="form-control @error('dFecha_inicio_descuento') is-invalid @enderror"
-                                               value="{{ old('dFecha_inicio_descuento', $variacion->dFecha_inicio_descuento ? \Carbon\Carbon::parse($variacion->dFecha_inicio_descuento)->format('Y-m-d') : '') }}"
+                                               value="{{ old('dFecha_inicio_descuento', $fechaInicioFormateada) }}"
                                                onchange="validarFechasDescuento()"
                                                autocomplete="off">
                                         @error('dFecha_inicio_descuento')
@@ -273,7 +323,7 @@
                                                name="dFecha_fin_descuento" 
                                                id="dFecha_fin_descuento" 
                                                class="form-control @error('dFecha_fin_descuento') is-invalid @enderror"
-                                               value="{{ old('dFecha_fin_descuento', $variacion->dFecha_fin_descuento ? \Carbon\Carbon::parse($variacion->dFecha_fin_descuento)->format('Y-m-d') : '') }}"
+                                               value="{{ old('dFecha_fin_descuento', $fechaFinFormateada) }}"
                                                onchange="validarFechasDescuento()"
                                                autocomplete="off">
                                         <div id="error-fechas-descuento" class="invalid-feedback" style="display: none;"></div>
@@ -332,6 +382,7 @@
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                     <small class="form-text text-muted">Máximo: 999.999 kg (3 dígitos enteros, 3 decimales)</small>
+                                    <div id="error-dPeso" class="invalid-feedback d-block" style="display: none;"></div>
                                 </div>
                             </div>
                             
@@ -358,6 +409,7 @@
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                     <small class="form-text text-muted">Máximo: 999.99 cm (3 dígitos enteros, 2 decimales)</small>
+                                    <div id="error-dLargo_cm" class="invalid-feedback d-block" style="display: none;"></div>
                                 </div>
                             </div>
                             
@@ -384,6 +436,7 @@
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                     <small class="form-text text-muted">Máximo: 999.99 cm (3 dígitos enteros, 2 decimales)</small>
+                                    <div id="error-dAncho_cm" class="invalid-feedback d-block" style="display: none;"></div>
                                 </div>
                             </div>
                             
@@ -410,6 +463,7 @@
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                     <small class="form-text text-muted">Máximo: 999.99 cm (3 dígitos enteros, 2 decimales)</small>
+                                    <div id="error-dAlto_cm" class="invalid-feedback d-block" style="display: none;"></div>
                                 </div>
                             </div>
                         </div>
@@ -438,6 +492,7 @@
                                         @else
                                             Producto padre: <strong>Sin clase de envío definida</strong>
                                         @endif
+                                        <br>Dejar vacío para usar la del producto padre.
                                     </small>
                                 </div>
                             </div>
@@ -503,8 +558,8 @@
                                     <small class="text-muted d-block">Precio con impuesto</small>
                                     <h5 class="fw-bold mb-0" id="precio-final-display">${{ number_format($variacion->precio_final, 2) }}</h5>
                                     <small class="text-muted" id="detalle-impuesto-display">
-                                        @if($variacion->impuesto)
-                                            {{ $variacion->impuesto->vNombre }}: {{ $variacion->impuesto->dPorcentaje }}%
+                                        @if($impuestoVariacion && $impuestoVariacion->bActivo)
+                                            {{ $impuestoVariacion->vNombre }}: {{ $impuestoVariacion->dPorcentaje }}%
                                         @else
                                             Sin impuesto
                                         @endif
@@ -515,7 +570,7 @@
                     </div>
                 </div>
 
-                <!-- SECCIÓN DE PRECIO FINAL CON IMPUESTO -->
+                <!-- SECCIÓN DE PRECIO FINAL CON IMPUESTO (MEJORADA) -->
                 <div class="card mb-4 bg-info text-white">
                     <div class="card-header bg-dark text-white">
                         <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Precio Final con Impuesto</h5>
@@ -526,12 +581,17 @@
                                 <div class="card bg-white text-dark">
                                     <div class="card-body text-center">
                                         <h6 class="text-muted">Precio base (con descuento aplicado)</h6>
-                                        <h3 class="fw-bold" id="precio-base-display">
-                                            ${{ number_format($variacion->precio_actual, 2) }}
-                                        </h3>
+                                        <h3 class="fw-bold" id="precio-base-display">${{ number_format($precioBase, 2) }}</h3>
                                         @if($tieneDescuentoActivo)
                                             <small class="text-muted" id="precio-original-display">
-                                                Precio original: ${{ number_format($variacion->dPrecio, 2) }}
+                                                <span class="text-decoration-line-through">${{ number_format($variacion->dPrecio, 2) }}</span>
+                                                <span class="badge bg-danger ms-2">-{{ $porcentajeDescuento }}%</span>
+                                            </small>
+                                        @elseif($tieneDescuentoProgramado)
+                                            <small class="text-muted" id="precio-original-display">
+                                                <span class="text-warning">Descuento programado:</span>
+                                                <span class="text-decoration-line-through">${{ number_format($variacion->dPrecio, 2) }}</span>
+                                                → ${{ number_format($variacion->dPrecio_descuento, 2) }}
                                             </small>
                                         @else
                                             <small class="text-muted" id="precio-original-display" style="display: none;"></small>
@@ -543,12 +603,9 @@
                                 <div class="card bg-white text-dark">
                                     <div class="card-body text-center">
                                         <h6 class="text-muted">Impuesto</h6>
-                                        <h3 class="fw-bold" id="total-impuestos-display">
-                                            ${{ number_format($variacion->total_impuesto, 2) }}
-                                        </h3>
-                                        <small id="porcentaje-impuestos-display">
-                                            {{ $variacion->porcentaje_impuesto }}%
-                                        </small>
+                                        <h3 class="fw-bold" id="total-impuestos-display">${{ number_format($totalImpuestos, 2) }}</h3>
+                                        <small id="porcentaje-impuestos-display">{{ $porcentajeImpuesto }}%</small>
+                                        <small class="d-block text-muted" id="detalle-impuesto-breakdown"></small>
                                     </div>
                                 </div>
                             </div>
@@ -556,9 +613,7 @@
                                 <div class="card bg-success text-white">
                                     <div class="card-body text-center">
                                         <h6>Precio final (con impuesto)</h6>
-                                        <h2 class="fw-bold" id="precio-final-total-display">
-                                            ${{ number_format($variacion->precio_final, 2) }}
-                                        </h2>
+                                        <h2 class="fw-bold" id="precio-final-total-display">${{ number_format($precioFinal, 2) }}</h2>
                                         <small>Este es el precio que verá el cliente</small>
                                     </div>
                                 </div>
@@ -567,13 +622,13 @@
                         <div class="row mt-3">
                             <div class="col-12">
                                 <div class="alert alert-light text-dark p-3" id="detalle-impuesto-info">
-                                    @if($variacion->impuesto)
-                                        <strong>Cálculo de {{ $variacion->impuesto->vNombre }}:</strong><br>
-                                        Precio base: ${{ number_format($variacion->precio_actual, 2) }}<br>
-                                        {{ $variacion->impuesto->vNombre }} ({{ $variacion->impuesto->dPorcentaje }}%): +${{ number_format($variacion->total_impuesto, 2) }}<br>
-                                        <strong>Total: ${{ number_format($variacion->precio_final, 2) }}</strong>
+                                    @if($impuestoVariacion && $impuestoVariacion->bActivo)
+                                        <strong>Cálculo de {{ $impuestoVariacion->vNombre }}:</strong><br>
+                                        Precio base: ${{ number_format($precioBase, 2) }}<br>
+                                        {{ $impuestoVariacion->vNombre }} ({{ $impuestoVariacion->dPorcentaje }}%): +${{ number_format($totalImpuestos, 2) }}<br>
+                                        <strong>Total: ${{ number_format($precioFinal, 2) }}</strong>
                                     @else
-                                        Precio final: ${{ number_format($variacion->precio_actual, 2) }} (Sin impuestos)
+                                        Precio final: ${{ number_format($precioBase, 2) }} (Sin impuestos)
                                     @endif
                                 </div>
                             </div>
@@ -594,13 +649,6 @@
                                 <i class="fas fa-info-circle me-2"></i>
                                 Selecciona un valor para cada atributo asignado al producto.
                             </div>
-                            
-                            @php
-                                $valoresSeleccionados = [];
-                                foreach($variacion->atributos as $atributoRel) {
-                                    $valoresSeleccionados[$atributoRel->id_atributo] = $atributoRel->id_atributo_valor;
-                                }
-                            @endphp
                             
                             @foreach($atributos as $nombreAtributo => $valores)
                                 <div class="mb-4 p-3 border rounded atributo-container">
@@ -649,7 +697,7 @@
                     </div>
                 </div>
 
-                <!-- MULTIMEDIA DE LA VARIACIÓN -->
+                <!-- MULTIMEDIA DE LA VARIACIÓN (MEJORADA) -->
                 <div class="card mb-4">
                     <div class="card-header bg-secondary text-white">
                         <h5 class="mb-0"><i class="fas fa-images me-2"></i>Multimedia de la Variación</h5>
@@ -698,15 +746,16 @@
                                 @endif
                             </small>
                             
+                            <!-- Preview de imagen principal -->
                             <div id="preview_principal_container" class="mt-2" style="display: none;">
-                                <div class="border rounded p-2 text-center bg-light">
+                                <div class="border rounded p-2 text-center bg-light position-relative">
                                     <img id="preview_principal_img" src="#" 
                                          class="img-thumbnail" 
                                          style="max-width: 150px; max-height: 150px; object-fit: contain;"
                                          alt="Preview imagen principal">
                                     <div class="mt-2">
                                         <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarImagenPrincipal()">
-                                            <i class="fas fa-times me-1"></i>Cancelar
+                                            <i class="fas fa-times me-1"></i>Quitar imagen
                                         </button>
                                     </div>
                                 </div>
@@ -756,6 +805,7 @@
                                 @endif
                             </small>
                             
+                            <!-- Preview de GIF -->
                             <div id="preview_gif_container" class="mt-2" style="display: none;">
                                 <div class="border rounded p-2 text-center bg-light">
                                     <img id="preview_gif" src="#" 
@@ -764,7 +814,7 @@
                                          alt="Preview GIF">
                                     <div class="mt-2">
                                         <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarGif()">
-                                            <i class="fas fa-times me-1"></i>Cancelar
+                                            <i class="fas fa-times me-1"></i>Quitar GIF
                                         </button>
                                     </div>
                                 </div>
@@ -1011,10 +1061,12 @@
 
 <script>
 // ============ DATOS EXISTENTES PARA VALIDACIÓN ============
+// SKUs de productos existentes
 const productosExistentes = @json(\App\Models\Producto::select('vCodigo_barras as sku')->get()->map(function($p) {
     return $p->sku;
 })->values());
 
+// SKUs de variaciones existentes (excluyendo la actual)
 const variacionesExistentes = @json(\App\Models\ProductoVariacion::where('id_variacion', '!=', $variacion->id_variacion)
     ->select('vSKU as sku')
     ->get()
@@ -1022,6 +1074,7 @@ const variacionesExistentes = @json(\App\Models\ProductoVariacion::where('id_var
         return $v->sku;
     })->values());
 
+// Crear sets para búsqueda rápida
 const skusProductosExistentes = new Set(productosExistentes);
 const skusVariacionesExistentes = new Set(variacionesExistentes);
 
@@ -1030,7 +1083,7 @@ let imagenPrincipalFile = null;
 let gifFile = null;
 let selectedImages = [];
 let imageCounter = 0;
-let maxTotalSize = 50 * 1024 * 1024;
+let maxTotalSize = 50 * 1024 * 1024; // 50MB en bytes
 let limiteExcedido = false;
 let imagenesAEliminar = [];
 
@@ -1056,6 +1109,7 @@ function verificarSKUVariacionLocal(input) {
         return true;
     }
     
+    // Verificar contra SKUs de productos
     if (skusProductosExistentes.has(sku)) {
         input.classList.add('is-invalid');
         errorDiv.textContent = `⚠️ Ya existe un producto con el SKU "${sku}".`;
@@ -1063,6 +1117,7 @@ function verificarSKUVariacionLocal(input) {
         return false;
     }
     
+    // Verificar contra SKUs de variaciones existentes
     if (skusVariacionesExistentes.has(sku)) {
         input.classList.add('is-invalid');
         errorDiv.textContent = `⚠️ Ya existe una variación con el SKU "${sku}".`;
@@ -1077,18 +1132,32 @@ function verificarSKUVariacionLocal(input) {
 }
 
 function validarSKU(input) {
-    const cursorPos = input.selectionStart;
+    // Permitir letras, números y guiones
     let valor = input.value.replace(/[^A-Za-z0-9\-]/g, '');
-    if (valor.length > 25) valor = valor.substring(0, 25);
-    valor = valor.toUpperCase();
     
-    if (input.value !== valor) {
-        input.value = valor;
-        setTimeout(() => input.setSelectionRange(cursorPos, cursorPos), 0);
+    // Limitar a 25 caracteres
+    if (valor.length > 25) {
+        valor = valor.substring(0, 25);
     }
     
-    if (input.value.trim() === '') input.classList.add('is-invalid');
-    else input.classList.remove('is-invalid');
+    // Convertir a mayúsculas automáticamente
+    valor = valor.toUpperCase();
+    
+    // Actualizar el valor
+    if (input.value !== valor) {
+        const cursorPos = input.selectionStart;
+        input.value = valor;
+        setTimeout(() => {
+            input.setSelectionRange(cursorPos, cursorPos);
+        }, 0);
+    }
+    
+    // Validar que no esté vacío
+    if (input.value.trim() === '') {
+        input.classList.add('is-invalid');
+    } else {
+        input.classList.remove('is-invalid');
+    }
 }
 
 function validarPrecio(input) {
@@ -1100,19 +1169,33 @@ function validarPrecio(input) {
         return;
     }
     
+    // Eliminar todo excepto números y un punto decimal
     value = value.replace(/[^0-9.]/g, '');
+    
+    // Verificar que no haya más de un punto decimal
     const puntos = value.split('.').length - 1;
     if (puntos > 1) {
         const partes = value.split('.');
         value = partes[0] + '.' + partes.slice(1).join('');
     }
-    value = value.replace(/\.{2,}/g, '.');
-    if (value.startsWith('.')) value = '0' + value;
     
-    const partesNumero = value.split('.');
-    if (partesNumero[0].length > 7) {
-        value = partesNumero[0].substring(0, 7) + (partesNumero[1] ? '.' + partesNumero[1] : '');
+    // Eliminar múltiples puntos seguidos
+    value = value.replace(/\.{2,}/g, '.');
+    
+    // Si comienza con punto, agregar 0 al inicio
+    if (value.startsWith('.')) {
+        value = '0' + value;
     }
+    
+    // Limitar a máximo 7 dígitos enteros (9,999,999.99)
+    const partesNumero = value.split('.');
+    const parteEntera = partesNumero[0];
+    
+    if (parteEntera.length > 7) {
+        value = parteEntera.substring(0, 7) + (partesNumero[1] ? '.' + partesNumero[1] : '');
+    }
+    
+    // Limitar decimales a máximo 2
     if (value.includes('.')) {
         const partes = value.split('.');
         if (partes[1].length > 2) {
@@ -1121,25 +1204,60 @@ function validarPrecio(input) {
         }
     }
     
+    // Solo actualizar si el valor cambió
     if (input.value !== value) {
         const oldValue = input.value;
         input.value = value;
+        
         const cursorDiff = value.length - oldValue.length;
         const newCursorPos = Math.max(0, Math.min(value.length, cursorPos + cursorDiff));
-        setTimeout(() => input.setSelectionRange(newCursorPos, newCursorPos), 0);
+        setTimeout(() => {
+            input.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
     }
     
-    input.classList.remove('is-invalid');
+    // Limpiar error específico del input
+    limpiarErrorPrecio(input);
     
+    // Mostrar error si el número es muy grande
     if (value) {
         const numero = parseFloat(value);
         if (!isNaN(numero) && numero > 9999999.99) {
             input.classList.add('is-invalid');
+            mostrarErrorPrecio(input, 'El precio máximo es 9,999,999.99');
         }
     }
     
-    if (input.id === 'dPrecio_descuento') validarPrecioDescuentoInstantaneo(input);
+    // Validaciones específicas
+    if (input.id === 'dPrecio_descuento') {
+        validarPrecioDescuentoInstantaneo(input);
+    }
+    
     actualizarPrecioFinal();
+}
+
+function mostrarErrorPrecio(input, mensaje) {
+    const errorId = `error-${input.id}-limite`;
+    const errorElement = document.getElementById(errorId);
+    if (errorElement) {
+        errorElement.remove();
+    }
+    
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'invalid-feedback d-block precio-error';
+    errorDiv.textContent = mensaje;
+    errorDiv.id = errorId;
+    
+    input.parentNode.appendChild(errorDiv);
+}
+
+function limpiarErrorPrecio(input) {
+    const errorId = `error-${input.id}-limite`;
+    const errorElement = document.getElementById(errorId);
+    if (errorElement) {
+        errorElement.remove();
+    }
+    input.classList.remove('is-invalid');
 }
 
 function validarPrecioDescuentoInstantaneo(input) {
@@ -1224,107 +1342,278 @@ function validarFechasDescuento() {
 }
 
 function validarStock(input) {
+    // Remover cualquier caracter que no sea número
     input.value = input.value.replace(/[^0-9]/g, '');
-    if (input.value.length > 6) input.value = input.value.substring(0, 6);
-    if (input.value && parseInt(input.value) < 0) input.value = '0';
-    if (input.value.length > 1 && input.value.startsWith('0')) input.value = input.value.replace(/^0+/, '');
-    if (input.value === '') input.value = '0';
+    
+    // Limitar a máximo 6 dígitos
+    if (input.value.length > 6) {
+        input.value = input.value.substring(0, 6);
+    }
+    
+    // Validar que sea mayor o igual a 0
+    if (input.value && parseInt(input.value) < 0) {
+        input.value = '0';
+    }
+    
+    // Remover ceros a la izquierda (excepto si es solo "0")
+    if (input.value.length > 1 && input.value.startsWith('0')) {
+        input.value = input.value.replace(/^0+/, '');
+    }
+    
+    // Si está vacío, poner 0
+    if (input.value === '') {
+        input.value = '0';
+    }
+    
     input.classList.remove('is-invalid');
 }
 
+// ==================== VALIDACIONES DE DIMENSIONES ====================
+
 function validarPeso(input) {
     let value = input.value;
-    if (value === '') return;
+    const cursorPos = input.selectionStart;
+    
+    if (value === '') {
+        limpiarErrorDimension(input);
+        return;
+    }
+    
+    // Solo números y punto decimal
     value = value.replace(/[^0-9.]/g, '');
+    
+    // Un solo punto decimal
     const puntos = value.split('.').length - 1;
     if (puntos > 1) {
         const partes = value.split('.');
         value = partes[0] + '.' + partes.slice(1).join('');
     }
-    if (value.startsWith('.')) value = '0' + value;
+    
+    // Eliminar múltiples puntos
+    value = value.replace(/\.{2,}/g, '.');
+    
+    // Agregar 0 si empieza con punto
+    if (value.startsWith('.')) {
+        value = '0' + value;
+    }
+    
+    // Limitar decimales a máximo 3
     if (value.includes('.')) {
         const partes = value.split('.');
         if (partes[1].length > 3) {
             partes[1] = partes[1].substring(0, 3);
             value = partes[0] + '.' + partes[1];
         }
-        if (partes[0].length > 3) value = partes[0].substring(0, 3) + '.' + partes[1];
-    } else {
-        if (value.length > 3) value = value.substring(0, 3);
     }
-    input.value = value;
     
+    // Limitar parte entera a máximo 3 dígitos
+    if (value.includes('.')) {
+        const partes = value.split('.');
+        if (partes[0].length > 3) {
+            partes[0] = partes[0].substring(0, 3);
+            value = partes[0] + '.' + partes[1];
+        }
+    } else {
+        if (value.length > 3) {
+            value = value.substring(0, 3);
+        }
+    }
+    
+    if (input.value !== value) {
+        const oldValue = input.value;
+        input.value = value;
+        
+        const cursorDiff = value.length - oldValue.length;
+        const newCursorPos = Math.max(0, Math.min(value.length, cursorPos + cursorDiff));
+        setTimeout(() => {
+            input.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
+    }
+    
+    // Limpiar error primero
+    limpiarErrorDimension(input);
+    
+    // Validar que no exceda 999.999 kg
     if (value) {
         const numero = parseFloat(value);
         if (!isNaN(numero) && numero > 999.999) {
             input.classList.add('is-invalid');
-        } else {
-            input.classList.remove('is-invalid');
+            mostrarErrorDimension(input, 'El peso máximo es 999.999 kg');
         }
     }
 }
 
 function validarDimensionCm(input) {
     let value = input.value;
-    if (value === '') return;
+    const cursorPos = input.selectionStart;
+    
+    if (value === '') {
+        limpiarErrorDimension(input);
+        return;
+    }
+    
+    // Solo números y punto decimal
     value = value.replace(/[^0-9.]/g, '');
+    
+    // Un solo punto decimal
     const puntos = value.split('.').length - 1;
     if (puntos > 1) {
         const partes = value.split('.');
         value = partes[0] + '.' + partes.slice(1).join('');
     }
-    if (value.startsWith('.')) value = '0' + value;
+    
+    // Eliminar múltiples puntos
+    value = value.replace(/\.{2,}/g, '.');
+    
+    // Agregar 0 si empieza con punto
+    if (value.startsWith('.')) {
+        value = '0' + value;
+    }
+    
+    // Limitar decimales a máximo 2
     if (value.includes('.')) {
         const partes = value.split('.');
         if (partes[1].length > 2) {
             partes[1] = partes[1].substring(0, 2);
             value = partes[0] + '.' + partes[1];
         }
-        if (partes[0].length > 3) value = partes[0].substring(0, 3) + '.' + partes[1];
-    } else {
-        if (value.length > 3) value = value.substring(0, 3);
     }
-    input.value = value;
     
+    // Limitar parte entera a máximo 3 dígitos
+    if (value.includes('.')) {
+        const partes = value.split('.');
+        if (partes[0].length > 3) {
+            partes[0] = partes[0].substring(0, 3);
+            value = partes[0] + '.' + partes[1];
+        }
+    } else {
+        if (value.length > 3) {
+            value = value.substring(0, 3);
+        }
+    }
+    
+    if (input.value !== value) {
+        const oldValue = input.value;
+        input.value = value;
+        
+        const cursorDiff = value.length - oldValue.length;
+        const newCursorPos = Math.max(0, Math.min(value.length, cursorPos + cursorDiff));
+        setTimeout(() => {
+            input.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
+    }
+    
+    // Limpiar error primero
+    limpiarErrorDimension(input);
+    
+    // Validar que no exceda 999.99 cm
     if (value) {
         const numero = parseFloat(value);
         if (!isNaN(numero) && numero > 999.99) {
             input.classList.add('is-invalid');
-        } else {
-            input.classList.remove('is-invalid');
+            mostrarErrorDimension(input, 'La dimensión máxima es 999.99 cm');
         }
     }
 }
 
+function mostrarErrorDimension(input, mensaje) {
+    const errorId = `error-${input.id}`;
+    let errorElement = document.getElementById(errorId);
+    
+    if (!errorElement) {
+        errorElement = document.createElement('div');
+        errorElement.className = 'invalid-feedback d-block';
+        errorElement.id = errorId;
+        input.parentNode.appendChild(errorElement);
+    }
+    
+    errorElement.textContent = mensaje;
+    input.classList.add('is-invalid');
+}
+
+function limpiarErrorDimension(input) {
+    const errorId = `error-${input.id}`;
+    const errorElement = document.getElementById(errorId);
+    if (errorElement) {
+        errorElement.textContent = '';
+    }
+    input.classList.remove('is-invalid');
+}
+
 function formatearPeso(input) {
     let value = input.value;
-    if (!value || value === '.' || value.endsWith('.')) return;
+    
+    if (!value || value === '.' || value.endsWith('.')) {
+        return;
+    }
+    
     let num = parseFloat(value);
     if (isNaN(num)) {
         input.value = '';
         return;
     }
-    if (num > 999.999) num = 999.999;
+    
+    if (num > 999.999) {
+        num = 999.999;
+    }
+    
     input.value = num.toString();
+    
+    // Asegurar que tenga el formato correcto (máx 3 decimales)
+    if (input.value.includes('.')) {
+        const partes = input.value.split('.');
+        if (partes[1].length > 3) {
+            input.value = partes[0] + '.' + partes[1].substring(0, 3);
+        }
+    }
 }
 
 function formatearDimensionCm(input) {
     let value = input.value;
-    if (!value || value === '.' || value.endsWith('.')) return;
+    
+    if (!value || value === '.' || value.endsWith('.')) {
+        return;
+    }
+    
     let num = parseFloat(value);
     if (isNaN(num)) {
         input.value = '';
         return;
     }
-    if (num > 999.99) num = 999.99;
+    
+    if (num > 999.99) {
+        num = 999.99;
+    }
+    
     input.value = num.toString();
+    
+    // Asegurar que tenga el formato correcto (máx 2 decimales)
+    if (input.value.includes('.')) {
+        const partes = input.value.split('.');
+        if (partes[1].length > 2) {
+            input.value = partes[0] + '.' + partes[1].substring(0, 2);
+        }
+    }
 }
 
 function permitirBorrado(e) {
-    const teclasPermitidas = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Tab', 'Enter'];
-    if (e.ctrlKey || e.metaKey) return true;
-    if (teclasPermitidas.includes(e.key)) return true;
-    if (e.key >= '0' && e.key <= '9') return true;
+    const teclasPermitidas = [
+        'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+        'Home', 'End', 'Tab', 'Enter'
+    ];
+    
+    if (e.ctrlKey || e.metaKey) {
+        return true;
+    }
+    
+    if (teclasPermitidas.includes(e.key)) {
+        return true;
+    }
+    
+    if (e.key >= '0' && e.key <= '9') {
+        return true;
+    }
+    
     if (e.key === '.') {
         if (e.target.value.includes('.')) {
             e.preventDefault();
@@ -1332,6 +1621,7 @@ function permitirBorrado(e) {
         }
         return true;
     }
+    
     e.preventDefault();
     return false;
 }
@@ -1347,84 +1637,155 @@ function toggleDescuentoFields() {
     
     if (tieneDescuento) {
         descuentoFields.style.display = 'block';
-        precioDescuento.required = true;
-        fechaInicio.required = true;
-        fechaFin.required = true;
+        if (precioDescuento) precioDescuento.required = true;
+        if (fechaInicio) fechaInicio.required = true;
+        if (fechaFin) fechaFin.required = true;
+        
         setTimeout(() => {
             validarPrecioDescuento();
             actualizarPrecioFinal();
         }, 100);
     } else {
         descuentoFields.style.display = 'none';
-        precioDescuento.required = false;
-        fechaInicio.required = false;
-        fechaFin.required = false;
-        precioDescuento.classList.remove('is-invalid');
+        if (precioDescuento) precioDescuento.required = false;
+        if (fechaInicio) fechaInicio.required = false;
+        if (fechaFin) fechaFin.required = false;
+        
+        if (precioDescuento) precioDescuento.classList.remove('is-invalid');
         const errorDiv = document.getElementById('error-precio-descuento');
         if (errorDiv) errorDiv.style.display = 'none';
-        fechaFin.classList.remove('is-invalid');
+        if (fechaFin) fechaFin.classList.remove('is-invalid');
         const errorFechas = document.getElementById('error-fechas-descuento');
         if (errorFechas) errorFechas.style.display = 'none';
+        
         actualizarPrecioFinal();
     }
 }
 
-// ==================== FUNCIÓN DE CÁLCULO DE IMPUESTO ====================
+// ==================== FUNCIÓN DE CÁLCULO DE IMPUESTO Y PRECIO FINAL ====================
 
 function actualizarPrecioFinal() {
     const precioInput = document.getElementById('dPrecio');
     const tieneDescuento = document.getElementById('bTiene_descuento')?.checked;
     const precioDescuentoInput = document.getElementById('dPrecio_descuento');
+    const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
+    const fechaFinInput = document.getElementById('dFecha_fin_descuento');
     const impuestoSelect = document.getElementById('id_impuesto');
     
     if (!precioInput) return;
     
+    // Determinar qué precio usar (original o con descuento)
     let precioBase = parseFloat(precioInput.value) || 0;
     let precioOriginal = precioBase;
     let descuentoActivo = false;
+    let mensajeDescuento = '';
     
+    // Verificar si el descuento está activo HOY
     if (tieneDescuento && precioDescuentoInput && precioDescuentoInput.value) {
         const fechaHoy = new Date();
         fechaHoy.setHours(0, 0, 0, 0);
-        const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
-        const fechaFinInput = document.getElementById('dFecha_fin_descuento');
-        let fechaInicio = null, fechaFin = null;
-        if (fechaInicioInput?.value) fechaInicio = new Date(fechaInicioInput.value + 'T00:00:00');
-        if (fechaFinInput?.value) fechaFin = new Date(fechaFinInput.value + 'T23:59:59');
+        
+        let fechaInicio = null;
+        let fechaFin = null;
+        
+        if (fechaInicioInput && fechaInicioInput.value) {
+            const [year, month, day] = fechaInicioInput.value.split('-').map(Number);
+            fechaInicio = new Date(year, month - 1, day);
+        }
+        if (fechaFinInput && fechaFinInput.value) {
+            const [year, month, day] = fechaFinInput.value.split('-').map(Number);
+            fechaFin = new Date(year, month - 1, day);
+            fechaFin.setHours(23, 59, 59, 999);
+        }
+        
         const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
         
-        let aplicar = false;
-        if (fechaInicio && fechaFin) aplicar = fechaHoy >= fechaInicio && fechaHoy <= fechaFin;
-        else if (fechaInicio && !fechaFin) aplicar = fechaHoy >= fechaInicio;
-        else if (!fechaInicio && fechaFin) aplicar = fechaHoy <= fechaFin;
-        else aplicar = true;
+        let aplicarDescuento = false;
+        if (fechaInicio && fechaFin) {
+            aplicarDescuento = fechaHoy >= fechaInicio && fechaHoy <= fechaFin;
+        } else if (fechaInicio && !fechaFin) {
+            aplicarDescuento = fechaHoy >= fechaInicio;
+        } else if (!fechaInicio && fechaFin) {
+            aplicarDescuento = fechaHoy <= fechaFin;
+        } else {
+            aplicarDescuento = true;
+        }
         
-        if (aplicar && precioDescuento > 0 && precioDescuento < precioBase) {
+        if (aplicarDescuento && precioDescuento > 0 && precioDescuento < precioBase) {
             precioBase = precioDescuento;
             descuentoActivo = true;
+            
+            if (fechaInicio && fechaFin) {
+                mensajeDescuento = `Válido del ${fechaInicioInput.value} al ${fechaFinInput.value}`;
+            } else if (fechaInicio) {
+                mensajeDescuento = `Válido desde ${fechaInicioInput.value}`;
+            } else if (fechaFin) {
+                mensajeDescuento = `Válido hasta ${fechaFinInput.value}`;
+            }
         }
     }
     
+    // Mostrar precio base
     document.getElementById('precio-base-display').textContent = '$' + precioBase.toFixed(2);
+    
+    // Mostrar precio original si hay descuento
     const precioOriginalDisplay = document.getElementById('precio-original-display');
     if (precioOriginalDisplay) {
         if (tieneDescuento && precioDescuentoInput?.value && descuentoActivo) {
+            const porcentajeDesc = Math.round(((precioOriginal - precioBase) / precioOriginal) * 100);
             precioOriginalDisplay.style.display = 'block';
-            precioOriginalDisplay.innerHTML = `<span class="text-decoration-line-through">$${precioOriginal.toFixed(2)}</span><span class="badge bg-danger ms-2">¡DESCUENTO!</span>`;
+            precioOriginalDisplay.innerHTML = `
+                <div class="alert alert-success p-2 mb-2">
+                    <strong>✓ ¡DESCUENTO ACTIVO HOY!</strong><br>
+                    <span class="text-decoration-line-through">$${precioOriginal.toFixed(2)}</span> → 
+                    <strong class="text-danger">$${precioBase.toFixed(2)}</strong>
+                    <span class="badge bg-danger ms-2">-${porcentajeDesc}%</span>
+                    ${mensajeDescuento ? `<br><small>${mensajeDescuento}</small>` : ''}
+                </div>
+            `;
+        } else if (tieneDescuento && precioDescuentoInput?.value) {
+            const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
+            if (precioDescuento > 0 && precioDescuento < precioOriginal) {
+                precioOriginalDisplay.style.display = 'block';
+                let fechaTexto = '';
+                if (fechaInicioInput?.value && fechaFinInput?.value) {
+                    fechaTexto = ` (${fechaInicioInput.value} al ${fechaFinInput.value})`;
+                } else if (fechaInicioInput?.value) {
+                    fechaTexto = ` desde ${fechaInicioInput.value}`;
+                } else if (fechaFinInput?.value) {
+                    fechaTexto = ` hasta ${fechaFinInput.value}`;
+                }
+                precioOriginalDisplay.innerHTML = `
+                    <div class="alert alert-warning p-2 mb-2">
+                        <strong>⏱️ Descuento programado${fechaTexto}</strong><br>
+                        Precio normal: <strong>$${precioOriginal.toFixed(2)}</strong><br>
+                        Precio con descuento: $${precioDescuento.toFixed(2)}
+                    </div>
+                `;
+            } else {
+                precioOriginalDisplay.style.display = 'none';
+            }
         } else {
             precioOriginalDisplay.style.display = 'none';
         }
     }
     
-    let totalImpuestos = 0, porcentaje = 0, nombreImpuesto = '';
+    // Obtener impuesto seleccionado
+    let totalImpuestos = 0;
+    let porcentaje = 0;
+    let nombreImpuesto = '';
+    
     if (impuestoSelect && impuestoSelect.value) {
         const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
         porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
         nombreImpuesto = selectedOption.dataset.nombre || selectedOption.text.split('(')[0].trim();
+        
         totalImpuestos = precioBase * (porcentaje / 100);
     }
     
     const precioFinal = precioBase + totalImpuestos;
+    
+    // Mostrar resultados
     document.getElementById('total-impuestos-display').textContent = '+$' + totalImpuestos.toFixed(2);
     document.getElementById('precio-final-total-display').textContent = '$' + precioFinal.toFixed(2);
     document.getElementById('precio-final-display').textContent = '$' + precioFinal.toFixed(2);
@@ -1432,15 +1793,23 @@ function actualizarPrecioFinal() {
     if (porcentaje > 0) {
         document.getElementById('porcentaje-impuestos-display').textContent = `+${porcentaje.toFixed(2)}% (${nombreImpuesto})`;
         document.getElementById('detalle-impuesto-display').textContent = `${nombreImpuesto}: ${porcentaje.toFixed(2)}% (+$${totalImpuestos.toFixed(2)})`;
+        
         const detalleInfo = document.getElementById('detalle-impuesto-info');
         if (detalleInfo) {
-            detalleInfo.innerHTML = `<strong>Cálculo de ${nombreImpuesto}:</strong><br>Precio base: $${precioBase.toFixed(2)}<br>${nombreImpuesto} (${porcentaje}%): +$${totalImpuestos.toFixed(2)}<br><strong>Total: $${precioFinal.toFixed(2)}</strong>`;
+            let html = `<strong>Cálculo de ${nombreImpuesto}:</strong><br>`;
+            html += `Precio base: $${precioBase.toFixed(2)}<br>`;
+            html += `${nombreImpuesto} (${porcentaje}%): +$${totalImpuestos.toFixed(2)}<br>`;
+            html += `<strong>Total: $${precioFinal.toFixed(2)}</strong>`;
+            detalleInfo.innerHTML = html;
         }
     } else {
         document.getElementById('porcentaje-impuestos-display').textContent = '0%';
         document.getElementById('detalle-impuesto-display').textContent = 'Sin impuesto';
+        
         const detalleInfo = document.getElementById('detalle-impuesto-info');
-        if (detalleInfo) detalleInfo.innerHTML = `Precio final: $${precioBase.toFixed(2)} (Sin impuestos)`;
+        if (detalleInfo) {
+            detalleInfo.innerHTML = `Precio final: $${precioBase.toFixed(2)} (Sin impuestos)`;
+        }
     }
 }
 
@@ -1448,9 +1817,14 @@ function actualizarPrecioFinal() {
 
 function calcularTamañoTotal() {
     let total = 0;
+    
     if (imagenPrincipalFile) total += imagenPrincipalFile.size;
     if (gifFile) total += gifFile.size;
-    selectedImages.forEach(img => { total += img.file.size; });
+    
+    selectedImages.forEach(img => {
+        total += img.file.size;
+    });
+    
     return total;
 }
 
@@ -1462,15 +1836,28 @@ function actualizarBarraProgresoTamaño() {
     const totalSizeSpan = document.getElementById('total-size');
     const totalImagenesSpan = document.getElementById('total-imagenes');
     const limiteMsg = document.getElementById('limiteArchivosMsg');
+    const sizeInfo = document.getElementById('sizeInfo');
+    
+    // Mostrar/ocultar la barra si hay archivos
+    if (totalSize > 0) {
+        if (sizeInfo) sizeInfo.style.display = 'block';
+    } else {
+        if (sizeInfo) sizeInfo.style.display = 'none';
+    }
     
     if (totalSizeSpan) {
-        if (totalSize < 1024) totalSizeSpan.textContent = totalSize + ' B';
-        else if (totalSize < 1024 * 1024) totalSizeSpan.textContent = (totalSize / 1024).toFixed(2) + ' KB';
-        else totalSizeSpan.textContent = (totalSize / (1024 * 1024)).toFixed(2) + ' MB';
+        if (totalSize < 1024) {
+            totalSizeSpan.textContent = totalSize + ' B';
+        } else if (totalSize < 1024 * 1024) {
+            totalSizeSpan.textContent = (totalSize / 1024).toFixed(2) + ' KB';
+        } else {
+            totalSizeSpan.textContent = (totalSize / (1024 * 1024)).toFixed(2) + ' MB';
+        }
     }
     
     if (progressBar) {
         progressBar.style.width = Math.min(porcentaje, 100) + '%';
+        
         if (porcentaje > 90) {
             progressBar.classList.remove('bg-success');
             progressBar.classList.add('bg-danger');
@@ -1483,6 +1870,7 @@ function actualizarBarraProgresoTamaño() {
         }
     }
     
+    // Actualizar contador de imágenes
     if (totalImagenesSpan) {
         let total = (imagenPrincipalFile ? 1 : 0) + (gifFile ? 1 : 0) + selectedImages.length;
         const imagenesActualesCount = {{ $totalImagenesActuales }};
@@ -1493,11 +1881,13 @@ function actualizarBarraProgresoTamaño() {
     if (totalSize > maxSize) {
         limiteExcedido = true;
         if (limiteMsg) limiteMsg.style.display = 'block';
-        document.getElementById('btnSubmit').disabled = true;
+        const btnSubmit = document.getElementById('btnSubmit');
+        if (btnSubmit) btnSubmit.disabled = true;
     } else {
         limiteExcedido = false;
         if (limiteMsg) limiteMsg.style.display = 'none';
-        document.getElementById('btnSubmit').disabled = false;
+        const btnSubmit = document.getElementById('btnSubmit');
+        if (btnSubmit) btnSubmit.disabled = false;
     }
 }
 
@@ -1507,24 +1897,38 @@ function previewImagenPrincipal(input) {
     
     if (input.files && input.files[0]) {
         const file = input.files[0];
-        if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
-            Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'La imagen principal solo acepta formatos JPG, JPEG y PNG' });
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        
+        if (!validTypes.includes(file.type)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Formato no válido',
+                text: 'La imagen principal solo acepta formatos JPG, JPEG y PNG'
+            });
             input.value = '';
             return;
         }
+        
         if (file.size > 5 * 1024 * 1024) {
-            Swal.fire({ icon: 'error', title: 'Archivo demasiado grande', text: 'La imagen principal no puede exceder los 5MB' });
+            Swal.fire({
+                icon: 'error',
+                title: 'Archivo demasiado grande',
+                text: 'La imagen principal no puede exceder los 5MB'
+            });
             input.value = '';
             return;
         }
+        
         imagenPrincipalFile = file;
         const reader = new FileReader();
+        
         reader.onload = function(e) {
             previewImg.src = e.target.result;
             previewContainer.style.display = 'block';
             actualizarBarraProgresoTamaño();
-        };
-        reader.readAsDataURL(file);
+        }
+        
+        reader.readAsDataURL(input.files[0]);
     } else {
         previewContainer.style.display = 'none';
         imagenPrincipalFile = null;
@@ -1533,8 +1937,11 @@ function previewImagenPrincipal(input) {
 }
 
 function cancelarImagenPrincipal() {
-    document.getElementById('imagen_principal').value = '';
-    document.getElementById('preview_principal_container').style.display = 'none';
+    const input = document.getElementById('imagen_principal');
+    const previewContainer = document.getElementById('preview_principal_container');
+    
+    input.value = '';
+    previewContainer.style.display = 'none';
     imagenPrincipalFile = null;
     actualizarBarraProgresoTamaño();
 }
@@ -1565,24 +1972,37 @@ function previewGif(input) {
     
     if (input.files && input.files[0]) {
         const file = input.files[0];
+        
         if (file.type !== 'image/gif') {
-            Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'El campo GIF solo acepta archivos con formato GIF' });
+            Swal.fire({
+                icon: 'error',
+                title: 'Formato no válido',
+                text: 'El campo GIF solo acepta archivos con formato GIF'
+            });
             input.value = '';
             return;
         }
+        
         if (file.size > 10 * 1024 * 1024) {
-            Swal.fire({ icon: 'error', title: 'Archivo demasiado grande', text: 'El GIF no puede exceder los 10MB' });
+            Swal.fire({
+                icon: 'error',
+                title: 'Archivo demasiado grande',
+                text: 'El GIF no puede exceder los 10MB'
+            });
             input.value = '';
             return;
         }
+        
         gifFile = file;
         const reader = new FileReader();
+        
         reader.onload = function(e) {
             previewImg.src = e.target.result;
             previewContainer.style.display = 'block';
             actualizarBarraProgresoTamaño();
-        };
-        reader.readAsDataURL(file);
+        }
+        
+        reader.readAsDataURL(input.files[0]);
     } else {
         previewContainer.style.display = 'none';
         gifFile = null;
@@ -1591,8 +2011,11 @@ function previewGif(input) {
 }
 
 function cancelarGif() {
-    document.getElementById('gif').value = '';
-    document.getElementById('preview_gif_container').style.display = 'none';
+    const input = document.getElementById('gif');
+    const previewContainer = document.getElementById('preview_gif_container');
+    
+    input.value = '';
+    previewContainer.style.display = 'none';
     gifFile = null;
     actualizarBarraProgresoTamaño();
 }
@@ -1617,7 +2040,6 @@ function eliminarGif() {
     });
 }
 
-// Función para eliminar imagen adicional existente (eliminación directa, sin marcado)
 function eliminarImagenAdicionalExistente(event, btn, imagenId, nombreArchivo) {
     if (event) {
         event.preventDefault();
@@ -1637,21 +2059,17 @@ function eliminarImagenAdicionalExistente(event, btn, imagenId, nombreArchivo) {
         if (result.isConfirmed) {
             const container = btn.closest('.existing-image-item');
             
-            // Agregar el ID a la lista de imágenes a eliminar
             if (!imagenesAEliminar.some(item => item.id == imagenId)) {
                 imagenesAEliminar.push({ id: parseInt(imagenId), filename: nombreArchivo });
             }
             
-            // Actualizar el input oculto
             document.getElementById('imagenes_a_eliminar').value = JSON.stringify(imagenesAEliminar);
             
-            // Ocultar la imagen
             if (container) {
                 container.classList.add('eliminada');
                 container.style.display = 'none';
             }
             
-            // Actualizar contadores
             actualizarBarraProgresoTamaño();
             
             Swal.fire({
@@ -1667,6 +2085,7 @@ function eliminarImagenAdicionalExistente(event, btn, imagenId, nombreArchivo) {
 
 function handleImageSelection(event) {
     const files = event.target.files;
+    
     if (!files || files.length === 0) {
         event.target.value = '';
         return;
@@ -1676,15 +2095,24 @@ function handleImageSelection(event) {
     const currentCount = selectedImages.length;
     const existingCount = {{ $totalImagenesActuales }};
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    
     const tamanioActual = calcularTamañoTotal();
     let nuevoTamanio = tamanioActual;
-    for (let i = 0; i < files.length; i++) nuevoTamanio += files[i].size;
+    for (let i = 0; i < files.length; i++) {
+        nuevoTamanio += files[i].size;
+    }
     
     if (nuevoTamanio > maxTotalSize) {
         Swal.fire({
             icon: 'warning',
             title: 'Límite de tamaño excedido',
-            html: `<div class="text-center"><p>Si agregas estos archivos, excederás el límite de 50MB.</p><p class="mb-0"><strong>Tamaño actual:</strong> ${(tamanioActual / (1024 * 1024)).toFixed(2)}MB</p><p><strong>Tamaño con nuevos archivos:</strong> ${(nuevoTamanio / (1024 * 1024)).toFixed(2)}MB</p></div>`,
+            html: `
+                <div class="text-center">
+                    <p>Si agregas estos archivos, excederás el límite de 50MB.</p>
+                    <p class="mb-0"><strong>Tamaño actual:</strong> ${(tamanioActual / (1024 * 1024)).toFixed(2)}MB</p>
+                    <p><strong>Tamaño con nuevos archivos:</strong> ${(nuevoTamanio / (1024 * 1024)).toFixed(2)}MB</p>
+                </div>
+            `,
             confirmButtonText: 'Entendido'
         });
         event.target.value = '';
@@ -1692,35 +2120,74 @@ function handleImageSelection(event) {
     }
     
     const imagenesNoEliminadas = existingCount - imagenesAEliminar.length;
-    if (imagenesNoEliminadas + currentCount + files.length > 7) {
-        Swal.fire({ icon: 'warning', title: 'Límite de imágenes', text: `No puedes tener más de 7 imágenes adicionales en total.` });
+    if (imagenesNoEliminadas + currentCount + files.length > maxFiles) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de imágenes',
+            text: `No puedes tener más de ${maxFiles} imágenes adicionales en total.`
+        });
         event.target.value = '';
         return;
     }
     
     let archivosAgregados = 0;
+    
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        if (!validTypes.includes(file.type)) continue;
-        if (file.size > 5 * 1024 * 1024) continue;
-        if (selectedImages.some(img => img.file.name === file.name && img.file.size === file.size)) continue;
+        
+        if (!validTypes.includes(file.type)) {
+            continue;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+            continue;
+        }
+        
+        if (isImageDuplicate(file)) {
+            continue;
+        }
         
         const imageId = 'img_' + Date.now() + '_' + imageCounter++;
         const preview = URL.createObjectURL(file);
-        selectedImages.push({ id: imageId, file: file, preview: preview, name: file.name, size: file.size });
+        
+        selectedImages.push({
+            id: imageId,
+            file: file,
+            preview: preview,
+            name: file.name,
+            size: file.size
+        });
         archivosAgregados++;
     }
     
     if (archivosAgregados > 0) {
-        const totalImagenesActuales = {{ $totalImagenesActuales }};
         document.getElementById('new-images-count').textContent = selectedImages.length;
-        document.getElementById('selected-images-count').innerHTML = `${totalImagenesActuales} imágenes actuales + <span id="new-images-count">${selectedImages.length}</span> nuevas`;
+        document.getElementById('selected-images-count').innerHTML = `${existingCount} imágenes actuales + <span id="new-images-count">${selectedImages.length}</span> nuevas`;
         renderSelectedImages();
         actualizarBarraProgresoTamaño();
-        if (selectedImages.length > 0) document.getElementById('btn-limpiar-imagenes').style.display = 'inline-block';
-        Swal.fire({ icon: 'success', title: 'Imágenes agregadas', text: `Se agregaron ${archivosAgregados} imagen(es) correctamente.`, timer: 2000, showConfirmButton: false });
+        
+        if (selectedImages.length > 0) {
+            document.getElementById('btn-limpiar-imagenes').style.display = 'inline-block';
+        }
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Imágenes agregadas',
+            text: `Se agregaron ${archivosAgregados} imagen(es) correctamente.`,
+            timer: 2000,
+            showConfirmButton: false
+        });
     }
+    
     event.target.value = '';
+}
+
+function isImageDuplicate(newFile) {
+    return selectedImages.some(img => 
+        img.file.name === newFile.name && 
+        img.file.size === newFile.size && 
+        img.file.lastModified === newFile.lastModified
+    );
 }
 
 function removeSelectedImage(imageId) {
@@ -1736,15 +2203,28 @@ function removeSelectedImage(imageId) {
     }).then((result) => {
         if (result.isConfirmed) {
             const image = selectedImages.find(img => img.id === imageId);
-            if (image && image.preview) URL.revokeObjectURL(image.preview);
+            if (image && image.preview) {
+                URL.revokeObjectURL(image.preview);
+            }
             selectedImages = selectedImages.filter(img => img.id !== imageId);
+            
             const totalImagenesActuales = {{ $totalImagenesActuales }};
             document.getElementById('new-images-count').textContent = selectedImages.length;
             document.getElementById('selected-images-count').innerHTML = `${totalImagenesActuales} imágenes actuales + <span id="new-images-count">${selectedImages.length}</span> nuevas`;
             renderSelectedImages();
             actualizarBarraProgresoTamaño();
-            if (selectedImages.length === 0) document.getElementById('btn-limpiar-imagenes').style.display = 'none';
-            Swal.fire({ icon: 'success', title: 'Imagen eliminada', text: 'La imagen se ha eliminado de la selección.', timer: 1500, showConfirmButton: false });
+            
+            if (selectedImages.length === 0) {
+                document.getElementById('btn-limpiar-imagenes').style.display = 'none';
+            }
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Imagen eliminada',
+                text: 'La imagen se ha eliminado de la selección.',
+                timer: 1500,
+                showConfirmButton: false
+            });
         }
     });
 }
@@ -1753,54 +2233,82 @@ function renderSelectedImages() {
     const container = document.getElementById('selected-images-container');
     const noMsg = document.getElementById('no-imagenes-msg');
     const btnLimpiar = document.getElementById('btn-limpiar-imagenes');
+    
     if (!container) return;
+    
     container.innerHTML = '';
     
     if (selectedImages.length === 0) {
-        if (noMsg) { noMsg.style.display = 'block'; noMsg.innerHTML = '<i class="fas fa-info-circle me-1"></i><small>No hay nuevas imágenes seleccionadas</small>'; }
-        if (btnLimpiar) btnLimpiar.style.display = 'none';
+        if (noMsg) {
+            noMsg.style.display = 'block';
+            noMsg.innerHTML = '<i class="fas fa-info-circle me-1"></i><small>No hay nuevas imágenes seleccionadas</small>';
+        }
+        if (btnLimpiar) {
+            btnLimpiar.style.display = 'none';
+        }
         return;
     }
     
     if (noMsg) noMsg.style.display = 'none';
-    if (btnLimpiar) btnLimpiar.style.display = 'inline-block';
+    if (btnLimpiar) {
+        btnLimpiar.style.display = 'inline-block';
+    }
     
     selectedImages.forEach((image, index) => {
         const col = document.createElement('div');
         col.className = 'col-6 col-md-4 mb-2';
+        
         const card = document.createElement('div');
         card.className = 'card border image-preview-card position-relative';
+        
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1 remove-btn';
         btn.style.cssText = 'width: 24px; height: 24px; padding: 0; border-radius: 50%; z-index: 10;';
-        btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); removeSelectedImage(image.id); };
+        btn.onclick = function(e) { 
+            e.preventDefault();
+            e.stopPropagation();
+            removeSelectedImage(image.id); 
+        };
+        
         const btnIcon = document.createElement('i');
         btnIcon.className = 'fas fa-times';
         btn.appendChild(btnIcon);
+        
         const img = document.createElement('img');
         img.src = image.preview;
         img.className = 'card-img-top';
         img.style.cssText = 'height: 80px; object-fit: contain; background: #f8f9fa; padding: 4px;';
+        img.alt = 'Imagen ' + (index + 1);
+        
         const cardBody = document.createElement('div');
         cardBody.className = 'card-body p-1 text-center';
+        
         const small1 = document.createElement('small');
         small1.className = 'text-muted d-block';
         small1.style.cssText = 'font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
         small1.textContent = image.file.name.length > 15 ? image.file.name.substring(0, 15) + '...' : image.file.name;
+        
         const small2 = document.createElement('small');
         small2.className = 'text-muted d-block';
         small2.style.fontSize = '9px';
         let sizeText = '';
-        if (image.file.size < 1024) sizeText = image.file.size + ' B';
-        else if (image.file.size < 1024 * 1024) sizeText = (image.file.size / 1024).toFixed(2) + ' KB';
-        else sizeText = (image.file.size / (1024 * 1024)).toFixed(2) + ' MB';
+        if (image.file.size < 1024) {
+            sizeText = image.file.size + ' B';
+        } else if (image.file.size < 1024 * 1024) {
+            sizeText = (image.file.size / 1024).toFixed(2) + ' KB';
+        } else {
+            sizeText = (image.file.size / (1024 * 1024)).toFixed(2) + ' MB';
+        }
         small2.textContent = sizeText;
+        
         cardBody.appendChild(small1);
         cardBody.appendChild(small2);
+        
         card.appendChild(btn);
         card.appendChild(img);
         card.appendChild(cardBody);
+        
         col.appendChild(card);
         container.appendChild(col);
     });
@@ -1808,6 +2316,7 @@ function renderSelectedImages() {
 
 function limpiarTodasLasImagenes() {
     if (selectedImages.length === 0) return;
+    
     Swal.fire({
         title: '¿Limpiar todas las imágenes nuevas?',
         text: 'Esta acción eliminará todas las imágenes adicionales recién seleccionadas.',
@@ -1819,7 +2328,10 @@ function limpiarTodasLasImagenes() {
         cancelButtonText: 'Cancelar'
     }).then((result) => {
         if (result.isConfirmed) {
-            selectedImages.forEach(img => { if (img.preview) URL.revokeObjectURL(img.preview); });
+            selectedImages.forEach(img => {
+                if (img.preview) URL.revokeObjectURL(img.preview);
+            });
+            
             selectedImages = [];
             const totalImagenesActuales = {{ $totalImagenesActuales }};
             document.getElementById('new-images-count').textContent = '0';
@@ -1827,32 +2339,74 @@ function limpiarTodasLasImagenes() {
             renderSelectedImages();
             actualizarBarraProgresoTamaño();
             document.getElementById('btn-limpiar-imagenes').style.display = 'none';
-            Swal.fire({ icon: 'success', title: 'Imágenes limpiadas', text: 'Todas las imágenes nuevas han sido eliminadas.', timer: 1500, showConfirmButton: false });
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Imágenes limpiadas',
+                text: 'Todas las imágenes nuevas han sido eliminadas.',
+                timer: 1500,
+                showConfirmButton: false
+            });
         }
     });
 }
 
-// ==================== FUNCIÓN PARA ENVÍO DEL FORMULARIO ====================
+// ==================== FUNCIÓN PARA PREPARAR FORMULARIO ====================
 
 function prepararFormularioParaEnvio(event) {
     event.preventDefault();
     
+    // Validar SKU antes de enviar
     const skuInput = document.getElementById('vSKU');
     if (!verificarSKUVariacionLocal(skuInput)) {
-        Swal.fire({ icon: 'error', title: 'Error de validación', text: 'El SKU ya está registrado en otro producto o variación.' });
+        Swal.fire({
+            icon: 'error',
+            title: 'Error de validación',
+            text: 'El SKU ya está registrado en otro producto o variación.'
+        });
         return false;
     }
     
+    // Validar campos obligatorios
     const precioInput = document.getElementById('dPrecio');
     const stockInput = document.getElementById('iStock');
-    if (!precioInput.value.trim()) { Swal.fire({ icon: 'error', title: 'Error', text: 'El precio de venta es obligatorio.' }); precioInput.classList.add('is-invalid'); return false; }
-    if (!stockInput.value.trim()) { Swal.fire({ icon: 'error', title: 'Error', text: 'El stock es obligatorio.' }); stockInput.classList.add('is-invalid'); return false; }
     
+    if (!precioInput.value.trim()) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'El precio de venta es obligatorio.'
+        });
+        precioInput.classList.add('is-invalid');
+        return false;
+    }
+    
+    if (!stockInput.value.trim()) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'El stock es obligatorio.'
+        });
+        stockInput.classList.add('is-invalid');
+        return false;
+    }
+    
+    // Validar atributos
     const atributosRadios = document.querySelectorAll('.atributo-radio');
     const atributosPorGrupo = {};
-    atributosRadios.forEach(radio => { if (radio.checked) atributosPorGrupo[radio.dataset.atributoId] = true; });
+    
+    atributosRadios.forEach(radio => {
+        const atributoId = radio.dataset.atributoId;
+        if (radio.checked) {
+            atributosPorGrupo[atributoId] = true;
+        }
+    });
+    
     const gruposAtributos = new Set();
-    atributosRadios.forEach(radio => gruposAtributos.add(radio.dataset.atributoId));
+    atributosRadios.forEach(radio => {
+        gruposAtributos.add(radio.dataset.atributoId);
+    });
+    
     let atributosFaltantes = [];
     gruposAtributos.forEach(atributoId => {
         if (!atributosPorGrupo[atributoId]) {
@@ -1862,30 +2416,65 @@ function prepararFormularioParaEnvio(event) {
             container?.classList.add('border-danger');
         }
     });
+    
     if (atributosFaltantes.length > 0) {
-        Swal.fire({ icon: 'error', title: 'Error', html: `Debes seleccionar un valor para los siguientes atributos:<br><br>${atributosFaltantes.join(', ')}` });
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            html: `Debes seleccionar un valor para los siguientes atributos:<br><br>${atributosFaltantes.join(', ')}`
+        });
         return false;
     }
     
+    // Validar descuento
     const tieneDescuento = document.getElementById('bTiene_descuento');
     if (tieneDescuento && tieneDescuento.checked) {
-        if (!validarPrecioDescuento()) { Swal.fire({ icon: 'error', title: 'Error', text: 'El precio de descuento debe ser menor que el precio de venta.' }); return false; }
-        if (!validarFechasDescuento()) { Swal.fire({ icon: 'error', title: 'Error', text: 'La fecha de fin no puede ser anterior a la fecha de inicio.' }); return false; }
+        if (!validarPrecioDescuento()) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'El precio de descuento debe ser menor que el precio de venta.'
+            });
+            return false;
+        }
+        if (!validarFechasDescuento()) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'La fecha de fin no puede ser anterior a la fecha de inicio.'
+            });
+            return false;
+        }
     }
     
+    // Crear FormData y enviar
     const form = document.getElementById('variacionForm');
     const formData = new FormData(form);
     formData.append('_method', 'PUT');
     
-    const fileInputs = form.querySelectorAll('input[type="file"][name^="imagenes_adicionales"]');
-    fileInputs.forEach(input => formData.delete(input.name));
+    // Agregar las imágenes adicionales seleccionadas al FormData
+    selectedImages.forEach((image, index) => {
+        formData.append(`imagenes_adicionales[${index}]`, image.file);
+    });
     
-    selectedImages.forEach((image, index) => formData.append(`imagenes_adicionales[${index}]`, image.file));
-    if (imagenPrincipalFile) formData.set('imagen_principal', imagenPrincipalFile);
-    if (gifFile) formData.set('gif', gifFile);
-    if (imagenesAEliminar.length > 0) formData.set('imagenes_a_eliminar', JSON.stringify(imagenesAEliminar));
+    if (imagenPrincipalFile) {
+        formData.set('imagen_principal', imagenPrincipalFile);
+    }
     
-    Swal.fire({ title: 'Actualizando variación...', text: 'Por favor espera', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+    if (gifFile) {
+        formData.set('gif', gifFile);
+    }
+    
+    if (imagenesAEliminar.length > 0) {
+        formData.set('imagenes_a_eliminar', JSON.stringify(imagenesAEliminar));
+    }
+    
+    Swal.fire({
+        title: 'Actualizando variación...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
     
     fetch(form.action, {
         method: 'POST',
@@ -1917,13 +2506,19 @@ function prepararFormularioParaEnvio(event) {
     .catch(error => {
         Swal.close();
         console.error('Error:', error);
+        
         let errorMessage = 'Hubo un problema al actualizar la variación.';
         if (error.errors) {
             errorMessage = Object.values(error.errors).flat().join('<br>');
         } else if (error.message) {
             errorMessage = error.message;
         }
-        Swal.fire({ icon: 'error', title: 'Error', html: errorMessage });
+        
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            html: errorMessage
+        });
     });
     
     return false;
@@ -1932,40 +2527,83 @@ function prepararFormularioParaEnvio(event) {
 // ==================== INICIALIZACIÓN ====================
 
 document.addEventListener('DOMContentLoaded', function() {
-    if (document.getElementById('bTiene_descuento') && document.getElementById('bTiene_descuento').checked) toggleDescuentoFields();
-    actualizarPrecioFinal();
-    document.getElementById('dPrecio').addEventListener('input', actualizarPrecioFinal);
-    document.getElementById('id_impuesto').addEventListener('change', actualizarPrecioFinal);
+    // Inicializar toggle de descuento
+    if (document.getElementById('bTiene_descuento') && document.getElementById('bTiene_descuento').checked) {
+        toggleDescuentoFields();
+    }
     
+    // Inicializar cálculo de precio final
+    actualizarPrecioFinal();
+    
+    // Event listeners para calcular precio final
+    const precioInput = document.getElementById('dPrecio');
+    const impuestoSelect = document.getElementById('id_impuesto');
+    const descuentoCheckbox = document.getElementById('bTiene_descuento');
+    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
+    const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
+    const fechaFinInput = document.getElementById('dFecha_fin_descuento');
+    
+    if (precioInput) precioInput.addEventListener('input', actualizarPrecioFinal);
+    if (impuestoSelect) impuestoSelect.addEventListener('change', actualizarPrecioFinal);
+    if (descuentoCheckbox) descuentoCheckbox.addEventListener('change', actualizarPrecioFinal);
+    if (precioDescuentoInput) precioDescuentoInput.addEventListener('input', actualizarPrecioFinal);
+    if (fechaInicioInput) fechaInicioInput.addEventListener('change', actualizarPrecioFinal);
+    if (fechaFinInput) fechaFinInput.addEventListener('change', actualizarPrecioFinal);
+    
+    // Validación en tiempo real de atributos
     document.querySelectorAll('.atributo-radio').forEach(radio => {
         radio.addEventListener('change', function() {
             const container = this.closest('.atributo-container');
             if (container) {
                 container.classList.remove('border-danger');
                 const errorExistente = container.querySelector('.error-atributo');
-                if (errorExistente) errorExistente.remove();
+                if (errorExistente) {
+                    errorExistente.remove();
+                }
             }
         });
     });
     
-    document.querySelectorAll('input, select, textarea').forEach(element => element.setAttribute('autocomplete', 'off'));
+    // Prevenir que el navegador guarde valores del autocomplete
+    document.querySelectorAll('input, select, textarea').forEach(element => {
+        element.setAttribute('autocomplete', 'off');
+    });
     
+    // Reemplazar el envío normal del formulario
     const form = document.getElementById('variacionForm');
-    if (form) form.addEventListener('submit', prepararFormularioParaEnvio);
+    if (form) {
+        form.addEventListener('submit', prepararFormularioParaEnvio);
+    }
     
+    // Inicializar barra de progreso
     actualizarBarraProgresoTamaño();
 });
 
+// Mostrar mensaje SweetAlert2 después de actualizar exitosamente
 @if(session('success'))
-Swal.fire({ title: "¡Actualizado!", text: "{{ session('success') }}", icon: "success", timer: 3000, showConfirmButton: false });
+Swal.fire({
+    title: "¡Actualizado!",
+    text: "{{ session('success') }}",
+    icon: "success",
+    timer: 3000,
+    showConfirmButton: false
+});
 @endif
 
+// Mostrar mensaje SweetAlert2 si hay error
 @if(session('error') || $errors->any())
 @php
     $errorMessage = session('error');
-    if (!$errorMessage && $errors->any()) $errorMessage = 'Por favor corrige los errores en el formulario.';
+    if (!$errorMessage && $errors->any()) {
+        $errorMessage = 'Por favor corrige los errores en el formulario.';
+    }
 @endphp
-Swal.fire({ icon: "error", title: "Oops...", text: "{{ $errorMessage }}", draggable: true });
+Swal.fire({
+    icon: "error",
+    title: "Oops...",
+    text: "{{ $errorMessage }}",
+    draggable: true
+});
 @endif
 </script>
 @endpush

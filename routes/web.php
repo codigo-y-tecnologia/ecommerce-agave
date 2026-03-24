@@ -352,7 +352,7 @@ Route::get('/productos/verificar-nombre', [ProductoController::class, 'verificar
 Route::get('/productos/verificar-sku', [ProductoController::class, 'verificarSKU'])->name('productos.verificar-sku');
 
 Route::get('/dashboard', function () {
-    return redirect()->route('home');
+    return redirect()->route('inicio.real');
 })->name('dashboard');
 
 Route::get('/debug-favoritos', function () {

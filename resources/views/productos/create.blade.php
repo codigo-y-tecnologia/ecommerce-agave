@@ -586,17 +586,18 @@
                 </div>
 
                 <div class="row">
-                    <!-- IMAGEN PRINCIPAL -->
+                   <!-- IMAGEN PRINCIPAL -->
                     <div class="col-md-6">
                         <div class="form-group mb-3">
                             <label for="imagen_principal" class="form-label fw-bold">
                                 <i class="fas fa-star text-warning me-1"></i>Imagen Principal <span class="text-danger">*</span>
                             </label>
                             <input type="file" name="imagen_principal" id="imagen_principal" 
-                                   class="form-control @error('imagen_principal') is-invalid @enderror" 
-                                   accept="image/jpeg,image/jpg,image/png"
-                                   required
-                                   onchange="previewImagenPrincipal(this)">
+                                class="form-control @error('imagen_principal') is-invalid @enderror" 
+                                accept="image/jpeg,image/jpg,image/png"
+                                onchange="previewImagenPrincipal(this)">
+                            <!-- Campo hidden para saber si se eliminó la imagen -->
+                            <input type="hidden" name="eliminar_imagen_principal" id="eliminar_imagen_principal" value="0">
                             @error('imagen_principal')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -609,9 +610,9 @@
                             <div id="preview_principal_container" class="mt-2" style="display: none;">
                                 <div class="border rounded p-2 text-center bg-light">
                                     <img id="preview_principal_img" src="#" 
-                                         class="img-thumbnail" 
-                                         style="max-width: 200px; max-height: 200px; object-fit: contain;"
-                                         alt="Preview imagen principal">
+                                        class="img-thumbnail" 
+                                        style="max-width: 200px; max-height: 200px; object-fit: contain;"
+                                        alt="Preview imagen principal">
                                     <div class="mt-2">
                                         <small class="text-muted d-block">Imagen principal (portada)</small>
                                         <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarImagenPrincipal()">
@@ -1917,9 +1918,9 @@ function toggleDescuentoFields() {
 
     if (tieneDescuento) {
         descuentoFields.style.display = 'block';
-        precioDescuento.required = true;
-        fechaInicio.required = true;
-        fechaFin.required = true;
+        if (precioDescuento) precioDescuento.required = true;
+        if (fechaInicio) fechaInicio.required = true;
+        if (fechaFin) fechaFin.required = true;
 
         setTimeout(() => {
             validarPrecioDescuentoProducto();
@@ -1928,22 +1929,21 @@ function toggleDescuentoFields() {
         }, 100);
     } else {
         descuentoFields.style.display = 'none';
-        precioDescuento.required = false;
-        fechaInicio.required = false;
-        fechaFin.required = false;
+        if (precioDescuento) {
+            precioDescuento.required = false;
+            precioDescuento.classList.remove('is-invalid');
+        }
+        if (fechaInicio) fechaInicio.required = false;
+        if (fechaFin) {
+            fechaFin.required = false;
+            fechaFin.classList.remove('is-invalid');
+        }
 
-        precioDescuento.classList.remove('is-invalid');
         const errorDiv = document.getElementById('error-precio-descuento');
-        if (errorDiv) {
-            errorDiv.style.display = 'none';
-            errorDiv.textContent = '';
-        }
-        fechaFin.classList.remove('is-invalid');
+        if (errorDiv) errorDiv.style.display = 'none';
+
         const errorFechas = document.getElementById('error-fechas-descuento');
-        if (errorFechas) {
-            errorFechas.style.display = 'none';
-            errorFechas.textContent = '';
-        }
+        if (errorFechas) errorFechas.style.display = 'none';
 
         actualizarPrecioFinal();
     }
@@ -1954,41 +1954,50 @@ function validarPrecioDescuentoProducto() {
     const precioVentaInput = document.getElementById('dPrecio_venta');
     const precioDescuentoInput = document.getElementById('dPrecio_descuento');
     const errorDiv = document.getElementById('error-precio-descuento');
-
+    
+    // Si no hay descuento activado, no validar
     if (!tieneDescuentoCheckbox || !tieneDescuentoCheckbox.checked) {
         if (precioDescuentoInput) {
             precioDescuentoInput.classList.remove('is-invalid');
         }
         if (errorDiv) {
             errorDiv.style.display = 'none';
-            errorDiv.textContent = '';
         }
         return true;
     }
-
+    
     const precioVenta = parseFloat(precioVentaInput?.value) || 0;
     const precioDescuento = parseFloat(precioDescuentoInput?.value) || 0;
     const inputValue = precioDescuentoInput?.value;
-
+    
     let esValido = true;
-
-    if (inputValue && inputValue !== '') {
-        if (precioDescuento >= precioVenta || precioDescuento === 0) {
-            esValido = false;
-        }
-    } else {
+    
+    // Validar que el campo no esté vacío
+    if (!inputValue || inputValue === '') {
         esValido = false;
+        if (errorDiv) {
+            errorDiv.textContent = 'Este campo es obligatorio cuando el descuento está activo.';
+        }
     }
-
+    // Validar que el precio de descuento sea menor al precio de venta
+    else if (precioDescuento >= precioVenta) {
+        esValido = false;
+        if (errorDiv) {
+            errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta.';
+        }
+    }
+    // Validar que el precio de descuento sea mayor a 0
+    else if (precioDescuento <= 0) {
+        esValido = false;
+        if (errorDiv) {
+            errorDiv.textContent = 'El precio de descuento debe ser mayor a 0.';
+        }
+    }
+    
     if (!esValido) {
         precioDescuentoInput.classList.add('is-invalid');
         if (errorDiv) {
             errorDiv.style.display = 'block';
-            if (precioDescuento >= precioVenta && inputValue) {
-                errorDiv.textContent = 'El precio de descuento debe ser menor que el precio de venta.';
-            } else {
-                errorDiv.textContent = 'Este campo es obligatorio cuando el descuento está activo.';
-            }
         }
     } else {
         precioDescuentoInput.classList.remove('is-invalid');
@@ -1997,6 +2006,9 @@ function validarPrecioDescuentoProducto() {
             errorDiv.textContent = '';
         }
     }
+    
+    // Forzar actualización del precio final después de validar
+    actualizarPrecioFinal();
     
     return esValido;
 }
@@ -2012,6 +2024,44 @@ function validarFechasDescuento() {
         const inicio = new Date(fechaInicio.value);
         const fin = new Date(fechaFin.value);
         
+        inicio.setHours(0, 0, 0, 0);
+        fin.setHours(0, 0, 0, 0);
+        
+        if (fin < inicio) {
+            fechaFin.classList.add('is-invalid');
+            if (errorDiv) {
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'La fecha de fin no puede ser anterior a la fecha de inicio';
+            }
+            return false;
+        } else {
+            fechaFin.classList.remove('is-invalid');
+            if (errorDiv) {
+                errorDiv.style.display = 'none';
+                errorDiv.textContent = '';
+            }
+            return true;
+        }
+    }
+    return true;
+}
+
+function validarFechasDescuento() {
+    const fechaInicio = document.getElementById('dFecha_inicio_descuento');
+    const fechaFin = document.getElementById('dFecha_fin_descuento');
+    const errorDiv = document.getElementById('error-fechas-descuento');
+    
+    if (!fechaInicio || !fechaFin) return true;
+    
+    if (fechaInicio.value && fechaFin.value) {
+        const inicio = new Date(fechaInicio.value);
+        const fin = new Date(fechaFin.value);
+        
+        // Comparar solo fechas (sin horas)
+        inicio.setHours(0, 0, 0, 0);
+        fin.setHours(0, 0, 0, 0);
+        
+        // PERMITIR que fecha fin sea igual a fecha inicio
         if (fin < inicio) {
             fechaFin.classList.add('is-invalid');
             if (errorDiv) {
@@ -2130,8 +2180,6 @@ function toggleDescuentoVariacion(checkbox, valorKey) {
     const precioDescuento = document.getElementById(`precio_descuento-${valorKey}`);
     const fechaInicio = document.getElementById(`fecha-inicio-${valorKey}`);
     const fechaFin = document.getElementById(`fecha-fin-${valorKey}`);
-    const errorDiv = document.getElementById(`error-precio-descuento-${valorKey}`);
-    const errorFechas = document.getElementById(`error-fechas-descuento-${valorKey}`);
     
     if (checkbox.checked) {
         if (fields) fields.style.display = 'block';
@@ -2139,35 +2187,29 @@ function toggleDescuentoVariacion(checkbox, valorKey) {
         if (fechaInicio) fechaInicio.required = true;
         if (fechaFin) fechaFin.required = true;
         
+        // ACTUALIZAR INMEDIATAMENTE DESPUÉS DE ACTIVAR
         setTimeout(() => {
             if (precioDescuento) validarPrecioDescuentoVariacion(precioDescuento);
-            actualizarPrecioFinalVariacion(valorKey);
-        }, 100);
+            actualizarPrecioFinalVariacion(valorKey);  // <--- FORZAR ACTUALIZACIÓN
+        }, 50);
     } else {
         if (fields) fields.style.display = 'none';
         if (precioDescuento) {
             precioDescuento.required = false;
             precioDescuento.classList.remove('is-invalid');
         }
-        if (errorDiv) {
-            errorDiv.style.display = 'none';
-            errorDiv.textContent = '';
-        }
         if (fechaInicio) fechaInicio.required = false;
         if (fechaFin) {
             fechaFin.required = false;
             fechaFin.classList.remove('is-invalid');
         }
-        if (errorFechas) {
-            errorFechas.style.display = 'none';
-            errorFechas.textContent = '';
-        }
         
+        // ACTUALIZAR INMEDIATAMENTE DESPUÉS DE DESACTIVAR
         actualizarPrecioFinalVariacion(valorKey);
     }
 }
+// ============ FUNCIÓN DE CÁLCULO DE PRECIO FINAL CORREGIDA ============
 
-// ============ FUNCIÓN DE CÁLCULO DE PRECIO FINAL (IVA e IEPS) ============
 function actualizarPrecioFinal() {
     const precioVentaInput = document.getElementById('dPrecio_venta');
     const tieneDescuentoCheckbox = document.getElementById('bTiene_descuento');
@@ -2175,141 +2217,174 @@ function actualizarPrecioFinal() {
     const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
     const fechaFinInput = document.getElementById('dFecha_fin_descuento');
     const impuestoSelect = document.getElementById('id_impuesto');
-    
+
     if (!precioVentaInput) return;
-    
-    const precioVenta = parseFloat(precioVentaInput.value) || 0;
+
+    // Obtener valores numéricos
+    let precioVenta = parseFloat(precioVentaInput.value) || 0;
     let precioBase = precioVenta;
-    let precioOriginal = precioVenta;
-    let descuentoActivo = false;
-    let mensajeDescuento = 'Descuento no activo';
-    
-    // Verificar si el descuento está activo HOY
-    if (tieneDescuentoCheckbox && tieneDescuentoCheckbox.checked) {
-        const fechaHoy = new Date();
-        fechaHoy.setHours(0, 0, 0, 0);
-        
-        let fechaInicio = null;
-        let fechaFin = null;
-        
-        if (fechaInicioInput && fechaInicioInput.value) {
-            fechaInicio = new Date(fechaInicioInput.value + 'T00:00:00');
-        }
-        
-        if (fechaFinInput && fechaFinInput.value) {
-            fechaFin = new Date(fechaFinInput.value + 'T23:59:59');
-        }
-        
-        const precioDescuento = parseFloat(precioDescuentoInput?.value) || 0;
-        
-        let descuentoDebeAplicarse = false;
-        
-        if (fechaInicio && fechaFin) {
-            if (fechaHoy >= fechaInicio && fechaHoy <= fechaFin) {
-                descuentoDebeAplicarse = true;
-                mensajeDescuento = `Descuento activo HOY`;
-            } else if (fechaHoy < fechaInicio) {
-                mensajeDescuento = `Descuento inicia ${fechaInicio.toLocaleDateString()}`;
-            } else {
-                mensajeDescuento = `Descuento terminó ${fechaFin.toLocaleDateString()}`;
+
+    // Variable para saber si el descuento está activo HOY
+    let descuentoActivoHoy = false;
+    let precioDescuento = 0;
+
+    // ========== 1. VERIFICAR DESCUENTO ACTIVO HOY ==========
+    if (tieneDescuentoCheckbox && tieneDescuentoCheckbox.checked && precioDescuentoInput) {
+        precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
+        const fechaInicioStr = fechaInicioInput?.value || '';
+        const fechaFinStr = fechaFinInput?.value || '';
+
+        // Solo si el precio de descuento es válido y menor al precio normal
+        if (precioDescuento > 0 && precioDescuento < precioVenta) {
+            // Obtener fecha actual SIN zona horaria (solo año-mes-día)
+            const hoy = new Date();
+            const fechaHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+            
+            let fechaInicio = null;
+            let fechaFin = null;
+            
+            if (fechaInicioStr) {
+                const [year, month, day] = fechaInicioStr.split('-').map(Number);
+                fechaInicio = new Date(year, month - 1, day);
             }
-        } else if (fechaInicio && !fechaFin) {
-            if (fechaHoy >= fechaInicio) {
-                descuentoDebeAplicarse = true;
-                mensajeDescuento = `Descuento activo desde ${fechaInicio.toLocaleDateString()}`;
-            } else {
-                mensajeDescuento = `Descuento inicia ${fechaInicio.toLocaleDateString()}`;
+            
+            if (fechaFinStr) {
+                const [year, month, day] = fechaFinStr.split('-').map(Number);
+                fechaFin = new Date(year, month - 1, day);
+                fechaFin.setHours(23, 59, 59, 999);
             }
-        } else if (!fechaInicio && fechaFin) {
-            if (fechaHoy <= fechaFin) {
-                descuentoDebeAplicarse = true;
-                mensajeDescuento = `Descuento hasta ${fechaFin.toLocaleDateString()}`;
+            
+            // Determinar si el descuento aplica HOY
+            if (fechaInicio && fechaFin) {
+                // Comparar solo fechas (sin horas)
+                descuentoActivoHoy = fechaHoy >= fechaInicio && fechaHoy <= fechaFin;
+            } else if (fechaInicio && !fechaFin) {
+                descuentoActivoHoy = fechaHoy >= fechaInicio;
+            } else if (!fechaInicio && fechaFin) {
+                descuentoActivoHoy = fechaHoy <= fechaFin;
             } else {
-                mensajeDescuento = `Descuento terminó ${fechaFin.toLocaleDateString()}`;
+                descuentoActivoHoy = true;
             }
-        } else {
-            descuentoDebeAplicarse = true;
-            mensajeDescuento = 'Descuento activo';
-        }
-        
-        if (descuentoDebeAplicarse && precioDescuento > 0 && precioDescuento < precioVenta) {
-            precioBase = precioDescuento;
-            descuentoActivo = true;
+            
+            // Aplicar descuento SOLO si está activo HOY
+            if (descuentoActivoHoy) {
+                precioBase = precioDescuento;
+            }
+            
+            // Debug - para verificar en consola
+            console.log('=== VALIDACIÓN DE DESCUENTO ===');
+            console.log('Fecha actual (sin hora):', fechaHoy.toISOString().split('T')[0]);
+            if (fechaInicio) console.log('Fecha inicio:', fechaInicio.toISOString().split('T')[0]);
+            if (fechaFin) console.log('Fecha fin:', fechaFin.toISOString().split('T')[0]);
+            console.log('¿Descuento activo hoy?', descuentoActivoHoy);
+            console.log('Precio base usado:', precioBase);
         }
     }
-    
-    document.getElementById('precio-base-display').textContent = '$' + precioBase.toFixed(2);
-    
-    // Mostrar precio original si hay descuento
+
+    // ========== 2. ACTUALIZAR DISPLAY DEL PRECIO BASE ==========
+    const precioBaseDisplay = document.getElementById('precio-base-display');
+    if (precioBaseDisplay) {
+        precioBaseDisplay.textContent = '$' + precioBase.toFixed(2);
+    }
+
+    // ========== 3. MOSTRAR INFO DEL DESCUENTO ==========
     const precioOriginalDisplay = document.getElementById('precio-original-display');
     if (precioOriginalDisplay) {
-        if (tieneDescuentoCheckbox && tieneDescuentoCheckbox.checked && precioDescuentoInput?.value) {
+        if (tieneDescuentoCheckbox && tieneDescuentoCheckbox.checked && precioDescuentoInput?.value && precioDescuento > 0 && precioDescuento < precioVenta) {
             precioOriginalDisplay.style.display = 'block';
-            if (descuentoActivo) {
+            
+            if (descuentoActivoHoy) {
+                // Calcular porcentaje de descuento
+                const porcentajeDesc = Math.round(((precioVenta - precioDescuento) / precioVenta) * 100);
                 precioOriginalDisplay.innerHTML = `
-                    <span class="text-decoration-line-through">$${precioVenta.toFixed(2)}</span>
-                    <span class="badge bg-success ms-2">¡DESCUENTO!</span>
-                    <br><small>${mensajeDescuento}</small>
+                    <div class="alert alert-success p-2 mb-2">
+                        <strong>✓ ¡DESCUENTO ACTIVO HOY!</strong><br>
+                        <span class="text-decoration-line-through">$${precioVenta.toFixed(2)}</span> → 
+                        <strong class="text-danger">$${precioBase.toFixed(2)}</strong>
+                        <span class="badge bg-danger ms-2">-${porcentajeDesc}%</span>
+                    </div>
                 `;
             } else {
+                // Descuento programado para el futuro o ya expirado
+                let mensaje = '⏱️ Descuento programado';
+                let fechaTexto = '';
+                
+                if (fechaInicioInput?.value && fechaFinInput?.value) {
+                    fechaTexto = ` (${fechaInicioInput.value} al ${fechaFinInput.value})`;
+                    mensaje = '⏱️ Descuento programado' + fechaTexto;
+                } else if (fechaInicioInput?.value) {
+                    fechaTexto = ` desde ${fechaInicioInput.value}`;
+                    mensaje = '⏱️ Descuento programado' + fechaTexto;
+                } else if (fechaFinInput?.value) {
+                    fechaTexto = ` hasta ${fechaFinInput.value}`;
+                    mensaje = '⏱️ Descuento programado' + fechaTexto;
+                }
+                
                 precioOriginalDisplay.innerHTML = `
-                    Precio normal: $${precioVenta.toFixed(2)}
-                    <br><small class="text-warning">⏱️ ${mensajeDescuento}</small>
+                    <div class="alert alert-warning p-2 mb-2">
+                        <strong>${mensaje}</strong><br>
+                        Precio actual: <strong>$${precioVenta.toFixed(2)}</strong><br>
+                        Precio con descuento: $${precioDescuento.toFixed(2)}
+                    </div>
                 `;
             }
         } else {
             precioOriginalDisplay.style.display = 'none';
         }
     }
-    
-    // Calcular impuesto (IVA o IEPS - ambos se SUMAN)
+
+    // ========== 4. CALCULAR IMPUESTOS SOBRE EL PRECIO BASE ACTUAL ==========
     let totalImpuesto = 0;
     let porcentaje = 0;
     let nombreImpuesto = '';
     let precioFinal = precioBase;
-    
+
     if (impuestoSelect && impuestoSelect.value) {
         const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
         porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
         nombreImpuesto = selectedOption.dataset.nombre || selectedOption.text.split('(')[0].trim();
-        
-        // TANTO IVA COMO IEPS SE SUMAN
+
         totalImpuesto = precioBase * (porcentaje / 100);
         precioFinal = precioBase + totalImpuesto;
     }
-    
-    document.getElementById('total-impuestos-display').textContent = '+$' + totalImpuesto.toFixed(2);
-    document.getElementById('precio-final-display').textContent = '$' + precioFinal.toFixed(2);
-    document.getElementById('porcentaje-impuestos-display').textContent = 
-        porcentaje > 0 ? `+${porcentaje.toFixed(2)}% (${nombreImpuesto})` : '0%';
-    
-    // Mostrar detalle
+
+    // ========== 5. ACTUALIZAR DISPLAY DE IMPUESTOS ==========
+    const totalImpuestosDisplay = document.getElementById('total-impuestos-display');
+    if (totalImpuestosDisplay) {
+        totalImpuestosDisplay.textContent = '+$' + totalImpuesto.toFixed(2);
+    }
+
+    const precioFinalDisplay = document.getElementById('precio-final-display');
+    if (precioFinalDisplay) {
+        precioFinalDisplay.textContent = '$' + precioFinal.toFixed(2);
+    }
+
+    const porcentajeImpuestosDisplay = document.getElementById('porcentaje-impuestos-display');
+    if (porcentajeImpuestosDisplay) {
+        porcentajeImpuestosDisplay.textContent = porcentaje > 0 ? `+${porcentaje.toFixed(2)}% (${nombreImpuesto})` : '0%';
+    }
+
+    // ========== 6. ACTUALIZAR DETALLE DE CÁLCULO ==========
     const detalleInfo = document.getElementById('isr-info');
     if (detalleInfo) {
-        let htmlDetalle = '';
-        
-        if (descuentoActivo) {
-            htmlDetalle += `
-                <div class="alert alert-success p-2 mb-2">
-                    <strong>¡DESCUENTO ACTIVO!</strong><br>
-                    Precio original: $${precioVenta.toFixed(2)} → Precio con descuento: $${precioBase.toFixed(2)}
-                </div>
-            `;
-        }
-        
-        if (nombreImpuesto) {
-            htmlDetalle += `
+        if (porcentaje > 0) {
+            detalleInfo.innerHTML = `
                 <strong>Cálculo de ${nombreImpuesto}:</strong><br>
                 Precio base: $${precioBase.toFixed(2)}<br>
                 ${nombreImpuesto} (${porcentaje}%): +$${totalImpuesto.toFixed(2)}<br>
                 <strong>Total: $${precioFinal.toFixed(2)}</strong>
             `;
         } else {
-            htmlDetalle += `Precio final: $${precioBase.toFixed(2)} (Sin impuestos)`;
+            detalleInfo.innerHTML = `Precio final: $${precioBase.toFixed(2)} (Sin impuestos)`;
         }
-        
-        detalleInfo.innerHTML = htmlDetalle;
     }
+    
+    console.log('=== CÁLCULO FINAL ===');
+    console.log('Precio venta:', precioVenta);
+    console.log('Descuento activo hoy:', descuentoActivoHoy);
+    console.log('Precio base usado:', precioBase);
+    console.log('Impuesto:', porcentaje + '%');
+    console.log('Precio final:', precioFinal);
 }
 
 function actualizarPrecioFinalVariacion(valorKey) {
@@ -2322,130 +2397,167 @@ function actualizarPrecioFinalVariacion(valorKey) {
     const precioFinalSpan = document.getElementById(`precio-final-${valorKey}`);
     const detalleImpuestoSpan = document.getElementById(`detalle-impuesto-${valorKey}`);
     
-    if (!precioInput || !precioFinalSpan) return;
+    if (!precioInput) return;
     
-    let precioBase = parseFloat(precioInput.value) || 0;
+    let precioNormal = parseFloat(precioInput.value) || 0;
+    let precioBase = precioNormal;
+    let tieneDescuento = descuentoCheckbox && descuentoCheckbox.checked;
+    let precioDescuento = 0;
     let descuentoActivo = false;
+    let mensaje = '';
     
-    // Verificar descuento de variación
-    if (descuentoCheckbox && descuentoCheckbox.checked && precioDescuentoInput?.value) {
-        const fechaHoy = new Date();
-        fechaHoy.setHours(0, 0, 0, 0);
+    // ========== VERIFICAR SI EL DESCUENTO DEBE APLICAR ==========
+    if (tieneDescuento && precioDescuentoInput && precioDescuentoInput.value) {
+        precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
         
-        let fechaInicio = null;
-        let fechaFin = null;
-        
-        if (fechaInicioInput?.value) {
-            fechaInicio = new Date(fechaInicioInput.value + 'T00:00:00');
-        }
-        if (fechaFinInput?.value) {
-            fechaFin = new Date(fechaFinInput.value + 'T23:59:59');
-        }
-        
-        const precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
-        
-        let aplicar = false;
-        if (fechaInicio && fechaFin) {
-            aplicar = fechaHoy >= fechaInicio && fechaHoy <= fechaFin;
-        } else if (fechaInicio && !fechaFin) {
-            aplicar = fechaHoy >= fechaInicio;
-        } else if (!fechaInicio && fechaFin) {
-            aplicar = fechaHoy <= fechaFin;
-        } else {
-            aplicar = true;
-        }
-        
-        if (aplicar && precioDescuento > 0 && precioDescuento < precioBase) {
-            precioBase = precioDescuento;
-            descuentoActivo = true;
+        if (precioDescuento > 0 && precioDescuento < precioNormal) {
+            const fechaInicioStr = fechaInicioInput?.value || '';
+            const fechaFinStr = fechaFinInput?.value || '';
+            
+            // Obtener fecha actual (solo fecha, sin hora)
+            const hoy = new Date();
+            const fechaHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+            
+            let fechaInicio = null;
+            let fechaFin = null;
+            
+            if (fechaInicioStr) {
+                const [year, month, day] = fechaInicioStr.split('-').map(Number);
+                fechaInicio = new Date(year, month - 1, day);
+            }
+            
+            if (fechaFinStr) {
+                const [year, month, day] = fechaFinStr.split('-').map(Number);
+                fechaFin = new Date(year, month - 1, day);
+                fechaFin.setHours(23, 59, 59, 999);
+            }
+            
+            // ========== LÓGICA CORRECTA ==========
+            if (fechaInicio && fechaFin) {
+                // Caso 1: Tiene ambas fechas
+                if (fechaHoy >= fechaInicio && fechaHoy <= fechaFin) {
+                    descuentoActivo = true;
+                    mensaje = '✓ Descuento activo HOY';
+                } else {
+                    descuentoActivo = false;
+                    mensaje = `⏱️ Descuento programado (${fechaInicioStr} al ${fechaFinStr})`;
+                }
+            } 
+            else if (fechaInicio && !fechaFin) {
+                // Caso 2: Solo fecha de inicio
+                if (fechaHoy >= fechaInicio) {
+                    descuentoActivo = true;
+                    mensaje = '✓ Descuento activo HOY';
+                } else {
+                    descuentoActivo = false;
+                    mensaje = `⏱️ Descuento programado desde ${fechaInicioStr}`;
+                }
+            } 
+            else if (!fechaInicio && fechaFin) {
+                // Caso 3: Solo fecha de fin
+                if (fechaHoy <= fechaFin) {
+                    descuentoActivo = true;
+                    mensaje = '✓ Descuento activo HOY';
+                } else {
+                    descuentoActivo = false;
+                    mensaje = `⏱️ Descuento programado hasta ${fechaFinStr}`;
+                }
+            } 
+            else {
+                // Caso 4: Sin fechas
+                descuentoActivo = true;
+                mensaje = '✓ Descuento activo';
+            }
+            
+            // SOLO si el descuento está activo, usamos el precio con descuento
+            if (descuentoActivo) {
+                precioBase = precioDescuento;
+            }
         }
     }
     
-    // Calcular impuesto (IVA o IEPS - ambos se suman)
+    // ========== CALCULAR IMPUESTOS ==========
     let totalImpuesto = 0;
-    let porcentaje = 0;
+    let porcentajeImpuesto = 0;
     let nombreImpuesto = '';
     let precioFinal = precioBase;
     
     if (impuestoSelect && impuestoSelect.value) {
         const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
-        porcentaje = parseFloat(selectedOption.dataset.porcentaje) || 0;
+        porcentajeImpuesto = parseFloat(selectedOption.dataset.porcentaje) || 0;
         nombreImpuesto = selectedOption.dataset.nombre || selectedOption.text.split('(')[0].trim();
-        
-        totalImpuesto = precioBase * (porcentaje / 100);
+        totalImpuesto = precioBase * (porcentajeImpuesto / 100);
         precioFinal = precioBase + totalImpuesto;
     }
     
-    precioFinalSpan.textContent = '$' + precioFinal.toFixed(2);
+    // ========== ACTUALIZAR DISPLAY ==========
+    if (precioFinalSpan) {
+        precioFinalSpan.textContent = '$' + precioFinal.toFixed(2);
+    }
     
     if (detalleImpuestoSpan) {
         let html = '';
-        if (descuentoActivo) html += `<span class="text-success">✓ Descuento activo</span><br>`;
-        if (porcentaje > 0) {
-            html += `${nombreImpuesto}: +${porcentaje.toFixed(2)}% ($${totalImpuesto.toFixed(2)})`;
+        if (mensaje) {
+            const colorClass = descuentoActivo ? 'text-success' : 'text-warning';
+            html += `<span class="${colorClass}">${mensaje}</span><br>`;
+        }
+        if (porcentajeImpuesto > 0) {
+            html += `${nombreImpuesto}: +${porcentajeImpuesto.toFixed(2)}% ($${totalImpuesto.toFixed(2)})`;
         } else {
             html += 'Sin impuesto';
         }
         detalleImpuestoSpan.innerHTML = html;
     }
+    
+    // Actualizar resumen de precios
+    const precioBaseDisplay = document.getElementById(`precio-base-display-${valorKey}`);
+    const totalImpuestosDisplay = document.getElementById(`total-impuestos-display-${valorKey}`);
+    const precioFinalTotalDisplay = document.getElementById(`precio-final-total-display-${valorKey}`);
+    
+    if (precioBaseDisplay) precioBaseDisplay.textContent = '$' + precioBase.toFixed(2);
+    if (totalImpuestosDisplay) totalImpuestosDisplay.textContent = '+$' + totalImpuesto.toFixed(2);
+    if (precioFinalTotalDisplay) precioFinalTotalDisplay.textContent = '$' + precioFinal.toFixed(2);
+    
+    // LOG PARA DEPURACIÓN
+    console.log('=== VARIACIÓN ' + valorKey + ' ===');
+    console.log('Precio normal:', precioNormal);
+    console.log('Precio descuento:', precioDescuento);
+    console.log('Descuento marcado:', tieneDescuento);
+    console.log('Descuento activo HOY?', descuentoActivo);
+    console.log('Precio BASE usado:', precioBase);
+    console.log('Precio FINAL:', precioFinal);
 }
-
 // ============ FUNCIONES DE IMÁGENES ============
 
 function calcularTamañoTotal() {
     let total = 0;
-    
     if (imagenPrincipalFile) total += imagenPrincipalFile.size;
     if (gifFile) total += gifFile.size;
-    
-    selectedImages.forEach(img => {
-        total += img.file.size;
-    });
+    selectedImages.forEach(img => total += img.file.size);
     
     Object.keys(imagenesVariacion).forEach(valorKey => {
-        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
-            imagenesVariacion[valorKey].imagenes.forEach(img => {
-                total += img.file.size;
-            });
+        if (imagenesVariacion[valorKey].imagenes) {
+            imagenesVariacion[valorKey].imagenes.forEach(img => total += img.file.size);
         }
     });
-    
     return total;
 }
+
 
 function actualizarBarraProgresoTamaño() {
     const totalSize = calcularTamañoTotal();
     const porcentaje = (totalSize / maxTotalSize) * 100;
     const progressBar = document.getElementById('size-progress-bar');
     const totalSizeSpan = document.getElementById('total-size');
-    const limiteMsg = document.getElementById('limiteArchivosMsg');
     
     if (totalSizeSpan) {
-        if (totalSize < 1024) {
-            totalSizeSpan.textContent = totalSize + ' B';
-        } else if (totalSize < 1024 * 1024) {
-            totalSizeSpan.textContent = (totalSize / 1024).toFixed(2) + ' KB';
-        } else {
-            totalSizeSpan.textContent = (totalSize / (1024 * 1024)).toFixed(2) + ' MB';
-        }
+        totalSizeSpan.textContent = totalSize > 1024 * 1024 ? 
+            (totalSize / (1024 * 1024)).toFixed(2) + ' MB' : 
+            (totalSize / 1024).toFixed(2) + ' KB';
     }
-    
-    if (progressBar) {
-        progressBar.style.width = Math.min(porcentaje, 100) + '%';
-    }
-    
-    if (totalSize > maxTotalSize) {
-        limiteExcedido = true;
-        if (limiteMsg) limiteMsg.style.display = 'block';
-        const btnSubmit = document.getElementById('btnSubmit');
-        if (btnSubmit) btnSubmit.disabled = true;
-    } else {
-        limiteExcedido = false;
-        if (limiteMsg) limiteMsg.style.display = 'none';
-        const btnSubmit = document.getElementById('btnSubmit');
-        if (btnSubmit) btnSubmit.disabled = false;
-    }
+    if (progressBar) progressBar.style.width = Math.min(porcentaje, 100) + '%';
 }
+
 
 function actualizarContadorImagenes() {
     const totalImagenesSpan = document.getElementById('total-imagenes');
@@ -2454,60 +2566,299 @@ function actualizarContadorImagenes() {
     let total = (imagenPrincipalFile ? 1 : 0) + (gifFile ? 1 : 0) + selectedImages.length;
     
     Object.keys(imagenesVariacion).forEach(valorKey => {
-        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
-            total += imagenesVariacion[valorKey].imagenes.length;
-        }
+        if (imagenesVariacion[valorKey].imagenes) total += imagenesVariacion[valorKey].imagenes.length;
     });
     
     totalImagenesSpan.textContent = total;
 }
 
+// ============ FUNCIONES DE IMÁGENES DEL PRODUCTO PRINCIPAL ============
+
 function previewImagenPrincipal(input) {
     const previewContainer = document.getElementById('preview_principal_container');
     const previewImg = document.getElementById('preview_principal_img');
+    const hiddenEliminar = document.getElementById('eliminar_imagen_principal');
     
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-        
-        if (!validTypes.includes(file.type)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Formato no válido',
-                text: 'La imagen principal solo acepta formatos JPG, JPEG y PNG'
-            });
-            input.value = '';
-            return;
-        }
-        
-        if (file.size > 5 * 1024 * 1024) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Archivo demasiado grande',
-                text: 'La imagen principal no puede exceder los 5MB'
-            });
-            input.value = '';
-            return;
-        }
-        
-        imagenPrincipalFile = file;
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-            if (previewImg) previewImg.src = e.target.result;
-            if (previewContainer) previewContainer.style.display = 'block';
-            actualizarBarraProgresoTamaño();
-            actualizarContadorImagenes();
-        }
-        
-        reader.readAsDataURL(input.files[0]);
-    } else {
-        if (previewContainer) previewContainer.style.display = 'none';
-        imagenPrincipalFile = null;
+    // Si el usuario NO seleccionó un archivo (canceló), NO HACER NADA
+    if (!input.files || input.files.length === 0) {
+        console.log('Canceló selección - manteniendo imagen actual');
+        input.value = '';
+        // No tocar imagenPrincipalFile
+        // No tocar el preview
+        return;
+    }
+    
+    const file = input.files[0];
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    
+    if (!validTypes.includes(file.type)) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Formato no válido',
+            text: 'La imagen principal solo acepta formatos JPG, JPEG y PNG'
+        });
+        input.value = '';
+        return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Archivo demasiado grande',
+            text: 'La imagen principal no puede exceder los 5MB'
+        });
+        input.value = '';
+        return;
+    }
+    
+    // SOLO si hay archivo válido, actualizamos todo
+    imagenPrincipalFile = file;
+    
+    // Resetear el campo hidden (no eliminar)
+    if (hiddenEliminar) hiddenEliminar.value = '0';
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        if (previewImg) previewImg.src = e.target.result;
+        if (previewContainer) previewContainer.style.display = 'block';
         actualizarBarraProgresoTamaño();
         actualizarContadorImagenes();
     }
+    reader.readAsDataURL(file);
 }
+
+function cancelarImagenPrincipal() {
+    const input = document.getElementById('imagen_principal');
+    const previewContainer = document.getElementById('preview_principal_container');
+    const hiddenEliminar = document.getElementById('eliminar_imagen_principal');
+    
+    // Limpiar input
+    if (input) input.value = '';
+    
+    // Ocultar preview
+    if (previewContainer) previewContainer.style.display = 'none';
+    
+    // ELIMINAR la imagen
+    imagenPrincipalFile = null;
+    
+    // Marcar que se eliminó la imagen
+    if (hiddenEliminar) hiddenEliminar.value = '1';
+    
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+}
+
+// ============ FUNCIONES DE GIF ============
+
+function previewGif(input) {
+    const previewContainer = document.getElementById('preview_gif_container');
+    const previewImg = document.getElementById('preview_gif');
+    
+    if (!input.files || input.files.length === 0) {
+        console.log('Canceló selección de GIF - manteniendo GIF actual');
+        input.value = '';
+        return;
+    }
+    
+    const file = input.files[0];
+    
+    if (file.type !== 'image/gif') {
+        Swal.fire({
+            icon: 'error',
+            title: 'Formato no válido',
+            text: 'El campo GIF solo acepta archivos con formato GIF'
+        });
+        input.value = '';
+        return;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Archivo demasiado grande',
+            text: 'El GIF no puede exceder los 10MB'
+        });
+        input.value = '';
+        return;
+    }
+    
+    gifFile = file;
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        if (previewImg) previewImg.src = e.target.result;
+        if (previewContainer) previewContainer.style.display = 'block';
+        actualizarBarraProgresoTamaño();
+        actualizarContadorImagenes();
+    }
+    reader.readAsDataURL(file);
+}
+
+function cancelarGif() {
+    const input = document.getElementById('gif_producto');
+    const previewContainer = document.getElementById('preview_gif_container');
+    
+    if (input) input.value = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+    gifFile = null;
+    
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+}
+
+// ============ FUNCIONES DE IMÁGENES ADICIONALES ============
+
+function handleImageSelection(event) {
+    const input = event.target;
+    const files = input.files;
+    const maxFiles = 7;
+    const currentCount = selectedImages.length;
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    
+    // Si canceló, NO hacer nada
+    if (!files || files.length === 0) {
+        console.log('Canceló selección de imágenes adicionales');
+        input.value = '';
+        return;
+    }
+    
+    const tamanioActual = calcularTamañoTotal();
+    let nuevoTamanio = tamanioActual;
+    for (let i = 0; i < files.length; i++) {
+        nuevoTamanio += files[i].size;
+    }
+    
+    if (nuevoTamanio > maxTotalSize) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de tamaño excedido',
+            html: `<p>Si agregas estos archivos, excederás el límite de 50MB.</p>`
+        });
+        input.value = '';
+        return;
+    }
+    
+    if (currentCount + files.length > maxFiles) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de imágenes',
+            text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales.`
+        });
+        input.value = '';
+        return;
+    }
+    
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        if (!validTypes.includes(file.type)) continue;
+        if (file.size > 5 * 1024 * 1024) continue;
+        if (isImageDuplicate(file)) continue;
+        
+        const imageId = 'img_' + Date.now() + '_' + imageCounter++;
+        const preview = URL.createObjectURL(file);
+        
+        selectedImages.push({
+            id: imageId,
+            file: file,
+            preview: preview,
+            name: file.name,
+            size: file.size
+        });
+    }
+    
+    const countSpan = document.getElementById('selected-images-count');
+    if (countSpan) countSpan.textContent = selectedImages.length + ' archivos';
+    
+    renderSelectedImages();
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+    input.value = '';
+}
+
+function removeSelectedImage(imageId) {
+    const image = selectedImages.find(img => img.id === imageId);
+    if (image && image.preview) {
+        URL.revokeObjectURL(image.preview);
+    }
+    selectedImages = selectedImages.filter(img => img.id !== imageId);
+    
+    const countSpan = document.getElementById('selected-images-count');
+    if (countSpan) countSpan.textContent = selectedImages.length + ' archivos';
+    renderSelectedImages();
+    actualizarContadorImagenes();
+    actualizarBarraProgresoTamaño();
+}
+
+function isImageDuplicate(newFile) {
+    return selectedImages.some(img => 
+        img.file.name === newFile.name && 
+        img.file.size === newFile.size
+    );
+}
+
+function renderSelectedImages() {
+    const container = document.getElementById('selected-images-container');
+    const noMsg = document.getElementById('no-imagenes-msg');
+    
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (selectedImages.length === 0) {
+        if (noMsg) noMsg.style.display = 'block';
+        return;
+    }
+    
+    if (noMsg) noMsg.style.display = 'none';
+    
+    selectedImages.forEach((image, index) => {
+        const col = document.createElement('div');
+        col.className = 'col-6 col-md-3 mb-3';
+        
+        const card = document.createElement('div');
+        card.className = 'card border position-relative';
+        
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1';
+        btn.style.cssText = 'width: 28px; height: 28px; padding: 0; border-radius: 50%; z-index: 10;';
+        btn.onclick = function(e) { 
+            e.preventDefault();
+            removeSelectedImage(image.id); 
+        };
+        btn.innerHTML = '<i class="fas fa-times"></i>';
+        
+        const img = document.createElement('img');
+        img.src = image.preview;
+        img.className = 'card-img-top';
+        img.style.cssText = 'height: 120px; object-fit: contain; background: #f8f9fa; padding: 8px;';
+        
+        const cardBody = document.createElement('div');
+        cardBody.className = 'card-body p-2 text-center';
+        
+        const small1 = document.createElement('small');
+        small1.className = 'text-muted d-block';
+        small1.textContent = image.file.name.length > 20 ? image.file.name.substring(0, 20) + '...' : image.file.name;
+        
+        const small2 = document.createElement('small');
+        small2.className = 'text-muted d-block';
+        let sizeText = image.file.size < 1024 ? image.file.size + ' B' : 
+                      (image.file.size / 1024).toFixed(2) + ' KB';
+        small2.textContent = sizeText;
+        
+        cardBody.appendChild(small1);
+        cardBody.appendChild(small2);
+        
+        card.appendChild(btn);
+        card.appendChild(img);
+        card.appendChild(cardBody);
+        
+        col.appendChild(card);
+        container.appendChild(col);
+    });
+}
+
 
 function cancelarImagenPrincipal() {
     const input = document.getElementById('imagen_principal');
@@ -2524,46 +2875,47 @@ function previewGif(input) {
     const previewContainer = document.getElementById('preview_gif_container');
     const previewImg = document.getElementById('preview_gif');
     
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        
-        if (file.type !== 'image/gif') {
-            Swal.fire({
-                icon: 'error',
-                title: 'Formato no válido',
-                text: 'El campo GIF solo acepta archivos con formato GIF'
-            });
-            input.value = '';
-            return;
-        }
-        
-        if (file.size > 10 * 1024 * 1024) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Archivo demasiado grande',
-                text: 'El GIF no puede exceder los 10MB'
-            });
-            input.value = '';
-            return;
-        }
-        
-        gifFile = file;
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-            if (previewImg) previewImg.src = e.target.result;
-            if (previewContainer) previewContainer.style.display = 'block';
-            actualizarBarraProgresoTamaño();
-            actualizarContadorImagenes();
-        }
-        
-        reader.readAsDataURL(input.files[0]);
-    } else {
-        if (previewContainer) previewContainer.style.display = 'none';
-        gifFile = null;
+    // IMPORTANTE: Si no hay archivos seleccionados, NO hacer nada (mantener GIF actual)
+    if (!input.files || input.files.length === 0) {
+        console.log('No se seleccionó ningún archivo, manteniendo GIF actual');
+        // NO hacer nada - el GIF actual permanece
+        return;
+    }
+    
+    const file = input.files[0];
+    
+    if (file.type !== 'image/gif') {
+        Swal.fire({
+            icon: 'error',
+            title: 'Formato no válido',
+            text: 'El campo GIF solo acepta archivos con formato GIF'
+        });
+        input.value = '';
+        return;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Archivo demasiado grande',
+            text: 'El GIF no puede exceder los 10MB'
+        });
+        input.value = '';
+        return;
+    }
+    
+    // Solo actualizar si hay un archivo válido seleccionado
+    gifFile = file;
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        if (previewImg) previewImg.src = e.target.result;
+        if (previewContainer) previewContainer.style.display = 'block';
         actualizarBarraProgresoTamaño();
         actualizarContadorImagenes();
     }
+    
+    reader.readAsDataURL(file);
 }
 
 function cancelarGif() {
@@ -2578,14 +2930,17 @@ function cancelarGif() {
 }
 
 function handleImageSelection(event) {
-    const files = event.target.files;
+    const input = event.target;
+    const files = input.files;
     const maxFiles = 7;
     const currentCount = selectedImages.length;
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     
+    // IMPORTANTE: Si el usuario canceló la selección (no eligió archivos), NO hacer nada
     if (!files || files.length === 0) {
-        event.target.value = '';
-        return;
+        console.log('Usuario canceló selección de imágenes - manteniendo imágenes actuales');
+        input.value = ''; // Limpiar el input
+        return; // NO eliminar las imágenes adicionales existentes
     }
     
     const tamanioActual = calcularTamañoTotal();
@@ -2608,7 +2963,7 @@ function handleImageSelection(event) {
             `,
             confirmButtonText: 'Entendido'
         });
-        event.target.value = '';
+        input.value = '';
         return;
     }
     
@@ -2618,7 +2973,7 @@ function handleImageSelection(event) {
             title: 'Límite de imágenes',
             text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales. Ya tienes ${currentCount} seleccionadas.`
         });
-        event.target.value = '';
+        input.value = '';
         return;
     }
     
@@ -2663,7 +3018,8 @@ function handleImageSelection(event) {
         actualizarContadorImagenes();
     }
     
-    event.target.value = '';
+    // Limpiar el input para permitir seleccionar más archivos después
+    input.value = '';
 }
 
 function isImageDuplicate(newFile) {
@@ -2762,8 +3118,8 @@ function renderSelectedImages() {
 
 function validarTamañoTotalAntesDeEnviar() {
     const totalSize = calcularTamañoTotal();
-    const maxSize = 50 * 1024 * 1024;
     
+    // IMPORTANTE: Verificar que la imagen principal NO sea null
     if (!imagenPrincipalFile) {
         Swal.fire({
             icon: 'error',
@@ -2773,11 +3129,11 @@ function validarTamañoTotalAntesDeEnviar() {
         return false;
     }
     
-    if (totalSize > maxSize) {
+    if (totalSize > maxTotalSize) {
         Swal.fire({
             icon: 'error',
             title: 'Archivos demasiado grandes',
-            text: `El tamaño total de los archivos (${(totalSize / (1024 * 1024)).toFixed(2)}MB) excede el límite de 50MB.`
+            text: `El tamaño total (${(totalSize / (1024 * 1024)).toFixed(2)}MB) excede el límite de 50MB.`
         });
         return false;
     }
@@ -3037,7 +3393,7 @@ function actualizarPestanasValores() {
                 <input type="hidden" name="variaciones[${valorKey}][vNombre_variacion]" 
                        value="${valor.atributoNombre}: ${valor.nombre}">
 
-                <!-- SECCIÓN DE IMÁGENES DE LA VARIACIÓN -->
+               <!-- SECCIÓN DE IMÁGENES DE LA VARIACIÓN -->
                 <div class="card mb-4 border-primary">
                     <div class="card-header bg-primary text-white py-2">
                         <h6 class="mb-0"><i class="fas fa-images me-2"></i>Imágenes de la Variación</h6>
@@ -3051,17 +3407,25 @@ function actualizarPestanasValores() {
                                         <i class="fas fa-star text-warning me-1"></i>Imagen Principal
                                     </label>
                                     <input type="file" 
-                                           name="variaciones[${valorKey}][imagen_principal]" 
-                                           id="img_principal_${valorKey}" 
-                                           class="form-control"
-                                           accept="image/jpeg,image/jpg,image/png"
-                                           onchange="previewImagenPrincipalVariacion(this, 'preview_principal_${valorKey}')">
+                                        name="variaciones[${valorKey}][imagen_principal]" 
+                                        id="img_principal_${valorKey}" 
+                                        class="form-control"
+                                        accept="image/jpeg,image/jpg,image/png"
+                                        onchange="previewImagenPrincipalVariacion(this, 'preview_principal_${valorKey}')">
                                     <small class="form-text text-muted">
                                         JPG, JPEG, PNG. Máx: 5MB
                                     </small>
+                                    
+                                    <!-- Preview con botón para quitar imagen -->
                                     <div id="preview_principal_${valorKey}" class="mt-2" style="display: none;">
                                         <div class="border rounded p-2 text-center bg-light">
                                             <img src="#" class="img-thumbnail" style="max-width: 150px; max-height: 150px; object-fit: contain;">
+                                            <div class="mt-2">
+                                                <small class="text-muted d-block">Imagen principal de variación</small>
+                                                <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarImagenPrincipalVariacion('${valorKey}')">
+                                                    <i class="fas fa-times me-1"></i>Quitar imagen
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -3074,17 +3438,25 @@ function actualizarPestanasValores() {
                                         <i class="fas fa-file-image text-success me-1"></i>GIF Animado
                                     </label>
                                     <input type="file" 
-                                           name="variaciones[${valorKey}][gif]" 
-                                           id="gif_${valorKey}" 
-                                           class="form-control"
-                                           accept="image/gif"
-                                           onchange="previewGifVariacion(this, 'preview_gif_${valorKey}')">
+                                        name="variaciones[${valorKey}][gif]" 
+                                        id="gif_${valorKey}" 
+                                        class="form-control"
+                                        accept="image/gif"
+                                        onchange="previewGifVariacion(this, 'preview_gif_${valorKey}')">
                                     <small class="form-text text-muted">
                                         GIF. Máx: 10MB
                                     </small>
+                                    
+                                    <!-- Preview con botón para quitar GIF -->
                                     <div id="preview_gif_${valorKey}" class="mt-2" style="display: none;">
                                         <div class="border rounded p-2 text-center bg-light">
                                             <img src="#" class="img-thumbnail" style="max-width: 150px; max-height: 150px; object-fit: contain;">
+                                            <div class="mt-2">
+                                                <small class="text-muted d-block">GIF de variación</small>
+                                                <button type="button" class="btn btn-sm btn-outline-danger mt-1" onclick="cancelarGifVariacion('${valorKey}')">
+                                                    <i class="fas fa-times me-1"></i>Quitar GIF
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -3097,18 +3469,21 @@ function actualizarPestanasValores() {
                                         <i class="fas fa-images me-1"></i>Imágenes Adicionales (Máx 7)
                                     </label>
                                     <input type="file" 
-                                           name="variaciones[${valorKey}][imagenes_adicionales][]" 
-                                           id="imagenes_adicionales_${valorKey}" 
-                                           class="form-control"
-                                           multiple
-                                           accept="image/jpeg,image/jpg,image/png,image/webp"
-                                           onchange="handleImagenesAdicionalesVariacion(event, '${valorKey}')">
+                                        name="variaciones[${valorKey}][imagenes_adicionales][]" 
+                                        id="imagenes_adicionales_${valorKey}" 
+                                        class="form-control"
+                                        multiple
+                                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                                        onchange="handleImagenesAdicionalesVariacion(event, '${valorKey}')">
                                     <small class="form-text text-muted">
                                         JPG, JPEG, PNG, WEBP. Máx: 5MB c/u
                                     </small>
                                     <div id="container_adicionales_${valorKey}" class="row mt-2"></div>
-                                    <div class="mt-2">
+                                    <div class="mt-2 d-flex justify-content-between align-items-center">
                                         <span class="badge bg-info" id="count_adicionales_${valorKey}">0 seleccionadas</span>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelarTodasImagenesAdicionalesVariacion('${valorKey}')" style="display: none;" id="btn_eliminar_todas_${valorKey}">
+                                            <i class="fas fa-trash-alt me-1"></i>Eliminar todas
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -3503,6 +3878,116 @@ function actualizarPestanasValores() {
     // Cargar impuestos en los selects de las nuevas variaciones
     setTimeout(cargarImpuestosEnVariaciones, 200);
 }
+// ============ FUNCIONES PARA ELIMINAR IMÁGENES DE VARIACIONES ============
+
+function cancelarImagenPrincipalVariacion(valorKey) {
+    const input = document.getElementById(`img_principal_${valorKey}`);
+    const previewContainer = document.getElementById(`preview_principal_${valorKey}`);
+    
+    // Limpiar el input y ocultar preview
+    if (input) input.value = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+    
+    // Eliminar la imagen principal del objeto global
+    if (imagenesVariacion[valorKey]) {
+        delete imagenesVariacion[valorKey].imagenPrincipal;
+    }
+    
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+}
+
+function cancelarGifVariacion(valorKey) {
+    const input = document.getElementById(`gif_${valorKey}`);
+    const previewContainer = document.getElementById(`preview_gif_${valorKey}`);
+    
+    // Limpiar el input y ocultar preview
+    if (input) input.value = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+    
+    // Eliminar el GIF del objeto global
+    if (imagenesVariacion[valorKey]) {
+        delete imagenesVariacion[valorKey].gif;
+    }
+    
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+}
+
+function cancelarTodasImagenesAdicionalesVariacion(valorKey) {
+    // Confirmar antes de eliminar
+    Swal.fire({
+        title: '¿Eliminar todas las imágenes?',
+        text: 'Esta acción eliminará todas las imágenes adicionales de esta variación.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar todas',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Liberar URLs de objeto
+            if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+                imagenesVariacion[valorKey].imagenes.forEach(img => {
+                    if (img.preview) {
+                        URL.revokeObjectURL(img.preview);
+                    }
+                });
+                imagenesVariacion[valorKey].imagenes = [];
+            }
+            
+            // Renderizar contenedor vacío
+            renderImagenesAdicionalesVariacion(valorKey);
+            
+            // Actualizar contador
+            const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
+            if (countSpan) countSpan.textContent = '0 seleccionadas';
+            
+            // Ocultar botón de eliminar todas si no hay imágenes
+            const btnEliminarTodas = document.getElementById(`btn_eliminar_todas_${valorKey}`);
+            if (btnEliminarTodas) btnEliminarTodas.style.display = 'none';
+            
+            actualizarBarraProgresoTamaño();
+            actualizarContadorImagenes();
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Imágenes eliminadas',
+                text: 'Todas las imágenes adicionales han sido eliminadas.',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        }
+    });
+}
+
+function eliminarImagenAdicionalVariacion(valorKey, imageId) {
+    if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+        const image = imagenesVariacion[valorKey].imagenes.find(img => img.id === imageId);
+        if (image && image.preview) {
+            URL.revokeObjectURL(image.preview);
+        }
+        
+        imagenesVariacion[valorKey].imagenes = imagenesVariacion[valorKey].imagenes.filter(img => img.id !== imageId);
+        
+        renderImagenesAdicionalesVariacion(valorKey);
+        
+        const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
+        if (countSpan) {
+            countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
+        }
+        
+        // Mostrar/ocultar botón "Eliminar todas"
+        const btnEliminarTodas = document.getElementById(`btn_eliminar_todas_${valorKey}`);
+        if (btnEliminarTodas) {
+            btnEliminarTodas.style.display = imagenesVariacion[valorKey].imagenes.length > 0 ? 'inline-block' : 'none';
+        }
+        
+        actualizarBarraProgresoTamaño();
+        actualizarContadorImagenes();
+    }
+} 
 
 function generarSkuSugerido(productoSku, combinacion) {
     let sku = productoSku || 'PROD';
@@ -3662,30 +4147,244 @@ function actualizarSelectsImpuestosVariaciones(impuesto) {
 
 function previewImagenPrincipalVariacion(input, previewId) {
     const previewContainer = document.getElementById(previewId);
+    const valorKey = obtenerValorKeyDesdePreviewId(previewId);
     
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!input.files || input.files.length === 0) {
+        console.log('Canceló selección - manteniendo imagen actual de variación');
+        input.value = '';
+        return;
+    }
+    
+    const file = input.files[0];
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    
+    if (!validTypes.includes(file.type)) {
+        Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'Solo JPG, JPEG, PNG' });
+        input.value = '';
+        return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+        Swal.fire({ icon: 'error', title: 'Archivo demasiado grande', text: 'Máximo 5MB' });
+        input.value = '';
+        return;
+    }
+    
+    if (valorKey) {
+        if (!imagenesVariacion[valorKey]) imagenesVariacion[valorKey] = { imagenes: [] };
+        imagenesVariacion[valorKey].imagenPrincipal = file;
         
-        if (!validTypes.includes(file.type)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Formato no válido',
-                text: 'La imagen principal solo acepta formatos JPG, JPEG y PNG'
-            });
-            input.value = '';
-            return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (previewContainer) {
+                const img = previewContainer.querySelector('img');
+                if (img) img.src = e.target.result;
+                previewContainer.style.display = 'block';
+            }
+            actualizarBarraProgresoTamaño();
+            actualizarContadorImagenes();
         }
+        reader.readAsDataURL(file);
+    }
+}
+
+function cancelarImagenPrincipalVariacion(valorKey) {
+    const input = document.getElementById(`img_principal_${valorKey}`);
+    const previewContainer = document.getElementById(`preview_principal_${valorKey}`);
+    
+    if (input) input.value = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+    if (imagenesVariacion[valorKey]) delete imagenesVariacion[valorKey].imagenPrincipal;
+    
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+}
+
+function previewGifVariacion(input, previewId) {
+    const previewContainer = document.getElementById(previewId);
+    const valorKey = obtenerValorKeyDesdePreviewId(previewId);
+    
+    if (!input.files || input.files.length === 0) {
+        console.log('Canceló selección - manteniendo GIF actual de variación');
+        input.value = '';
+        return;
+    }
+    
+    const file = input.files[0];
+    
+    if (file.type !== 'image/gif') {
+        Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'Solo archivos GIF' });
+        input.value = '';
+        return;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) {
+        Swal.fire({ icon: 'error', title: 'Archivo demasiado grande', text: 'Máximo 10MB' });
+        input.value = '';
+        return;
+    }
+    
+    if (valorKey) {
+        if (!imagenesVariacion[valorKey]) imagenesVariacion[valorKey] = { imagenes: [] };
+        imagenesVariacion[valorKey].gif = file;
         
-        if (file.size > 5 * 1024 * 1024) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Archivo demasiado grande',
-                text: 'La imagen principal no puede exceder los 5MB'
-            });
-            input.value = '';
-            return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (previewContainer) {
+                const img = previewContainer.querySelector('img');
+                if (img) img.src = e.target.result;
+                previewContainer.style.display = 'block';
+            }
+            actualizarBarraProgresoTamaño();
+            actualizarContadorImagenes();
         }
+        reader.readAsDataURL(file);
+    }
+}
+
+
+function cancelarGifVariacion(valorKey) {
+    const input = document.getElementById(`gif_${valorKey}`);
+    const previewContainer = document.getElementById(`preview_gif_${valorKey}`);
+    
+    if (input) input.value = '';
+    if (previewContainer) previewContainer.style.display = 'none';
+    if (imagenesVariacion[valorKey]) delete imagenesVariacion[valorKey].gif;
+    
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+}
+
+function handleImagenesAdicionalesVariacion(event, valorKey) {
+    const input = event.target;
+    const files = Array.from(input.files);
+    const maxFiles = 7;
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    
+    if (files.length === 0) {
+        console.log('Canceló selección - manteniendo imágenes actuales de variación');
+        input.value = '';
+        return;
+    }
+    
+    if (!imagenesVariacion[valorKey]) imagenesVariacion[valorKey] = { imagenes: [] };
+    
+    if (imagenesVariacion[valorKey].imagenes.length + files.length > maxFiles) {
+        Swal.fire({ icon: 'warning', title: 'Límite', text: `Máximo ${maxFiles} imágenes adicionales` });
+        input.value = '';
+        return;
+    }
+    
+    files.forEach(file => {
+        if (!validTypes.includes(file.type)) return;
+        if (file.size > 5 * 1024 * 1024) return;
+        
+        const imageId = 'var_img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const preview = URL.createObjectURL(file);
+        
+        imagenesVariacion[valorKey].imagenes.push({
+            id: imageId,
+            file: file,
+            preview: preview,
+            name: file.name,
+            size: file.size
+        });
+    });
+    
+    renderImagenesAdicionalesVariacion(valorKey);
+    const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
+    if (countSpan) countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+    input.value = '';
+}
+
+function eliminarImagenAdicionalVariacion(valorKey, imageId) {
+    if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+        const image = imagenesVariacion[valorKey].imagenes.find(img => img.id === imageId);
+        if (image && image.preview) URL.revokeObjectURL(image.preview);
+        
+        imagenesVariacion[valorKey].imagenes = imagenesVariacion[valorKey].imagenes.filter(img => img.id !== imageId);
+        
+        renderImagenesAdicionalesVariacion(valorKey);
+        
+        const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
+        if (countSpan) countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
+        
+        actualizarBarraProgresoTamaño();
+        actualizarContadorImagenes();
+    }
+}
+
+
+function cancelarTodasImagenesAdicionalesVariacion(valorKey) {
+    if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+        imagenesVariacion[valorKey].imagenes.forEach(img => {
+            if (img.preview) {
+                URL.revokeObjectURL(img.preview);
+            }
+        });
+        imagenesVariacion[valorKey].imagenes = [];
+    }
+    
+    renderImagenesAdicionalesVariacion(valorKey);
+    
+    const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
+    if (countSpan) countSpan.textContent = '0 seleccionadas';
+    
+    const btnEliminarTodas = document.getElementById(`btn_eliminar_todas_${valorKey}`);
+    if (btnEliminarTodas) btnEliminarTodas.style.display = 'none';
+    
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+}
+
+function obtenerValorKeyDesdePreviewId(previewId) {
+    const parts = previewId.split('_');
+    if (parts.length >= 3) {
+        return parts.slice(2).join('_');
+    }
+    return null;
+}
+
+function previewGifVariacion(input, previewId) {
+    const previewContainer = document.getElementById(previewId);
+    
+    // IMPORTANTE: Si el usuario canceló la selección, NO hacer nada
+    if (!input.files || input.files.length === 0) {
+        console.log('Usuario canceló selección de GIF de variación');
+        input.value = '';
+        return; // NO eliminar el GIF existente
+    }
+    
+    const file = input.files[0];
+    
+    if (file.type !== 'image/gif') {
+        Swal.fire({
+            icon: 'error',
+            title: 'Formato no válido',
+            text: 'Solo se permiten archivos GIF'
+        });
+        input.value = '';
+        return;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Archivo demasiado grande',
+            text: 'El GIF no puede exceder los 10MB'
+        });
+        input.value = '';
+        return;
+    }
+    
+    const valorKey = obtenerValorKeyDesdePreviewId(previewId);
+    if (valorKey) {
+        if (!imagenesVariacion[valorKey]) {
+            imagenesVariacion[valorKey] = { imagenes: [] };
+        }
+        imagenesVariacion[valorKey].gif = file;
         
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -3700,11 +4399,234 @@ function previewImagenPrincipalVariacion(input, previewId) {
             actualizarContadorImagenes();
         }
         reader.readAsDataURL(file);
-    } else {
-        if (previewContainer) previewContainer.style.display = 'none';
-        actualizarBarraProgresoTamaño();
-        actualizarContadorImagenes();
     }
+}
+
+function handleImagenesAdicionalesVariacion(event, valorKey) {
+    const input = event.target;
+    const container = document.getElementById(`container_adicionales_${valorKey}`);
+    const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
+    
+    if (!container || !countSpan) return;
+    
+    const files = Array.from(input.files);
+    const maxFiles = 7;
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    
+    // IMPORTANTE: Si el usuario canceló la selección, NO hacer nada
+    if (files.length === 0) {
+        console.log('Usuario canceló selección de imágenes adicionales de variación');
+        input.value = '';
+        return; // NO eliminar las imágenes existentes
+    }
+    
+    if (!imagenesVariacion[valorKey]) {
+        imagenesVariacion[valorKey] = {
+            imagenes: []
+        };
+    }
+    
+    if (imagenesVariacion[valorKey].imagenes.length + files.length > maxFiles) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de imágenes',
+            text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales para esta variación.`
+        });
+        input.value = '';
+        return;
+    }
+    
+    const tamanioActual = calcularTamañoTotal();
+    let nuevoTamanio = tamanioActual;
+    files.forEach(file => nuevoTamanio += file.size);
+    
+    if (nuevoTamanio > maxTotalSize) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de tamaño excedido',
+            text: 'Si agregas estas imágenes, excederás el límite de 50MB.'
+        });
+        input.value = '';
+        return;
+    }
+    
+    files.forEach(file => {
+        if (!validTypes.includes(file.type)) return;
+        if (file.size > 5 * 1024 * 1024) return;
+        
+        const yaExiste = imagenesVariacion[valorKey].imagenes.some(img => 
+            img.file.name === file.name && img.file.size === file.size
+        );
+        if (yaExiste) return;
+        
+        const imageId = 'var_img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const preview = URL.createObjectURL(file);
+        
+        imagenesVariacion[valorKey].imagenes.push({
+            id: imageId,
+            file: file,
+            preview: preview,
+            name: file.name,
+            size: file.size
+        });
+    });
+    
+    renderImagenesAdicionalesVariacion(valorKey);
+    countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+    input.value = '';
+}
+
+// Función auxiliar
+function obtenerValorKeyDesdePreviewId(previewId) {
+    const parts = previewId.split('_');
+    if (parts.length >= 3) {
+        return parts.slice(2).join('_');
+    }
+    return null;
+}
+
+function previewGifVariacion(input, previewId) {
+    const previewContainer = document.getElementById(previewId);
+    
+    // IMPORTANTE: Si no hay archivos seleccionados, NO hacer nada (mantener GIF actual)
+    if (!input.files || input.files.length === 0) {
+        console.log('No se seleccionó archivo para GIF de variación, manteniendo GIF actual');
+        return; // NO hacer nada - el GIF actual permanece
+    }
+    
+    const file = input.files[0];
+    
+    if (file.type !== 'image/gif') {
+        Swal.fire({
+            icon: 'error',
+            title: 'Formato no válido',
+            text: 'Solo se permiten archivos GIF'
+        });
+        input.value = '';
+        return;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Archivo demasiado grande',
+            text: 'El GIF no puede exceder los 10MB'
+        });
+        input.value = '';
+        return;
+    }
+    
+    // Actualizar el GIF en el objeto global
+    const valorKey = obtenerValorKeyDesdePreviewId(previewId);
+    if (valorKey) {
+        if (!imagenesVariacion[valorKey]) {
+            imagenesVariacion[valorKey] = { imagenes: [] };
+        }
+        imagenesVariacion[valorKey].gif = file;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (previewContainer) {
+                const img = previewContainer.querySelector('img');
+                if (img) {
+                    img.src = e.target.result;
+                    previewContainer.style.display = 'block';
+                }
+            }
+            actualizarBarraProgresoTamaño();
+            actualizarContadorImagenes();
+        }
+        reader.readAsDataURL(file);
+    }
+}
+
+function handleImagenesAdicionalesVariacion(event, valorKey) {
+    const input = event.target;
+    const container = document.getElementById(`container_adicionales_${valorKey}`);
+    const countSpan = document.getElementById(`count_adicionales_${valorKey}`);
+    
+    if (!container || !countSpan) return;
+    
+    const files = Array.from(input.files);
+    const maxFiles = 7;
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    
+    // IMPORTANTE: Si no hay archivos seleccionados, NO hacer nada (mantener imágenes actuales)
+    if (files.length === 0) {
+        console.log('No se seleccionaron archivos para variación, manteniendo imágenes actuales');
+        input.value = '';
+        return; // NO hacer nada - las imágenes actuales permanecen
+    }
+    
+    if (!imagenesVariacion[valorKey]) {
+        imagenesVariacion[valorKey] = {
+            imagenes: []
+        };
+    }
+    
+    if (imagenesVariacion[valorKey].imagenes.length + files.length > maxFiles) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de imágenes',
+            text: `Solo puedes seleccionar máximo ${maxFiles} imágenes adicionales para esta variación.`
+        });
+        input.value = '';
+        return;
+    }
+    
+    const tamanioActual = calcularTamañoTotal();
+    let nuevoTamanio = tamanioActual;
+    files.forEach(file => nuevoTamanio += file.size);
+    
+    if (nuevoTamanio > maxTotalSize) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Límite de tamaño excedido',
+            text: 'Si agregas estas imágenes, excederás el límite de 50MB.'
+        });
+        input.value = '';
+        return;
+    }
+    
+    files.forEach(file => {
+        if (!validTypes.includes(file.type)) return;
+        if (file.size > 5 * 1024 * 1024) return;
+        
+        // Verificar duplicados
+        const yaExiste = imagenesVariacion[valorKey].imagenes.some(img => 
+            img.file.name === file.name && img.file.size === file.size
+        );
+        if (yaExiste) return;
+        
+        const imageId = 'var_img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const preview = URL.createObjectURL(file);
+        
+        imagenesVariacion[valorKey].imagenes.push({
+            id: imageId,
+            file: file,
+            preview: preview,
+            name: file.name,
+            size: file.size
+        });
+    });
+    
+    renderImagenesAdicionalesVariacion(valorKey);
+    countSpan.textContent = imagenesVariacion[valorKey].imagenes.length + ' seleccionadas';
+    actualizarBarraProgresoTamaño();
+    actualizarContadorImagenes();
+    input.value = '';
+}
+
+// Función auxiliar para obtener valorKey desde previewId
+function obtenerValorKeyDesdePreviewId(previewId) {
+    // Ejemplo: preview_principal_123_456
+    const parts = previewId.split('_');
+    if (parts.length >= 3) {
+        return parts.slice(2).join('_');
+    }
+    return null;
 }
 
 function previewGifVariacion(input, previewId) {
@@ -3830,39 +4752,39 @@ function renderImagenesAdicionalesVariacion(valorKey) {
     
     imagenesVariacion[valorKey].imagenes.forEach((img, index) => {
         const col = document.createElement('div');
-        col.className = 'col-4 col-md-3 mb-2';
-        
-        const card = document.createElement('div');
-        card.className = 'border rounded p-1 text-center bg-light position-relative';
+        col.className = 'col-4 col-md-3 mb-2 position-relative';
         
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1';
-        btn.style.cssText = 'width: 20px; height: 20px; padding: 0; border-radius: 50%; font-size: 10px;';
-        btn.onclick = function(e) {
-            e.preventDefault();
-            eliminarImagenAdicionalVariacion(valorKey, img.id);
-        };
-        
-        const btnIcon = document.createElement('i');
-        btnIcon.className = 'fas fa-times';
-        btn.appendChild(btnIcon);
+        btn.style.cssText = 'width: 22px; height: 22px; padding: 0; border-radius: 50%; font-size: 10px; z-index: 10;';
+        btn.onclick = () => eliminarImagenAdicionalVariacion(valorKey, img.id);
+        btn.innerHTML = '<i class="fas fa-times"></i>';
         
         const imgElement = document.createElement('img');
         imgElement.src = img.preview;
         imgElement.className = 'img-fluid';
-        imgElement.style.cssText = 'height: 60px; object-fit: contain;';
+        imgElement.style.cssText = 'height: 70px; object-fit: contain; width: 100%;';
         
         const small = document.createElement('small');
-        small.className = 'd-block text-truncate';
-        small.textContent = img.name.length > 10 ? img.name.substring(0, 10) + '...' : img.name;
+        small.className = 'd-block text-truncate mt-1';
+        small.textContent = img.name.length > 12 ? img.name.substring(0, 12) + '...' : img.name;
         
-        card.appendChild(btn);
+        const card = document.createElement('div');
+        card.className = 'border rounded p-1 text-center bg-light';
         card.appendChild(imgElement);
         card.appendChild(small);
+        
+        col.appendChild(btn);
         col.appendChild(card);
         container.appendChild(col);
     });
+}
+
+function obtenerValorKeyDesdePreviewId(previewId) {
+    const parts = previewId.split('_');
+    if (parts.length >= 3) return parts.slice(2).join('_');
+    return null;
 }
 
 function eliminarImagenAdicionalVariacion(valorKey, imageId) {
@@ -4961,78 +5883,146 @@ function cancelarImagenCategoriaModal() {
 }
 
 // ============ CONFIGURAR EVENTOS PARA ACTUALIZACIÓN EN TIEMPO REAL ============
-document.addEventListener('DOMContentLoaded', function() {
+function actualizarPrecioFinalVariacion(valorKey) {
+    const precioInput = document.getElementById(`precio-${valorKey}`);
+    const descuentoCheckbox = document.getElementById(`descuento-${valorKey}`);
+    const precioDescuentoInput = document.getElementById(`precio_descuento-${valorKey}`);
+    const fechaInicioInput = document.getElementById(`fecha-inicio-${valorKey}`);
+    const fechaFinInput = document.getElementById(`fecha-fin-${valorKey}`);
+    const impuestoSelect = document.getElementById(`impuesto-${valorKey}`);
+    const precioFinalSpan = document.getElementById(`precio-final-${valorKey}`);
+    const detalleImpuestoSpan = document.getElementById(`detalle-impuesto-${valorKey}`);
     
-    // Eventos para el producto principal
-    const precioVentaInput = document.getElementById('dPrecio_venta');
-    const tieneDescuentoCheckbox = document.getElementById('bTiene_descuento');
-    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
-    const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
-    const fechaFinInput = document.getElementById('dFecha_fin_descuento');
-    const impuestoSelect = document.getElementById('id_impuesto');
+    if (!precioInput) return;
     
-    if (precioVentaInput) {
-        precioVentaInput.addEventListener('input', actualizarPrecioFinal);
-        precioVentaInput.addEventListener('change', actualizarPrecioFinal);
-    }
+    let precioNormal = parseFloat(precioInput.value) || 0;
+    let precioBase = precioNormal;
+    let tieneDescuento = descuentoCheckbox && descuentoCheckbox.checked;
+    let precioDescuento = 0;
+    let descuentoActivo = false;
+    let mensaje = '';
     
-    if (tieneDescuentoCheckbox) {
-        tieneDescuentoCheckbox.addEventListener('change', function() {
-            toggleDescuentoFields();
-            actualizarPrecioFinal();
-        });
-    }
-    
-    if (precioDescuentoInput) {
-        precioDescuentoInput.addEventListener('input', actualizarPrecioFinal);
-        precioDescuentoInput.addEventListener('change', actualizarPrecioFinal);
-    }
-    
-    if (fechaInicioInput) {
-        fechaInicioInput.addEventListener('change', function() {
-            validarFechasDescuento();
-            actualizarPrecioFinal();
-        });
-        fechaInicioInput.addEventListener('blur', actualizarPrecioFinal);
-    }
-    
-    if (fechaFinInput) {
-        fechaFinInput.addEventListener('change', function() {
-            validarFechasDescuento();
-            actualizarPrecioFinal();
-        });
-        fechaFinInput.addEventListener('blur', actualizarPrecioFinal);
-    }
-    
-    if (impuestoSelect) {
-        impuestoSelect.addEventListener('change', actualizarPrecioFinal);
-    }
-    
-    // Eventos para variaciones
-    document.addEventListener('change', function(e) {
-        if (e.target.id && e.target.id.startsWith('fecha-inicio-')) {
-            const valorKey = e.target.id.replace('fecha-inicio-', '');
-            validarFechasDescuentoVariacion(e.target.id, `fecha-fin-${valorKey}`, valorKey);
-            actualizarPrecioFinalVariacion(valorKey);
-        }
+    // ========== VERIFICAR SI EL DESCUENTO DEBE APLICAR ==========
+    if (tieneDescuento && precioDescuentoInput && precioDescuentoInput.value) {
+        precioDescuento = parseFloat(precioDescuentoInput.value) || 0;
         
-        if (e.target.id && e.target.id.startsWith('fecha-fin-')) {
-            const valorKey = e.target.id.replace('fecha-fin-', '');
-            validarFechasDescuentoVariacion(`fecha-inicio-${valorKey}`, e.target.id, valorKey);
-            actualizarPrecioFinalVariacion(valorKey);
+        if (precioDescuento > 0 && precioDescuento < precioNormal) {
+            const fechaInicioStr = fechaInicioInput?.value || '';
+            const fechaFinStr = fechaFinInput?.value || '';
+            
+            // Obtener fecha actual (solo fecha, sin hora)
+            const hoy = new Date();
+            const fechaHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+            
+            let fechaInicio = null;
+            let fechaFin = null;
+            
+            if (fechaInicioStr) {
+                const [year, month, day] = fechaInicioStr.split('-').map(Number);
+                fechaInicio = new Date(year, month - 1, day);
+            }
+            
+            if (fechaFinStr) {
+                const [year, month, day] = fechaFinStr.split('-').map(Number);
+                fechaFin = new Date(year, month - 1, day);
+                fechaFin.setHours(23, 59, 59, 999);
+            }
+            
+            // ========== LÓGICA CORRECTA ==========
+            if (fechaInicio && fechaFin) {
+                // Caso 1: Tiene ambas fechas
+                if (fechaHoy >= fechaInicio && fechaHoy <= fechaFin) {
+                    descuentoActivo = true;
+                    mensaje = '✓ Descuento activo HOY';
+                } else {
+                    descuentoActivo = false;
+                    mensaje = `⏱️ Descuento programado (${fechaInicioStr} al ${fechaFinStr})`;
+                }
+            } 
+            else if (fechaInicio && !fechaFin) {
+                // Caso 2: Solo fecha de inicio
+                if (fechaHoy >= fechaInicio) {
+                    descuentoActivo = true;
+                    mensaje = '✓ Descuento activo HOY';
+                } else {
+                    descuentoActivo = false;
+                    mensaje = `⏱️ Descuento programado desde ${fechaInicioStr}`;
+                }
+            } 
+            else if (!fechaInicio && fechaFin) {
+                // Caso 3: Solo fecha de fin
+                if (fechaHoy <= fechaFin) {
+                    descuentoActivo = true;
+                    mensaje = '✓ Descuento activo HOY';
+                } else {
+                    descuentoActivo = false;
+                    mensaje = `⏱️ Descuento programado hasta ${fechaFinStr}`;
+                }
+            } 
+            else {
+                // Caso 4: Sin fechas
+                descuentoActivo = true;
+                mensaje = '✓ Descuento activo';
+            }
+            
+            // SOLO si el descuento está activo, usamos el precio con descuento
+            if (descuentoActivo) {
+                precioBase = precioDescuento;
+            }
         }
-        
-        if (e.target.id && e.target.id.startsWith('descuento-')) {
-            const valorKey = e.target.id.replace('descuento-', '');
-            toggleDescuentoVariacion(e.target, valorKey);
+    }
+    
+    // ========== CALCULAR IMPUESTOS ==========
+    let totalImpuesto = 0;
+    let porcentajeImpuesto = 0;
+    let nombreImpuesto = '';
+    let precioFinal = precioBase;
+    
+    if (impuestoSelect && impuestoSelect.value) {
+        const selectedOption = impuestoSelect.options[impuestoSelect.selectedIndex];
+        porcentajeImpuesto = parseFloat(selectedOption.dataset.porcentaje) || 0;
+        nombreImpuesto = selectedOption.dataset.nombre || selectedOption.text.split('(')[0].trim();
+        totalImpuesto = precioBase * (porcentajeImpuesto / 100);
+        precioFinal = precioBase + totalImpuesto;
+    }
+    
+    // ========== ACTUALIZAR DISPLAY ==========
+    if (precioFinalSpan) {
+        precioFinalSpan.textContent = '$' + precioFinal.toFixed(2);
+    }
+    
+    if (detalleImpuestoSpan) {
+        let html = '';
+        if (mensaje) {
+            const colorClass = descuentoActivo ? 'text-success' : 'text-warning';
+            html += `<span class="${colorClass}">${mensaje}</span><br>`;
         }
-    });
+        if (porcentajeImpuesto > 0) {
+            html += `${nombreImpuesto}: +${porcentajeImpuesto.toFixed(2)}% ($${totalImpuesto.toFixed(2)})`;
+        } else {
+            html += 'Sin impuesto';
+        }
+        detalleImpuestoSpan.innerHTML = html;
+    }
     
-    actualizarResumenAtributos();
-    actualizarPestanasValores();
+    // Actualizar resumen de precios
+    const precioBaseDisplay = document.getElementById(`precio-base-display-${valorKey}`);
+    const totalImpuestosDisplay = document.getElementById(`total-impuestos-display-${valorKey}`);
+    const precioFinalTotalDisplay = document.getElementById(`precio-final-total-display-${valorKey}`);
     
-    setTimeout(actualizarPrecioFinal, 100);
-});
+    if (precioBaseDisplay) precioBaseDisplay.textContent = '$' + precioBase.toFixed(2);
+    if (totalImpuestosDisplay) totalImpuestosDisplay.textContent = '+$' + totalImpuesto.toFixed(2);
+    if (precioFinalTotalDisplay) precioFinalTotalDisplay.textContent = '$' + precioFinal.toFixed(2);
+    
+    // LOG PARA DEPURACIÓN
+    console.log('=== VARIACIÓN ' + valorKey + ' ===');
+    console.log('Precio normal:', precioNormal);
+    console.log('Precio descuento:', precioDescuento);
+    console.log('Descuento marcado:', tieneDescuento);
+    console.log('Descuento activo HOY?', descuentoActivo);
+    console.log('Precio BASE usado:', precioBase);
+    console.log('Precio FINAL:', precioFinal);
+}
 
 // ============ EVENT LISTENERS ADICIONALES PARA ATRIBUTOS ============
 document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
@@ -5153,31 +6143,33 @@ document.querySelectorAll('.valor-checkbox').forEach(checkbox => {
 document.getElementById('productoForm').addEventListener('submit', function(event) {
     event.preventDefault();
     
-    // Primero validar atributos incompletos
-    if (!validarAtributosAntesDeEnviar()) {
-        return false;
+    // Verificar que la imagen principal NO sea null
+    if (!imagenPrincipalFile) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Imagen principal requerida',
+            text: 'Debes seleccionar una imagen principal para el producto'
+        });
+        return;
     }
     
-    // Luego las demás validaciones
-    if (!validarCamposUnicosAntesDeEnviar()) {
-        return false;
-    }
-    
-    if (!validarTamañoTotalAntesDeEnviar()) {
-        return false;
-    }
-
-    
+    // Resto de validaciones...
     const form = this;
     const formData = new FormData(form);
     
-    // IMPORTANTE: Las imágenes ya están en formData por el input file,
-    // pero si selectedImages tiene imágenes, aseguramos que se agreguen
+    // Agregar imagen principal si existe
+    if (imagenPrincipalFile) {
+        formData.set('imagen_principal', imagenPrincipalFile);
+    }
+    
+    // Agregar GIF si existe
+    if (gifFile) {
+        formData.set('gif_producto', gifFile);
+    }
+    
+    // Agregar imágenes adicionales
     if (selectedImages.length > 0) {
-        // Eliminar las entradas existentes de imagenes[] para evitar duplicados
         formData.delete('imagenes[]');
-        
-        // Agregar cada imagen seleccionada
         selectedImages.forEach((image) => {
             formData.append('imagenes[]', image.file);
         });
@@ -5185,47 +6177,34 @@ document.getElementById('productoForm').addEventListener('submit', function(even
     
     // Agregar imágenes de variaciones
     Object.keys(imagenesVariacion).forEach(valorKey => {
-        if (imagenesVariacion[valorKey] && imagenesVariacion[valorKey].imagenes) {
+        if (imagenesVariacion[valorKey].imagenes) {
             imagenesVariacion[valorKey].imagenes.forEach((img, idx) => {
                 formData.append(`variaciones[${valorKey}][imagenes_adicionales][${idx}]`, img.file);
             });
         }
     });
     
-    Swal.fire({
-        title: 'Guardando producto...',
-        text: 'Por favor espera',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
-    
+    // Enviar...
     fetch(form.action, {
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-            'Accept': 'application/json'
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
         }
     })
     .then(response => {
         if (response.redirected) {
             window.location.href = response.url;
-        } else if (response.ok) {
-            return response.json();
         } else {
-            throw new Error('Error al guardar el producto');
+            return response.json();
         }
     })
     .then(data => {
-        Swal.close();
         if (data && data.redirect) {
             window.location.href = data.redirect;
-        } else {
-            window.location.href = '{{ route("productos.index") }}';
         }
     })
     .catch(error => {
-        Swal.close();
         console.error('Error:', error);
         Swal.fire({
             icon: 'error',
@@ -5237,23 +6216,205 @@ document.getElementById('productoForm').addEventListener('submit', function(even
 
 // Inicializar modales
 document.addEventListener('DOMContentLoaded', function() {
+    // ============ INICIALIZAR MODALES ============
     try {
-        const modalCategoriaEl = document.getElementById('modalCategoria');
-        const modalMarcaEl = document.getElementById('modalMarca');
-        const modalEtiquetaEl = document.getElementById('modalEtiqueta');
-        const modalAtributoEl = document.getElementById('modalAtributo');
-        const modalImpuestoEl = document.getElementById('modalImpuesto');
-        const crearValorModalEl = document.getElementById('crearValorModal');
-        
-        if (modalCategoriaEl) modalCategoria = new bootstrap.Modal(modalCategoriaEl);
-        if (modalMarcaEl) modalMarca = new bootstrap.Modal(modalMarcaEl);
-        if (modalEtiquetaEl) modalEtiqueta = new bootstrap.Modal(modalEtiquetaEl);
-        if (modalAtributoEl) modalAtributo = new bootstrap.Modal(modalAtributoEl);
-        if (modalImpuestoEl) modalImpuesto = new bootstrap.Modal(modalImpuestoEl);
-        if (crearValorModalEl) valorModal = new bootstrap.Modal(crearValorModalEl);
-    } catch (e) {
-        console.error('Error al inicializar modales:', e);
+        modalCategoria = new bootstrap.Modal(document.getElementById('modalCategoria'));
+        modalMarca = new bootstrap.Modal(document.getElementById('modalMarca'));
+        modalEtiqueta = new bootstrap.Modal(document.getElementById('modalEtiqueta'));
+        modalAtributo = new bootstrap.Modal(document.getElementById('modalAtributo'));
+        modalImpuesto = new bootstrap.Modal(document.getElementById('modalImpuesto'));
+        valorModal = new bootstrap.Modal(document.getElementById('crearValorModal'));
+    } catch(e) { console.error('Error al inicializar modales:', e); }
+    
+    // ============ EVENTOS DEL PRODUCTO PRINCIPAL ============
+    const fechaInicioInput = document.getElementById('dFecha_inicio_descuento');
+    const fechaFinInput = document.getElementById('dFecha_fin_descuento');
+    const precioDescuentoInput = document.getElementById('dPrecio_descuento');
+    const tieneDescuentoCheckbox = document.getElementById('bTiene_descuento');
+    const precioVentaInput = document.getElementById('dPrecio_venta');
+    const impuestoSelect = document.getElementById('id_impuesto');
+    
+    if (precioVentaInput) {
+        precioVentaInput.addEventListener('input', actualizarPrecioFinal);
+        precioVentaInput.addEventListener('change', actualizarPrecioFinal);
     }
+    
+    if (tieneDescuentoCheckbox) {
+        tieneDescuentoCheckbox.addEventListener('change', function() {
+            toggleDescuentoFields();
+            actualizarPrecioFinal();
+        });
+    }
+    
+    if (precioDescuentoInput) {
+        precioDescuentoInput.addEventListener('input', function() {
+            validarPrecioDescuentoProducto();
+            actualizarPrecioFinal();
+        });
+        precioDescuentoInput.addEventListener('change', function() {
+            validarPrecioDescuentoProducto();
+            actualizarPrecioFinal();
+        });
+    }
+    
+    if (fechaInicioInput) {
+        fechaInicioInput.addEventListener('change', function() {
+            validarFechasDescuento();
+            actualizarPrecioFinal();
+        });
+        fechaInicioInput.addEventListener('blur', actualizarPrecioFinal);
+    }
+    
+    if (fechaFinInput) {
+        fechaFinInput.addEventListener('change', function() {
+            validarFechasDescuento();
+            actualizarPrecioFinal();
+        });
+        fechaFinInput.addEventListener('blur', actualizarPrecioFinal);
+    }
+    
+    if (impuestoSelect) {
+        impuestoSelect.addEventListener('change', actualizarPrecioFinal);
+    }
+    
+    // ============ EVENTOS PARA ATRIBUTOS Y VARIACIONES ============
+    document.querySelectorAll('.atributo-activo-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const atributoId = this.dataset.atributoId;
+            const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+            const estadoBadge = document.getElementById(`estado-${atributoId}`);
+            
+            if (this.checked) {
+                if (valoresContainer) valoresContainer.style.display = 'block';
+                if (estadoBadge) estadoBadge.style.display = 'inline-block';
+                if (!atributosActivos[atributoId]) {
+                    atributosActivos[atributoId] = {
+                        id: atributoId,
+                        nombre: this.dataset.atributoNombre,
+                        valores: {}
+                    };
+                }
+            } else {
+                if (valoresContainer) valoresContainer.style.display = 'none';
+                if (estadoBadge) estadoBadge.style.display = 'none';
+                delete atributosActivos[atributoId];
+            }
+            actualizarPestanasValores();
+            actualizarResumenAtributos();
+        });
+    });
+    
+    document.querySelectorAll('.seleccionar-todos-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const atributoId = this.dataset.atributoId;
+            const valoresContainer = document.getElementById(`valores-container-${atributoId}`);
+            if (!valoresContainer) return;
+            
+            const valorCheckboxes = valoresContainer.querySelectorAll('.valor-checkbox');
+            
+            valorCheckboxes.forEach(cb => {
+                cb.checked = this.checked;
+                const atributoNombre = cb.dataset.atributoNombre;
+                const valorId = cb.value;
+                const valorNombre = cb.dataset.valorNombre;
+                
+                if (this.checked) {
+                    if (!atributosActivos[atributoId]) {
+                        atributosActivos[atributoId] = {
+                            id: atributoId,
+                            nombre: atributoNombre,
+                            valores: {}
+                        };
+                    }
+                    atributosActivos[atributoId].valores[valorId] = {
+                        id: valorId,
+                        nombre: valorNombre,
+                        atributoId: atributoId,
+                        atributoNombre: atributoNombre
+                    };
+                } else {
+                    if (atributosActivos[atributoId] && atributosActivos[atributoId].valores[valorId]) {
+                        delete atributosActivos[atributoId].valores[valorId];
+                        if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
+                            delete atributosActivos[atributoId];
+                        }
+                    }
+                }
+            });
+            
+            actualizarPestanasValores();
+            actualizarResumenAtributos();
+        });
+    });
+    
+    document.querySelectorAll('.valor-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const atributoId = this.dataset.atributoId;
+            const atributoNombre = this.dataset.atributoNombre;
+            const valorId = this.value;
+            const valorNombre = this.dataset.valorNombre;
+            
+            const atributoActivo = document.getElementById(`atributo-activo-${atributoId}`);
+            if (!atributoActivo.checked) {
+                atributoActivo.checked = true;
+                atributoActivo.dispatchEvent(new Event('change'));
+            }
+            
+            if (!atributosActivos[atributoId]) {
+                atributosActivos[atributoId] = {
+                    id: atributoId,
+                    nombre: atributoNombre,
+                    valores: {}
+                };
+            }
+            
+            if (this.checked) {
+                atributosActivos[atributoId].valores[valorId] = {
+                    id: valorId,
+                    nombre: valorNombre,
+                    atributoId: atributoId,
+                    atributoNombre: atributoNombre
+                };
+            } else {
+                if (atributosActivos[atributoId] && atributosActivos[atributoId].valores[valorId]) {
+                    delete atributosActivos[atributoId].valores[valorId];
+                    if (Object.keys(atributosActivos[atributoId].valores).length === 0) {
+                        delete atributosActivos[atributoId];
+                    }
+                }
+            }
+            
+            actualizarPestanasValores();
+            actualizarResumenAtributos();
+        });
+    });
+    
+    // ============ EVENT LISTENERS PARA FECHAS Y DESCUENTOS DE VARIACIONES ============
+    document.addEventListener('change', function(e) {
+        // Cuando cambia la fecha de inicio de una variación
+        if (e.target.id && e.target.id.startsWith('fecha-inicio-')) {
+            const valorKey = e.target.id.replace('fecha-inicio-', '');
+            validarFechasDescuentoVariacion(e.target.id, `fecha-fin-${valorKey}`, valorKey);
+            actualizarPrecioFinalVariacion(valorKey);
+        }
+        // Cuando cambia la fecha de fin de una variación
+        if (e.target.id && e.target.id.startsWith('fecha-fin-')) {
+            const valorKey = e.target.id.replace('fecha-fin-', '');
+            validarFechasDescuentoVariacion(`fecha-inicio-${valorKey}`, e.target.id, valorKey);
+            actualizarPrecioFinalVariacion(valorKey);
+        }
+        // Cuando se activa/desactiva el checkbox de descuento de una variación
+        if (e.target.id && e.target.id.startsWith('descuento-')) {
+            const valorKey = e.target.id.replace('descuento-', '');
+            toggleDescuentoVariacion(e.target, valorKey);
+            actualizarPrecioFinalVariacion(valorKey);
+        }
+    });
+    
+    // ============ INICIALIZAR RESÚMENES ============
+    actualizarResumenAtributos();
+    actualizarPestanasValores();
+    setTimeout(actualizarPrecioFinal, 100);
 });
 </script>
 @endpush

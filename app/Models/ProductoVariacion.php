@@ -27,17 +27,17 @@ class ProductoVariacion extends Model
         'dFecha_inicio_descuento',
         'dFecha_fin_descuento',
         'vMotivo_descuento',
-        'bTiene_descuento',
         'iStock',
         'dPeso',
         'dLargo_cm',
         'dAncho_cm',
         'dAlto_cm',
+        'bTiene_descuento',
+        'id_impuesto',
         'vClase_envio',
         'tDescripcion',
         'vImagen',
         'bActivo',
-        'id_impuesto',
         'tFecha_registro',
         'tFecha_actualizacion'
     ];
@@ -55,8 +55,8 @@ class ProductoVariacion extends Model
         'dAlto_cm' => 'decimal:2',
         'tFecha_registro' => 'datetime',
         'tFecha_actualizacion' => 'datetime',
-        'dFecha_inicio_descuento' => 'date',
-        'dFecha_fin_descuento' => 'date'
+        'dFecha_inicio_descuento' => 'datetime',
+        'dFecha_fin_descuento' => 'datetime'
     ];
 
     protected $appends = [
@@ -68,6 +68,10 @@ class ProductoVariacion extends Model
         'numero_imagenes',
         'precio_actual',
         'porcentaje_descuento',
+        'porcentaje_descuento_real',
+        'ahorro_total',
+        'precio_con_descuento_con_impuesto',
+        'precio_original_con_impuesto',
         'precio_final',
         'total_impuesto',
         'porcentaje_impuesto',
@@ -103,38 +107,74 @@ class ProductoVariacion extends Model
         });
     }
 
-    // ============ MÉTODOS DE DESCUENTO ============
+    // ============ MÉTODOS DE DESCUENTO CORREGIDOS ============
 
-    public function tieneDescuentoActivo()
+    /**
+     * Verifica si el descuento está activo en la fecha actual
+     * Usa DateTime nativo de PHP sin Carbon
+     */
+    public function tieneDescuentoActivo(): bool
     {
         if (!$this->bTiene_descuento || $this->dPrecio_descuento === null || $this->dPrecio_descuento <= 0) {
             return false;
         }
 
-        $fechaActual = now()->toDateString();
+        $fechaActual = new \DateTime();
+        $fechaActual->setTime(0, 0, 0);
 
-        if ($this->dFecha_inicio_descuento && $this->dFecha_fin_descuento) {
-            return $fechaActual >= $this->dFecha_inicio_descuento &&
-                $fechaActual <= $this->dFecha_fin_descuento;
+        // Procesar fecha de inicio
+        $fechaInicio = null;
+        if ($this->dFecha_inicio_descuento) {
+            if ($this->dFecha_inicio_descuento instanceof \DateTime) {
+                $fechaInicio = clone $this->dFecha_inicio_descuento;
+            } else {
+                $fechaInicio = new \DateTime($this->dFecha_inicio_descuento);
+            }
+            $fechaInicio->setTime(0, 0, 0);
         }
 
-        if ($this->dFecha_inicio_descuento && !$this->dFecha_fin_descuento) {
-            return $fechaActual >= $this->dFecha_inicio_descuento;
+        // Procesar fecha de fin
+        $fechaFin = null;
+        if ($this->dFecha_fin_descuento) {
+            if ($this->dFecha_fin_descuento instanceof \DateTime) {
+                $fechaFin = clone $this->dFecha_fin_descuento;
+            } else {
+                $fechaFin = new \DateTime($this->dFecha_fin_descuento);
+            }
+            $fechaFin->setTime(23, 59, 59);
         }
 
-        if (!$this->dFecha_inicio_descuento && $this->dFecha_fin_descuento) {
-            return $fechaActual <= $this->dFecha_fin_descuento;
+        // Caso 1: Tiene ambas fechas
+        if ($fechaInicio && $fechaFin) {
+            return $fechaActual >= $fechaInicio && $fechaActual <= $fechaFin;
         }
 
+        // Caso 2: Solo tiene fecha de inicio
+        if ($fechaInicio && !$fechaFin) {
+            return $fechaActual >= $fechaInicio;
+        }
+
+        // Caso 3: Solo tiene fecha de fin
+        if (!$fechaInicio && $fechaFin) {
+            return $fechaActual <= $fechaFin;
+        }
+
+        // Caso 4: No tiene fechas, el descuento está siempre activo
         return true;
     }
 
-    public function descuentoVigente()
+    /**
+     * Alias para tieneDescuentoActivo
+     */
+    public function descuentoVigente(): bool
     {
         return $this->tieneDescuentoActivo();
     }
 
-    public function getPrecioActualAttribute()
+    /**
+     * Obtiene el precio base (con descuento si está activo, sino el normal)
+     */
+    public function getPrecioBaseAttribute()
     {
         if ($this->tieneDescuentoActivo()) {
             return $this->dPrecio_descuento;
@@ -142,6 +182,17 @@ class ProductoVariacion extends Model
         return $this->dPrecio;
     }
 
+    /**
+     * Alias para getPrecioBaseAttribute
+     */
+    public function getPrecioActualAttribute()
+    {
+        return $this->getPrecioBaseAttribute();
+    }
+
+    /**
+     * Obtener el porcentaje de descuento (sobre precio sin impuesto)
+     */
     public function getPorcentajeDescuentoAttribute()
     {
         if ($this->tieneDescuentoActivo() && $this->dPrecio_descuento < $this->dPrecio && $this->dPrecio > 0) {
@@ -151,38 +202,198 @@ class ProductoVariacion extends Model
         return 0;
     }
 
-    public function tieneDescuento()
+    /**
+     * Obtener el porcentaje de descuento real considerando impuestos
+     */
+    public function getPorcentajeDescuentoRealAttribute()
+    {
+        if (!$this->tieneDescuentoActivo() || $this->dPrecio_descuento >= $this->dPrecio) {
+            return 0;
+        }
+
+        $precioOriginalConImpuesto = $this->dPrecio;
+        $precioDescuentoConImpuesto = $this->dPrecio_descuento;
+
+        if ($this->impuesto && $this->impuesto->bActivo) {
+            $precioOriginalConImpuesto += $this->dPrecio * ($this->impuesto->dPorcentaje / 100);
+            $precioDescuentoConImpuesto += $this->dPrecio_descuento * ($this->impuesto->dPorcentaje / 100);
+        }
+
+        if ($precioOriginalConImpuesto > 0) {
+            $descuentoReal = (($precioOriginalConImpuesto - $precioDescuentoConImpuesto) / $precioOriginalConImpuesto) * 100;
+            return round($descuentoReal);
+        }
+
+        return 0;
+    }
+
+    /**
+     * Obtener el ahorro total (precio original con impuesto - precio descuento con impuesto)
+     */
+    public function getAhorroTotalAttribute()
+    {
+        if (!$this->tieneDescuentoActivo() || $this->dPrecio_descuento >= $this->dPrecio) {
+            return 0;
+        }
+
+        $precioOriginalConImpuesto = $this->dPrecio;
+        $precioDescuentoConImpuesto = $this->dPrecio_descuento;
+
+        if ($this->impuesto && $this->impuesto->bActivo) {
+            $precioOriginalConImpuesto += $this->dPrecio * ($this->impuesto->dPorcentaje / 100);
+            $precioDescuentoConImpuesto += $this->dPrecio_descuento * ($this->impuesto->dPorcentaje / 100);
+        }
+
+        return round($precioOriginalConImpuesto - $precioDescuentoConImpuesto, 2);
+    }
+
+    /**
+     * Obtener precio con descuento ya con impuesto incluido
+     */
+    public function getPrecioConDescuentoConImpuestoAttribute()
+    {
+        if (!$this->tieneDescuentoActivo() || $this->dPrecio_descuento >= $this->dPrecio) {
+            return $this->precio_final;
+        }
+
+        $precioDescuentoConImpuesto = $this->dPrecio_descuento;
+
+        if ($this->impuesto && $this->impuesto->bActivo) {
+            $precioDescuentoConImpuesto += $this->dPrecio_descuento * ($this->impuesto->dPorcentaje / 100);
+        }
+
+        return $precioDescuentoConImpuesto;
+    }
+
+    /**
+     * Obtener precio original con impuesto
+     */
+    public function getPrecioOriginalConImpuestoAttribute()
+    {
+        $precioOriginalConImpuesto = $this->dPrecio;
+
+        if ($this->impuesto && $this->impuesto->bActivo) {
+            $precioOriginalConImpuesto += $this->dPrecio * ($this->impuesto->dPorcentaje / 100);
+        }
+
+        return $precioOriginalConImpuesto;
+    }
+
+    /**
+     * Alias para tieneDescuento
+     */
+    public function tieneDescuento(): bool
     {
         return $this->tieneDescuentoActivo();
     }
 
+    // ============ MÉTODO DE PRECIO FINAL ============
+
+    /**
+     * Obtener el precio final EN TIEMPO REAL con impuestos incluidos
+     * Este es el método que DEBE usarse para mostrar precios
+     */
+    public function getPrecioFinalAttribute()
+    {
+        $precioBase = $this->getPrecioBaseAttribute();
+        $totalImpuestos = 0;
+
+        if ($this->impuesto && $this->impuesto->bActivo) {
+            $totalImpuestos = $precioBase * ($this->impuesto->dPorcentaje / 100);
+        }
+
+        return $precioBase + $totalImpuestos;
+    }
+
+    /**
+     * Obtener el total de impuestos
+     */
+    public function getTotalImpuestoAttribute()
+    {
+        $precioBase = $this->getPrecioBaseAttribute();
+
+        if ($this->impuesto && $this->impuesto->bActivo) {
+            return $precioBase * ($this->impuesto->dPorcentaje / 100);
+        }
+        return 0;
+    }
+
+    public function recalcularPrecioFinal()
+    {
+        $precioBase = $this->getPrecioBaseAttribute();
+        $totalImpuestos = 0;
+
+        if ($this->impuesto && $this->impuesto->bActivo) {
+            $totalImpuestos = $precioBase * ($this->impuesto->dPorcentaje / 100);
+        }
+
+        $this->dPrecio_final = $precioBase + $totalImpuestos;
+        $this->save();
+
+        return $this->dPrecio_final;
+    }
+
+    /**
+     * Obtener el porcentaje de impuesto
+     */
+    public function getPorcentajeImpuestoAttribute()
+    {
+        return $this->impuesto ? $this->impuesto->dPorcentaje : 0;
+    }
+
+    /**
+     * Obtener el nombre del impuesto
+     */
+    public function getNombreImpuestoAttribute()
+    {
+        return $this->impuesto ? $this->impuesto->vNombre : 'Sin impuesto';
+    }
+
     // ============ RELACIONES ============
 
+    /**
+     * Relación con el producto padre
+     */
     public function producto()
     {
         return $this->belongsTo(Producto::class, 'id_producto');
     }
 
+    /**
+     * Alias para producto()
+     */
     public function productoPadre()
     {
         return $this->belongsTo(Producto::class, 'id_producto');
     }
 
+    /**
+     * Relación con los atributos de la variación
+     */
     public function atributos()
     {
         return $this->hasMany(VariacionAtributo::class, 'id_variacion');
     }
 
+    /**
+     * Relación con el impuesto aplicable
+     */
     public function impuesto()
     {
         return $this->belongsTo(Impuesto::class, 'id_impuesto');
     }
 
+    /**
+     * Relación con las imágenes registradas
+     */
     public function imagenesRegistradas()
     {
         return $this->hasMany(VariacionImagen::class, 'id_variacion')->orderBy('iOrden');
     }
 
+    /**
+     * Relación con los favoritos
+     */
     public function favoritos()
     {
         return $this->hasMany(Favorito::class, 'id_variacion');
@@ -190,7 +401,10 @@ class ProductoVariacion extends Model
 
     // ============ MÉTODOS DE ATRIBUTOS ============
 
-    public function getAtributosTexto()
+    /**
+     * Obtener texto de los atributos (ej: "Rojo - XL")
+     */
+    public function getAtributosTexto(): string
     {
         $atributos = [];
         foreach ($this->atributos as $atributoRel) {
@@ -201,7 +415,10 @@ class ProductoVariacion extends Model
         return implode(' - ', $atributos);
     }
 
-    public function getAtributosCompletosTexto()
+    /**
+     * Obtener texto completo de los atributos (ej: "Color: Rojo | Talla: XL")
+     */
+    public function getAtributosCompletosTexto(): string
     {
         $atributos = [];
         foreach ($this->atributos as $atributoRel) {
@@ -210,38 +427,6 @@ class ProductoVariacion extends Model
             }
         }
         return implode(' | ', $atributos);
-    }
-
-    // ============ MÉTODOS DE IMPUESTOS ============
-
-    public function getPrecioFinalAttribute()
-    {
-        $precioBase = $this->precio_actual;
-        $totalImpuestos = 0;
-
-        if ($this->impuesto && $this->impuesto->bActivo) {
-            $totalImpuestos = $precioBase * ($this->impuesto->dPorcentaje / 100);
-        }
-
-        return $precioBase + $totalImpuestos;
-    }
-
-    public function getTotalImpuestoAttribute()
-    {
-        if ($this->impuesto && $this->impuesto->bActivo) {
-            return $this->precio_actual * ($this->impuesto->dPorcentaje / 100);
-        }
-        return 0;
-    }
-
-    public function getPorcentajeImpuestoAttribute()
-    {
-        return $this->impuesto ? $this->impuesto->dPorcentaje : 0;
-    }
-
-    public function getNombreImpuestoAttribute()
-    {
-        return $this->impuesto ? $this->impuesto->vNombre : 'Sin impuesto';
     }
 
     // ============ MÉTODOS PARA GUARDAR Y ELIMINAR IMÁGENES ============
@@ -557,6 +742,9 @@ class ProductoVariacion extends Model
 
     // ============ ACCESORES PARA IMÁGENES ============
 
+    /**
+     * Obtener URL de la imagen principal
+     */
     public function getImagenPrincipalUrlAttribute()
     {
         // Buscar en imágenes registradas
@@ -584,6 +772,9 @@ class ProductoVariacion extends Model
         return null;
     }
 
+    /**
+     * Obtener URL del GIF
+     */
     public function getGifUrlAttribute()
     {
         $gif = $this->imagenesRegistradas()
@@ -602,6 +793,9 @@ class ProductoVariacion extends Model
         return null;
     }
 
+    /**
+     * Obtener URLs de las imágenes adicionales
+     */
     public function getImagenesAdicionalesUrlsAttribute()
     {
         $imagenes = [];
@@ -622,6 +816,9 @@ class ProductoVariacion extends Model
         return $imagenes;
     }
 
+    /**
+     * Obtener todas las imágenes (principal, gif, adicionales)
+     */
     public function getImagenesAttribute()
     {
         $imagenes = [];
@@ -646,6 +843,9 @@ class ProductoVariacion extends Model
         return array_values($imagenes);
     }
 
+    /**
+     * Obtener la primera imagen disponible
+     */
     public function getPrimeraImagenAttribute()
     {
         $imagenPrincipal = $this->imagen_principal_url;
@@ -665,6 +865,9 @@ class ProductoVariacion extends Model
         return null;
     }
 
+    /**
+     * Obtener el número total de imágenes
+     */
     public function getNumeroImagenesAttribute()
     {
         return VariacionImagen::where('id_variacion', $this->id_variacion)
@@ -672,6 +875,9 @@ class ProductoVariacion extends Model
             ->count();
     }
 
+    /**
+     * Verificar si se pueden agregar más imágenes
+     */
     public function puedeAgregarMasImagenes()
     {
         return $this->numero_imagenes < 9;
@@ -679,7 +885,10 @@ class ProductoVariacion extends Model
 
     // ============ MÉTODOS DE FAVORITOS ============
 
-    public function esFavorito()
+    /**
+     * Verificar si la variación es favorita del usuario actual
+     */
+    public function esFavorito(): bool
     {
         try {
             if (Auth::check()) {
@@ -696,6 +905,9 @@ class ProductoVariacion extends Model
 
     // ============ MÉTODOS DE UTILIDAD ============
 
+    /**
+     * Obtener dimensiones formateadas
+     */
     public function getDimensionesFormateadasAttribute()
     {
         if ($this->dLargo_cm && $this->dAncho_cm && $this->dAlto_cm) {
@@ -706,6 +918,9 @@ class ProductoVariacion extends Model
         return 'No especificado';
     }
 
+    /**
+     * Obtener peso formateado
+     */
     public function getPesoFormateadoAttribute()
     {
         if ($this->dPeso) {
@@ -714,6 +929,9 @@ class ProductoVariacion extends Model
         return 'No especificado';
     }
 
+    /**
+     * Obtener volumen en cm³
+     */
     public function getVolumenAttribute()
     {
         if ($this->dLargo_cm && $this->dAncho_cm && $this->dAlto_cm) {
@@ -722,6 +940,9 @@ class ProductoVariacion extends Model
         return null;
     }
 
+    /**
+     * Obtener clase de envío formateada
+     */
     public function getClaseEnvioFormateadaAttribute()
     {
         switch ($this->vClase_envio) {
@@ -738,6 +959,9 @@ class ProductoVariacion extends Model
         }
     }
 
+    /**
+     * Obtener peso volumétrico
+     */
     public function getPesoVolumetricoAttribute()
     {
         if ($this->volumen) {
@@ -746,16 +970,25 @@ class ProductoVariacion extends Model
         return null;
     }
 
+    /**
+     * Obtener precio formateado (actual)
+     */
     public function getPrecioFormateadoAttribute()
     {
         return '$' . number_format($this->precio_actual, 2);
     }
 
+    /**
+     * Obtener precio final formateado
+     */
     public function getPrecioFinalFormateadoAttribute()
     {
         return '$' . number_format($this->precio_final, 2);
     }
 
+    /**
+     * Obtener stock formateado con colores HTML
+     */
     public function getStockFormateadoAttribute()
     {
         if ($this->iStock > 10) {
@@ -765,5 +998,32 @@ class ProductoVariacion extends Model
         } else {
             return '<span class="text-danger">Sin stock</span>';
         }
+    }
+
+    /**
+     * Verificar si tiene dimensiones completas
+     */
+    public function tieneDimensionesCompletas(): bool
+    {
+        return $this->dLargo_cm && $this->dAncho_cm && $this->dAlto_cm;
+    }
+
+    /**
+     * Verificar si tiene peso
+     */
+    public function tienePeso(): bool
+    {
+        return $this->dPeso && $this->dPeso > 0;
+    }
+
+    /**
+     * Obtener el peso facturable (el mayor entre peso real y peso volumétrico)
+     */
+    public function getPesoFacturableAttribute()
+    {
+        $pesoReal = $this->dPeso ?: 0;
+        $pesoVolumetrico = $this->peso_volumetrico ?: 0;
+
+        return max($pesoReal, $pesoVolumetrico);
     }
 }
