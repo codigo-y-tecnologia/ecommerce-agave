@@ -2526,7 +2526,6 @@ function actualizarPrecioFinalVariacion(valorKey) {
     console.log('Precio BASE usado:', precioBase);
     console.log('Precio FINAL:', precioFinal);
 }
-
 // ============ FUNCIONES DE IMÁGENES ============
 
 function calcularTamañoTotal() {

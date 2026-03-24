@@ -87,11 +87,11 @@ class ProductoController extends Controller
             return redirect()->back()
                 ->withInput()
                 ->with('post_max_size_error', true)
-                ->with('error', 'El tamaño total de los archivos (' . round($contentLength / (1024 * 1024), 2) . 'MB) excede el límite permitido de 50MB. Por favor, reduce el tamaño de los archivos o súbelos en menos cantidad.')
+                ->with('error', 'El tamaño total de los archivos (' . round($contentLength / (1024 * 1024), 2) . 'MB) excede el límite permitido de 50MB.')
                 ->with('swal_error', true);
         }
 
-        // Validación personalizada para precio de descuento
+        // ============ VALIDACIÓN CORREGIDA - IMÁGENES OPCIONALES ============
         $validator = Validator::make($request->all(), [
             'vCodigo_barras' => [
                 'required',
@@ -111,22 +111,12 @@ class ProductoController extends Controller
                 'numeric',
                 'min:0',
                 'max:9999999.99',
-                function ($attribute, $value, $fail) {
-                    if ($value !== null && !preg_match('/^\d{1,7}(\.\d{1,2})?$/', $value)) {
-                        $fail('El precio de compra debe tener máximo 7 dígitos enteros y 2 decimales.');
-                    }
-                }
             ],
             'dPrecio_venta' => [
                 'required',
                 'numeric',
                 'min:0',
                 'max:9999999.99',
-                function ($attribute, $value, $fail) {
-                    if (!preg_match('/^\d{1,7}(\.\d{1,2})?$/', $value)) {
-                        $fail('El precio de venta debe tener máximo 7 dígitos enteros y 2 decimales.');
-                    }
-                }
             ],
             'iStock' => 'required|integer|min:0|max:999999',
             'id_categoria' => 'required|exists:tbl_categorias,id_categoria',
@@ -134,182 +124,69 @@ class ProductoController extends Controller
             'id_impuesto' => 'nullable|exists:tbl_impuestos,id_impuesto',
             'etiquetas' => 'nullable|array',
             'etiquetas.*' => 'exists:tbl_etiquetas,id_etiqueta',
-            'imagen_principal' => 'required|image|mimes:jpeg,jpg,png|max:5120',
+            
+            // ============ IMÁGENES OPCIONALES (NO required) ============
+            'imagen_principal' => 'nullable|image|mimes:jpeg,jpg,png|max:5120',
             'gif_producto' => 'nullable|mimes:gif|max:10240',
             'imagenes' => 'nullable|array|max:7',
-            'imagenes.*' => 'image|mimes:jpeg,jpg,png,webp|max:5120',
+            'imagenes.*' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:5120',
+            
             'atributos' => 'nullable|array',
             
-            'dPeso' => [
-                'nullable',
-                'numeric',
-                'min:0',
-                'max:999.999',
-                function ($attribute, $value, $fail) {
-                    if ($value !== null && $value !== '') {
-                        if (!is_numeric($value)) {
-                            $fail('El peso debe ser un número válido.');
-                        } elseif ($value < 0) {
-                            $fail('El peso no puede ser negativo.');
-                        } elseif ($value > 999.999) {
-                            $fail('El peso no puede ser mayor a 999.999 kg.');
-                        } else {
-                            $partes = explode('.', (string)$value);
-                            if (isset($partes[1]) && strlen($partes[1]) > 3) {
-                                $fail('El peso debe tener máximo 3 decimales.');
-                            }
-                        }
-                    }
-                }
-            ],
-            'dLargo_cm' => [
-                'nullable',
-                'numeric',
-                'min:0',
-                'max:999.99',
-                function ($attribute, $value, $fail) {
-                    if ($value !== null && $value !== '') {
-                        if (!is_numeric($value)) {
-                            $fail('El largo debe ser un número válido.');
-                        } elseif ($value < 0) {
-                            $fail('El largo no puede ser negativo.');
-                        } elseif ($value > 999.99) {
-                            $fail('El largo no puede ser mayor a 999.99 cm.');
-                        } else {
-                            $partes = explode('.', (string)$value);
-                            if (isset($partes[1]) && strlen($partes[1]) > 2) {
-                                $fail('El largo debe tener máximo 2 decimales.');
-                            }
-                        }
-                    }
-                }
-            ],
-            'dAncho_cm' => [
-                'nullable',
-                'numeric',
-                'min:0',
-                'max:999.99',
-                function ($attribute, $value, $fail) {
-                    if ($value !== null && $value !== '') {
-                        if (!is_numeric($value)) {
-                            $fail('El ancho debe ser un número válido.');
-                        } elseif ($value < 0) {
-                            $fail('El ancho no puede ser negativo.');
-                        } elseif ($value > 999.99) {
-                            $fail('El ancho no puede ser mayor a 999.99 cm.');
-                        } else {
-                            $partes = explode('.', (string)$value);
-                            if (isset($partes[1]) && strlen($partes[1]) > 2) {
-                                $fail('El ancho debe tener máximo 2 decimales.');
-                            }
-                        }
-                    }
-                }
-            ],
-            'dAlto_cm' => [
-                'nullable',
-                'numeric',
-                'min:0',
-                'max:999.99',
-                function ($attribute, $value, $fail) {
-                    if ($value !== null && $value !== '') {
-                        if (!is_numeric($value)) {
-                            $fail('El alto debe ser un número válido.');
-                        } elseif ($value < 0) {
-                            $fail('El alto no puede ser negativo.');
-                        } elseif ($value > 999.99) {
-                            $fail('El alto no puede ser mayor a 999.99 cm.');
-                        } else {
-                            $partes = explode('.', (string)$value);
-                            if (isset($partes[1]) && strlen($partes[1]) > 2) {
-                                $fail('El alto debe tener máximo 2 decimales.');
-                            }
-                        }
-                    }
-                }
-            ],
-            
+            'dPeso' => 'nullable|numeric|min:0|max:999.999',
+            'dLargo_cm' => 'nullable|numeric|min:0|max:999.99',
+            'dAncho_cm' => 'nullable|numeric|min:0|max:999.99',
+            'dAlto_cm' => 'nullable|numeric|min:0|max:999.99',
             'vClase_envio' => 'nullable|in:estandar,express,fragil,grandes_dimensiones',
             
             'bTiene_descuento' => 'nullable|in:0,1',
-            'dPrecio_descuento' => [
-                'nullable',
-                'numeric',
-                'min:0',
-                'max:9999999.99',
-                function ($attribute, $value, $fail) use ($request) {
-                    if ($value !== null && $value !== '') {
-                        if (!is_numeric($value)) {
-                            $fail('El precio de descuento debe ser un número válido.');
-                        } elseif (!preg_match('/^\d{1,7}(\.\d{1,2})?$/', (string)$value)) {
-                            $fail('El precio de descuento debe tener máximo 7 dígitos enteros y 2 decimales.');
-                        }
-                        
-                        if ($request->input('bTiene_descuento') == '1' && $value >= $request->dPrecio_venta) {
-                            $fail('El precio de descuento debe ser menor que el precio de venta.');
-                        }
-                    }
-                }
-            ],
+            'dPrecio_descuento' => 'nullable|numeric|min:0|max:9999999.99',
             'dFecha_inicio_descuento' => 'nullable|date',
             'dFecha_fin_descuento' => 'nullable|date|after_or_equal:dFecha_inicio_descuento',
             'vMotivo_descuento' => 'nullable|string|max:255',
             'variaciones' => 'nullable|array',
         ]);
 
-        // Validaciones condicionales para descuento
-        $validator->sometimes('dPrecio_descuento', 'required', function ($input) {
+        // Validación condicional para descuento
+        $validator->sometimes('dPrecio_descuento', 'required|lt:dPrecio_venta', function ($input) {
             return $input->bTiene_descuento == 1;
         });
 
-        $validator->sometimes('dFecha_inicio_descuento', 'required', function ($input) {
+        $validator->sometimes('dFecha_inicio_descuento', 'required|date', function ($input) {
             return $input->bTiene_descuento == 1;
         });
 
-        $validator->sometimes('dFecha_fin_descuento', 'required', function ($input) {
+        $validator->sometimes('dFecha_fin_descuento', 'required|date|after_or_equal:dFecha_inicio_descuento', function ($input) {
             return $input->bTiene_descuento == 1;
         });
 
         // Validación de variaciones
-        if ($request->has('variaciones')) {
+        if ($request->has('variaciones') && !empty($request->variaciones)) {
             $validator->after(function ($validator) use ($request) {
                 foreach ($request->variaciones as $key => $variacion) {
+                    // Solo validar SKU si está presente
                     $sku = $variacion['vSKU'] ?? '';
                     if (!empty($sku) && ProductoVariacion::where('vSKU', $sku)->exists()) {
-                        $validator->errors()->add("variaciones.{$key}.vSKU", "El SKU '{$sku}' ya está registrado para otra variación.");
+                        $validator->errors()->add("variaciones.{$key}.vSKU", "El SKU '{$sku}' ya está registrado.");
                     }
                     
+                    // Validar precio si está presente
                     if (isset($variacion['dPrecio']) && !empty($variacion['dPrecio'])) {
                         if (!preg_match('/^\d{1,7}(\.\d{1,2})?$/', $variacion['dPrecio'])) {
                             $validator->errors()->add("variaciones.{$key}.dPrecio", 'El precio debe tener máximo 7 dígitos enteros y 2 decimales.');
                         }
                     }
                     
-                    if (isset($variacion['dPrecio_descuento']) && !empty($variacion['dPrecio_descuento'])) {
-                        if (!preg_match('/^\d{1,7}(\.\d{1,2})?$/', $variacion['dPrecio_descuento'])) {
-                            $validator->errors()->add("variaciones.{$key}.dPrecio_descuento", 'El precio de descuento debe tener máximo 7 dígitos enteros y 2 decimales.');
-                        }
-                        
-                        if (($variacion['bTiene_descuento'] ?? 0) == 1 && isset($variacion['dPrecio']) && $variacion['dPrecio_descuento'] >= $variacion['dPrecio']) {
-                            $validator->errors()->add("variaciones.{$key}.dPrecio_descuento", 'El precio de descuento debe ser menor que el precio normal.');
-                        }
-                    }
-                    
+                    // Validar descuento si está activo
                     if (isset($variacion['bTiene_descuento']) && $variacion['bTiene_descuento'] == 1) {
                         if (empty($variacion['dPrecio_descuento'])) {
-                            $validator->errors()->add("variaciones.{$key}.dPrecio_descuento", 'El precio de descuento es obligatorio cuando el descuento está activo.');
+                            $validator->errors()->add("variaciones.{$key}.dPrecio_descuento", 'El precio de descuento es obligatorio.');
                         }
                         if (empty($variacion['dFecha_inicio_descuento'])) {
-                            $validator->errors()->add("variaciones.{$key}.dFecha_inicio_descuento", 'La fecha de inicio es obligatoria cuando el descuento está activo.');
+                            $validator->errors()->add("variaciones.{$key}.dFecha_inicio_descuento", 'La fecha de inicio es obligatoria.');
                         }
                         if (empty($variacion['dFecha_fin_descuento'])) {
-                            $validator->errors()->add("variaciones.{$key}.dFecha_fin_descuento", 'La fecha de fin es obligatoria cuando el descuento está activo.');
-                        }
-                        
-                        if (!empty($variacion['dFecha_inicio_descuento']) && !empty($variacion['dFecha_fin_descuento'])) {
-                            if ($variacion['dFecha_fin_descuento'] < $variacion['dFecha_inicio_descuento']) {
-                                $validator->errors()->add("variaciones.{$key}.dFecha_fin_descuento", 'La fecha de fin debe ser igual o posterior a la fecha de inicio.');
-                            }
+                            $validator->errors()->add("variaciones.{$key}.dFecha_fin_descuento", 'La fecha de fin es obligatoria.');
                         }
                     }
                 }
@@ -326,21 +203,6 @@ class ProductoController extends Controller
         try {
             DB::beginTransaction();
 
-            Log::info('Datos del formulario de producto:', [
-                'bTiene_descuento' => $request->has('bTiene_descuento'),
-                'bTiene_descuento_value' => $request->bTiene_descuento,
-                'dPrecio_descuento' => $request->dPrecio_descuento,
-                'dFecha_inicio_descuento' => $request->dFecha_inicio_descuento,
-                'dFecha_fin_descuento' => $request->dFecha_fin_descuento,
-                'vMotivo_descuento' => $request->vMotivo_descuento,
-                'id_impuesto' => $request->id_impuesto,
-                'dPeso' => $request->dPeso,
-                'dLargo_cm' => $request->dLargo_cm,
-                'dAncho_cm' => $request->dAncho_cm,
-                'dAlto_cm' => $request->dAlto_cm,
-                'imagenes_adicionales_count' => $request->hasFile('imagenes') ? count($request->file('imagenes')) : 0
-            ]);
-
             $productoData = [
                 'vCodigo_barras' => strtoupper($request->vCodigo_barras),
                 'vNombre' => $request->vNombre,
@@ -352,14 +214,11 @@ class ProductoController extends Controller
                 'id_categoria' => $request->id_categoria,
                 'id_marca' => $request->id_marca,
                 'bActivo' => $request->has('bActivo') ? true : false,
-                
                 'dPeso' => ($request->dPeso !== null && $request->dPeso !== '') ? floatval($request->dPeso) : null,
                 'dLargo_cm' => ($request->dLargo_cm !== null && $request->dLargo_cm !== '') ? floatval($request->dLargo_cm) : null,
                 'dAncho_cm' => ($request->dAncho_cm !== null && $request->dAncho_cm !== '') ? floatval($request->dAncho_cm) : null,
                 'dAlto_cm' => ($request->dAlto_cm !== null && $request->dAlto_cm !== '') ? floatval($request->dAlto_cm) : null,
-                
                 'vClase_envio' => $request->vClase_envio ?: null,
-                
                 'bTiene_descuento' => $request->has('bTiene_descuento') && $request->bTiene_descuento == '1',
                 'dPrecio_descuento' => $request->dPrecio_descuento ? floatval($request->dPrecio_descuento) : null,
                 'vMotivo_descuento' => $request->vMotivo_descuento ?: null,
@@ -375,46 +234,35 @@ class ProductoController extends Controller
 
             $producto = Producto::create($productoData);
 
-            // Sincronizar impuesto (IVA o IEPS)
+            // Sincronizar impuesto
             if ($request->id_impuesto) {
                 $producto->impuestos()->sync([$request->id_impuesto]);
                 $producto->recalcularPrecioFinal();
             }
 
-            Log::info('Producto creado con ID: ' . $producto->id_producto . ' - Precio final: ' . $producto->dPrecio_final);
-
-            // Guardar imagen principal
-            if ($request->hasFile('imagen_principal')) {
+            // ============ GUARDAR IMÁGENES SOLO SI EXISTEN ============
+            // Guardar imagen principal SOLO si se subió
+            if ($request->hasFile('imagen_principal') && $request->file('imagen_principal')->isValid()) {
                 $producto->guardarImagenPrincipal($request->file('imagen_principal'));
                 Log::info('Imagen principal guardada');
             }
 
-            // Guardar GIF si existe
-            if ($request->hasFile('gif_producto')) {
+            // Guardar GIF SOLO si se subió
+            if ($request->hasFile('gif_producto') && $request->file('gif_producto')->isValid()) {
                 $producto->guardarGif($request->file('gif_producto'));
                 Log::info('GIF guardado');
             }
 
-            // Guardar imágenes adicionales
+            // Guardar imágenes adicionales SOLO si existen
             if ($request->hasFile('imagenes')) {
                 $imagenes = $request->file('imagenes');
-                \Log::info('Intentando guardar ' . count($imagenes) . ' imágenes adicionales');
-                
-                if (!is_array($imagenes)) {
-                    $imagenes = [$imagenes];
-                }
-                
                 $imagenesValidas = array_filter($imagenes, function($file) {
                     return $file && $file->isValid();
                 });
                 
                 if (!empty($imagenesValidas)) {
-                    $resultado = $producto->guardarImagenesAdicionales($imagenesValidas);
-                    \Log::info('Resultado de guardar imágenes:', [
-                        'cantidad_guardadas' => is_array($resultado) ? count($resultado) : 0
-                    ]);
-                    
-                    $producto->refresh();
+                    $producto->guardarImagenesAdicionales($imagenesValidas);
+                    Log::info('Imágenes adicionales guardadas: ' . count($imagenesValidas));
                 }
             }
 
@@ -423,7 +271,7 @@ class ProductoController extends Controller
                 $producto->etiquetas()->sync($request->etiquetas);
             }
 
-            // Guardar atributos del producto
+            // Guardar atributos
             if ($request->has('atributos')) {
                 foreach ($request->atributos as $atributoId => $valores) {
                     if (!empty($valores) && is_array($valores)) {
@@ -446,9 +294,14 @@ class ProductoController extends Controller
             }
 
             // Guardar variaciones
-            if ($request->has('variaciones')) {
+            if ($request->has('variaciones') && !empty($request->variaciones)) {
                 foreach ($request->variaciones as $key => $variacionData) {
                     if (!isset($variacionData['vSKU']) || empty($variacionData['vSKU'])) {
+                        continue;
+                    }
+
+                    // Solo guardar si tiene precio definido
+                    if (!isset($variacionData['dPrecio']) || empty($variacionData['dPrecio'])) {
                         continue;
                     }
 
@@ -459,12 +312,11 @@ class ProductoController extends Controller
                         $claseEnvio = 'estandar';
                     }
 
-                    // ========== CÁLCULO CORRECTO DEL PRECIO FINAL DE LA VARIACIÓN ==========
-                    $precioBaseVariacion = floatval($variacionData['dPrecio'] ?? $producto->dPrecio_venta);
+                    // Calcular precio final
+                    $precioBaseVariacion = floatval($variacionData['dPrecio']);
                     $tieneDescuentoVariacion = isset($variacionData['bTiene_descuento']) && $variacionData['bTiene_descuento'] == '1';
                     $precioDescuentoVariacion = isset($variacionData['dPrecio_descuento']) ? floatval($variacionData['dPrecio_descuento']) : null;
 
-                    // Validar si el descuento está vigente según las fechas
                     $aplicaDescuento = false;
                     if ($tieneDescuentoVariacion && $precioDescuentoVariacion !== null && $precioDescuentoVariacion > 0 && $precioDescuentoVariacion < $precioBaseVariacion) {
                         $fechaActual = new \DateTime();
@@ -494,10 +346,9 @@ class ProductoController extends Controller
                         }
                     }
 
-                    // Usar el precio base que corresponda (con descuento SOLO si está vigente)
                     $precioBaseParaImpuestos = $aplicaDescuento ? $precioDescuentoVariacion : $precioBaseVariacion;
 
-                    // Calcular impuestos sobre el precio base correcto
+                    // Calcular impuestos
                     $totalImpuestosVariacion = 0;
                     $idImpuestoVariacion = $variacionData['id_impuesto'] ?? null;
 
@@ -514,28 +365,27 @@ class ProductoController extends Controller
                     }
 
                     $precioFinalVariacion = $precioBaseParaImpuestos + $totalImpuestosVariacion;
+                    
                     $variacionDataToCreate = [
                         'id_producto' => $producto->id_producto,
                         'vSKU' => strtoupper($variacionData['vSKU']),
-                        'dPrecio' => $variacionData['dPrecio'] ?? $producto->dPrecio_venta,
+                        'dPrecio' => $variacionData['dPrecio'],
                         'dPrecio_descuento' => $variacionData['dPrecio_descuento'] ?? null,
                         'dPrecio_final' => $precioFinalVariacion,
                         'vMotivo_descuento' => $variacionData['vMotivo_descuento'] ?? null,
                         'bTiene_descuento' => $tieneDescuentoVariacion ? 1 : 0,
                         'iStock' => $variacionData['iStock'] ?? 0,
-                        
                         'dPeso' => (isset($variacionData['dPeso']) && $variacionData['dPeso'] !== '') ? floatval($variacionData['dPeso']) : null,
                         'dLargo_cm' => (isset($variacionData['dLargo_cm']) && $variacionData['dLargo_cm'] !== '') ? floatval($variacionData['dLargo_cm']) : null,
                         'dAncho_cm' => (isset($variacionData['dAncho_cm']) && $variacionData['dAncho_cm'] !== '') ? floatval($variacionData['dAncho_cm']) : null,
                         'dAlto_cm' => (isset($variacionData['dAlto_cm']) && $variacionData['dAlto_cm'] !== '') ? floatval($variacionData['dAlto_cm']) : null,
-                        
                         'vClase_envio' => $claseEnvio,
                         'tDescripcion' => $variacionData['tDescripcion'] ?? null,
                         'bActivo' => isset($variacionData['bActivo']) ? 1 : 0,
                         'id_impuesto' => $idImpuestoVariacion,
                     ];
 
-                    // Guardar fechas de descuento (si existen)
+                    // Guardar fechas de descuento
                     if (!empty($variacionData['dFecha_inicio_descuento'])) {
                         $variacionDataToCreate['dFecha_inicio_descuento'] = $variacionData['dFecha_inicio_descuento'] . ' 00:00:00';
                     }
@@ -545,8 +395,7 @@ class ProductoController extends Controller
 
                     $variacion = ProductoVariacion::create($variacionDataToCreate);
 
-                    Log::info('Variación creada con ID: ' . $variacion->id_variacion . ', precio_final: ' . $precioFinalVariacion);
-
+                    // Guardar relación con atributos
                     if (isset($variacionData['id_atributo']) && isset($variacionData['id_atributo_valor'])) {
                         VariacionAtributo::create([
                             'id_variacion' => $variacion->id_variacion,
@@ -555,17 +404,23 @@ class ProductoController extends Controller
                         ]);
                     }
 
-                    if ($request->hasFile("variaciones.{$key}.imagen_principal")) {
+                    // Guardar imágenes de la variación SOLO si existen
+                    if ($request->hasFile("variaciones.{$key}.imagen_principal") && $request->file("variaciones.{$key}.imagen_principal")->isValid()) {
                         $variacion->guardarImagenPrincipal($request->file("variaciones.{$key}.imagen_principal"));
                     }
                     
-                    if ($request->hasFile("variaciones.{$key}.gif")) {
+                    if ($request->hasFile("variaciones.{$key}.gif") && $request->file("variaciones.{$key}.gif")->isValid()) {
                         $variacion->guardarGif($request->file("variaciones.{$key}.gif"));
                     }
                     
                     if ($request->hasFile("variaciones.{$key}.imagenes_adicionales")) {
                         $imagenesVariacion = $request->file("variaciones.{$key}.imagenes_adicionales");
-                        $variacion->guardarImagenesAdicionales($imagenesVariacion);
+                        $imagenesValidas = array_filter($imagenesVariacion, function($file) {
+                            return $file && $file->isValid();
+                        });
+                        if (!empty($imagenesValidas)) {
+                            $variacion->guardarImagenesAdicionales($imagenesValidas);
+                        }
                     }
                 }
             }
@@ -586,7 +441,7 @@ class ProductoController extends Controller
                 return redirect()->back()
                     ->withInput()
                     ->with('post_max_size_error', true)
-                    ->with('error', 'El tamaño total de los archivos excede el límite del servidor (50MB). Por favor, reduce el tamaño de los archivos.')
+                    ->with('error', 'El tamaño total de los archivos excede el límite del servidor (50MB).')
                     ->with('swal_error', true);
             }
             
