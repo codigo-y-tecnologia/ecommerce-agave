@@ -29,8 +29,9 @@ class CarritoController extends Controller
                 // ── VARIACIÓN ──
                 $variacion = $detalle->variacion;
 
+                $nombreProducto = $producto->vNombre ?? 'Producto eliminado';
+
                 if (!$variacion || $variacion->iStock <= 0) {
-                    $nombreProducto = $producto->vNombre ?? 'Producto eliminado';
                     $mensajes[] = "El producto {$nombreProducto} ya no tiene stock y fue eliminado del carrito.";
                     $detalle->delete();
                     continue;
@@ -39,13 +40,15 @@ class CarritoController extends Controller
                 if ($detalle->iCantidad > $variacion->iStock) {
                     $detalle->iCantidad = $variacion->iStock;
                     $detalle->save();
-                    $mensajes[] = "La cantidad de {$producto->vNombre} fue ajustada al stock disponible ({$variacion->iStock} unidades).";
+                    $mensajes[] = "La cantidad de {$nombreProducto} fue ajustada al stock disponible ({$variacion->iStock} unidades).";
                 }
             } else {
 
+                $nombreProducto = $producto->vNombre ?? 'Producto eliminado';
+
                 // Producto eliminado o desactivado
                 if (!$producto || $producto->iStock <= 0) {
-                    $mensajes[] = "El producto {$detalle->producto->vNombre} ya no tiene stock y fue eliminado del carrito.";
+                    $mensajes[] = "El producto {$nombreProducto} ya no tiene stock y fue eliminado del carrito.";
                     $detalle->delete();
                     continue;
                 }
@@ -55,7 +58,7 @@ class CarritoController extends Controller
                     $detalle->iCantidad = $producto->iStock;
                     $detalle->save();
 
-                    $mensajes[] = "La cantidad de {$producto->vNombre} fue ajustada al stock disponible.";
+                    $mensajes[] = "La cantidad de {$nombreProducto} fue ajustada al stock disponible.";
                 }
             }
         }
