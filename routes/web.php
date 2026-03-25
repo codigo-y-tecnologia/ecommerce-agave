@@ -653,15 +653,6 @@ Route::middleware(['auth', 'permission:gestionar_permisos'])->group(function () 
         ->name('roles.destroy');
 
     // Permisos
-    Route::get('/superadmin/permissions', [SpatiePermissionController::class, 'index'])
-        ->name('permissions.index');
-
-    Route::get('/superadmin/permissions/create', [SpatiePermissionController::class, 'create'])
-        ->name('permissions.create');
-
-    Route::post('/superadmin/permissions', [SpatiePermissionController::class, 'store'])
-        ->name('permissions.store');
-
     Route::resource('permissions', SpatiePermissionController::class)
         ->except(['show']);
 
