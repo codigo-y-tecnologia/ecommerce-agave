@@ -133,12 +133,6 @@ class MarcaController extends Controller
     }
 
     /**
-     * ============================================
-     * NUEVOS MÉTODOS PARA PANEL DE GESTIÓN
-     * ============================================
-     */
-
-    /**
      * Creación rápida de marca desde AJAX
      */
    public function quickCreate(Request $request)
@@ -147,6 +141,12 @@ class MarcaController extends Controller
             $validator = Validator::make($request->all(), [
                 'vNombre' => 'required|max:100|unique:tbl_marcas,vNombre',
                 'tDescripcion' => 'nullable|string|max:500'
+            ], [
+                // Mensajes de error 
+                'vNombre.required' => 'El nombre de la marca es obligatorio',
+                'vNombre.max' => 'El nombre no debe exceder los 100 caracteres',
+                'vNombre.unique' => 'Ya existe una marca con este nombre',
+                'tDescripcion.max' => 'La descripción no debe exceder los 500 caracteres'
             ]);
 
             if ($validator->fails()) {
