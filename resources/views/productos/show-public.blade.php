@@ -2115,31 +2115,34 @@
         }
 
         function agregarAlCarrito(productoId, variacionId = null) {
-                fetch('/carrito/agregar', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        producto_id: productoId,
-                        variacion_id: variacionId,
-                        cantidad: 1
-                    })
+            // Usar la variación actualmente seleccionada si la hay
+            const varId = variacionSeleccionadaId !== undefined ? variacionSeleccionadaId : variacionId;
+
+            fetch('/carrito/agregar', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    producto_id: productoId,
+                    variacion_id: varId,
+                    cantidad: 1
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showNotification('✅ Producto agregado al carrito', 'success');
-                    } else {
-                        showNotification('❌ ' + (data.message || 'Error al agregar'), 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showNotification('❌ Error de conexión', 'error');
-                });
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('✅ Producto agregado al carrito', 'success');
+                } else {
+                    showNotification('❌ ' + (data.message || 'Error al agregar'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('❌ Error de conexión', 'error');
+            });
         }
 
         function comprarAhora(productoId, variacionId = null) {

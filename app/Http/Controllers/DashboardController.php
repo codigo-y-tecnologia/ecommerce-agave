@@ -14,27 +14,23 @@ class DashboardController extends Controller
     public function index()
     {
 
-        $productosDestacados = Producto::with([
-            'categoria',
-            'marca',
-            'etiquetas'
-        ])
-            ->where('bActivo', true)
-            ->orderBy('id_producto', 'desc')
-            ->take(12)
-            ->get();
+        $productosDestacados = $this->calcularPreciosConImpuesto(
+            Producto::with(['categoria', 'marca', 'etiquetas', 'impuestos'])
+                ->where('bActivo', true)
+                ->orderBy('id_producto', 'desc')
+                ->take(12)
+                ->get()
+        );
 
         $productosDescuento = $this->obtenerItemsConDescuento(12);
 
-        $productosRecomendados = Producto::with([
-            'categoria',
-            'marca',
-            'etiquetas'
-        ])
-            ->where('bActivo', true)
-            ->orderBy('id_producto', 'desc')
-            ->take(8)
-            ->get();
+        $productosRecomendados = $this->calcularPreciosConImpuesto(
+            Producto::with(['categoria', 'marca', 'etiquetas', 'impuestos'])
+                ->where('bActivo', true)
+                ->orderBy('id_producto', 'desc')
+                ->take(8)
+                ->get()
+        );
 
         $todosLosItems = $this->obtenerTodosLosItems();
 
@@ -64,27 +60,23 @@ class DashboardController extends Controller
 
     public function cliente()
     {
-        $productosDestacados = Producto::with([
-            'categoria',
-            'marca',
-            'etiquetas'
-        ])
-            ->where('bActivo', true)
-            ->orderBy('id_producto', 'desc')
-            ->take(12)
-            ->get();
+        $productosDestacados = $this->calcularPreciosConImpuesto(
+            Producto::with(['categoria', 'marca', 'etiquetas', 'impuestos'])
+                ->where('bActivo', true)
+                ->orderBy('id_producto', 'desc')
+                ->take(12)
+                ->get()
+        );
 
         $productosDescuento = $this->obtenerItemsConDescuento(12);
 
-        $productosRecomendados = Producto::with([
-            'categoria',
-            'marca',
-            'etiquetas'
-        ])
-            ->where('bActivo', true)
-            ->orderBy('id_producto', 'desc')
-            ->take(8)
-            ->get();
+        $productosRecomendados = $this->calcularPreciosConImpuesto(
+            Producto::with(['categoria', 'marca', 'etiquetas', 'impuestos'])
+                ->where('bActivo', true)
+                ->orderBy('id_producto', 'desc')
+                ->take(8)
+                ->get()
+        );
 
         $todosLosItems = $this->obtenerTodosLosItems();
 
@@ -389,5 +381,33 @@ class DashboardController extends Controller
 
         $descuento = (($variacion->dPrecio - $variacion->dPrecio_descuento) / $variacion->dPrecio) * 100;
         return round($descuento);
+    }
+
+    private function calcularPreciosConImpuesto($productos)
+    {
+        foreach ($productos as $producto) {
+            $precioBase = $producto->tieneDescuentoActivo()
+                ? $producto->dPrecio_descuento
+                : $producto->dPrecio_venta;
+
+            $totalImpuestos = 0;
+            foreach ($producto->impuestos as $impuesto) {
+                if ($impuesto->bActivo) {
+                    $totalImpuestos += $precioBase * ($impuesto->dPorcentaje / 100);
+                }
+            }
+
+            $producto->precio_final_con_impuesto = $precioBase + $totalImpuestos;
+
+            $precioOriginal = $producto->dPrecio_venta;
+            foreach ($producto->impuestos as $impuesto) {
+                if ($impuesto->bActivo) {
+                    $precioOriginal += $producto->dPrecio_venta * ($impuesto->dPorcentaje / 100);
+                }
+            }
+            $producto->precio_original_con_impuesto = $precioOriginal;
+        }
+
+        return $productos;
     }
 }

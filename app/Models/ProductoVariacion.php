@@ -20,7 +20,6 @@ class ProductoVariacion extends Model
     protected $fillable = [
         'id_producto',
         'vSKU',
-        'vNombre_variacion',
         'dPrecio',
         'dPrecio_descuento',
         'dPrecio_final',
@@ -49,7 +48,7 @@ class ProductoVariacion extends Model
         'iStock' => 'integer',
         'bTiene_descuento' => 'boolean',
         'bActivo' => 'boolean',
-        'dPeso' => 'decimal:3',
+        'dPeso' => 'decimal:2',
         'dLargo_cm' => 'decimal:2',
         'dAncho_cm' => 'decimal:2',
         'dAlto_cm' => 'decimal:2',
